@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title><![CDATA[Rosewein's Cottage]]></title><description><![CDATA[say anything]]></description><link>https://github.com/rosewein</link><image><url>https://github.com/rosewein/public/img/favorite.png</url><title>Rosewein&apos;s Cottage</title><link>https://github.com/rosewein</link></image><generator>RSS for Node</generator><lastBuildDate>Wed, 29 Jan 2014 04:54:55 GMT</lastBuildDate><atom:link href="https://github.com/rosewein/rss.xml" rel="self" type="application/rss+xml"/><item><title><![CDATA[Welcome to haroopress]]></title><description><![CDATA[<img src="http://www.gravatar.com/avatar/a8618a255192bd842fdd62d099776735?r=pg&s=48.jpg&d=identicon"><br/><h3 id="toc_7">환영합니다.</h3>
+<rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title><![CDATA[Rosewein's Cottage]]></title><description><![CDATA[say anything]]></description><link>http://rosewein.github.com/</link><image><url>http://rosewein.github.com//public/img/favorite.png</url><title>Rosewein&apos;s Cottage</title><link>http://rosewein.github.com/</link></image><generator>RSS for Node</generator><lastBuildDate>Wed, 29 Jan 2014 04:57:55 GMT</lastBuildDate><atom:link href="http://rosewein.github.com//rss.xml" rel="self" type="application/rss+xml"/><item><title><![CDATA[Welcome to haroopress]]></title><description><![CDATA[<img src="http://www.gravatar.com/avatar/a8618a255192bd842fdd62d099776735?r=pg&s=48.jpg&d=identicon"><br/><h3 id="toc_7">환영합니다.</h3>
 
 <ul>
 <li>Welcome</li>
@@ -40,4 +40,4 @@
 <ul>
 <li><a href="https://github.com/rhiokim/haroopress/wiki/Change-History">변경 이력</a></li>
 </ul>
-]]></description><link>https://github.com/rosewein/post/welcome-to-haroopress</link><guid isPermaLink="false">welcome-to-haroopress</guid><dc:creator><![CDATA[<a href="haroopress" target="_blank">haroopress</a>]]></dc:creator><pubDate>Tue, 21 Feb 2012 00:00:00 GMT</pubDate></item></channel></rss>
+]]></description><link>http://rosewein.github.com//post/welcome-to-haroopress</link><guid isPermaLink="false">welcome-to-haroopress</guid><dc:creator><![CDATA[<a href="haroopress" target="_blank">haroopress</a>]]></dc:creator><pubDate>Tue, 21 Feb 2012 00:00:00 GMT</pubDate></item></channel></rss>
