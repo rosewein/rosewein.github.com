@@ -243,6 +243,19 @@ dialog.sheet {
 dialog.sheet::backdrop { background: rgba(0,0,0,.4); }
 dialog.sheet .in { padding: 16px 16px calc(16px + env(safe-area-inset-bottom)); }
 dialog.sheet h3 { margin: 0 0 4px; font-size: 17px; }
+.imp-list { list-style: none; margin: 10px 0 0; padding: 0; max-height: 46vh; overflow-y: auto; }
+.imp-list li { display: flex; gap: 10px; align-items: flex-start; padding: 9px 0; border-top: 1px solid var(--border); }
+.imp-list li:first-child { border-top: 0; }
+.imp-list input { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--accent); flex: none; }
+.imp-list .when { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 14px; min-width: 92px; }
+.imp-list .when small { display: block; font-weight: 500; color: var(--text-3); font-size: 11px; }
+.imp-list .what { font-size: 14px; min-width: 0; }
+.imp-list .what b { font-weight: 600; }
+.imp-list .what small { display: block; color: var(--text-3); font-size: 12px; }
+.imp-list li.dup .what, .imp-list li.dup .when { opacity: .5; }
+.imp-status { font-size: 13px; color: var(--text-2); margin-top: 10px; min-height: 18px; }
+details.raw { margin-top: 8px; font-size: 12px; color: var(--text-3); }
+details.raw pre { white-space: pre-wrap; word-break: break-all; max-height: 30vh; overflow: auto; background: var(--surface-2); padding: 8px; border-radius: 8px; }
 .sheet-actions { display: flex; gap: 8px; margin-top: 16px; }
 .sheet-actions .btn { flex: 1; }
 
@@ -307,6 +320,7 @@ dialog.sheet h3 { margin: 0 0 4px; font-size: 17px; }
         </div>
         <button type="button" class="linkbtn" id="qToggle">+ 시작 시각 · 분류 · 메모</button>
       </form>
+      <button type="button" class="btn ghost block" id="impOpen" style="margin-top:10px">📷 베이비타임 스샷에서 불러오기</button>
     </div>
 
     <div class="card">
@@ -427,6 +441,22 @@ dialog.sheet h3 { margin: 0 0 4px; font-size: 17px; }
       <button type="submit" class="btn" id="eSave">저장</button>
     </div>
   </form>
+</dialog>
+
+<dialog class="sheet" id="impSheet">
+  <div class="in">
+    <h3>베이비타임 스샷 불러오기</h3>
+    <p class="muted" style="margin:0">베이비타임 「기록」 화면 캡처를 골라 주세요. 여러 장도 돼요. 글자 인식은 폰 안에서만 하고, 사진은 어디에도 올라가지 않아요.</p>
+    <input type="file" id="impFile" accept="image/*" multiple hidden>
+    <button type="button" class="btn block" id="impPick" style="margin-top:12px">스크린샷 고르기</button>
+    <div class="imp-status" id="impStatus"></div>
+    <ul class="imp-list" id="impList"></ul>
+    <details class="raw" id="impRawWrap" hidden><summary>인식된 글자 보기</summary><pre id="impRaw"></pre></details>
+    <div class="sheet-actions">
+      <button type="button" class="btn ghost" id="impClose">닫기</button>
+      <button type="button" class="btn" id="impAdd" disabled>추가</button>
+    </div>
+  </div>
 </dialog>
 
 <div class="toast" id="toast"><span id="toastMsg"></span><button id="toastUndo" hidden>되돌리기</button></div>
@@ -551,8 +581,13 @@ function lastCategoryFor(title) {
   return r ? r.category : '';
 }
 const isToday = () => curDate === todayStr();
+const isOwn = (e) => e.source !== 'babytime';
 const isRoutineEntry = (r, e) => e.routineId === r.id || e.title === r.title;
-function entryTs(e) { return parseDate(e.date).getTime() + toMin(e.end) * 60000; }
+function entryTs(e) {
+  let m = toMin(e.end);
+  if (e.start && m < toMin(e.start)) m += 1440; // e.g. 밤잠 20:00~01:40 ends the next day
+  return parseDate(e.date).getTime() + m * 60000;
+}
 function lastRoutineAt(r) {
   let best = null;
   data.entries.forEach((e) => { if (isRoutineEntry(r, e)) { const t = entryTs(e); if (best == null || t > best) best = t; } });
@@ -585,9 +620,11 @@ function renderToday() {
   const list = entriesOn(curDate);
 
   // summary
-  const first = list.length ? list[0].start || list[0].end : null;
-  const last = list.length ? list[list.length - 1].end : null;
-  const total = list.reduce((s, e) => s + (durMin(e) || 0), 0);
+  // imported BabyTime records are the baby's schedule, so they don't set my start/end of day
+  const own = list.filter(isOwn);
+  const first = own.length ? own[0].start || own[0].end : null;
+  const last = own.length ? own[own.length - 1].end : null;
+  const total = own.reduce((s, e) => s + (durMin(e) || 0), 0);
   $('#summary').innerHTML = `
     <div><b>${list.length}</b><span>한 일</span></div>
     <div><b>${first || '—'}</b><span>첫 기록</span></div>
@@ -753,6 +790,202 @@ $('#eDelete').addEventListener('click', () => {
   toast('삭제했어요', () => { data.entries.splice(idx, 0, e); save(); renderToday(); });
 });
 
+/* ---------- BabyTime screenshot import ---------- */
+// OCR runs in the browser with tesseract.js (loaded from the CDN on first use).
+const OCR = {
+  script: 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js',
+  workerPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/worker.min.js',
+  corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.1',
+  langPath: 'https://cdn.jsdelivr.net/npm/@tesseract.js-data/kor@1.0.0/4.0.0_best_int',
+};
+// BabyTime item → DONE title; label goes into the memo.
+const BT_TYPES = [
+  ['분유', '수유', '분유'], ['모유', '수유', '모유'], ['수유', '수유', ''], ['유축', '유축', ''], ['이유식', '이유식', ''],
+  ['소변', '기저귀', '소변'], ['대변', '기저귀', '대변'], ['기저귀', '기저귀', ''],
+  ['낮잠', '낮잠 재우기', '낮잠'], ['밤잠', '밤잠', ''], ['목욕', '아기 목욕', ''],
+  ['체온', '체온', ''], ['투약', '투약', ''], ['병원', '병원', ''], ['간식', '간식', ''], ['놀이', '놀이', ''], ['터미타임', '터미타임', ''],
+];
+let ocrWorker = null;
+function loadScript(src) {
+  return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('load')); document.head.appendChild(s); });
+}
+async function getOcr(status) {
+  if (ocrWorker) return ocrWorker;
+  status('글자 인식 도구를 불러오는 중… (처음 한 번만 몇 초 걸려요)');
+  if (!window.Tesseract) await loadScript(OCR.script);
+  ocrWorker = await Tesseract.createWorker('kor', 1, { workerPath: OCR.workerPath, corePath: OCR.corePath, langPath: OCR.langPath });
+  return ocrWorker;
+}
+// Grayscale, flip dark mode to dark-on-light, stretch contrast; small images are upscaled.
+async function prepImage(file) {
+  const bmp = await createImageBitmap(file);
+  const scale = bmp.width < 1000 ? 2 : 1;
+  const c = document.createElement('canvas');
+  c.width = bmp.width * scale; c.height = bmp.height * scale;
+  const g = c.getContext('2d');
+  g.drawImage(bmp, 0, 0, c.width, c.height);
+  const img = g.getImageData(0, 0, c.width, c.height), px = img.data;
+  let sum = 0;
+  for (let i = 0; i < px.length; i += 4) { const v = 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2]; px[i] = v; sum += v; }
+  const dark = sum / (px.length / 4) < 128;
+  for (let i = 0; i < px.length; i += 4) {
+    let v = px[i];
+    if (dark) v = 255 - v;
+    v = Math.max(0, Math.min(255, (v - 40) * 255 / 175));
+    px[i] = px[i + 1] = px[i + 2] = v;
+  }
+  g.putImageData(img, 0, 0);
+  return c;
+}
+// Reads "11:49", and also OCR slips like "11549", "1145", "11.49".
+function btTime(str) {
+  const m = str.match(/(\d{1,2})\s*[:;.,]\s*(\d{2})(?!\d)/) || str.match(/(?<!\d)(\d{2})\d?(\d{2})(?!\d)/) || str.match(/(?<!\d)(\d)(\d{2})(?!\d)/);
+  if (!m) return null;
+  const h = +m[1], mi = +m[2];
+  return h < 24 && mi < 60 ? `${pad(h)}:${pad(mi)}` : null;
+}
+function btDuration(str) {
+  let m = str.match(/(\d{1,2})\s*시간\s*(\d{1,2})\s*분/);
+  if (m) return +m[1] * 60 + +m[2];
+  if ((m = str.match(/(\d{1,2})\s*시간/))) return +m[1] * 60;
+  if ((m = str.match(/(?<!\d)(\d{1,3})\s*분/))) return +m[1];
+  return null;
+}
+function btYearDate(mo, d) {
+  const now = new Date();
+  let y = now.getFullYear();
+  if (dateStr(new Date(y, mo - 1, d)) > todayStr()) y--;
+  return dateStr(new Date(y, mo - 1, d));
+}
+function parseBabyTime(lines, width, fallbackDate) {
+  const items = [];
+  let date = null, cur = null;
+  const finish = () => { if (cur) items.push(cur); cur = null; };
+  for (const { text, x0 } of lines) {
+    const t = text.replace(/[。·•●]/g, ' ').replace(/\s+/g, ' ').trim();
+    // skip app bar, tab bar and the day-summary line ("D+102  1000ml(1000)")
+    if (!t || /개월|기록\s*패턴|공개일기|\d\s*\+\s*\d|\(\d{2,4}\)/.test(t)) continue;
+    const dm = t.match(/(\d{1,2})\s*월\s*(\d{1,2})\s*일/);
+    if (dm) { finish(); date = btYearDate(+dm[1], +dm[2]); continue; }
+    const startsWithTime = /^\d{1,2}[:;.,]?\d{2,3}[_.,]?$/.test(t.split(' ')[0]);
+    const type = BT_TYPES.find(([k]) => t.includes(k));
+    const word = (t.match(/[가-힣]{2,}/g) || []).pop();
+    if (startsWithTime && (type || word)) {
+      const tm = btTime(t.split(' ')[0]);
+      if (tm) {
+        finish();
+        const [kw, title, label] = type || [word, word, ''];
+        cur = { date: date || fallbackDate, start: tm, end: '', kw, title, label, amount: '', dur: null, memo: [] };
+        continue;
+      }
+    }
+    if (!cur) continue;
+    if (/^[~\-–>›~]/.test(t) || (!cur.end && /\d/.test(t) && /분|시간|ml/i.test(t))) {
+      // detail row: "~ 19:58   200 ml, 16분"
+      const rest = t.replace(/^[^\d]*/, '');
+      const endTok = rest.split(' ')[0];
+      const et = /^[~\-–>›]/.test(t) ? btTime(endTok) : null;
+      if (et) cur.end = et;
+      const d = btDuration(rest.slice(endTok.length));
+      if (d != null) cur.dur = d;
+      const ml = rest.match(/(\d{2,3})\s*m\s*[l1I|]/i);
+      const nums = rest.slice(et ? endTok.length : 0).replace(/\d+\s*(시간|분)/g, '').match(/\d{2,3}/g) || [];
+      const amt = ml ? +ml[1] : nums.map(Number).find((n) => n >= 20 && n <= 400);
+      if (amt && ['분유', '모유', '유축', '이유식', '수유'].includes(cur.kw)) cur.amount = amt + 'ml';
+      continue;
+    }
+    // memo row sits in the title column: "보습로션"
+    if (x0 > width * 0.2 && /[가-힣]{2,}/.test(t) && !/시간|\d+분/.test(t)) cur.memo.push(t);
+  }
+  finish();
+  return items.map((it) => {
+    let end = it.end;
+    // the duration text ("5시간 40분") is a cross-check for a misread end time
+    if (it.dur != null && (!end || Math.abs((toMin(end) - toMin(it.start) + 1440) % 1440 - it.dur) > 2)) end = fromMin(toMin(it.start) + it.dur);
+    const hasRange = !!end && end !== it.start;
+    return {
+      date: it.date, title: it.title,
+      start: hasRange ? it.start : '', end: hasRange ? end : it.start,
+      memo: [it.label, it.amount, ...it.memo].filter(Boolean).join(' · '),
+      key: `${it.date}|${it.title}|${it.start}`,
+      score: (hasRange ? 1 : 0) + (it.amount ? 1 : 0) + it.memo.length,
+    };
+  });
+}
+const entryKey = (e) => `${e.date}|${e.title}|${e.start || e.end}`;
+
+let impItems = [];
+const impSheet = $('#impSheet');
+function impStatus(msg) { $('#impStatus').textContent = msg; }
+function renderImport() {
+  const existing = new Set(data.entries.map(entryKey));
+  $('#impList').innerHTML = impItems.map((it, i) => {
+    const dup = existing.has(it.key);
+    return `<li class="${dup ? 'dup' : ''}"><input type="checkbox" data-imp="${i}" ${dup ? '' : 'checked'} aria-label="${esc(it.title)} 추가">
+      <div class="when">${it.start ? `${it.start}~${it.end}` : it.end}<small>${esc(shortDate(it.date))} (${WD[parseDate(it.date).getDay()]})</small></div>
+      <div class="what"><b>${esc(it.title)}</b>${it.memo ? `<small>${esc(it.memo)}</small>` : ''}${dup ? '<small>이미 있어요</small>' : ''}</div></li>`;
+  }).join('');
+  updateImpBtn();
+}
+function updateImpBtn() {
+  const n = $$('#impList input:checked').length;
+  $('#impAdd').disabled = !n;
+  $('#impAdd').textContent = n ? `${n}개 추가` : '추가';
+}
+$('#impOpen').addEventListener('click', () => {
+  impItems = []; $('#impList').innerHTML = ''; impStatus(''); $('#impRawWrap').hidden = true; updateImpBtn();
+  impSheet.showModal ? impSheet.showModal() : impSheet.setAttribute('open', '');
+});
+$('#impClose').addEventListener('click', () => (impSheet.close ? impSheet.close() : impSheet.removeAttribute('open')));
+$('#impPick').addEventListener('click', () => $('#impFile').click());
+$('#impList').addEventListener('change', updateImpBtn);
+$('#impFile').addEventListener('change', async (ev) => {
+  const files = [...ev.target.files]; ev.target.value = '';
+  if (!files.length) return;
+  $('#impPick').disabled = true;
+  const raw = [];
+  try {
+    const w = await getOcr(impStatus);
+    const found = new Map(impItems.map((it) => [it.key, it]));
+    for (let i = 0; i < files.length; i++) {
+      impStatus(`글자 읽는 중… (${i + 1}/${files.length})`);
+      const canvas = await prepImage(files[i]);
+      const { data: r } = await w.recognize(canvas);
+      const lines = r.lines.map((l) => ({ text: l.text, x0: l.bbox.x0 }));
+      raw.push(lines.map((l) => l.text.trim()).join('\n'));
+      parseBabyTime(lines, canvas.width, curDate).forEach((it) => {
+        const prev = found.get(it.key);
+        if (!prev || it.score > prev.score) found.set(it.key, it); // overlapping screenshots: keep the fuller read
+      });
+    }
+    impItems = [...found.values()].sort((a, b) => (a.date + a.start + a.end).localeCompare(b.date + b.start + b.end));
+    impStatus(impItems.length ? `${impItems.length}개를 찾았어요. 확인하고 추가를 눌러 주세요.` : '기록을 찾지 못했어요. 베이비타임 「기록」 화면 캡처인지 확인해 주세요.');
+    renderImport();
+  } catch (e) {
+    impStatus('글자 인식 도구를 불러오지 못했어요. 인터넷 연결을 확인하고 다시 시도해 주세요.');
+  }
+  $('#impRaw').textContent = raw.join('\n\n────────\n\n');
+  $('#impRawWrap').hidden = !raw.length;
+  $('#impPick').disabled = false;
+  $('#impPick').textContent = '스크린샷 더 고르기';
+});
+$('#impAdd').addEventListener('click', () => {
+  const picked = $$('#impList input:checked').map((c) => impItems[Number(c.dataset.imp)]);
+  if (!picked.length) return;
+  if (!data.categories.includes('육아')) data.categories.push('육아');
+  const existing = new Set(data.entries.map(entryKey));
+  const added = [];
+  picked.forEach((it) => {
+    if (existing.has(it.key)) return;
+    const r = data.routines.find((x) => x.title === it.title);
+    const e = { id: uid(), date: it.date, title: it.title, category: r ? r.category : '육아', start: it.start, end: it.end, memo: it.memo, routineId: r ? r.id : null, source: 'babytime', createdAt: Date.now() };
+    data.entries.push(e); added.push(e.id); existing.add(it.key);
+  });
+  save(); renderToday();
+  impSheet.close ? impSheet.close() : impSheet.removeAttribute('open');
+  toast(`베이비타임 기록 ${added.length}개를 추가했어요`, () => { const ids = new Set(added); data.entries = data.entries.filter((x) => !ids.has(x.id)); save(); renderToday(); });
+});
+
 /* ---------- stats ---------- */
 function barPath(x, y, w, h, r) {
   if (h <= 0) return '';
@@ -827,10 +1060,11 @@ function renderStats() {
   const firstActive = activeDays[0] || today;
   const spanDays = days.filter((d) => d >= firstActive);
 
-  const lastTimes = activeDays.map((d) => Math.max(...byDay.get(d).map((e) => lateAdj(toMin(e.end)))));
-  const firstTimes = activeDays.map((d) => Math.min(...byDay.get(d).map((e) => toMin(e.start || e.end))));
+  const ownDays = activeDays.filter((d) => byDay.get(d).some(isOwn));
+  const lastTimes = ownDays.map((d) => Math.max(...byDay.get(d).filter(isOwn).map((e) => lateAdj(toMin(e.end)))));
+  const firstTimes = ownDays.map((d) => Math.min(...byDay.get(d).filter(isOwn).map((e) => toMin(e.start || e.end))));
   const avg = (a) => (a.length ? a.reduce((s, x) => s + x, 0) / a.length : null);
-  const totalDur = inRange.reduce((s, e) => s + (durMin(e) || 0), 0);
+  const totalDur = inRange.filter(isOwn).reduce((s, e) => s + (durMin(e) || 0), 0);
 
   let html = `<div class="tiles" style="margin-top:12px">
     <div class="tile"><b>${activeDays.length}<small style="font-size:14px;color:var(--text-3)"> / ${spanDays.length}일</small></b><span>기록한 날</span></div>
@@ -845,7 +1079,7 @@ function renderStats() {
 
   // end-of-day trend
   const endVals = days.map((d) => {
-    const l = byDay.get(d);
+    const l = byDay.get(d).filter(isOwn);
     const m = l.length ? Math.max(...l.map((e) => lateAdj(toMin(e.end)))) : 0;
     return { label: shortDate(d), value: m ? m / 60 : 0, text: l.length ? `${fmtDate(d)} · 마지막 기록 ${fromMin(m)}` : `${fmtDate(d)} · 기록 없음` };
   });
