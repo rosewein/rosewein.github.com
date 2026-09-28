@@ -547,14 +547,15 @@ function fmtHours(m) { return (m / 60).toFixed(m >= 600 ? 0 : 1) + '시간'; }
 const WD = ['일', '월', '화', '수', '목', '금', '토'];
 function fmtDate(s, withYear) { const d = parseDate(s); return `${withYear ? d.getFullYear() + '. ' : ''}${d.getMonth() + 1}월 ${d.getDate()}일 (${WD[d.getDay()]})`; }
 function shortDate(s) { const d = parseDate(s); return `${d.getMonth() + 1}/${d.getDate()}`; }
-// Times before 4 AM count as "late night of the previous day" when averaging end-of-day.
-const lateAdj = (m) => (m < 240 ? m + 1440 : m);
+// Entries live on their calendar date, so 01:40 is early morning. Only a range that
+// crosses midnight (20:00~01:40) ends on the next day.
+const endKey = (e) => toMin(e.end) + (e.start && toMin(e.end) < toMin(e.start) ? 1440 : 0);
 function catColor(cat) {
   const i = data.categories.indexOf(cat);
   return i < 0 ? 'var(--text-3)' : `var(--c${(i % 8) + 1})`;
 }
 function entriesOn(date) {
-  return data.entries.filter((e) => e.date === date).sort((a, b) => lateAdj(toMin(a.end)) - lateAdj(toMin(b.end)) || a.createdAt - b.createdAt);
+  return data.entries.filter((e) => e.date === date).sort((a, b) => endKey(a) - endKey(b) || a.createdAt - b.createdAt);
 }
 
 let data = load();
@@ -1074,7 +1075,7 @@ function renderStats() {
   const spanDays = days.filter((d) => d >= firstActive);
 
   const ownDays = activeDays.filter((d) => byDay.get(d).some(isOwn));
-  const lastTimes = ownDays.map((d) => Math.max(...byDay.get(d).filter(isOwn).map((e) => lateAdj(toMin(e.end)))));
+  const lastTimes = ownDays.map((d) => Math.max(...byDay.get(d).filter(isOwn).map((e) => endKey(e))));
   const firstTimes = ownDays.map((d) => Math.min(...byDay.get(d).filter(isOwn).map((e) => toMin(e.start || e.end))));
   const avg = (a) => (a.length ? a.reduce((s, x) => s + x, 0) / a.length : null);
   const totalDur = inRange.filter(isOwn).reduce((s, e) => s + (durMin(e) || 0), 0);
@@ -1093,7 +1094,7 @@ function renderStats() {
   // end-of-day trend
   const endVals = days.map((d) => {
     const l = byDay.get(d).filter(isOwn);
-    const m = l.length ? Math.max(...l.map((e) => lateAdj(toMin(e.end)))) : 0;
+    const m = l.length ? Math.max(...l.map((e) => endKey(e))) : 0;
     return { label: shortDate(d), value: m ? m / 60 : 0, text: l.length ? `${fmtDate(d)} · 마지막 기록 ${fromMin(m)}` : `${fmtDate(d)} · 기록 없음` };
   });
   html += `<div class="card"><h2>하루 마무리 시각 <span class="sub">그날 마지막 기록</span></h2>${barChart('chEnd', endVals, { label: '날짜별 마지막 기록 시각', readout: lastTimes.length ? `평균 ${fromMin(avg(lastTimes))} · 가장 늦게 ${fromMin(Math.max(...lastTimes))}` : '', maxLabels: 7, labelLast: true, tick: (v) => `${Math.round(v) % 24}시`,
@@ -1137,7 +1138,7 @@ function renderStats() {
         const gaps = ts.slice(1).map((t, i) => (t - ts[i]) / 60000).filter((g) => g > 0 && g <= 720);
         extra = doneDays ? ` · 하루 ${(hits.length / doneDays).toFixed(1)}회` : '';
         if (gaps.length) extra += ` · 간격 ${fmtDur(Math.round(avg(gaps)))}`;
-      } else if (hits.length) extra = ' · 평균 ' + fromMin(avg(hits.map((e) => lateAdj(toMin(e.end)))));
+      } else if (hits.length) extra = ' · 평균 ' + fromMin(avg(hits.map((e) => endKey(e))));
       return { r, doneDays, pct, extra };
     });
     html += `<div class="card"><h2>반복 일과 달성률 <span class="sub">${spanDays.length}일 중</span></h2><div class="hbars">${rows.map((x) => `
@@ -1148,7 +1149,7 @@ function renderStats() {
 
   // top activities
   const acts = new Map();
-  inRange.forEach((e) => { const a = acts.get(e.title) || { n: 0, t: [], m: 0, md: 0 }; a.n++; a.t.push(lateAdj(toMin(e.end))); const d = durMin(e); if (d != null) { a.m += d; a.md++; } acts.set(e.title, a); });
+  inRange.forEach((e) => { const a = acts.get(e.title) || { n: 0, t: [], m: 0, md: 0 }; a.n++; a.t.push(endKey(e)); const d = durMin(e); if (d != null) { a.m += d; a.md++; } acts.set(e.title, a); });
   const actArr = [...acts.entries()].sort((a, b) => b[1].n - a[1].n).slice(0, 15);
   html += `<div class="card"><h2>자주 한 일 <span class="sub">상위 ${actArr.length}개</span></h2>
     <table class="t"><thead><tr><th>한 일</th><th class="n">횟수</th><th class="n">평균 끝난 시각</th><th class="n">평균 소요</th></tr></thead><tbody>
@@ -1232,7 +1233,7 @@ $('#exportJson').addEventListener('click', () => download(`DONE-백업-${todaySt
 $('#exportCsv').addEventListener('click', () => {
   const q = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
   const rows = [['날짜', '요일', '시작', '끝', '소요(분)', '한 일', '분류', '반복일과', '메모']];
-  data.entries.slice().sort((a, b) => a.date.localeCompare(b.date) || lateAdj(toMin(a.end)) - lateAdj(toMin(b.end))).forEach((e) => {
+  data.entries.slice().sort((a, b) => a.date.localeCompare(b.date) || endKey(a) - endKey(b)).forEach((e) => {
     const r = data.routines.find((x) => x.id === e.routineId);
     rows.push([e.date, WD[parseDate(e.date).getDay()], e.start || '', e.end, durMin(e) ?? '', e.title, e.category || '', r || e.routineId ? 'Y' : '', e.memo || '']);
   });
