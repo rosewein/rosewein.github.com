@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>오늘 한 일</title>
+<title>DONE</title>
 <meta name="description" content="오늘 한 일과 끝난 시각을 기록하고 통계를 보는 웹앱">
 <meta name="theme-color" content="#fcfcfb" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#1a1a19" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="한 일">
+<meta name="apple-mobile-web-app-title" content="DONE">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
@@ -981,7 +981,7 @@ function download(name, text, type) {
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
-$('#exportJson').addEventListener('click', () => download(`한일-백업-${todayStr()}.json`, JSON.stringify(data, null, 2), 'application/json'));
+$('#exportJson').addEventListener('click', () => download(`DONE-백업-${todayStr()}.json`, JSON.stringify(data, null, 2), 'application/json'));
 $('#exportCsv').addEventListener('click', () => {
   const q = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
   const rows = [['날짜', '요일', '시작', '끝', '소요(분)', '한 일', '분류', '반복일과', '메모']];
@@ -989,7 +989,7 @@ $('#exportCsv').addEventListener('click', () => {
     const r = data.routines.find((x) => x.id === e.routineId);
     rows.push([e.date, WD[parseDate(e.date).getDay()], e.start || '', e.end, durMin(e) ?? '', e.title, e.category || '', r || e.routineId ? 'Y' : '', e.memo || '']);
   });
-  download(`한일-${todayStr()}.csv`, '﻿' + rows.map((r) => r.map(q).join(',')).join('\r\n'), 'text/csv;charset=utf-8');
+  download(`DONE-${todayStr()}.csv`, '﻿' + rows.map((r) => r.map(q).join(',')).join('\r\n'), 'text/csv;charset=utf-8');
 });
 $('#importBtn').addEventListener('click', () => $('#importFile').click());
 $('#importFile').addEventListener('change', async (ev) => {
