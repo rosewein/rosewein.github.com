@@ -119,6 +119,8 @@ header.top {
 }
 .card h2 { margin: 0 0 10px; font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
 .card h2 .sub { font-weight: 500; color: var(--text-3); font-size: 13px; margin-left: auto; }
+.card h2 .pill { padding: 4px 12px; font-size: 13px; font-weight: 600; }
+.card h2 .sub + .pill { margin-left: 8px; }
 .muted { color: var(--text-3); font-size: 13px; }
 
 /* summary */
@@ -201,6 +203,17 @@ nav.tabs button.on { color: var(--accent); font-weight: 700; }
 .tile b { display: block; font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.2; }
 .tile span { font-size: 12px; color: var(--text-3); }
 .chart svg { width: 100%; height: auto; display: block; overflow: visible; }
+.chart .track { fill: var(--surface-2); }
+.chart text.lane { fill: var(--text-2); font-size: 10px; }
+.chart .mk.sel { stroke: var(--text); stroke-width: 1.5; }
+.chart .pt { stroke: var(--surface); stroke-width: 1; }
+.chart .now { stroke: var(--text-2); stroke-width: 1; stroke-dasharray: 2 2; }
+.chart .rowhit { fill: transparent; cursor: pointer; }
+.chart .rowhit.sel { fill: var(--accent-soft); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-top: 8px; font-size: 12px; color: var(--text-2); }
+.legend span { display: inline-flex; align-items: center; gap: 5px; }
+.legend i { width: 9px; height: 9px; border-radius: 3px; display: inline-block; }
+.readout .go { background: none; border: 0; color: var(--accent); font-weight: 700; padding: 0 0 0 6px; font-size: 13px; }
 .chart .readout { font-size: 13px; color: var(--text-2); min-height: 20px; margin-bottom: 4px; font-variant-numeric: tabular-nums; }
 .chart text { fill: var(--text-3); font-size: 9px; }
 .chart .hit { fill: transparent; cursor: pointer; }
@@ -323,8 +336,13 @@ details.raw pre { white-space: pre-wrap; word-break: break-all; max-height: 30vh
       <button type="button" class="btn ghost block" id="impOpen" style="margin-top:10px">📷 베이비타임 스샷에서 불러오기</button>
     </div>
 
+    <div class="card" id="dayCard" hidden>
+      <h2>하루 한눈에</h2>
+      <div class="chart" id="dayChart"></div>
+    </div>
+
     <div class="card">
-      <h2>타임라인 <span class="sub" id="tlCount"></span></h2>
+      <h2>타임라인 <span class="sub" id="tlCount"></span><button type="button" class="pill" id="shareDay" hidden>공유</button></h2>
       <ul class="tl" id="timeline"></ul>
     </div>
   </div>
@@ -680,6 +698,11 @@ function renderToday() {
   $('#freqWrap').hidden = !top.length;
   $('#freqChips').innerHTML = top.map(([t]) => `<button class="chip small" data-freq="${esc(t)}">+ ${esc(t)}</button>`).join('');
 
+  // day at a glance
+  $('#dayCard').hidden = !list.length;
+  if (list.length) renderDayChart(curDate);
+  $('#shareDay').hidden = !list.length;
+
   // timeline
   $('#tlCount').textContent = list.length ? `${list.length}개` : '';
   $('#timeline').innerHTML = list.length
@@ -1000,6 +1023,146 @@ $('#impAdd').addEventListener('click', () => {
   toast(`베이비타임 기록 ${added.length}개를 추가했어요`, () => { const ids = new Set(added); data.entries = data.entries.filter((x) => !ids.has(x.id)); save(); renderToday(); });
 });
 
+/* ---------- day at a glance ---------- */
+const catOf = (e) => e.category || '분류 없음';
+const catRank = (c) => { const i = data.categories.indexOf(c); return i < 0 ? 999 : i; };
+// Marks on one day in minutes; a range that crossed midnight the day before shows from 00:00.
+function dayMarks(date) {
+  const prev = addDays(date, -1), marks = [];
+  data.entries.forEach((e) => {
+    if (e.date === date) marks.push(e.start ? { e, s: toMin(e.start), f: Math.min(endKey(e), 1440) } : { e, s: toMin(e.end), f: null });
+    else if (e.date === prev && e.start && endKey(e) > 1440) marks.push({ e, s: 0, f: endKey(e) - 1440, cont: true });
+  });
+  // ranges first so point ticks sit on top
+  return marks.sort((a, b) => (a.f == null) - (b.f == null) || a.s - b.s);
+}
+function markText(m) {
+  const e = m.e;
+  return `${e.start ? `${e.start}~${e.end}` : e.end} ${e.title}${m.cont ? ' (전날부터)' : ''}${e.memo ? ' · ' + e.memo : ''}`;
+}
+function catSummary(list) {
+  const c = new Map();
+  list.forEach((e) => c.set(catOf(e), (c.get(catOf(e)) || 0) + 1));
+  return [...c.entries()].sort((a, b) => catRank(a[0]) - catRank(b[0])).map(([k, n]) => `${k} ${n}`).join(' · ');
+}
+function hourGrid(x, top, bottom, H) {
+  let s = '';
+  for (let h = 0; h <= 24; h += 3) {
+    s += `<line class="g" x1="${x(h * 60)}" x2="${x(h * 60)}" y1="${top}" y2="${bottom}"/>`;
+    if (h % 6 === 0) s += `<text x="${x(h * 60)}" y="${H - 3}" text-anchor="${h === 0 ? 'start' : h === 24 ? 'end' : 'middle'}">${h}시</text>`;
+  }
+  return s;
+}
+function markSvg(m, i, x, y, h) {
+  const style = `style="fill:${catColor(catOf(m.e))}"`;
+  if (m.f == null) return `<rect class="mk pt" data-m="${i}" x="${x(m.s) - 1.5}" y="${y}" width="3" height="${h}" rx="1" ${style}/>`;
+  const w = Math.max(3, x(m.f) - x(m.s));
+  return `<rect class="mk" data-m="${i}" x="${x(m.s)}" y="${y}" width="${w}" height="${h}" rx="${Math.min(3, w / 2)}" ${style}/>`;
+}
+function markHit(m, i, x, y, h) {
+  const x0 = x(m.s), w = m.f == null ? 0 : x(m.f) - x0;
+  const hw = Math.max(12, w);
+  return `<rect class="hit" data-m="${i}" x="${x0 + w / 2 - hw / 2}" y="${y}" width="${hw}" height="${h}"/>`;
+}
+// Today tab: one lane per category across 0–24h.
+let dayMarksCache = [];
+function renderDayChart(date) {
+  const marks = dayMarksCache = dayMarks(date);
+  const cats = [...new Set(marks.map((m) => catOf(m.e)))].sort((a, b) => catRank(a) - catRank(b));
+  const W = 340, padL = 46, padR = 6, laneH = 20, gap = 6, axisH = 14;
+  const H = cats.length * (laneH + gap) + axisH;
+  const x = (min) => padL + (min / 1440) * (W - padL - padR);
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="하루 타임라인">`;
+  cats.forEach((c, i) => {
+    const y = i * (laneH + gap);
+    s += `<rect class="track" x="${padL}" y="${y}" width="${W - padL - padR}" height="${laneH}" rx="4"/>`;
+    s += `<text class="lane" x="${padL - 6}" y="${y + laneH / 2 + 3.5}" text-anchor="end">${esc(c.length > 4 ? c.slice(0, 4) : c)}</text>`;
+  });
+  s += hourGrid(x, 0, H - axisH, H);
+  if (date === todayStr()) { const n = new Date(); const nx = x(n.getHours() * 60 + n.getMinutes()); s += `<line class="now" x1="${nx}" x2="${nx}" y1="0" y2="${H - axisH}"/>`; }
+  marks.forEach((m, i) => { s += markSvg(m, i, x, cats.indexOf(catOf(m.e)) * (laneH + gap), laneH); });
+  marks.forEach((m, i) => { s += markHit(m, i, x, cats.indexOf(catOf(m.e)) * (laneH + gap), laneH); });
+  s += `</svg>`;
+  const def = `${catSummary(entriesOn(date))} · 막대를 누르면 내용이 보여요`;
+  const el = $('#dayChart');
+  el.dataset.default = def;
+  el.innerHTML = `<div class="readout">${esc(def)}</div>${s}`;
+}
+function showMark(el, marks, i) {
+  el.querySelectorAll('.mk.sel').forEach((b) => b.classList.remove('sel'));
+  const ro = el.querySelector('.readout');
+  if (i == null) { ro.textContent = el.dataset.default; return; }
+  el.querySelectorAll(`.mk[data-m="${i}"]`).forEach((b) => b.classList.add('sel'));
+  ro.textContent = markText(marks[i]);
+}
+$('#dayChart').addEventListener('click', (ev) => {
+  const h = ev.target.closest('.hit');
+  showMark($('#dayChart'), dayMarksCache, h ? Number(h.dataset.m) : null);
+});
+$('#dayChart').addEventListener('pointerover', (ev) => {
+  const h = ev.target.closest('.hit');
+  if (h && ev.pointerType === 'mouse') showMark($('#dayChart'), dayMarksCache, Number(h.dataset.m));
+});
+
+// Stats: one row per day (BabyTime-style pattern).
+let patternRows = [];
+function patternChart(days) {
+  patternRows = days.map((d) => ({ d, marks: dayMarks(d) }));
+  const n = days.length;
+  const rowH = n <= 14 ? 16 : n <= 31 ? 10 : 6, gap = n <= 31 ? 4 : 2;
+  const W = 340, padL = 46, padR = 6, axisH = 14;
+  const H = n * (rowH + gap) + axisH;
+  const x = (min) => padL + (min / 1440) * (W - padL - padR);
+  const labelEvery = rowH >= 10 ? 1 : 7;
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="날짜별 24시간 패턴">`;
+  patternRows.forEach((r, i) => {
+    const y = i * (rowH + gap);
+    s += `<rect class="rowhit" data-row="${i}" x="0" y="${y - gap / 2}" width="${W}" height="${rowH + gap}"/>`;
+    s += `<rect class="track" x="${padL}" y="${y}" width="${W - padL - padR}" height="${rowH}" rx="${Math.min(4, rowH / 2)}" pointer-events="none"/>`;
+    if (i % labelEvery === 0) s += `<text class="lane" x="${padL - 6}" y="${y + rowH / 2 + 3.5}" text-anchor="end" pointer-events="none">${shortDate(r.d)} ${WD[parseDate(r.d).getDay()]}</text>`;
+  });
+  s += `<g pointer-events="none">${hourGrid(x, 0, H - axisH, H)}`;
+  patternRows.forEach((r, i) => r.marks.forEach((m, j) => { s += markSvg(m, `${i}-${j}`, x, i * (rowH + gap), rowH); }));
+  s += `</g></svg>`;
+  const cats = [...new Set(patternRows.flatMap((r) => r.marks.map((m) => catOf(m.e))))].sort((a, b) => catRank(a) - catRank(b));
+  const legend = `<div class="legend">${cats.map((c) => `<span><i style="background:${catColor(c)}"></i>${esc(c)}</span>`).join('')}</div>`;
+  return `<div class="chart" id="chPattern" data-default="줄을 누르면 그날 요약이 보여요"><div class="readout">줄을 누르면 그날 요약이 보여요</div>${s}${legend}</div>`;
+}
+function wirePattern() {
+  const el = document.getElementById('chPattern'); if (!el) return;
+  el.addEventListener('click', (ev) => {
+    const go = ev.target.closest('.go');
+    if (go) { curDate = go.dataset.date; showTab('today'); return; }
+    const hit = ev.target.closest('.rowhit'); if (!hit) return;
+    el.querySelectorAll('.rowhit.sel').forEach((r) => r.classList.remove('sel'));
+    hit.classList.add('sel');
+    const r = patternRows[Number(hit.dataset.row)];
+    const list = entriesOn(r.d);
+    el.querySelector('.readout').innerHTML = `${esc(fmtDate(r.d))} · ${list.length ? `${list.length}개 · ${esc(catSummary(list))}` : '기록 없음'}<button class="go" data-date="${r.d}">이 날 보기 ›</button>`;
+  });
+}
+
+// Share the day as plain text (카톡, 메모 등).
+function dayText(date) {
+  // in the shared text, read in the order things started
+  const list = entriesOn(date).sort((a, b) => toMin(a.start || a.end) - toMin(b.start || b.end));
+  const lines = [`${fmtDate(date, true)} · DONE`, ''];
+  list.forEach((e) => lines.push(`${e.start ? `${e.start}~${e.end}` : e.end}  ${e.title}${e.memo ? ` (${e.memo})` : ''}`));
+  lines.push('', `총 ${list.length}개 · ${catSummary(list)}`);
+  return lines.join('\n');
+}
+$('#shareDay').addEventListener('click', async () => {
+  const text = dayText(curDate);
+  try {
+    if (navigator.share) { await navigator.share({ text }); return; }
+    await navigator.clipboard.writeText(text);
+    toast('하루 기록을 복사했어요');
+  } catch (e) {
+    if (e && e.name === 'AbortError') return;
+    try { await navigator.clipboard.writeText(text); toast('하루 기록을 복사했어요'); } catch (_) { toast('공유하지 못했어요'); }
+  }
+});
+
 /* ---------- stats ---------- */
 function barPath(x, y, w, h, r) {
   if (h <= 0) return '';
@@ -1087,6 +1250,9 @@ function renderStats() {
     <div class="tile"><b>${lastTimes.length ? fromMin(avg(lastTimes)) : '—'}</b><span>평균 하루 마무리 (마지막 기록)</span></div>
   </div>`;
 
+  // pattern: one 24h row per day, newest on top
+  html += `<div class="card"><h2>패턴 <span class="sub">하루 24시간</span></h2>${patternChart(spanDays.slice().reverse())}</div>`;
+
   // daily counts
   const dayVals = days.map((d) => ({ label: shortDate(d), value: byDay.get(d).length, text: `${fmtDate(d)} · ${byDay.get(d).length}개` }));
   html += `<div class="card"><h2>날짜별 한 일 개수</h2>${barChart('chDaily', dayVals, { label: '날짜별 한 일 개수', readout: '막대를 탭하면 자세히 보여요', maxLabels: 7, labelLast: true })}</div>`;
@@ -1157,6 +1323,7 @@ function renderStats() {
     </tbody></table></div>`;
 
   body.innerHTML = html;
+  wirePattern();
   wireChart('chDaily', dayVals); wireChart('chEnd', endVals); wireChart('chHour', hourVals); wireChart('chWd', wdVals);
 }
 $('#rangeBar').addEventListener('click', (ev) => {
