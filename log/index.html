@@ -476,7 +476,7 @@ function defaultData() {
   const r = (title, category, multi = false) => ({ id: uid(), title, category, multi, createdAt: todayStr() });
   return {
     version: 1,
-    migrations: ['parenting'],
+    migrations: ['parenting', 'no-night-sleep'],
     entries: [],
     categories: DEFAULT_CATS.slice(),
     routines: [...BABY_ROUTINES.map(([t, m]) => r(t, '육아', m)), r('메일 확인', '업무'), r('점심', '개인'), r('운동', '운동')],
@@ -494,6 +494,12 @@ function migrate(d) {
       .map(([title, multi]) => ({ id: uid(), title, category: '육아', multi, createdAt: todayStr() }));
     d.routines = [...add, ...d.routines];
     d.migrations.push('parenting');
+    migrated = true;
+  }
+  if (!d.migrations.includes('no-night-sleep')) {
+    // 밤잠 used to be imported from BabyTime; drop those records
+    d.entries = d.entries.filter((e) => !(e.source === 'babytime' && e.title === '밤잠'));
+    d.migrations.push('no-night-sleep');
     migrated = true;
   }
   return d;
@@ -798,11 +804,11 @@ const OCR = {
   corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.1',
   langPath: 'https://cdn.jsdelivr.net/npm/@tesseract.js-data/kor@1.0.0/4.0.0_best_int',
 };
-// BabyTime item → DONE title; label goes into the memo.
+// BabyTime item → DONE title; label goes into the memo. A null title is skipped (밤잠 is the baby's sleep, not my work).
 const BT_TYPES = [
   ['분유', '수유', '분유'], ['모유', '수유', '모유'], ['수유', '수유', ''], ['유축', '유축', ''], ['이유식', '이유식', ''],
   ['소변', '기저귀', '소변'], ['대변', '기저귀', '대변'], ['기저귀', '기저귀', ''],
-  ['낮잠', '낮잠 재우기', '낮잠'], ['밤잠', '밤잠', ''], ['목욕', '아기 목욕', ''],
+  ['낮잠', '낮잠 재우기', '낮잠'], ['밤잠', null, ''], ['목욕', '아기 목욕', ''],
   ['체온', '체온', ''], ['투약', '투약', ''], ['병원', '병원', ''], ['간식', '간식', ''], ['놀이', '놀이', ''], ['터미타임', '터미타임', ''],
 ];
 let ocrWorker = null;
@@ -898,7 +904,7 @@ function parseBabyTime(lines, width, fallbackDate) {
     if (x0 > width * 0.2 && /[가-힣]{2,}/.test(t) && !/시간|\d+분/.test(t)) cur.memo.push(t);
   }
   finish();
-  return items.map((it) => {
+  return items.filter((it) => it.title).map((it) => {
     let end = it.end;
     // the duration text ("5시간 40분") is a cross-check for a misread end time
     if (it.dur != null && (!end || Math.abs((toMin(end) - toMin(it.start) + 1440) % 1440 - it.dur) > 2)) end = fromMin(toMin(it.start) + it.dur);
