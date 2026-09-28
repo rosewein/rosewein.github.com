@@ -1,0 +1,986 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>오늘 한 일</title>
+<meta name="description" content="오늘 한 일과 끝난 시각을 기록하고 통계를 보는 웹앱">
+<meta name="theme-color" content="#fcfcfb" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1a1a19" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="한 일">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<style>
+:root {
+  color-scheme: light;
+  --bg: #f4f3f0;
+  --surface: #fcfcfb;
+  --surface-2: #efeee9;
+  --border: #e2e0da;
+  --text: #0b0b0b;
+  --text-2: #52514e;
+  --text-3: #7c7b76;
+  --accent: #2a78d6;
+  --accent-ink: #ffffff;
+  --accent-soft: #e3eefb;
+  --done: #1a8a5a;
+  --done-soft: #e2f3ea;
+  --danger: #c93b3a;
+  --bar: #2a78d6;
+  --grid: #e6e4de;
+  --c1: #2a78d6; --c2: #eb6834; --c3: #1baf7a; --c4: #eda100;
+  --c5: #e87ba4; --c6: #008300; --c7: #4a3aa7; --c8: #e34948;
+  --shadow: 0 1px 2px rgba(0,0,0,.05), 0 2px 8px rgba(0,0,0,.04);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #121211;
+    --surface: #1a1a19;
+    --surface-2: #252523;
+    --border: #33332f;
+    --text: #ffffff;
+    --text-2: #c3c2b7;
+    --text-3: #8f8e86;
+    --accent: #3987e5;
+    --accent-ink: #ffffff;
+    --accent-soft: #1e2d42;
+    --done: #3fbf85;
+    --done-soft: #183226;
+    --danger: #e66767;
+    --bar: #3987e5;
+    --grid: #2c2c29;
+    --c1: #3987e5; --c2: #d95926; --c3: #199e70; --c4: #c98500;
+    --c5: #d55181; --c6: #008300; --c7: #9085e9; --c8: #e66767;
+    --shadow: none;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #121211;
+  --surface: #1a1a19;
+  --surface-2: #252523;
+  --border: #33332f;
+  --text: #ffffff;
+  --text-2: #c3c2b7;
+  --text-3: #8f8e86;
+  --accent: #3987e5;
+  --accent-ink: #ffffff;
+  --accent-soft: #1e2d42;
+  --done: #3fbf85;
+  --done-soft: #183226;
+  --danger: #e66767;
+  --bar: #3987e5;
+  --grid: #2c2c29;
+  --c1: #3987e5; --c2: #d95926; --c3: #199e70; --c4: #c98500;
+  --c5: #d55181; --c6: #008300; --c7: #9085e9; --c8: #e66767;
+  --shadow: none;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.45 -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Noto Sans KR", "Malgun Gothic", system-ui, sans-serif;
+  padding-bottom: calc(72px + env(safe-area-inset-bottom));
+  overflow-x: hidden;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+.wrap { max-width: 640px; margin: 0 auto; padding: 0 16px; }
+
+/* header */
+header.top {
+  position: sticky; top: 0; z-index: 10;
+  background: var(--bg);
+  padding: calc(10px + env(safe-area-inset-top)) 0 8px;
+}
+.datebar { display: flex; align-items: center; gap: 8px; }
+.datebar h1 { flex: 1; margin: 0; font-size: 20px; font-weight: 700; text-align: center; }
+.datebar h1 small { display: block; font-size: 12px; font-weight: 500; color: var(--text-3); }
+.iconbtn {
+  width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--border);
+  background: var(--surface); display: grid; place-items: center; font-size: 18px;
+}
+.pill {
+  border: 1px solid var(--border); background: var(--surface); border-radius: 999px;
+  padding: 6px 12px; font-size: 14px;
+}
+.pill.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+
+.card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+  padding: 14px; margin: 12px 0; box-shadow: var(--shadow);
+}
+.card h2 { margin: 0 0 10px; font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.card h2 .sub { font-weight: 500; color: var(--text-3); font-size: 13px; margin-left: auto; }
+.muted { color: var(--text-3); font-size: 13px; }
+
+/* summary */
+.summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 4px; }
+.summary div { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 8px 10px; }
+.summary b { display: block; font-size: 16px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.summary span { font-size: 12px; color: var(--text-3); }
+
+/* chips */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  min-height: 44px; padding: 8px 14px; border-radius: 12px;
+  border: 1.5px solid var(--border); background: var(--surface-2);
+  font-size: 15px; font-weight: 600; text-align: left;
+}
+.chip .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.chip.done { background: var(--done-soft); border-color: var(--done); color: var(--text); }
+.chip.done .t { font-size: 12px; font-weight: 600; color: var(--done); font-variant-numeric: tabular-nums; }
+.chip.small { min-height: 36px; padding: 6px 12px; font-size: 14px; font-weight: 500; border-radius: 999px; background: var(--surface); }
+.chip:active { transform: scale(.97); }
+
+/* form */
+.addrow { display: flex; gap: 8px; }
+.addrow input { flex: 1; min-width: 0; }
+input[type=text], input[type=time], input[type=date], select, textarea {
+  width: 100%; padding: 11px 12px; border-radius: 12px; border: 1px solid var(--border);
+  background: var(--surface-2); font-size: 16px; outline: none;
+}
+input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+textarea { resize: vertical; min-height: 64px; }
+.btn {
+  border: 0; border-radius: 12px; padding: 11px 16px; font-weight: 700;
+  background: var(--accent); color: var(--accent-ink); white-space: nowrap;
+}
+.btn.ghost { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); font-weight: 600; }
+.btn.danger { background: transparent; color: var(--danger); border: 1px solid var(--border); font-weight: 600; }
+.btn.block { width: 100%; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+label.f { display: block; font-size: 12px; color: var(--text-3); margin: 10px 0 4px; }
+.linkbtn { background: none; border: 0; color: var(--accent); padding: 8px 0 0; font-size: 14px; font-weight: 600; }
+.nowbtn { font-size: 12px; background: none; border: 0; color: var(--accent); padding: 0 0 0 6px; font-weight: 600; }
+
+/* timeline */
+.tl { list-style: none; margin: 0; padding: 0; }
+.tl li {
+  display: grid; grid-template-columns: 58px 1fr; gap: 10px; padding: 10px 0;
+  border-top: 1px solid var(--border); cursor: pointer;
+}
+.tl li:first-child { border-top: 0; }
+.tl .time { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 15px; }
+.tl .time small { display: block; font-weight: 500; font-size: 11px; color: var(--text-3); }
+.tl .title { font-weight: 600; word-break: break-word; }
+.tl .meta { font-size: 12px; color: var(--text-3); display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 2px; }
+.tl .memo { font-size: 13px; color: var(--text-2); margin-top: 4px; white-space: pre-wrap; word-break: break-word; }
+.tag { display: inline-flex; align-items: center; gap: 4px; }
+.tag i { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+.empty { text-align: center; color: var(--text-3); padding: 18px 0 8px; font-size: 14px; }
+
+/* nav */
+nav.tabs {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+  background: var(--surface); border-top: 1px solid var(--border);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+nav.tabs .wrap { display: grid; grid-template-columns: repeat(3, 1fr); }
+nav.tabs button {
+  background: none; border: 0; padding: 8px 0 10px; font-size: 12px; color: var(--text-3);
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+}
+nav.tabs button svg { width: 24px; height: 24px; }
+nav.tabs button.on { color: var(--accent); font-weight: 700; }
+.view { display: none; }
+.view.on { display: block; }
+
+/* stats */
+.tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.tile { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 12px; }
+.tile b { display: block; font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.2; }
+.tile span { font-size: 12px; color: var(--text-3); }
+.chart svg { width: 100%; height: auto; display: block; overflow: visible; }
+.chart .readout { font-size: 13px; color: var(--text-2); min-height: 20px; margin-bottom: 4px; font-variant-numeric: tabular-nums; }
+.chart text { fill: var(--text-3); font-size: 9px; }
+.chart .hit { fill: transparent; cursor: pointer; }
+.chart .bar { fill: var(--bar); }
+.chart .bar.sel { fill: var(--text); }
+.chart line.g { stroke: var(--grid); stroke-width: 1; }
+.hbars { display: grid; gap: 10px; }
+.hbar .row1 { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; }
+.hbar .row1 .l { font-weight: 600; display: flex; align-items: center; gap: 6px; min-width: 0; }
+.hbar .row1 .l span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hbar .row1 .v { color: var(--text-2); font-variant-numeric: tabular-nums; white-space: nowrap; font-size: 13px; }
+.hbar .track { height: 8px; background: var(--surface-2); border-radius: 4px; margin-top: 4px; overflow: hidden; }
+.hbar .fill { height: 100%; background: var(--bar); border-radius: 0 4px 4px 0; }
+table.t { width: 100%; border-collapse: collapse; font-size: 14px; }
+table.t th { text-align: left; font-size: 12px; color: var(--text-3); font-weight: 600; padding: 4px 4px 6px; }
+table.t td { padding: 8px 4px; border-top: 1px solid var(--border); font-variant-numeric: tabular-nums; }
+table.t td.n, table.t th.n { text-align: right; white-space: nowrap; }
+.rangebar { display: flex; gap: 6px; flex-wrap: wrap; margin: 4px 0; }
+
+/* settings */
+.list { list-style: none; margin: 0; padding: 0; }
+.list li { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-top: 1px solid var(--border); }
+.list li:first-child { border-top: 0; }
+.list li .name { flex: 1; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
+.list li .name small { display: block; color: var(--text-3); font-weight: 500; font-size: 12px; }
+.sbtn { width: 34px; height: 34px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-2); font-size: 14px; }
+.sbtn.x { color: var(--danger); }
+.stack { display: grid; gap: 8px; }
+
+/* sheet */
+dialog.sheet {
+  border: 0; padding: 0; margin: auto auto 0; width: 100%; max-width: 640px;
+  background: var(--surface); color: var(--text); border-radius: 20px 20px 0 0;
+  max-height: 92vh;
+}
+dialog.sheet::backdrop { background: rgba(0,0,0,.4); }
+dialog.sheet .in { padding: 16px 16px calc(16px + env(safe-area-inset-bottom)); }
+dialog.sheet h3 { margin: 0 0 4px; font-size: 17px; }
+.sheet-actions { display: flex; gap: 8px; margin-top: 16px; }
+.sheet-actions .btn { flex: 1; }
+
+/* toast */
+.toast {
+  position: fixed; left: 50%; bottom: calc(84px + env(safe-area-inset-bottom)); transform: translateX(-50%) translateY(20px);
+  background: var(--text); color: var(--surface); padding: 10px 14px; border-radius: 12px;
+  font-size: 14px; display: flex; gap: 14px; align-items: center; opacity: 0; pointer-events: none;
+  transition: opacity .2s, transform .2s; z-index: 50; max-width: calc(100% - 32px);
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
+.toast button { background: none; border: 0; color: var(--surface); font-weight: 700; text-decoration: underline; padding: 0; }
+</style>
+</head>
+<body>
+
+<!-- ============ 오늘 ============ -->
+<section class="view on" id="v-today">
+  <header class="top">
+    <div class="wrap">
+      <div class="datebar">
+        <button class="iconbtn" id="prevDay" aria-label="이전 날">‹</button>
+        <h1 id="dateTitle">오늘</h1>
+        <button class="iconbtn" id="nextDay" aria-label="다음 날">›</button>
+      </div>
+    </div>
+  </header>
+  <div class="wrap">
+    <div class="summary" id="summary"></div>
+
+    <div class="card">
+      <h2>반복 일과 <span class="sub">탭하면 지금 시각으로 체크</span></h2>
+      <div class="chips" id="routineChips"></div>
+      <div id="freqWrap" style="margin-top:12px">
+        <div class="muted" style="margin-bottom:6px">최근 자주 한 일</div>
+        <div class="chips" id="freqChips"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>방금 끝낸 일 기록</h2>
+      <form id="quickForm" autocomplete="off">
+        <div class="addrow">
+          <input type="text" id="qTitle" list="titleList" placeholder="예: 보고서 작성" enterkeyhint="done">
+          <button class="btn" type="submit">기록</button>
+        </div>
+        <div id="qMore" hidden>
+          <div class="grid2">
+            <div>
+              <label class="f" for="qStart">시작 시각 (선택)</label>
+              <input type="time" id="qStart">
+            </div>
+            <div>
+              <label class="f" for="qEnd">끝난 시각<button type="button" class="nowbtn" data-now="qEnd">지금</button></label>
+              <input type="time" id="qEnd">
+            </div>
+          </div>
+          <label class="f" for="qCat">분류</label>
+          <select id="qCat"></select>
+          <label class="f" for="qMemo">메모 (선택)</label>
+          <textarea id="qMemo" rows="2"></textarea>
+        </div>
+        <button type="button" class="linkbtn" id="qToggle">+ 시작 시각 · 분류 · 메모</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>타임라인 <span class="sub" id="tlCount"></span></h2>
+      <ul class="tl" id="timeline"></ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 통계 ============ -->
+<section class="view" id="v-stats">
+  <header class="top">
+    <div class="wrap">
+      <div class="datebar"><h1>통계</h1></div>
+      <div class="rangebar" id="rangeBar">
+        <button class="pill" data-range="7">7일</button>
+        <button class="pill" data-range="30">30일</button>
+        <button class="pill" data-range="90">90일</button>
+        <button class="pill" data-range="0">전체</button>
+      </div>
+    </div>
+  </header>
+  <div class="wrap" id="statsBody"></div>
+</section>
+
+<!-- ============ 설정 ============ -->
+<section class="view" id="v-settings">
+  <header class="top"><div class="wrap"><div class="datebar"><h1>설정</h1></div></div></header>
+  <div class="wrap">
+    <div class="card">
+      <h2>반복 일과</h2>
+      <ul class="list" id="routineList"></ul>
+      <form id="routineForm" class="stack" style="margin-top:10px" autocomplete="off">
+        <input type="text" id="rTitle" list="titleList" placeholder="새 반복 일과 (예: 퇴근)">
+        <div class="addrow">
+          <select id="rCat"></select>
+          <button class="btn" type="submit">추가</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>분류</h2>
+      <ul class="list" id="catList"></ul>
+      <form id="catForm" class="addrow" style="margin-top:10px" autocomplete="off">
+        <input type="text" id="cName" placeholder="새 분류">
+        <button class="btn" type="submit">추가</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>데이터</h2>
+      <p class="muted" style="margin:0 0 10px">기록은 이 폰의 브라우저에만 저장돼요. 브라우저 데이터를 지우면 사라지니 가끔 내보내기로 백업해 두세요. CSV는 엑셀·구글 시트에서 바로 열립니다.</p>
+      <div class="stack">
+        <div class="grid2">
+          <button class="btn ghost" id="exportJson">백업 (JSON)</button>
+          <button class="btn ghost" id="exportCsv">CSV 내보내기</button>
+        </div>
+        <button class="btn ghost" id="importBtn">백업 불러오기</button>
+        <input type="file" id="importFile" accept="application/json,.json" hidden>
+        <button class="btn danger" id="wipeBtn">모든 기록 삭제</button>
+      </div>
+      <p class="muted" style="margin:12px 0 0" id="storageInfo"></p>
+    </div>
+  </div>
+</section>
+
+<nav class="tabs">
+  <div class="wrap">
+    <button data-tab="today" class="on">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+      오늘
+    </button>
+    <button data-tab="stats">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+      통계
+    </button>
+    <button data-tab="settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+      설정
+    </button>
+  </div>
+</nav>
+
+<datalist id="titleList"></datalist>
+
+<dialog class="sheet" id="editSheet">
+  <form class="in" id="editForm" method="dialog" autocomplete="off">
+    <h3 id="editHeading">기록 수정</h3>
+    <label class="f" for="eTitle">한 일</label>
+    <input type="text" id="eTitle" list="titleList" required>
+    <div class="grid2">
+      <div>
+        <label class="f" for="eStart">시작 시각 (선택)</label>
+        <input type="time" id="eStart">
+      </div>
+      <div>
+        <label class="f" for="eEnd">끝난 시각<button type="button" class="nowbtn" data-now="eEnd">지금</button></label>
+        <input type="time" id="eEnd" required>
+      </div>
+    </div>
+    <div class="grid2">
+      <div>
+        <label class="f" for="eDate">날짜</label>
+        <input type="date" id="eDate" required>
+      </div>
+      <div>
+        <label class="f" for="eCat">분류</label>
+        <select id="eCat"></select>
+      </div>
+    </div>
+    <label class="f" for="eMemo">메모</label>
+    <textarea id="eMemo" rows="3"></textarea>
+    <div class="sheet-actions">
+      <button type="button" class="btn danger" id="eDelete">삭제</button>
+      <button type="button" class="btn ghost" id="eCancel">닫기</button>
+      <button type="submit" class="btn" id="eSave">저장</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="toast" id="toast"><span id="toastMsg"></span><button id="toastUndo" hidden>되돌리기</button></div>
+
+<script>
+(() => {
+'use strict';
+
+/* ---------- storage ---------- */
+const KEY = 'donelog.v1';
+const DEFAULT_CATS = ['업무', '공부', '운동', '집안일', '개인', '기타'];
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
+function defaultData() {
+  const r = (title, category) => ({ id: uid(), title, category, createdAt: todayStr() });
+  return {
+    version: 1,
+    entries: [],
+    categories: DEFAULT_CATS.slice(),
+    routines: [r('출근', '업무'), r('메일 확인', '업무'), r('점심', '개인'), r('운동', '운동'), r('퇴근', '업무')],
+  };
+}
+
+let memoryOnly = false;
+function load() {
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (raw) {
+      const d = JSON.parse(raw);
+      d.entries ||= []; d.routines ||= []; d.categories ||= DEFAULT_CATS.slice();
+      return d;
+    }
+  } catch (e) { memoryOnly = true; }
+  return defaultData();
+}
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify(data)); }
+  catch (e) { memoryOnly = true; toast('저장 실패: 브라우저 저장소를 쓸 수 없어요'); }
+}
+
+/* ---------- utils ---------- */
+const $ = (s) => document.querySelector(s);
+const $$ = (s) => Array.from(document.querySelectorAll(s));
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const pad = (n) => String(n).padStart(2, '0');
+function dateStr(d) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
+function todayStr() { return dateStr(new Date()); }
+function parseDate(s) { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); }
+function addDays(s, n) { const d = parseDate(s); d.setDate(d.getDate() + n); return dateStr(d); }
+function nowTime() { const d = new Date(); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; }
+function toMin(t) { if (!t) return null; const [h, m] = t.split(':').map(Number); return h * 60 + m; }
+function fromMin(m) { m = Math.round(m); m = ((m % 1440) + 1440) % 1440; return `${pad(Math.floor(m / 60))}:${pad(m % 60)}`; }
+function durMin(e) { if (!e.start || !e.end) return null; let d = toMin(e.end) - toMin(e.start); if (d < 0) d += 1440; return d; }
+function fmtDur(m) { if (m == null) return ''; const h = Math.floor(m / 60), mm = m % 60; return h ? (mm ? `${h}시간 ${mm}분` : `${h}시간`) : `${mm}분`; }
+function fmtHours(m) { return (m / 60).toFixed(m >= 600 ? 0 : 1) + '시간'; }
+const WD = ['일', '월', '화', '수', '목', '금', '토'];
+function fmtDate(s, withYear) { const d = parseDate(s); return `${withYear ? d.getFullYear() + '. ' : ''}${d.getMonth() + 1}월 ${d.getDate()}일 (${WD[d.getDay()]})`; }
+function shortDate(s) { const d = parseDate(s); return `${d.getMonth() + 1}/${d.getDate()}`; }
+// Times before 4 AM count as "late night of the previous day" when averaging end-of-day.
+const lateAdj = (m) => (m < 240 ? m + 1440 : m);
+function catColor(cat) {
+  const i = data.categories.indexOf(cat);
+  return i < 0 ? 'var(--text-3)' : `var(--c${(i % 8) + 1})`;
+}
+function entriesOn(date) {
+  return data.entries.filter((e) => e.date === date).sort((a, b) => lateAdj(toMin(a.end)) - lateAdj(toMin(b.end)) || a.createdAt - b.createdAt);
+}
+
+let data = load();
+
+/* ---------- toast ---------- */
+let toastTimer, undoFn = null;
+function toast(msg, undo) {
+  $('#toastMsg').textContent = msg;
+  undoFn = undo || null;
+  $('#toastUndo').hidden = !undo;
+  $('#toast').classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => $('#toast').classList.remove('show'), undo ? 4500 : 2200);
+}
+$('#toastUndo').addEventListener('click', () => { if (undoFn) undoFn(); undoFn = null; $('#toast').classList.remove('show'); });
+
+/* ---------- state ---------- */
+let curDate = todayStr();
+let range = 7;
+try { range = Number(localStorage.getItem('donelog.range') ?? 7); } catch (e) {}
+
+/* ---------- entries ---------- */
+function addEntry(fields) {
+  const e = {
+    id: uid(), date: curDate, title: '', category: '', start: '', end: nowTime(), memo: '', routineId: null,
+    createdAt: Date.now(), ...fields,
+  };
+  data.entries.push(e);
+  save(); renderToday();
+  toast(`✓ ${e.title} · ${e.end}`, () => { data.entries = data.entries.filter((x) => x.id !== e.id); save(); renderToday(); });
+  return e;
+}
+function lastCategoryFor(title) {
+  for (let i = data.entries.length - 1; i >= 0; i--) if (data.entries[i].title === title) return data.entries[i].category;
+  const r = data.routines.find((x) => x.title === title);
+  return r ? r.category : '';
+}
+const isToday = () => curDate === todayStr();
+
+/* ---------- render: today ---------- */
+function catOptions(sel) {
+  return `<option value="">분류 없음</option>` + data.categories.map((c) => `<option ${c === sel ? 'selected' : ''}>${esc(c)}</option>`).join('');
+}
+function renderDatalist() {
+  const counts = new Map();
+  data.entries.forEach((e) => counts.set(e.title, (counts.get(e.title) || 0) + 1));
+  data.routines.forEach((r) => counts.set(r.title, (counts.get(r.title) || 0) + 1));
+  $('#titleList').innerHTML = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 80).map(([t]) => `<option value="${esc(t)}">`).join('');
+}
+
+function renderToday() {
+  const today = todayStr();
+  $('#dateTitle').innerHTML = `${curDate === today ? '오늘' : curDate === addDays(today, -1) ? '어제' : esc(fmtDate(curDate))}<small>${esc(fmtDate(curDate, true))}</small>`;
+  $('#nextDay').style.visibility = curDate >= today ? 'hidden' : 'visible';
+
+  const list = entriesOn(curDate);
+
+  // summary
+  const first = list.length ? list[0].start || list[0].end : null;
+  const last = list.length ? list[list.length - 1].end : null;
+  const total = list.reduce((s, e) => s + (durMin(e) || 0), 0);
+  $('#summary').innerHTML = `
+    <div><b>${list.length}</b><span>한 일</span></div>
+    <div><b>${first || '—'}</b><span>첫 기록</span></div>
+    <div><b>${last || '—'}</b><span>마지막</span></div>
+    <div><b>${total ? (total >= 60 ? (total / 60).toFixed(1) + 'h' : total + '분') : '—'}</b><span>소요시간</span></div>`;
+
+  // routines
+  const doneMap = new Map();
+  list.forEach((e) => {
+    const r = data.routines.find((x) => x.id === e.routineId) || data.routines.find((x) => x.title === e.title);
+    if (r) { const arr = doneMap.get(r.id) || []; arr.push(e); doneMap.set(r.id, arr); }
+  });
+  $('#routineChips').innerHTML = data.routines.length
+    ? data.routines.map((r) => {
+        const done = doneMap.get(r.id);
+        return `<button class="chip ${done ? 'done' : ''}" data-routine="${r.id}">
+          ${done ? '✓' : `<span class="dot" style="background:${catColor(r.category)}"></span>`}
+          <span>${esc(r.title)}</span>
+          ${done ? `<span class="t">${done.map((e) => e.end).join(', ')}</span>` : ''}
+        </button>`;
+      }).join('')
+    : `<span class="muted">설정 탭에서 반복 일과를 추가해 보세요.</span>`;
+
+  // frequent (non-routine) titles from last 21 days
+  const routineTitles = new Set(data.routines.map((r) => r.title));
+  const todayTitles = new Set(list.map((e) => e.title));
+  const since = addDays(today, -21);
+  const freq = new Map();
+  data.entries.forEach((e) => { if (e.date >= since && !routineTitles.has(e.title)) freq.set(e.title, (freq.get(e.title) || 0) + 1); });
+  const top = [...freq.entries()].filter(([t, n]) => n >= 2 && !todayTitles.has(t)).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  $('#freqWrap').hidden = !top.length;
+  $('#freqChips').innerHTML = top.map(([t]) => `<button class="chip small" data-freq="${esc(t)}">+ ${esc(t)}</button>`).join('');
+
+  // timeline
+  $('#tlCount').textContent = list.length ? `${list.length}개` : '';
+  $('#timeline').innerHTML = list.length
+    ? list.map((e) => {
+        const d = durMin(e);
+        return `<li data-id="${e.id}">
+          <div class="time">${e.end}${e.start ? `<small>${e.start}~</small>` : ''}</div>
+          <div>
+            <div class="title">${esc(e.title)}</div>
+            <div class="meta">
+              ${e.category ? `<span class="tag"><i style="background:${catColor(e.category)}"></i>${esc(e.category)}</span>` : ''}
+              ${d != null ? `<span>${fmtDur(d)}</span>` : ''}
+            </div>
+            ${e.memo ? `<div class="memo">${esc(e.memo)}</div>` : ''}
+          </div>
+        </li>`;
+      }).join('')
+    : `<li class="empty" style="display:block;cursor:default">${isToday() ? '아직 기록이 없어요. 하나 끝낼 때마다 적어 보세요!' : '이 날은 기록이 없어요.'}</li>`;
+
+  $('#qCat').innerHTML = catOptions($('#qCat').value);
+  renderDatalist();
+}
+
+/* ---------- today: interactions ---------- */
+$('#prevDay').addEventListener('click', () => { curDate = addDays(curDate, -1); renderToday(); });
+$('#nextDay').addEventListener('click', () => { if (curDate < todayStr()) { curDate = addDays(curDate, 1); renderToday(); } });
+
+$('#routineChips').addEventListener('click', (ev) => {
+  const b = ev.target.closest('[data-routine]'); if (!b) return;
+  const r = data.routines.find((x) => x.id === b.dataset.routine); if (!r) return;
+  const already = b.classList.contains('done');
+  if (!isToday()) { openEdit(null, { title: r.title, category: r.category, routineId: r.id }); return; }
+  if (already && !confirm(`'${r.title}'은(는) 오늘 이미 체크했어요. 한 번 더 기록할까요?`)) return;
+  addEntry({ title: r.title, category: r.category, routineId: r.id });
+});
+$('#freqChips').addEventListener('click', (ev) => {
+  const b = ev.target.closest('[data-freq]'); if (!b) return;
+  const t = b.dataset.freq;
+  if (!isToday()) { openEdit(null, { title: t, category: lastCategoryFor(t) }); return; }
+  addEntry({ title: t, category: lastCategoryFor(t) });
+});
+
+$('#qToggle').addEventListener('click', () => {
+  const m = $('#qMore'); m.hidden = !m.hidden;
+  $('#qToggle').textContent = m.hidden ? '+ 시작 시각 · 분류 · 메모' : '− 간단히';
+  if (!m.hidden && !$('#qEnd').value) $('#qEnd').value = isToday() ? nowTime() : '';
+});
+$('#qTitle').addEventListener('change', () => {
+  const c = lastCategoryFor($('#qTitle').value.trim());
+  if (c && data.categories.includes(c)) $('#qCat').value = c;
+});
+$$('[data-now]').forEach((b) => b.addEventListener('click', () => { $('#' + b.dataset.now).value = nowTime(); }));
+
+$('#quickForm').addEventListener('submit', (ev) => {
+  ev.preventDefault();
+  const title = $('#qTitle').value.trim();
+  if (!title) { $('#qTitle').focus(); return; }
+  const more = !$('#qMore').hidden;
+  let end = more && $('#qEnd').value ? $('#qEnd').value : nowTime();
+  if (!isToday() && !(more && $('#qEnd').value)) {
+    // past day without explicit time: open the full editor instead of guessing
+    openEdit(null, { title, category: more ? $('#qCat').value : lastCategoryFor(title), start: more ? $('#qStart').value : '', memo: more ? $('#qMemo').value.trim() : '' });
+    return;
+  }
+  addEntry({
+    title,
+    category: more ? $('#qCat').value : lastCategoryFor(title),
+    start: more ? $('#qStart').value : '',
+    end,
+    memo: more ? $('#qMemo').value.trim() : '',
+  });
+  $('#qTitle').value = ''; $('#qStart').value = ''; $('#qMemo').value = ''; $('#qEnd').value = '';
+  if (more) $('#qEnd').value = isToday() ? nowTime() : '';
+  $('#qTitle').blur();
+});
+
+$('#timeline').addEventListener('click', (ev) => {
+  const li = ev.target.closest('li[data-id]'); if (!li) return;
+  const e = data.entries.find((x) => x.id === li.dataset.id); if (e) openEdit(e);
+});
+
+/* ---------- edit sheet ---------- */
+const sheet = $('#editSheet');
+let editing = null, draft = null;
+function openEdit(entry, preset) {
+  editing = entry; draft = preset || null;
+  const src = entry || { title: '', category: '', start: '', end: isToday() ? nowTime() : '', memo: '', date: curDate, ...preset };
+  $('#editHeading').textContent = entry ? '기록 수정' : '기록 추가';
+  $('#eTitle').value = src.title;
+  $('#eStart').value = src.start || '';
+  $('#eEnd').value = src.end || '';
+  $('#eDate').value = src.date || curDate;
+  $('#eDate').max = todayStr();
+  $('#eCat').innerHTML = catOptions(src.category);
+  $('#eMemo').value = src.memo || '';
+  $('#eDelete').hidden = !entry;
+  if (typeof sheet.showModal === 'function') sheet.showModal(); else sheet.setAttribute('open', '');
+  if (!entry && !src.end) setTimeout(() => $('#eEnd').focus(), 50);
+}
+function closeEdit() { if (sheet.close) sheet.close(); else sheet.removeAttribute('open'); editing = null; draft = null; }
+$('#eCancel').addEventListener('click', closeEdit);
+sheet.addEventListener('click', (ev) => { if (ev.target === sheet) closeEdit(); });
+$('#editForm').addEventListener('submit', (ev) => {
+  ev.preventDefault();
+  const f = {
+    title: $('#eTitle').value.trim(), start: $('#eStart').value, end: $('#eEnd').value,
+    date: $('#eDate').value, category: $('#eCat').value, memo: $('#eMemo').value.trim(),
+  };
+  if (!f.title || !f.end || !f.date) return;
+  if (editing) { Object.assign(editing, f); save(); toast('수정했어요'); }
+  else {
+    data.entries.push({ id: uid(), routineId: draft?.routineId || null, createdAt: Date.now(), ...f });
+    save(); toast(`✓ ${f.title} · ${f.end}`);
+    $('#qTitle').value = ''; $('#qStart').value = ''; $('#qMemo').value = '';
+  }
+  closeEdit(); renderToday();
+});
+$('#eDelete').addEventListener('click', () => {
+  if (!editing) return;
+  const e = editing, idx = data.entries.indexOf(e);
+  data.entries.splice(idx, 1); save(); closeEdit(); renderToday();
+  toast('삭제했어요', () => { data.entries.splice(idx, 0, e); save(); renderToday(); });
+});
+
+/* ---------- stats ---------- */
+function barPath(x, y, w, h, r) {
+  if (h <= 0) return '';
+  r = Math.min(r, w / 2, h);
+  return `M${x},${y + h}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h}Z`;
+}
+// Vertical bar chart with a readout line; values: [{label, value, text}]
+function barChart(id, values, opts = {}) {
+  const W = 340, H = opts.h || 120, padL = 26, padB = 18, padT = 6;
+  const max = Math.max(1, ...values.map((v) => v.value));
+  const base = opts.min || 0;
+  const top = opts.max || niceMax(max);
+  const n = values.length, slot = (W - padL) / n;
+  const gap = n > 40 ? 1 : 2;
+  const bw = Math.max(1, slot - gap);
+  const ih = H - padB - padT;
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(opts.label || '')}">`;
+  [0, 0.5, 1].forEach((f) => {
+    const y = padT + ih - ih * f;
+    s += `<line class="g" x1="${padL}" x2="${W}" y1="${y}" y2="${y}"/><text x="${padL - 4}" y="${y + 3}" text-anchor="end">${fmtTick(base + (top - base) * f, opts)}</text>`;
+  });
+  const every = Math.ceil(n / (opts.maxLabels || 10));
+  values.forEach((v, i) => {
+    const x = padL + i * slot + gap / 2;
+    const h = v.value > 0 ? Math.max(2, ((Math.min(v.value, top) - base) / (top - base)) * ih) : 0;
+    s += `<path class="bar" data-i="${i}" d="${barPath(x, padT + ih - h, bw, h, Math.min(4, bw / 2))}"/>`;
+    if (i % every === 0 || (opts.labelLast && i === n - 1)) s += `<text x="${x + bw / 2}" y="${H - 5}" text-anchor="middle">${esc(v.label)}</text>`;
+    s += `<rect class="hit" data-i="${i}" x="${padL + i * slot}" y="0" width="${slot}" height="${H}"><title>${esc(v.text)}</title></rect>`;
+  });
+  s += `</svg>`;
+  return `<div class="chart" id="${id}" data-default="${esc(opts.readout || '')}"><div class="readout">${esc(opts.readout || '')}</div>${s}</div>`;
+}
+function niceMax(m) {
+  if (m <= 5) return Math.ceil(m);
+  const p = Math.pow(10, Math.floor(Math.log10(m)));
+  for (const k of [1, 2, 2.5, 5, 10]) if (k * p >= m) return k * p;
+  return m;
+}
+function fmtTick(v, opts) { return opts.tick ? opts.tick(v) : (Math.round(v * 10) / 10).toString(); }
+function wireChart(id, values) {
+  const el = document.getElementById(id); if (!el) return;
+  const ro = el.querySelector('.readout');
+  const show = (i) => {
+    el.querySelectorAll('.bar.sel').forEach((b) => b.classList.remove('sel'));
+    if (i == null) { ro.textContent = el.dataset.default; return; }
+    el.querySelector(`.bar[data-i="${i}"]`)?.classList.add('sel');
+    ro.textContent = values[i].text;
+  };
+  el.querySelectorAll('.hit').forEach((r) => {
+    r.addEventListener('pointerenter', () => show(Number(r.dataset.i)));
+    r.addEventListener('click', () => show(Number(r.dataset.i)));
+  });
+  el.querySelector('svg').addEventListener('pointerleave', (ev) => { if (ev.pointerType === 'mouse') show(null); });
+}
+
+function renderStats() {
+  $$('#rangeBar .pill').forEach((b) => b.classList.toggle('on', Number(b.dataset.range) === range));
+  const today = todayStr();
+  const all = data.entries;
+  const body = $('#statsBody');
+  if (!all.length) { body.innerHTML = `<div class="card"><div class="empty">기록이 쌓이면 여기서 통계를 볼 수 있어요.</div></div>`; return; }
+
+  const earliest = all.reduce((m, e) => (e.date < m ? e.date : m), today);
+  let start = range ? addDays(today, -(range - 1)) : earliest;
+  const days = [];
+  for (let d = start; d <= today; d = addDays(d, 1)) days.push(d);
+  const inRange = all.filter((e) => e.date >= start && e.date <= today);
+  const byDay = new Map(days.map((d) => [d, []]));
+  inRange.forEach((e) => byDay.get(e.date)?.push(e));
+  const activeDays = days.filter((d) => byDay.get(d).length);
+  // days counted for averages: from first recorded day in range onwards
+  const firstActive = activeDays[0] || today;
+  const spanDays = days.filter((d) => d >= firstActive);
+
+  const lastTimes = activeDays.map((d) => Math.max(...byDay.get(d).map((e) => lateAdj(toMin(e.end)))));
+  const firstTimes = activeDays.map((d) => Math.min(...byDay.get(d).map((e) => toMin(e.start || e.end))));
+  const avg = (a) => (a.length ? a.reduce((s, x) => s + x, 0) / a.length : null);
+  const totalDur = inRange.reduce((s, e) => s + (durMin(e) || 0), 0);
+
+  let html = `<div class="tiles" style="margin-top:12px">
+    <div class="tile"><b>${activeDays.length}<small style="font-size:14px;color:var(--text-3)"> / ${spanDays.length}일</small></b><span>기록한 날</span></div>
+    <div class="tile"><b>${inRange.length}</b><span>총 한 일 · 하루 평균 ${activeDays.length ? (inRange.length / activeDays.length).toFixed(1) : 0}개</span></div>
+    <div class="tile"><b>${firstTimes.length ? fromMin(avg(firstTimes)) : '—'}</b><span>평균 하루 시작 (첫 기록)</span></div>
+    <div class="tile"><b>${lastTimes.length ? fromMin(avg(lastTimes)) : '—'}</b><span>평균 하루 마무리 (마지막 기록)</span></div>
+  </div>`;
+
+  // daily counts
+  const dayVals = days.map((d) => ({ label: shortDate(d), value: byDay.get(d).length, text: `${fmtDate(d)} · ${byDay.get(d).length}개` }));
+  html += `<div class="card"><h2>날짜별 한 일 개수</h2>${barChart('chDaily', dayVals, { label: '날짜별 한 일 개수', readout: '막대를 탭하면 자세히 보여요', maxLabels: 7, labelLast: true })}</div>`;
+
+  // end-of-day trend
+  const endVals = days.map((d) => {
+    const l = byDay.get(d);
+    const m = l.length ? Math.max(...l.map((e) => lateAdj(toMin(e.end)))) : 0;
+    return { label: shortDate(d), value: m ? m / 60 : 0, text: l.length ? `${fmtDate(d)} · 마지막 기록 ${fromMin(m)}` : `${fmtDate(d)} · 기록 없음` };
+  });
+  html += `<div class="card"><h2>하루 마무리 시각 <span class="sub">그날 마지막 기록</span></h2>${barChart('chEnd', endVals, { label: '날짜별 마지막 기록 시각', readout: lastTimes.length ? `평균 ${fromMin(avg(lastTimes))} · 가장 늦게 ${fromMin(Math.max(...lastTimes))}` : '', maxLabels: 7, labelLast: true, tick: (v) => `${Math.round(v) % 24}시`,
+    min: lastTimes.length ? Math.max(0, Math.floor(Math.min(...lastTimes) / 60) - 2) : 0, max: lastTimes.length ? Math.ceil(Math.max(...lastTimes) / 60) + 1 : 24 })}</div>`;
+
+  // hour histogram
+  const hours = Array(24).fill(0);
+  inRange.forEach((e) => hours[Math.floor(toMin(e.end) / 60)]++);
+  const peak = hours.indexOf(Math.max(...hours));
+  const hourVals = hours.map((c, h) => ({ label: String(h), value: c, text: `${h}시대에 끝낸 일 ${c}개` }));
+  html += `<div class="card"><h2>시간대별 <span class="sub">일을 끝낸 시각 기준</span></h2>${barChart('chHour', hourVals, { label: '시간대별 끝낸 일', readout: `가장 많이 끝낸 시간대: ${peak}시대`, maxLabels: 8, h: 130 })}</div>`;
+
+  // weekday
+  const wdCount = Array(7).fill(0), wdDays = Array(7).fill(0);
+  spanDays.forEach((d) => { const w = parseDate(d).getDay(); wdDays[w]++; wdCount[w] += byDay.get(d).length; });
+  const order = [1, 2, 3, 4, 5, 6, 0];
+  const wdVals = order.map((w) => { const a = wdDays[w] ? wdCount[w] / wdDays[w] : 0; return { label: WD[w], value: a, text: `${WD[w]}요일 평균 ${a.toFixed(1)}개` }; });
+  html += `<div class="card"><h2>요일별 평균</h2>${barChart('chWd', wdVals, { label: '요일별 평균 한 일', readout: '요일별 하루 평균 개수', h: 120 })}</div>`;
+
+  // categories
+  const cats = new Map();
+  inRange.forEach((e) => { const k = e.category || '분류 없음'; const c = cats.get(k) || { n: 0, m: 0 }; c.n++; c.m += durMin(e) || 0; cats.set(k, c); });
+  const catArr = [...cats.entries()].sort((a, b) => b[1].n - a[1].n);
+  const catMax = Math.max(...catArr.map(([, c]) => c.n));
+  html += `<div class="card"><h2>분류별</h2><div class="hbars">${catArr.map(([k, c]) => `
+    <div class="hbar"><div class="row1"><span class="l"><i style="width:8px;height:8px;border-radius:50%;background:${catColor(k)};flex:none"></i><span>${esc(k)}</span></span>
+    <span class="v">${c.n}개 · ${Math.round((c.n / inRange.length) * 100)}%${c.m ? ' · ' + fmtDur(c.m) : ''}</span></div>
+    <div class="track"><div class="fill" style="width:${(c.n / catMax) * 100}%"></div></div></div>`).join('')}</div>
+    ${totalDur ? `<p class="muted" style="margin:10px 0 0">시작 시각을 적은 일의 총 소요시간: ${fmtHours(totalDur)}</p>` : ''}</div>`;
+
+  // routines
+  if (data.routines.length) {
+    const rows = data.routines.map((r) => {
+      const hits = inRange.filter((e) => e.routineId === r.id || e.title === r.title);
+      const doneDays = new Set(hits.map((e) => e.date)).size;
+      const avgT = hits.length ? avg(hits.map((e) => lateAdj(toMin(e.end)))) : null;
+      const pct = spanDays.length ? Math.round((doneDays / spanDays.length) * 100) : 0;
+      return { r, doneDays, pct, avgT };
+    });
+    html += `<div class="card"><h2>반복 일과 달성률 <span class="sub">${spanDays.length}일 중</span></h2><div class="hbars">${rows.map((x) => `
+      <div class="hbar"><div class="row1"><span class="l"><span>${esc(x.r.title)}</span></span>
+      <span class="v">${x.doneDays}일 · ${x.pct}%${x.avgT != null ? ' · 평균 ' + fromMin(x.avgT) : ''}</span></div>
+      <div class="track"><div class="fill" style="width:${x.pct}%"></div></div></div>`).join('')}</div></div>`;
+  }
+
+  // top activities
+  const acts = new Map();
+  inRange.forEach((e) => { const a = acts.get(e.title) || { n: 0, t: [], m: 0, md: 0 }; a.n++; a.t.push(lateAdj(toMin(e.end))); const d = durMin(e); if (d != null) { a.m += d; a.md++; } acts.set(e.title, a); });
+  const actArr = [...acts.entries()].sort((a, b) => b[1].n - a[1].n).slice(0, 15);
+  html += `<div class="card"><h2>자주 한 일 <span class="sub">상위 ${actArr.length}개</span></h2>
+    <table class="t"><thead><tr><th>한 일</th><th class="n">횟수</th><th class="n">평균 끝난 시각</th><th class="n">평균 소요</th></tr></thead><tbody>
+    ${actArr.map(([t, a]) => `<tr><td>${esc(t)}</td><td class="n">${a.n}</td><td class="n">${fromMin(avg(a.t))}</td><td class="n">${a.md ? fmtDur(Math.round(a.m / a.md)) : '—'}</td></tr>`).join('')}
+    </tbody></table></div>`;
+
+  body.innerHTML = html;
+  wireChart('chDaily', dayVals); wireChart('chEnd', endVals); wireChart('chHour', hourVals); wireChart('chWd', wdVals);
+}
+$('#rangeBar').addEventListener('click', (ev) => {
+  const b = ev.target.closest('[data-range]'); if (!b) return;
+  range = Number(b.dataset.range);
+  try { localStorage.setItem('donelog.range', String(range)); } catch (e) {}
+  renderStats();
+});
+
+/* ---------- settings ---------- */
+function renderSettings() {
+  $('#routineList').innerHTML = data.routines.map((r, i) => `
+    <li><span class="dot" style="width:8px;height:8px;border-radius:50%;background:${catColor(r.category)};flex:none"></span>
+    <span class="name">${esc(r.title)}<small>${esc(r.category || '분류 없음')}</small></span>
+    <button class="sbtn" data-rmove="${i}" data-dir="-1" aria-label="위로" ${i === 0 ? 'disabled' : ''}>↑</button>
+    <button class="sbtn" data-rmove="${i}" data-dir="1" aria-label="아래로" ${i === data.routines.length - 1 ? 'disabled' : ''}>↓</button>
+    <button class="sbtn x" data-rdel="${i}" aria-label="삭제">✕</button></li>`).join('') || `<li class="muted">반복 일과가 없어요.</li>`;
+  $('#rCat').innerHTML = catOptions($('#rCat').value);
+  $('#catList').innerHTML = data.categories.map((c, i) => `
+    <li><span style="width:10px;height:10px;border-radius:50%;background:${catColor(c)};flex:none"></span>
+    <span class="name">${esc(c)}</span>
+    <button class="sbtn x" data-cdel="${i}" aria-label="삭제">✕</button></li>`).join('');
+  let kb = 0;
+  try { kb = Math.round((localStorage.getItem(KEY) || '').length / 1024); } catch (e) {}
+  $('#storageInfo').textContent = memoryOnly
+    ? '⚠ 이 브라우저에서는 저장소를 쓸 수 없어 새로고침하면 기록이 사라져요.'
+    : `기록 ${data.entries.length}개 · 약 ${kb}KB 사용 중`;
+}
+$('#routineForm').addEventListener('submit', (ev) => {
+  ev.preventDefault();
+  const t = $('#rTitle').value.trim(); if (!t) return;
+  data.routines.push({ id: uid(), title: t, category: $('#rCat').value, createdAt: todayStr() });
+  save(); $('#rTitle').value = ''; renderSettings(); renderToday();
+});
+$('#rTitle').addEventListener('change', () => { const c = lastCategoryFor($('#rTitle').value.trim()); if (c && data.categories.includes(c)) $('#rCat').value = c; });
+$('#routineList').addEventListener('click', (ev) => {
+  const mv = ev.target.closest('[data-rmove]'), del = ev.target.closest('[data-rdel]');
+  if (mv) {
+    const i = Number(mv.dataset.rmove), j = i + Number(mv.dataset.dir);
+    if (j < 0 || j >= data.routines.length) return;
+    [data.routines[i], data.routines[j]] = [data.routines[j], data.routines[i]];
+  } else if (del) {
+    const r = data.routines[Number(del.dataset.rdel)];
+    if (!confirm(`'${r.title}' 반복 일과를 뺄까요? (지금까지의 기록은 남아요)`)) return;
+    data.routines.splice(Number(del.dataset.rdel), 1);
+  } else return;
+  save(); renderSettings(); renderToday();
+});
+$('#catForm').addEventListener('submit', (ev) => {
+  ev.preventDefault();
+  const c = $('#cName').value.trim(); if (!c) return;
+  if (data.categories.includes(c)) { toast('이미 있는 분류예요'); return; }
+  data.categories.push(c); save(); $('#cName').value = ''; renderSettings(); renderToday();
+});
+$('#catList').addEventListener('click', (ev) => {
+  const b = ev.target.closest('[data-cdel]'); if (!b) return;
+  const c = data.categories[Number(b.dataset.cdel)];
+  if (!confirm(`'${c}' 분류를 삭제할까요? (기존 기록에는 이름이 그대로 남아요)`)) return;
+  data.categories.splice(Number(b.dataset.cdel), 1); save(); renderSettings(); renderToday();
+});
+
+function download(name, text, type) {
+  const blob = new Blob([text], { type });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+$('#exportJson').addEventListener('click', () => download(`한일-백업-${todayStr()}.json`, JSON.stringify(data, null, 2), 'application/json'));
+$('#exportCsv').addEventListener('click', () => {
+  const q = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const rows = [['날짜', '요일', '시작', '끝', '소요(분)', '한 일', '분류', '반복일과', '메모']];
+  data.entries.slice().sort((a, b) => a.date.localeCompare(b.date) || lateAdj(toMin(a.end)) - lateAdj(toMin(b.end))).forEach((e) => {
+    const r = data.routines.find((x) => x.id === e.routineId);
+    rows.push([e.date, WD[parseDate(e.date).getDay()], e.start || '', e.end, durMin(e) ?? '', e.title, e.category || '', r || e.routineId ? 'Y' : '', e.memo || '']);
+  });
+  download(`한일-${todayStr()}.csv`, '﻿' + rows.map((r) => r.map(q).join(',')).join('\r\n'), 'text/csv;charset=utf-8');
+});
+$('#importBtn').addEventListener('click', () => $('#importFile').click());
+$('#importFile').addEventListener('change', async (ev) => {
+  const file = ev.target.files[0]; if (!file) return;
+  try {
+    const d = JSON.parse(await file.text());
+    if (!Array.isArray(d.entries)) throw new Error('형식 오류');
+    const ids = new Set(data.entries.map((e) => e.id));
+    let added = 0;
+    d.entries.forEach((e) => { if (e && e.id && e.date && e.end && !ids.has(e.id)) { data.entries.push(e); added++; } });
+    (d.routines || []).forEach((r) => { if (r && r.id && !data.routines.some((x) => x.id === r.id || x.title === r.title)) data.routines.push(r); });
+    (d.categories || []).forEach((c) => { if (!data.categories.includes(c)) data.categories.push(c); });
+    save(); renderAll(); toast(`기록 ${added}개를 불러왔어요`);
+  } catch (e) { toast('불러오기 실패: 올바른 백업 파일이 아니에요'); }
+  ev.target.value = '';
+});
+$('#wipeBtn').addEventListener('click', () => {
+  if (!confirm('모든 기록을 삭제할까요? 되돌릴 수 없어요. (반복 일과와 분류는 남아요)')) return;
+  data.entries = []; save(); renderAll(); toast('모든 기록을 삭제했어요');
+});
+
+/* ---------- tabs ---------- */
+function showTab(name) {
+  $$('nav.tabs button').forEach((b) => b.classList.toggle('on', b.dataset.tab === name));
+  $$('.view').forEach((v) => v.classList.toggle('on', v.id === 'v-' + name));
+  if (name === 'stats') renderStats();
+  if (name === 'settings') renderSettings();
+  if (name === 'today') renderToday();
+  window.scrollTo(0, 0);
+}
+$$('nav.tabs button').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
+
+function renderAll() { renderToday(); if ($('#v-stats').classList.contains('on')) renderStats(); renderSettings(); }
+
+// If the app stays open past midnight, jump "today" forward when it comes back.
+let lastSeenToday = todayStr();
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible') return;
+  const t = todayStr();
+  if (t !== lastSeenToday) { if (curDate === lastSeenToday) curDate = t; lastSeenToday = t; renderAll(); }
+});
+window.addEventListener('storage', (ev) => { if (ev.key === KEY) { data = load(); renderAll(); } });
+
+renderToday();
+try { if (!localStorage.getItem(KEY)) save(); } catch (e) {}
+
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+})();
+</script>
+</body>
+</html>
