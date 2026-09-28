@@ -476,7 +476,7 @@ function defaultData() {
   const r = (title, category, multi = false) => ({ id: uid(), title, category, multi, createdAt: todayStr() });
   return {
     version: 1,
-    migrations: ['parenting', 'no-night-sleep'],
+    migrations: ['parenting', 'no-night-sleep', 'babytime-parenting'],
     entries: [],
     categories: DEFAULT_CATS.slice(),
     routines: [...BABY_ROUTINES.map(([t, m]) => r(t, '육아', m)), r('메일 확인', '업무'), r('점심', '개인'), r('운동', '운동')],
@@ -500,6 +500,13 @@ function migrate(d) {
     // 밤잠 used to be imported from BabyTime; drop those records
     d.entries = d.entries.filter((e) => !(e.source === 'babytime' && e.title === '밤잠'));
     d.migrations.push('no-night-sleep');
+    migrated = true;
+  }
+  if (!d.migrations.includes('babytime-parenting')) {
+    // everything from BabyTime is childcare
+    d.entries.forEach((e) => { if (e.source === 'babytime') e.category = '육아'; });
+    if (!d.categories.includes('육아')) d.categories.push('육아');
+    d.migrations.push('babytime-parenting');
     migrated = true;
   }
   return d;
@@ -984,7 +991,7 @@ $('#impAdd').addEventListener('click', () => {
   picked.forEach((it) => {
     if (existing.has(it.key)) return;
     const r = data.routines.find((x) => x.title === it.title);
-    const e = { id: uid(), date: it.date, title: it.title, category: r ? r.category : '육아', start: it.start, end: it.end, memo: it.memo, routineId: r ? r.id : null, source: 'babytime', createdAt: Date.now() };
+    const e = { id: uid(), date: it.date, title: it.title, category: '육아', start: it.start, end: it.end, memo: it.memo, routineId: r ? r.id : null, source: 'babytime', createdAt: Date.now() };
     data.entries.push(e); added.push(e.id); existing.add(it.key);
   });
   save(); renderToday();
