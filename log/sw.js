@@ -1,5 +1,5 @@
 // Offline cache for the DONE web app. Bump VERSION when files change.
-const VERSION = 'donelog-v7';
+const VERSION = 'donelog-v8';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon.svg', './icon-180.png', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', (e) => {
