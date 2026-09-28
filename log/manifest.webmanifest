@@ -1,6 +1,6 @@
 {
-  "name": "오늘 한 일",
-  "short_name": "한 일",
+  "name": "DONE",
+  "short_name": "DONE",
   "description": "오늘 한 일과 끝난 시각을 기록하고 통계를 봅니다",
   "lang": "ko",
   "start_url": "./",
