@@ -140,6 +140,9 @@ header.top {
 .chip .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
 .chip.done { background: var(--done-soft); border-color: var(--done); color: var(--text); }
 .chip .t { font-size: 12px; font-weight: 600; color: var(--text-3); font-variant-numeric: tabular-nums; }
+.chip.run { background: var(--accent-soft); border-color: var(--accent); }
+.chip.run .t { color: var(--accent); }
+.chip.run.over { border-style: dashed; }
 .chip.done .t { font-size: 12px; font-weight: 600; color: var(--done); font-variant-numeric: tabular-nums; }
 .chip.small { min-height: 36px; padding: 6px 12px; font-size: 14px; font-weight: 500; border-radius: 999px; background: var(--surface); }
 .chip:active { transform: scale(.97); }
@@ -487,6 +490,8 @@ details.raw pre { white-space: pre-wrap; word-break: break-all; max-height: 30vh
 const KEY = 'donelog.v1';
 const DEFAULT_CATS = ['육아', '업무', '공부', '운동', '집안일', '개인', '기타'];
 // multi: done many times a day (logs without asking, shows count and time since last)
+// machine: a device keeps running after I start it; the chip shows elapsed time until I mark it done
+const WASHER = { minutes: 60, next: '빨래 널기' };
 const BABY_ROUTINES = [['수유', true], ['기저귀', true], ['낮잠 재우기', true], ['아기 목욕', false]];
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 
@@ -494,10 +499,11 @@ function defaultData() {
   const r = (title, category, multi = false) => ({ id: uid(), title, category, multi, createdAt: todayStr() });
   return {
     version: 1,
-    migrations: ['parenting', 'no-night-sleep', 'babytime-parenting'],
+    running: [],
+    migrations: ['parenting', 'no-night-sleep', 'babytime-parenting', 'machines'],
     entries: [],
     categories: DEFAULT_CATS.slice(),
-    routines: [...BABY_ROUTINES.map(([t, m]) => r(t, '육아', m)), r('메일 확인', '업무'), r('점심', '개인'), r('운동', '운동')],
+    routines: [...BABY_ROUTINES.map(([t, m]) => r(t, '육아', m)), { ...r('세탁기 돌리기', '집안일'), machine: { ...WASHER } }, r('메일 확인', '업무'), r('점심', '개인'), r('운동', '운동')],
   };
 }
 
@@ -527,6 +533,14 @@ function migrate(d) {
     d.migrations.push('babytime-parenting');
     migrated = true;
   }
+  if (!d.migrations.includes('machines')) {
+    if (!d.routines.some((r) => r.title === '세탁기 돌리기')) {
+      if (!d.categories.includes('집안일')) d.categories.push('집안일');
+      d.routines.push({ id: uid(), title: '세탁기 돌리기', category: '집안일', machine: { ...WASHER }, createdAt: todayStr() });
+    }
+    d.migrations.push('machines');
+    migrated = true;
+  }
   return d;
 }
 
@@ -536,7 +550,7 @@ function load() {
     const raw = localStorage.getItem(KEY);
     if (raw) {
       const d = JSON.parse(raw);
-      d.entries ||= []; d.routines ||= []; d.categories ||= DEFAULT_CATS.slice();
+      d.entries ||= []; d.routines ||= []; d.categories ||= DEFAULT_CATS.slice(); d.running ||= [];
       return migrate(d);
     }
   } catch (e) { memoryOnly = true; }
@@ -625,6 +639,21 @@ function lastRoutineAt(r) {
   data.entries.forEach((e) => { if (isRoutineEntry(r, e)) { const t = entryTs(e); if (best == null || t > best) best = t; } });
   return best;
 }
+// A running machine; dropped if its start entry was undone or deleted.
+function runningFor(r) {
+  data.running = (data.running || []).filter((x) => data.entries.some((e) => e.id === x.entryId));
+  return data.running.find((x) => x.routineId === r.id);
+}
+function finishMachine(r, run) {
+  const next = r.machine.next;
+  if (!confirm(`${r.title} 끝났어요?${next ? `\n'${next}'(으)로 기록할게요.` : ''}`)) return;
+  data.running = data.running.filter((x) => x !== run);
+  const start = data.entries.find((e) => e.id === run.entryId);
+  const doneAt = nowTime();
+  if (start) start.memo = [start.memo, `완료 ${doneAt}`].filter(Boolean).join(' · ');
+  if (next) addEntry({ title: next, category: r.category, date: todayStr() });
+  else { save(); renderToday(); toast(`${r.title} 완료 · ${doneAt}`); }
+}
 function agoText(ts) {
   const m = Math.floor((Date.now() - ts) / 60000);
   if (m < 1) return '방금';
@@ -661,7 +690,7 @@ function renderToday() {
     <div><b>${list.length}</b><span>한 일</span></div>
     <div><b>${first || '—'}</b><span>첫 기록</span></div>
     <div><b>${last || '—'}</b><span>마지막</span></div>
-    <div><b>${total ? (total >= 60 ? (total / 60).toFixed(1) + 'h' : total + '분') : '—'}</b><span>소요시간</span></div>`;
+    <div><b>${total ? (total >= 60 ? (total / 60).toFixed(1) + 'h' : total + '분') : '—'}</b><span>시간 기록</span></div>`;
 
   // routines
   const doneMap = new Map();
@@ -672,7 +701,13 @@ function renderToday() {
   $('#routineChips').innerHTML = data.routines.length
     ? data.routines.map((r) => {
         const done = doneMap.get(r.id);
-        if (r.multi) {
+        const run = r.machine && runningFor(r);
+        if (run) {
+          const el = Math.floor((Date.now() - run.startTs) / 60000), left = r.machine.minutes - el;
+          const info = left > 0 ? `${el < 1 ? '방금 시작' : `${fmtDur(el)} 지남`} · ${fmtDur(left)} 남음` : `끝났을 거예요 · ${fmtDur(el)}`;
+          return `<button class="chip run ${left > 0 ? '' : 'over'}" data-routine="${r.id}">⏳ <span>${esc(r.title)}</span><span class="t">${info}</span></button>`;
+        }
+        if (r.multi || r.machine) {
           const last = today === curDate ? lastRoutineAt(r) : null;
           const info = [done ? `${done.length}회` : '', last != null ? agoText(last) : done ? done[done.length - 1].end : ''].filter(Boolean).join(' · ');
           return `<button class="chip ${done ? 'done' : ''}" data-routine="${r.id}">
@@ -735,6 +770,14 @@ $('#routineChips').addEventListener('click', (ev) => {
   const r = data.routines.find((x) => x.id === b.dataset.routine); if (!r) return;
   const already = b.classList.contains('done');
   if (!isToday()) { openEdit(null, { title: r.title, category: r.category, routineId: r.id }); return; }
+  if (r.machine) {
+    const run = runningFor(r);
+    if (run) { finishMachine(r, run); return; }
+    const e = addEntry({ title: r.title, category: r.category, routineId: r.id });
+    data.running.push({ routineId: r.id, entryId: e.id, startTs: Date.now() });
+    save(); renderToday();
+    return;
+  }
   if (already && !r.multi && !confirm(`'${r.title}'은(는) 오늘 이미 체크했어요. 한 번 더 기록할까요?`)) return;
   addEntry({ title: r.title, category: r.category, routineId: r.id });
 });
@@ -1289,7 +1332,7 @@ function renderStats() {
     <div class="hbar"><div class="row1"><span class="l"><i style="width:8px;height:8px;border-radius:50%;background:${catColor(k)};flex:none"></i><span>${esc(k)}</span></span>
     <span class="v">${c.n}개 · ${Math.round((c.n / inRange.length) * 100)}%${c.m ? ' · ' + fmtDur(c.m) : ''}</span></div>
     <div class="track"><div class="fill" style="width:${(c.n / catMax) * 100}%"></div></div></div>`).join('')}</div>
-    ${totalDur ? `<p class="muted" style="margin:10px 0 0">시작 시각을 적은 일의 총 소요시간: ${fmtHours(totalDur)}</p>` : ''}</div>`;
+    <p class="muted" style="margin:10px 0 0">시간은 시작~끝을 적은 일만 더해요${totalDur ? ` (총 ${fmtHours(totalDur)})` : ''}. 체크만 한 일 ${inRange.filter((e) => durMin(e) == null).length}개는 개수로만 셌어요.</p></div>`;
 
   // routines
   if (data.routines.length) {
@@ -1337,8 +1380,8 @@ $('#rangeBar').addEventListener('click', (ev) => {
 function renderSettings() {
   $('#routineList').innerHTML = data.routines.map((r, i) => `
     <li><span class="dot" style="width:8px;height:8px;border-radius:50%;background:${catColor(r.category)};flex:none"></span>
-    <span class="name">${esc(r.title)}<small>${esc(r.category || '분류 없음')}</small></span>
-    <button class="sbtn wide ${r.multi ? 'on' : ''}" data-rmulti="${i}" aria-label="하루 여러 번 기록 전환">${r.multi ? '여러 번' : '하루 1번'}</button>
+    <span class="name">${esc(r.title)}<small>${esc(r.category || '분류 없음')}${r.machine ? ` · ${fmtDur(r.machine.minutes)}${r.machine.next ? ` → ${esc(r.machine.next)}` : ''}` : ''}</small></span>
+    <button class="sbtn wide ${r.multi || r.machine ? 'on' : ''}" data-rmulti="${i}" aria-label="기록 방식 바꾸기">${r.machine ? '⏱ 기계' : r.multi ? '여러 번' : '하루 1번'}</button>
     <button class="sbtn" data-rmove="${i}" data-dir="-1" aria-label="위로" ${i === 0 ? 'disabled' : ''}>↑</button>
     <button class="sbtn" data-rmove="${i}" data-dir="1" aria-label="아래로" ${i === data.routines.length - 1 ? 'disabled' : ''}>↓</button>
     <button class="sbtn x" data-rdel="${i}" aria-label="삭제">✕</button></li>`).join('') || `<li class="muted">반복 일과가 없어요.</li>`;
@@ -1363,8 +1406,16 @@ $('#rTitle').addEventListener('change', () => { const c = lastCategoryFor($('#rT
 $('#routineList').addEventListener('click', (ev) => {
   const mv = ev.target.closest('[data-rmove]'), del = ev.target.closest('[data-rdel]'), mu = ev.target.closest('[data-rmulti]');
   if (mu) {
+    // cycles: 하루 1번 → 여러 번 → 기계 → 하루 1번
     const r = data.routines[Number(mu.dataset.rmulti)];
-    r.multi = !r.multi;
+    if (r.machine) { delete r.machine; r.multi = false; data.running = (data.running || []).filter((x) => x.routineId !== r.id); }
+    else if (r.multi) {
+      const next = prompt(`'${r.title}'이(가) 끝나면 할 일이 있나요? (예: 빨래 널기, 없으면 비워 두세요)`, '');
+      if (next === null) return;
+      const min = Number(prompt('보통 몇 분 걸려요?', '60'));
+      r.machine = { minutes: min > 0 ? Math.round(min) : 60, next: next.trim() };
+      r.multi = false;
+    } else r.multi = true;
   } else if (mv) {
     const i = Number(mv.dataset.rmove), j = i + Number(mv.dataset.dir);
     if (j < 0 || j >= data.routines.length) return;
