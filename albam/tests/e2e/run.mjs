@@ -75,13 +75,28 @@ async function demoFlow(browser, base) {
 
   await page.click('#feedBtn');
   await shot(page, 'feed');
-  check((await page.$$eval('#amountRow button', (b) => b.map((x) => x.textContent))).join() === '120,140,160', '최근 양 세 가지');
-  check((await text(page, '#amountRow .on')) === '160', '기본 선택은 마지막 양');
+  const quick = () => page.$$eval('#amountRow button', (b) => b.map((x) => x.textContent).join());
+  check(await quick() === '180,200,220', '빠른 선택 처음 값 180·200·220');
+  check((await text(page, '#stepVal')) === '160ml', '기본 선택은 마지막으로 먹인 양');
+
+  // 수유량 설정: 첫 칸 180 → 190, 저장하면 수유 창으로 돌아와 새 양이 보임
+  await page.click('#amountEditBtn');
+  await page.waitForSelector('#amountSheet:not(.hidden)');
+  check((await page.$$eval('#amountSlots .val', (v) => v.map((x) => x.textContent).join())) === '180ml,200ml,220ml', '수유량 설정 창에 지금 양');
+  await page.click('#amountSlots .slot:nth-child(1) button:nth-of-type(4)');  // +10
+  await shot(page, 'feed-amounts');
+  await page.click('#amountSave');
+  await page.waitForSelector('#feedSheet:not(.hidden)');
+  check(await quick() === '190,200,220', '저장하면 빠른 선택이 바뀜');
+  check((await text(page, '#stepVal')) === '160ml', '돌아와도 고르던 양은 그대로');
+  await page.click('#amountRow button:nth-child(2)');
+  check((await text(page, '#stepVal')) === '200ml', '빠른 선택 200 누르면 200');
   await page.click('#feedSave');
   await page.waitForSelector('#undo:not(.hidden)');
+  check((await text(page, '#lastFeed')).includes('200ml'), '200ml 로 저장');
   check(await page.getAttribute('#elapsed', 'aria-label') === '방금', '저장하면 상태 칸이 바로 바뀜(방금)');
   check(await page.isVisible('#micBtn'), '저장 알림 동안에도 [말하기]는 보임');
-  check(await text(page, '#today') === '오늘 수유4회 · 580ml', '오늘 횟수 증가(예시 3회 + 1)');
+  check(await text(page, '#today') === '오늘 수유4회 · 620ml', '오늘 횟수 증가(예시 3회 + 1)');
   await shot(page, 'saved');
 
   await page.click('#undoMsg');
@@ -225,6 +240,7 @@ async function supabaseFlow(browser, base) {
   await page.click('#feedSave');
   await page.waitForTimeout(400);
   check(fake.events.length === 1, '기록이 Supabase 로 감');
+  check(fake.events[0].amount_ml === 180, '기록이 없으면 빠른 선택 첫 값(180)으로');
   check((await text(page, '#today')).startsWith('오늘 수유1회'), '요약 다시 받음');
   await page.click('#undoMsg');
 
@@ -252,10 +268,21 @@ async function supabaseFlow(browser, base) {
   await page.waitForTimeout(600);
   check((await text(page, '#net')) === '대기 1건', '앱을 다시 열어도 남아 있음');
 
+  // 오프라인에서 수유량 설정 바꾸기 → 쌓였다가 연결되면 보냄
+  await page.click('#feedBtn');
+  await page.click('#amountEditBtn');
+  for (let i = 0; i < 2; i += 1) await page.click('#amountSlots .slot:nth-child(3) button:nth-of-type(4)');  // 220 → 240
+  await page.click('#amountSave');
+  await page.waitForSelector('#feedSheet:not(.hidden)');
+  check((await page.$$eval('#amountRow button', (b) => b.map((x) => x.textContent).join())) === '180,200,240', '오프라인에서도 바꾼 양이 바로 보임');
+  check((await text(page, '#net')) === '대기 2건', '수유량 설정도 대기에 쌓임');
+  await page.click('#feedSheet [data-close]');
+
   await fake.goOnline();
   await page.evaluate(() => window.dispatchEvent(new Event('online')));
   await page.waitForTimeout(800);
   check(fake.events.length === 2 && fake.events[1].kind === 'diaper', '다시 연결되면 보냄');
+  check(fake.feedAmounts.join() === '180,200,240', '쌓였던 수유량 설정도 Supabase 로 감');
   check((await text(page, '#net')) === '', '"대기" 사라짐');
 
   await page.evaluate(() => {

@@ -15,6 +15,6 @@ window.ALBAM_CONFIG = {
   pollSeconds: 20,           // 다른 기기 기록을 다시 읽는 주기
   shiftMinutes: 3,           // 번인 대비로 화면을 옮기는 주기
   hungryMinutes: 180,        // 마지막 수유 후 이만큼 지나면 캐릭터가 배고파함
-  defaultAmounts: [120, 140, 160], // 기록이 없을 때 수유량 빠른 선택
+  defaultAmounts: [180, 200, 220], // 수유량 빠른 선택을 아직 못 받았을 때(평소엔 화면의 '수유량 설정' 값)
   dailyReloadHour: 4,        // 24시간 켜 둘 때 하루 한 번 새로 고침하는 시각
 };

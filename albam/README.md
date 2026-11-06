@@ -15,7 +15,7 @@
 1. 폰 브라우저(아이폰 사파리·안드로이드 크롬 모두 됨)로 `https://rosewein.github.io/albam/?demo` 를 연다.
    Supabase 설정 없이 가짜 데이터로 돈다. 기록은 그 폰에만 남는다.
 2. **폰을 가로로** 돌린다. 세로로 보면 아주 작게 보인다.
-3. 눌러 볼 것: [수유] → 양 → 저장 → "저장됨 [취소 6]", 같은 걸 또 넣으면 확인 창, [지난 기록 넣기] → [최근 기록].
+3. 눌러 볼 것: [수유] → 양 → 저장, [수유] → [빠른 선택 바꾸기] → "저장됨 [취소 6]", 같은 걸 또 넣으면 확인 창, [지난 기록 넣기] → [최근 기록].
 4. **"대기 n건" 보기**: 화면이 뜬 상태에서 **비행기 모드를 켜고** [기저귀] → [대변].
    위쪽에 주황색 "대기 1건"이 뜨고 상태 칸은 바로 바뀐다. 비행기 모드를 끄면 몇 초 안에(늦어도 20초) "대기"가 사라지고 "미리 보기"로 돌아온다.
 5. 처음 상태로 되돌리려면 브라우저의 사이트 데이터를 지운다.
@@ -29,7 +29,7 @@
 
 1. 대시보드에서 프로젝트가 **일시정지(Paused)** 상태면 Restore 한다.
 2. Table Editor에서 기존 표를 확인한다. 새 표는 모두 `care_` 로 시작해 겹치지 않는다.
-3. SQL Editor에 [`supabase/001_care_schema.sql`](supabase/001_care_schema.sql) 전체를 붙여 실행한다(여러 번 실행해도 안전).
+3. SQL Editor에 [`supabase/001_care_schema.sql`](supabase/001_care_schema.sql), [`002_feed_amounts.sql`](supabase/002_feed_amounts.sql)을 **차례로** 붙여 실행한다(여러 번 실행해도 안전).
 4. Authentication → Users → Add user 로 가족 계정을 만든다(이메일+비밀번호, Auto confirm). 거실 기기용 계정을 따로 두면 기기만 로그아웃시키기 쉽다.
 5. 가족으로 등록한다. 여기 없는 계정은 로그인해도 아무것도 못 읽고 못 쓴다.
    ```sql
@@ -61,7 +61,7 @@ python3 tools/import_babytime.py --until 2026-11-10 activity_세훈_*.zip -o imp
 | --- | --- | --- |
 | 하루 끊는 시각 | 자정 | `care_settings.day_start_hour` |
 | 같은 종류 확인 간격 | 10분 | `care_settings.dup_window_minutes` |
-| 수유량 빠른 선택 | 최근 양 3개 (없으면 120·140·160) | `care_settings.quick_amount_count`, `config.js defaultAmounts` |
+| 수유량 빠른 선택 | 180·200·220 | 화면: [수유] → [빠른 선택 바꾸기] (모든 기기에 같이 적용) |
 | 밤 화면 | 21~6시, 터치하면 30초 | `config.js nightStartHour·nightEndHour·nightWakeSeconds` |
 | 저장 직후 취소 / 음성 자동 저장 | 6초 / 4초 | `config.js undoSeconds·voiceConfirmSeconds` |
 | 다른 기기 기록 다시 읽기 | 20초 | `config.js pollSeconds` |

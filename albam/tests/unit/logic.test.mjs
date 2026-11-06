@@ -7,7 +7,8 @@ import { applyPending, findLocalDuplicate } from '../../src/api/pending.js';
 
 // status.js·quick-record.js 는 DOM 도움 함수를 가져오지만, 불러오는 순간에는 DOM 을 쓰지 않는다
 const { chooseMood } = await import('../../src/ui/status.js');
-const { chooseQuickAmounts, clampAmount } = await import('../../src/ui/quick-record.js');
+const { feedAmountsOf, clampAmount } = await import('../../src/ui/quick-record.js');
+const { toSlots } = await import('../../src/ui/feed-amounts.js');
 
 const NOW = new Date(2026, 10, 6, 15, 0);
 const ago = (min) => new Date(NOW - min * 60000);
@@ -58,9 +59,12 @@ test('캐릭터 기분 우선순위', () => {
 });
 
 test('수유량 빠른 선택', () => {
-  assert.deepEqual(chooseQuickAmounts([160, 140, 180], [120, 140, 160]), [140, 160, 180]);
-  assert.deepEqual(chooseQuickAmounts([150], [120, 140, 160]), [120, 140, 150]);
-  assert.deepEqual(chooseQuickAmounts([], [120, 140, 160]), [120, 140, 160]);
+  assert.deepEqual(feedAmountsOf({ feed_amounts: [220, 180, 200] }, [100]), [180, 200, 220]);
+  assert.deepEqual(feedAmountsOf({ feed_amounts: [] }, [180, 200, 220]), [180, 200, 220], '비어 있으면 기본값');
+  assert.deepEqual(feedAmountsOf(null, [180, 200, 220]), [180, 200, 220], '요약 전에는 기본값');
+  assert.deepEqual(toSlots([200, 180, 220]), [180, 200, 220]);
+  assert.deepEqual(toSlots([200]), [200, 220, 240], '모자라면 20ml씩 채움');
+  assert.deepEqual(toSlots([100, 120, 140, 160]), [100, 120, 140], '세 칸까지');
   assert.equal(clampAmount(1000), 500);
   assert.equal(clampAmount(0), 5);
 });
@@ -104,6 +108,14 @@ test('못 보낸 취소: 다음 기록이 마지막이 된다', () => {
 test('이미 요약에 들어간 기록은 두 번 세지 않는다', () => {
   const s = applyPending(base, [add('f1', 'feed', 120, { amount_ml: 140 })]);
   assert.equal(s.today.feed_count, 2);
+});
+
+test('못 보낸 수유량 설정이 얹힌다(가장 나중 것)', () => {
+  const s = applyPending({ ...base, feed_amounts: [180, 200, 220] }, [
+    { op: 'feed_amounts', id: 'x1', amounts: [190, 200, 210] },
+    { op: 'feed_amounts', id: 'x2', amounts: [200, 210, 220] },
+  ]);
+  assert.deepEqual(s.feed_amounts, [200, 210, 220]);
 });
 
 test('요약이 없을 때(처음부터 오프라인)', () => {

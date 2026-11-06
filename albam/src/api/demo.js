@@ -1,14 +1,15 @@
 // 미리 보기(?demo). 진짜 통신 창구(index.js)에 Supabase 대신 이 가짜 서버를 끼운다.
 // 그래서 오프라인 저장, "대기 n건", 다시 연결되면 보내기까지 실제와 똑같이 동작한다.
 // 가짜 서버의 기록은 이 기기의 localStorage 에만 있고, 기기 안 큐·캐시도 실제와 다른 이름을 쓴다.
-// 규칙은 supabase/001_care_schema.sql 의 함수를 흉내 낸다.
+// 규칙은 supabase/*.sql 의 함수를 흉내 낸다.
 
 import { createApi, STORAGE } from './index.js';
 import { NetworkError } from './errors.js';
 
 const EVENTS_KEY = 'albam.demo.events';
+const AMOUNTS_KEY = 'albam.demo.feedAmounts';
+const DEFAULT_FEED_AMOUNTS = [180, 200, 220];
 const DUP_WINDOW_MIN = 10;
-const QUICK_AMOUNT_COUNT = 3;
 const RECENT_LIMIT = 8;
 
 const minutesAgo = (n) => new Date(Date.now() - n * 60000).toISOString();
@@ -45,6 +46,7 @@ class DemoServer {
       case 'care_summary': return this.summary();
       case 'care_add_event': return this.addEvent(args.p);
       case 'care_cancel_event': return this.cancelEvent(args.p_id);
+      case 'care_set_feed_amounts': return this.setFeedAmounts(args.p_amounts);
       default: throw new Error(`unknown function ${name}`);
     }
   }
@@ -64,7 +66,7 @@ class DemoServer {
       today: { feed_count: todayFeeds.length, feed_ml: todayFeeds.reduce((sum, e) => sum + (e.amount_ml || 0), 0) },
       last_diaper: diaper ? { id: diaper.id, at: diaper.occurred_at, type: diaper.detail.type } : null,
       last_sleep: sleep ? { id: sleep.id, at: sleep.occurred_at, ended_at: sleep.ended_at } : null,
-      recent_feed_amounts: [...new Set(feeds.map((e) => e.amount_ml).filter((x) => x != null))].slice(0, QUICK_AMOUNT_COUNT),
+      feed_amounts: this.feedAmounts(),
       recent: all.slice(0, RECENT_LIMIT).map((e) => ({
         id: e.id, kind: e.kind, at: e.occurred_at, ended_at: e.ended_at ?? null, ml: e.amount_ml ?? null, detail: e.detail, source: e.source,
       })),
@@ -95,6 +97,17 @@ class DemoServer {
     e.deleted_at = new Date().toISOString();
     this.save();
     return { status: 'cancelled', id };
+  }
+
+  setFeedAmounts(amounts) {
+    const clean = [...new Set(amounts)].sort((a, b) => a - b);
+    if (!clean.length || clean.length > 6 || clean.some((a) => a < 10 || a > 500)) throw new Error('bad_feed_amounts');
+    localStorage.setItem(AMOUNTS_KEY, JSON.stringify(clean));
+    return { status: 'saved', feed_amounts: clean };
+  }
+
+  feedAmounts() {
+    try { return JSON.parse(localStorage.getItem(AMOUNTS_KEY) || 'null') ?? DEFAULT_FEED_AMOUNTS; } catch (e) { return DEFAULT_FEED_AMOUNTS; }
   }
 
   // ── 저장 ──

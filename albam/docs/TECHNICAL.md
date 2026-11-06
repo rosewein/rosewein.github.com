@@ -33,7 +33,7 @@
 | 원칙 | 코드에서 |
 | --- | --- |
 | 화면은 얇게, 계산은 Supabase에 | 마지막 수유·오늘 합계·최근 양은 `care_summary()`가 계산한다. 화면이 스스로 세는 건 마지막 수유 뒤 지난 시간뿐이다 |
-| 통신은 두 함수 뒤에 | 화면은 `src/api/index.js`의 `getSummary()`·`addEvent()`(+`cancelEvent()`)만 부른다. 다른 기기로 옮길 때 이 폴더만 다시 짜면 된다 |
+| 통신은 두 함수 뒤에 | 화면은 `src/api/index.js`의 `getSummary()`·`addEvent()`(+`cancelEvent()`, `updateFeedAmounts()`)만 부른다. 다른 기기로 옮길 때 이 폴더만 다시 짜면 된다 |
 | 실제 시각과 입력 시각을 따로 | `occurred_at`(실제)과 `recorded_at`(입력)을 따로 둔다. 정렬과 계산은 모두 `occurred_at` 기준이다 |
 | 지우지 않고 취소 표시만 | 삭제 권한이 없고, 취소는 `deleted_at`만 찍는다 |
 | 요약에 항목을 더하기 쉽게 | 요약은 jsonb 하나다. 키를 하나 더해도 기존 화면은 깨지지 않는다 |
@@ -106,10 +106,13 @@ albam/
 │     ├─ night.js          밤 화면
 │     ├─ recorder.js       저장 공통 흐름: 중복 확인 창, 저장 직후 취소
 │     ├─ quick-record.js   [수유] [기저귀] 버튼과 창
+│     ├─ feed-amounts.js   수유량 설정(빠른 선택 세 개)
 │     ├─ late-entry.js     지난 기록 넣기, 최근 기록
 │     ├─ voice-input.js    음성 입력
 │     └─ login.js          로그인 창
-├─ supabase/001_care_schema.sql   표·권한·함수 (여러 번 실행해도 안전)
+├─ supabase/
+│  ├─ 001_care_schema.sql   표·권한·함수 (여러 번 실행해도 안전)
+│  └─ 002_feed_amounts.sql  수유량 빠른 선택을 직접 정하기
 ├─ sprites/                도트 그림 원본 PNG + sprites.json
 ├─ fonts/                  갈무리 글꼴 (SIL OFL 1.1)
 ├─ tools/
@@ -157,7 +160,7 @@ albam/
 | --- | --- | --- |
 | day_start_hour | 0 | 하루를 끊는 시각(서울). 0이면 자정 |
 | dup_window_minutes | 10 | 같은 종류가 이 시간(분) 안에 있으면 확인을 묻는다 |
-| quick_amount_count | 3 | 수유량 빠른 선택 개수 |
+| feed_amounts | [180, 200, 220] | 수유량 빠른 선택(ml). 화면의 '수유량 설정'에서 바꾼다(002) |
 | recent_limit | 8 | 요약의 최근 기록 개수 |
 
 **care_chores**: 집안일 규칙(2단계). 지금은 표만 있다.
@@ -190,7 +193,7 @@ flowchart TD
   "today":       { "feed_count": 6, "feed_ml": 820 },
   "last_diaper": { "id": "…", "at": "…", "type": "poo" },
   "last_sleep":  { "id": "…", "at": "…", "ended_at": "…" },
-  "recent_feed_amounts": [160, 140, 120],
+  "feed_amounts": [180, 200, 220],
   "recent": [ { "id": "…", "kind": "feed", "at": "…", "ended_at": null, "ml": 160, "detail": {}, "source": "…" } ],
   "due_chores": [],
   "settings": { "day_start_hour": 0, "dup_window_minutes": 10 }
@@ -199,7 +202,7 @@ flowchart TD
 
 - `last_*`는 기록이 없으면 `null`이다.
 - `today`는 `day_start`부터 24시간 안의 수유만 센다.
-- `recent_feed_amounts`는 최근 50번 수유 중 서로 다른 양을 최근 것부터 담는다.
+- `feed_amounts`는 `care_settings.feed_amounts`(작은 것부터)다.
 - `recent`는 실제 시각 역순이다.
 - `due_chores`는 2단계에서 채운다.
 
@@ -222,6 +225,9 @@ flowchart TD
 | 오류 `42501` | `not_family` |
 
 **`care_cancel_event(p_id uuid) → jsonb`**: `cancelled` / `already_cancelled` / `not_found`
+
+**`care_set_feed_amounts(p_amounts int[]) → jsonb`** (002): 수유량 빠른 선택 저장. 1~6개, 각 10~500ml. 같은 양은 하나로 합치고 작은 것부터 둔다.
+결과 `{"status":"saved","feed_amounts":[…]}`, 범위를 벗어나면 오류 `22023 bad_feed_amounts`.
 
 ### 4.4 시간대
 
@@ -378,6 +384,7 @@ flowchart TD
 - **아직 못 보낸 기록을 취소하면** 큐에서 빼기만 한다. 서버에는 아무것도 가지 않는다.
 - **서버가 형식 오류로 거절한 기록은 버린다.** 큐가 계속 막히지 않게 하려는 것이다. 버릴 때 콘솔에 남긴다.
 - **오프라인 요약은 근사치다.** 마지막으로 받은 요약 위에 못 보낸 기록을 얹을 뿐이다. 연결되면 서버 값으로 바뀐다.
+- **수유량 설정도 같은 큐를 탄다.** 연결이 끊긴 채 바꾸면 `op: 'feed_amounts'`로 쌓이고, 그동안 화면은 새 양을 쓴다(`applyPending`).
 - **미리 보기(?demo)도 같은 코드를 탄다.** `createApi()`에 Supabase 대신 `demo.js`의 `DemoServer`를 끼운 것이라, 기기가 오프라인이면 똑같이 쌓이고 "대기 n건"이 뜬다. 기기 안 이름은 따로 쓴다(`STORAGE.demo`: 큐 `albam-demo`, 캐시 `albam.demo.summary`). 미리 보기 기록이 실제 Supabase 로 갈 일은 없다.
 
 ### 6.3 로그인과 토큰
@@ -479,7 +486,7 @@ flowchart LR
 | 명령 | 무엇 | 필요한 것 |
 | --- | --- | --- |
 | `npm test` | 음성 규칙, 시각 글자, 기록 이름, 캐릭터 기분, 수유량 선택, 못 보낸 기록 얹기, 서비스 워커 목록, 베이비타임 가져오기 | Node 22+, Python 3.9+ |
-| `npm run test:sql` | 임시 Postgres를 띄워 SQL을 두 번 실행하고 시험한다. 권한, 중복 확인, 다시 보내기, 취소, 순서, 하루 끊는 시각 | PostgreSQL 14+ |
+| `npm run test:sql` | 임시 Postgres를 띄워 `supabase/*.sql`을 번호 순서로 두 번 실행하고 시험한다. 권한, 중복 확인, 다시 보내기, 취소, 순서, 하루 끊는 시각 | PostgreSQL 14+ |
 | `npm run test:e2e` | S10 크기 브라우저로 미리 보기, 밤 화면, 가짜 Supabase(로그인·오프라인·다시 보내기·토큰 갱신)를 눌러 본다 | Playwright + 크로미움 |
 
 `SCREENSHOTS=/tmp/shots npm run test:e2e`로 돌리면 화면 사진도 남긴다.
@@ -500,7 +507,7 @@ flowchart LR
 - 이 저장소는 GitHub Pages로 나간다. main에 합치면 `https://rosewein.github.io/albam/`에 반영된다.
 - 서비스 워커는 네트워크를 먼저 쓴다. 그래서 고친 파일은 다음에 열 때 바로 보인다. 오프라인일 때만 캐시를 쓴다.
 - 파일을 더하거나 이름을 바꾸면 `sw.js`의 `FILES`에 반영하고 `VERSION`을 올린다.
-- SQL은 Supabase SQL Editor에서 직접 실행한다. 바꿀 때는 `002_…sql`처럼 번호를 붙여 새 파일로 더하고, 이미 실행한 파일은 고치지 않는다.
+- SQL은 Supabase SQL Editor에서 번호 순서대로 직접 실행한다(지금 `001`, `002`). 바꿀 때는 `003_…sql`처럼 번호를 붙여 새 파일로 더하고, 이미 실행한 파일은 고치지 않는다. 함수를 바꿀 때는 새 파일에 `create or replace`로 함수 전체를 다시 쓴다(002의 `care_summary()`처럼).
 - `config.js`에는 anon key만 둔다. service_role 키는 절대 넣지 않는다.
 
 ## 12. 고치고 늘리는 법

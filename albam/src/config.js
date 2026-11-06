@@ -16,7 +16,7 @@ const DEFAULTS = {
   pollSeconds: 20,
   shiftMinutes: 3,
   hungryMinutes: 180,
-  defaultAmounts: [120, 140, 160],
+  defaultAmounts: [180, 200, 220],
   dailyReloadHour: 4,
 };
 

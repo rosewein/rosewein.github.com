@@ -135,6 +135,14 @@ button.px.acc { color: var(--accent); }
 .sheet .foot button.main { flex: 2; }
 
 #amountRow button { flex: 1; height: 40px; font-size: 24px; }
+#amountEditBtn { position: absolute; right: 6px; top: 4px; height: 20px; padding: 0 6px; }
+
+/* 수유량 설정 */
+#amountSlots .slot { height: 28px; }
+#amountSlots .lbl { width: 14px; color: var(--dim); }
+#amountSlots button { width: 40px; height: 26px; }
+#amountSlots .val { flex: 1; text-align: center; }
+#amountMsg { margin-top: 4px; min-height: 12px; }
 #stepRow button { width: 40px; height: 28px; }
 #stepVal { flex: 1; text-align: center; }
 #diaperSheet .choices { display: flex; gap: 8px; margin-top: 8px; }
