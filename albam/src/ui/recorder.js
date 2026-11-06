@@ -80,7 +80,6 @@ export function setupRecorder(ctx) {
     };
     undo = { id, timer: setInterval(update, 250) };
     $('#undoText').textContent = `${text} 저장됨`;
-    setHidden($('#actions'), true);
     setHidden($('#undo'), false);
     update();
   }
@@ -88,7 +87,6 @@ export function setupRecorder(ctx) {
     if (undo) clearInterval(undo.timer);
     undo = null;
     setHidden($('#undo'), true);
-    setHidden($('#actions'), false);
   }
   $('#undoBtn').addEventListener('click', async () => {
     if (!undo) return;

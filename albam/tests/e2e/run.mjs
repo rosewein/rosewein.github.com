@@ -59,6 +59,12 @@ async function demoFlow(browser, base) {
 
   check((await page.evaluate(() => document.querySelector('#stage').style.zoom)) === '2', 'S10 에서 6배(기기 화소) = CSS zoom 2');
   check(await text(page, '#elapsed') === '2:35', '경과 시간 표시');
+  const sizes = await page.$$eval('#actions .action', (bs) => bs.map((b) => {
+    const r = b.getBoundingClientRect();
+    const i = b.querySelector('.ico').getBoundingClientRect();
+    return [r.width, r.height, r.top, i.width, i.height, getComputedStyle(b).fontSize].join('/');
+  }));
+  check(sizes.length === 3 && new Set(sizes).size === 1, `큰 버튼 셋 크기·아이콘·글자 똑같음 ${sizes.join(' | ')}`);
 
   await page.click('#feedBtn');
   await shot(page, 'feed');
@@ -67,6 +73,7 @@ async function demoFlow(browser, base) {
   await page.click('#feedSave');
   await page.waitForSelector('#undo:not(.hidden)');
   check(await text(page, '#elapsed') === '0:00', '저장하면 상태 칸이 바로 바뀜');
+  check(await page.isVisible('#micBtn'), '저장 알림 동안에도 [말하기]는 보임');
   check(await text(page, '#todayCount') === '4회', '오늘 횟수 증가(예시 3회 + 1)');
   await shot(page, 'saved');
 

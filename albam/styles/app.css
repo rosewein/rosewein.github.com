@@ -83,18 +83,16 @@ button.px.acc { color: var(--accent); }
 .ico-check { background-position: -60px 0; } .x2.ico-check { background-position: -120px 0; }
 
 /* ── 왼쪽: 캐릭터 칸 (곡면 가장자리 16px 비움) ── */
-#charPanel { left: 16px; top: 4px; width: 108px; height: 172px; }
+#charPanel { left: 16px; top: 4px; width: 112px; height: 124px; }
 #albam {
-  position: absolute; left: 6px; top: 4px; width: 96px; height: 96px;
+  position: absolute; left: 8px; top: 4px; width: 96px; height: 96px;
   background-image: url('../sprites/albam.png'); background-size: 192px 384px;
 }
-#bubble { position: absolute; left: 0; top: 104px; width: 108px; text-align: center; line-height: 12px; height: 24px; color: var(--dim); }
-/* 오른쪽 버튼 줄(#actions)과 위·아래 선을 맞춘다: 4 + 128 = 132 */
-#micBtn { position: absolute; left: 0; top: 128px; width: 108px; }
+#bubble { position: absolute; left: 0; top: 104px; width: 112px; text-align: center; line-height: 12px; height: 24px; color: var(--dim); }
 #micBtn.listening { border-color: var(--accent); color: var(--accent); }
 
 /* ── 오른쪽 위: 상태 ── */
-#status { left: 132px; top: 4px; width: 232px; height: 122px; }
+#status { left: 134px; top: 4px; width: 230px; height: 122px; }
 #elapsedLabel { position: absolute; left: 0; top: 4px; }
 #elapsed { position: absolute; left: 0; top: 18px; letter-spacing: 0; white-space: nowrap; }
 #elapsed.warn { color: var(--warn); }
@@ -106,14 +104,15 @@ button.px.acc { color: var(--accent); }
 #clock { position: absolute; right: 0; top: 70px; text-align: right; }
 /* 못 보낸 기록·연결 상태: 위쪽, '오늘' 칸 왼쪽 */
 #net { position: absolute; right: 92px; top: 6px; text-align: right; white-space: nowrap; }
-#lateBtn { position: absolute; left: 0; top: 102px; width: 232px; height: 20px; font-size: 12px; }
+#lateBtn { position: absolute; left: 0; top: 102px; width: 230px; height: 20px; font-size: 12px; }
 
 /* ── 오른쪽 아래: 큰 버튼 ── */
-#actions { left: 132px; top: 132px; width: 232px; height: 42px; display: flex; gap: 8px; }
-#actions button { flex: 1; }
+/* 큰 버튼 셋: (348 - 6*2) / 3 = 112 씩 똑같이. 둘째 버튼 왼쪽(134)이 상태 칸 왼쪽과 맞는다 */
+#actions { left: 16px; top: 132px; width: 348px; height: 42px; display: flex; gap: 6px; }
+#actions button { flex: 1 1 0; min-width: 0; }
 
-/* 저장 직후 알림 (버튼 자리를 잠깐 덮음) */
-#undo { left: 132px; top: 132px; width: 232px; height: 42px; display: flex; gap: 6px; background: var(--bg); }
+/* 저장 직후 알림: [수유] [기저귀] 자리만 잠깐 덮는다([말하기]는 그대로) */
+#undo { left: 134px; top: 132px; width: 230px; height: 42px; display: flex; gap: 6px; background: var(--bg); }
 #undoMsg { flex: 1; display: flex; align-items: center; gap: 4px; border: 2px solid var(--ok); color: var(--ok); padding: 0 6px; overflow: hidden; white-space: nowrap; }
 #undoBtn { width: 76px; }
 
