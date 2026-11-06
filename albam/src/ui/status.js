@@ -48,7 +48,7 @@ export function createStatusView(ctx) {
     tick();
   }
 
-  /** 오른쪽 구석: 못 보낸 기록 수, 연결 상태 */
+  /** 상태 칸 위쪽('오늘' 왼쪽): 못 보낸 기록 수, 연결 상태 */
   function renderConnection() {
     const net = $('#net');
     if (state.pending) { net.textContent = `대기 ${state.pending}건`; net.className = 't9 acc'; }
