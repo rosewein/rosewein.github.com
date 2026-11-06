@@ -60,9 +60,9 @@ async function demoFlow(browser, base) {
   check((await page.evaluate(() => document.querySelector('#stage').style.zoom)) === '2', 'S10 에서 6배(기기 화소) = CSS zoom 2');
   const label = (sel) => page.getAttribute(sel, 'aria-label');
   check(await label('#elapsed') === '2시간 35분 전', '큰 글씨: 마지막 수유 뒤 "2시간 35분 전"');
-  check(await text(page, '#lastFeed') === '마지막 수유11:25 · 160ml', '마지막 수유 시각에 이름표');
+  check(await text(page, '#lastFeed') === '마지막 수유11:25 · 200ml', '마지막 수유 시각에 이름표');
   check(await text(page, '#clock') === '지금14:00', '현재 시각에 "지금"');
-  check(await text(page, '#today') === '오늘 수유3회 · 420ml', '오늘 수유 한 줄');
+  check(await text(page, '#today') === '오늘 수유3회 · 567ml', '오늘 수유 한 줄');
   check(await text(page, '#lastDiaper') === '마지막 기저귀소변 · 1시간 10분 전', '마지막 기저귀 "1시간 10분 전"');
   const overflow = await page.$$eval('#status > div', (els) => els.filter((e) => e.getBoundingClientRect().right > document.querySelector('#status').getBoundingClientRect().right + 0.5).map((e) => e.id));
   check(overflow.length === 0, `상태 칸 글이 넘치지 않음 ${overflow.join()}`);
@@ -74,29 +74,41 @@ async function demoFlow(browser, base) {
   check(sizes.length === 3 && new Set(sizes).size === 1, `큰 버튼 셋 크기·아이콘·글자 똑같음 ${sizes.join(' | ')}`);
 
   await page.click('#feedBtn');
-  await shot(page, 'feed');
-  const quick = () => page.$$eval('#amountRow button', (b) => b.map((x) => x.textContent).join());
-  check(await quick() === '180,200,220', '빠른 선택 처음 값 180·200·220');
-  check((await text(page, '#stepVal')) === '160ml', '기본 선택은 마지막으로 먹인 양');
+  const quick = () => page.$$eval('#amountRow button', (b) => b.map((x) => `${x.querySelector('.t24').textContent}/${x.querySelector('.machine').textContent}`).join());
+  const chosen = async () => `${await text(page, '#stepRow .amount .t24')} ${await text(page, '#stepRow .amount .machine')}`;
+  check(await quick() === '200/브레짜 180,233/브레짜 210,267/브레짜 240', '빠른 선택 처음 값: 브레짜 180·210·240 (200·233·267)');
+  check(await chosen() === '200ml 브레짜 180', '기본 선택은 마지막으로 먹인 양, 브레짜 물 양 같이');
 
-  // 수유량 설정: 첫 칸 180 → 190, 저장하면 수유 창으로 돌아와 새 양이 보임
+  // ± 버튼: 브레짜 한 칸(물 30ml) 단위, ±10 은 덜 먹었을 때
+  await page.click('#stepRow .machineBtn >> nth=1');   // +30 브레짜
+  check(await chosen() === '233ml 브레짜 210', '+30 브레짜 → 233ml');
+  await page.click('#stepRow .fineBtn >> nth=0');      // -10
+  check(await chosen() === '223ml 브레짜 칸 아님', '-10 하면 브레짜 칸이 아님을 표시');
+  await page.click('#stepRow .machineBtn >> nth=0');   // -30 브레짜 → 아래 칸에 맞춤
+  check(await chosen() === '200ml 브레짜 180', '-30 브레짜 는 아래쪽 칸(180)에 맞춤');
+
+  // 수유량 설정: 셋째 칸 267 → 300(브레짜 270), 저장하면 수유 창으로 돌아와 새 양이 보임
   await page.click('#amountEditBtn');
   await page.waitForSelector('#amountSheet:not(.hidden)');
-  check((await page.$$eval('#amountSlots .val', (v) => v.map((x) => x.textContent).join())) === '180ml,200ml,220ml', '수유량 설정 창에 지금 양');
-  await page.click('#amountSlots .slot:nth-child(1) button:nth-of-type(4)');  // +10
+  const slots = () => page.$$eval('#amountSlots .amount .t24', (v) => v.map((x) => x.textContent).join());
+  check(await slots() === '200ml,233ml,267ml', '수유량 설정 창에 지금 양');
+  check((await page.$$eval('#amountSlots .fineBtn', (b) => b.length)) === 0, '수유량 설정은 브레짜 칸 단위로만');
+  await page.click('#amountSlots .slot:nth-child(3) .machineBtn >> nth=1');  // +30 브레짜
+  check(await slots() === '200ml,233ml,300ml', '+30 브레짜 → 300ml(브레짜 270)');
   await shot(page, 'feed-amounts');
   await page.click('#amountSave');
   await page.waitForSelector('#feedSheet:not(.hidden)');
-  check(await quick() === '190,200,220', '저장하면 빠른 선택이 바뀜');
-  check((await text(page, '#stepVal')) === '160ml', '돌아와도 고르던 양은 그대로');
+  check(await quick() === '200/브레짜 180,233/브레짜 210,300/브레짜 270', '저장하면 빠른 선택이 바뀜');
+  check(await chosen() === '200ml 브레짜 180', '돌아와도 고르던 양은 그대로');
   await page.click('#amountRow button:nth-child(2)');
-  check((await text(page, '#stepVal')) === '200ml', '빠른 선택 200 누르면 200');
+  check(await chosen() === '233ml 브레짜 210', '빠른 선택 233 누르면 브레짜 210');
+  await shot(page, 'feed');
   await page.click('#feedSave');
   await page.waitForSelector('#undo:not(.hidden)');
-  check((await text(page, '#lastFeed')).includes('200ml'), '200ml 로 저장');
+  check((await text(page, '#lastFeed')).includes('233ml'), '233ml(브레짜 210) 로 저장');
   check(await page.getAttribute('#elapsed', 'aria-label') === '방금', '저장하면 상태 칸이 바로 바뀜(방금)');
   check(await page.isVisible('#micBtn'), '저장 알림 동안에도 [말하기]는 보임');
-  check(await text(page, '#today') === '오늘 수유4회 · 620ml', '오늘 횟수 증가(예시 3회 + 1)');
+  check(await text(page, '#today') === '오늘 수유4회 · 800ml', '오늘 횟수 증가(예시 3회 + 1)');
   await shot(page, 'saved');
 
   await page.click('#undoMsg');
@@ -121,6 +133,12 @@ async function demoFlow(browser, base) {
   await page.click('#lateSheet [data-kind="sleep"]');
   await shot(page, 'late-sleep');
   await page.click('#lateSheet [data-kind="feed"]');
+  await shot(page, 'late-feed');
+  const lateOverflow = await page.$$eval('#lateSheet .row, #lateSheet .timeRow', (rows) => {
+    const foot = document.querySelector('#lateSheet .foot').getBoundingClientRect().top;
+    return rows.filter((r) => r.offsetParent && r.getBoundingClientRect().bottom > foot).map((r) => r.id);
+  });
+  check(lateOverflow.length === 0, `지난 기록 창: 줄이 아래 버튼과 안 겹침 ${lateOverflow.join()}`);
   for (let i = 0; i < 3; i += 1) await page.click('#lateSteps [data-min="-60"]');
   await page.click('#lateSave');
   await page.waitForTimeout(300);
@@ -240,7 +258,7 @@ async function supabaseFlow(browser, base) {
   await page.click('#feedSave');
   await page.waitForTimeout(400);
   check(fake.events.length === 1, '기록이 Supabase 로 감');
-  check(fake.events[0].amount_ml === 180, '기록이 없으면 빠른 선택 첫 값(180)으로');
+  check(fake.events[0].amount_ml === 200, '기록이 없으면 빠른 선택 첫 값(200, 브레짜 180)으로');
   check((await text(page, '#today')).startsWith('오늘 수유1회'), '요약 다시 받음');
   await page.click('#undoMsg');
 
@@ -271,10 +289,10 @@ async function supabaseFlow(browser, base) {
   // 오프라인에서 수유량 설정 바꾸기 → 쌓였다가 연결되면 보냄
   await page.click('#feedBtn');
   await page.click('#amountEditBtn');
-  for (let i = 0; i < 2; i += 1) await page.click('#amountSlots .slot:nth-child(3) button:nth-of-type(4)');  // 220 → 240
+  for (let i = 0; i < 2; i += 1) await page.click('#amountSlots .slot:nth-child(3) .machineBtn >> nth=1');  // 브레짜 240 → 270 → 300
   await page.click('#amountSave');
   await page.waitForSelector('#feedSheet:not(.hidden)');
-  check((await page.$$eval('#amountRow button', (b) => b.map((x) => x.textContent).join())) === '180,200,240', '오프라인에서도 바꾼 양이 바로 보임');
+  check((await page.$$eval('#amountRow .t24', (b) => b.map((x) => x.textContent).join())) === '200,233,333', '오프라인에서도 바꾼 양이 바로 보임');
   check((await text(page, '#net')) === '대기 2건', '수유량 설정도 대기에 쌓임');
   await page.click('#feedSheet [data-close]');
 
@@ -282,7 +300,7 @@ async function supabaseFlow(browser, base) {
   await page.evaluate(() => window.dispatchEvent(new Event('online')));
   await page.waitForTimeout(800);
   check(fake.events.length === 2 && fake.events[1].kind === 'diaper', '다시 연결되면 보냄');
-  check(fake.feedAmounts.join() === '180,200,240', '쌓였던 수유량 설정도 Supabase 로 감');
+  check(fake.feedAmounts.join() === '200,233,333', '쌓였던 수유량 설정도 Supabase 로 감');
   check((await text(page, '#net')) === '', '"대기" 사라짐');
 
   await page.evaluate(() => {

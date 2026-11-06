@@ -134,17 +134,27 @@ button.px.acc { color: var(--accent); }
 .sheet .foot button { height: 32px; flex: 1; }
 .sheet .foot button.main { flex: 2; }
 
-#amountRow button { flex: 1; height: 40px; font-size: 24px; }
+/* 수유량: 빠른 선택은 "200 / 브레짜 180" 두 줄, 고르는 줄은 [-10][-30 브레짜] 양 [+30 브레짜][+10] */
+#amountRow button { flex: 1; height: 40px; flex-direction: column; gap: 2px; line-height: 1; }
 #amountEditBtn { position: absolute; right: 6px; top: 4px; height: 20px; padding: 0 6px; }
+.machine { color: var(--dim); }
+button.on .machine { color: var(--accent); }
+.amount { flex: 1; text-align: center; line-height: 1; }
+.amount .machine { margin-top: 3px; }
+.amount.inline { display: flex; align-items: baseline; justify-content: center; gap: 8px; }
+.amount.inline .machine { margin-top: 0; }
+button.fineBtn { width: 34px; }
+/* 브레짜 한 칸 버튼: "+30" 위, "브레짜" 아래 */
+button.machineBtn { width: 44px; flex-direction: column; gap: 1px; line-height: 1; }
+#stepRow { height: 38px; }
+#stepRow button { height: 30px; }
 
 /* 수유량 설정 */
 #amountSlots .slot { height: 28px; }
+#amountSlots .slot + .slot { margin-top: 2px; }
 #amountSlots .lbl { width: 14px; color: var(--dim); }
-#amountSlots button { width: 40px; height: 26px; }
-#amountSlots .val { flex: 1; text-align: center; }
-#amountMsg { margin-top: 4px; min-height: 12px; }
-#stepRow button { width: 40px; height: 28px; }
-#stepVal { flex: 1; text-align: center; }
+#amountSlots button { height: 26px; }
+#amountMsg { margin-top: 2px; min-height: 10px; }
 #diaperSheet .choices { display: flex; gap: 8px; margin-top: 8px; }
 #diaperSheet .choices button { flex: 1; height: 82px; font-size: 24px; flex-direction: column; gap: 8px; }
 
@@ -162,9 +172,8 @@ button.px.acc { color: var(--accent); }
 .timeRow.sel { border-color: var(--accent); }
 .timeRow .lbl { width: 24px; color: var(--dim); }
 #lateSteps button { flex: 1; height: 24px; font-size: 12px; }
-#lateDetail { height: 28px; }
 #lateDetail button { height: 26px; }
-#lateDetail .amt { flex: 1; text-align: center; }
+#lateDetail { height: 38px; }
 
 #recentList { line-height: 15px; }
 #recentList .pending { color: var(--accent); }

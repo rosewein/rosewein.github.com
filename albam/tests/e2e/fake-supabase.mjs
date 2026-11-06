@@ -11,7 +11,7 @@ export async function createFakeSupabase(context) {
   const calls = [];
   let offline = false;
   let tokenNo = 0;
-  let feedAmounts = [180, 200, 220];
+  let feedAmounts = [200, 233, 267];
 
   const live = () => events.filter((e) => !e.deleted).sort((a, b) => new Date(b.occurred_at) - new Date(a.occurred_at));
 

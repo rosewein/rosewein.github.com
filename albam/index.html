@@ -48,16 +48,10 @@
 
     <!-- 수유량 고르기 -->
     <div class="sheet hidden" id="feedSheet">
-      <h2>수유량 · 지금</h2>
+      <h2>수유량(완성량) · 지금</h2>
       <button class="px ghost" id="amountEditBtn">빠른 선택 바꾸기</button>
-      <div class="row" id="amountRow"></div>
-      <div class="row" id="stepRow">
-        <button class="px" data-step="-10">-10</button>
-        <button class="px" data-step="-5">-5</button>
-        <div id="stepVal" class="t24">160ml</div>
-        <button class="px" data-step="5">+5</button>
-        <button class="px" data-step="10">+10</button>
-      </div>
+      <div class="row" id="amountRow"></div>     <!-- 빠른 선택: 200 / 브레짜 180 … -->
+      <div class="row" id="stepRow"></div>       <!-- [-10] [-30 브레짜] 200ml·브레짜 180 [+30 브레짜] [+10] -->
       <div class="foot">
         <button class="px ghost" data-close>닫기</button>
         <button class="px main acc" id="feedSave">저장</button>

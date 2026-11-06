@@ -8,7 +8,7 @@ import { NetworkError } from './errors.js';
 
 const EVENTS_KEY = 'albam.demo.events';
 const AMOUNTS_KEY = 'albam.demo.feedAmounts';
-const DEFAULT_FEED_AMOUNTS = [180, 200, 220];
+const DEFAULT_FEED_AMOUNTS = [200, 233, 267];
 const DUP_WINDOW_MIN = 10;
 const RECENT_LIMIT = 8;
 
@@ -17,10 +17,10 @@ const minutesAgo = (n) => new Date(Date.now() - n * 60000).toISOString();
 function sampleEvents() {
   const ev = (kind, min, extra = {}) => ({ id: crypto.randomUUID(), kind, occurred_at: minutesAgo(min), detail: {}, ...extra });
   return [
-    ev('feed', 155, { amount_ml: 160 }),
+    ev('feed', 155, { amount_ml: 200 }),
     ev('diaper', 70, { detail: { type: 'pee' } }),
-    ev('feed', 330, { amount_ml: 140 }),
-    ev('feed', 520, { amount_ml: 120 }),
+    ev('feed', 330, { amount_ml: 200 }),
+    ev('feed', 520, { amount_ml: 167 }),
     ev('sleep', 300, { ended_at: minutesAgo(200) }),
   ];
 }

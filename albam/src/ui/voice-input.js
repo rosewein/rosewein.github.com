@@ -12,7 +12,7 @@ import { SOURCE } from '../domain.js';
 import { parseUtterance } from '../voice-parse.js';
 
 const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-const EXAMPLES = '예: 수유 160 · 기저귀 대변 · 잠 1시부터 2시 40분까지';
+const EXAMPLES = '예: 수유 200 · 브레짜 210 · 기저귀 대변 · 잠 1시부터 2시 40분까지';
 const ERROR_TEXT = {
   'not-allowed': '마이크 권한을 허용해 주세요',
   'service-not-allowed': '마이크 권한을 허용해 주세요',
@@ -93,7 +93,7 @@ export function setupVoiceInput(ctx) {
     stop();
     const now = ctx.now();
     for (const text of alternatives) {
-      const parsed = parseUtterance(text, now);
+      const parsed = parseUtterance(text, now, { formula: cfg.formula, machine: cfg.machine });
       if (parsed.ok) return confirmThenSave({ ...parsed.event, source: SOURCE.VOICE, voice_text: text }, parsed.label, text);
     }
     sfx.error();

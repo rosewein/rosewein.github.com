@@ -3,12 +3,12 @@
 -- 001 다음에 SQL Editor 에서 실행한다(여러 번 실행해도 안전).
 -- 예전에는 '최근에 먹인 양 3개'를 자동으로 보여 줬는데, 양이 늘 때(지금 200ml) 바로 따라가지 못해서
 -- 가족이 화면에서 직접 정하게 바꾼다.
---   - care_settings.feed_amounts : 빠른 선택 양(ml) 배열. 처음 값 180·200·220
+--   - care_settings.feed_amounts : 빠른 선택 양(완성량 ml) 배열. 처음 값 200·233·267 (브레짜 180·210·240, 압타밀)
 --   - care_set_feed_amounts()    : 화면의 '수유량 설정'이 부르는 함수
 --   - care_summary()             : recent_feed_amounts 대신 feed_amounts 를 돌려준다
 
 insert into public.care_settings (key, value, note) values
-  ('feed_amounts', '[180, 200, 220]', '수유량 빠른 선택(ml). 화면의 수유량 설정에서 바꾼다')
+  ('feed_amounts', '[200, 233, 267]', '수유량 빠른 선택(완성량 ml). 화면의 수유량 설정에서 바꾼다')
 on conflict (key) do nothing;
 
 delete from public.care_settings where key = 'quick_amount_count';
@@ -34,7 +34,7 @@ begin
   end if;
 
   insert into public.care_settings (key, value, note)
-  values ('feed_amounts', to_jsonb(v_clean), '수유량 빠른 선택(ml). 화면의 수유량 설정에서 바꾼다')
+  values ('feed_amounts', to_jsonb(v_clean), '수유량 빠른 선택(완성량 ml). 화면의 수유량 설정에서 바꾼다')
   on conflict (key) do update set value = excluded.value;
 
   return jsonb_build_object('status', 'saved', 'feed_amounts', to_jsonb(v_clean));
@@ -97,7 +97,7 @@ begin
     ),
 
     -- 수유량 빠른 선택: 화면의 '수유량 설정'에서 정한 양(작은 것부터)
-    'feed_amounts', coalesce((select s.value from public.care_settings s where s.key = 'feed_amounts'), '[180, 200, 220]'::jsonb),
+    'feed_amounts', coalesce((select s.value from public.care_settings s where s.key = 'feed_amounts'), '[200, 233, 267]'::jsonb),
 
     -- 최근 기록(실제 시각 순). 나중에 넣는 기록 화면에서 자리 잡은 걸 확인하는 용도
     'recent', (

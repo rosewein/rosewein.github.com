@@ -9,6 +9,7 @@ import { applyPending, findLocalDuplicate } from '../../src/api/pending.js';
 const { chooseMood } = await import('../../src/ui/status.js');
 const { feedAmountsOf, clampAmount } = await import('../../src/ui/quick-record.js');
 const { toSlots } = await import('../../src/ui/feed-amounts.js');
+const { mlForScoops, mlForWater, waterFor, machineLabel, machineAmounts, stepMachine } = await import('../../src/formula.js');
 
 const NOW = new Date(2026, 10, 6, 15, 0);
 const ago = (min) => new Date(NOW - min * 60000);
@@ -58,13 +59,33 @@ test('캐릭터 기분 우선순위', () => {
   assert.equal(chooseMood({ ...base, minutesSinceFeed: null }), 'normal');
 });
 
+test('브레짜(물 30ml 단위) + 압타밀(물 30ml에 1스푼) → 완성량', () => {
+  assert.deepEqual(machineAmounts(), [67, 100, 133, 167, 200, 233, 267, 300, 333], '브레짜 60~300');
+  assert.deepEqual([180, 210, 240].map((w) => mlForWater(w)), [200, 233, 267]);
+  assert.equal(mlForScoops(7), 233);
+  assert.equal(waterFor(200), 180);
+  assert.equal(waterFor(233), 210);
+  assert.equal(waterFor(223), null, '브레짜 칸이 아님');
+  assert.equal(waterFor(400), null, '브레짜 범위 밖');
+  assert.equal(machineLabel(200), '브레짜 180');
+  assert.equal(machineLabel(223), '브레짜 칸 아님');
+  assert.equal(stepMachine(200, +1), 233);
+  assert.equal(stepMachine(200, -1), 167);
+  assert.equal(stepMachine(223, +1), 233, '칸이 아니면 위쪽 칸으로 맞춤');
+  assert.equal(stepMachine(223, -1), 200, '칸이 아니면 아래쪽 칸으로 맞춤');
+  assert.equal(stepMachine(67, -1), 67, '브레짜 60 아래로는 안 감');
+  assert.equal(stepMachine(333, +1), 333, '브레짜 300 위로는 안 감');
+  const other = { formula: { name: '다른 분유', waterMlPerScoop: 20, mlPerScoop: 22 }, machine: { name: '기계', minWaterMl: 40, maxWaterMl: 200, stepWaterMl: 20 } };
+  assert.equal(machineLabel(220, other.formula, other.machine), '기계 200', '분유·기계를 바꾸면 설정값만 바꾸면 됨');
+});
+
 test('수유량 빠른 선택', () => {
-  assert.deepEqual(feedAmountsOf({ feed_amounts: [220, 180, 200] }, [100]), [180, 200, 220]);
-  assert.deepEqual(feedAmountsOf({ feed_amounts: [] }, [180, 200, 220]), [180, 200, 220], '비어 있으면 기본값');
-  assert.deepEqual(feedAmountsOf(null, [180, 200, 220]), [180, 200, 220], '요약 전에는 기본값');
-  assert.deepEqual(toSlots([200, 180, 220]), [180, 200, 220]);
-  assert.deepEqual(toSlots([200]), [200, 220, 240], '모자라면 20ml씩 채움');
-  assert.deepEqual(toSlots([100, 120, 140, 160]), [100, 120, 140], '세 칸까지');
+  assert.deepEqual(feedAmountsOf({ feed_amounts: [267, 200, 233] }, [100]), [200, 233, 267]);
+  assert.deepEqual(feedAmountsOf({ feed_amounts: [] }, [200, 233, 267]), [200, 233, 267], '비어 있으면 기본값');
+  assert.deepEqual(feedAmountsOf(null, [200, 233, 267]), [200, 233, 267], '요약 전에는 기본값');
+  assert.deepEqual(toSlots([233, 200, 267]), [200, 233, 267]);
+  assert.deepEqual(toSlots([200]), [200, 233, 267], '모자라면 브레짜 한 칸씩 채움');
+  assert.deepEqual(toSlots([100, 133, 167, 200]), [100, 133, 167], '세 칸까지');
   assert.equal(clampAmount(1000), 500);
   assert.equal(clampAmount(0), 5);
 });

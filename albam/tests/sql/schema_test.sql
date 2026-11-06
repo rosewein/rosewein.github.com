@@ -118,7 +118,7 @@ begin
          'amount_ml', 90, 'occurred_at', now() - interval '3 hours'));
   s := public.care_summary();
   perform pg_temp.check((s #>> '{last_feed,id}') = 'aaaaaaaa-0000-0000-0000-000000000002', 'late entry keeps real-time order');
-  perform pg_temp.check(s -> 'feed_amounts' = '[180, 200, 220]'::jsonb, 'default feed amounts: ' || (s -> 'feed_amounts')::text);
+  perform pg_temp.check(s -> 'feed_amounts' = '[200, 233, 267]'::jsonb, 'default feed amounts: ' || (s -> 'feed_amounts')::text);
   perform pg_temp.check(not (s ? 'recent_feed_amounts'), 'recent_feed_amounts replaced by feed_amounts');
 
   -- 수유량 빠른 선택 바꾸기: 정렬·중복 제거

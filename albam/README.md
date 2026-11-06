@@ -61,7 +61,8 @@ python3 tools/import_babytime.py --until 2026-11-10 activity_세훈_*.zip -o imp
 | --- | --- | --- |
 | 하루 끊는 시각 | 자정 | `care_settings.day_start_hour` |
 | 같은 종류 확인 간격 | 10분 | `care_settings.dup_window_minutes` |
-| 수유량 빠른 선택 | 180·200·220 | 화면: [수유] → [빠른 선택 바꾸기] (모든 기기에 같이 적용) |
+| 수유량 빠른 선택 | 200·233·267 (브레짜 180·210·240) | 화면: [수유] → [빠른 선택 바꾸기] (모든 기기에 같이 적용) |
+| 분유·기계 | 압타밀, 브레짜(물 30ml 단위). 기록은 완성량 | `config.js formula·machine` |
 | 밤 화면 | 21~6시, 터치하면 30초 | `config.js nightStartHour·nightEndHour·nightWakeSeconds` |
 | 저장 직후 취소 / 음성 자동 저장 | 6초 / 4초 | `config.js undoSeconds·voiceConfirmSeconds` |
 | 다른 기기 기록 다시 읽기 | 20초 | `config.js pollSeconds` |

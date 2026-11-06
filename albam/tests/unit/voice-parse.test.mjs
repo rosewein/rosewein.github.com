@@ -41,6 +41,13 @@ const cases = [
   ['수유 120 한 시간 전', { kind: 'feed', amount_ml: 120, at: mins(60) }],
   ['수유 120 1시간 반 전', { kind: 'feed', amount_ml: 120, at: mins(90) }],
   ['수유 140 2시 10분에', { kind: 'feed', amount_ml: 140, at: at(14, 10) }],
+  ['수유 7스푼', { kind: 'feed', amount_ml: 233, at: NOW.getTime() }],
+  ['수유 일곱 스푼', { kind: 'feed', amount_ml: 233, at: NOW.getTime() }],
+  ['수유 칠 스푼', { kind: 'feed', amount_ml: 233, at: NOW.getTime() }],
+  ['분유 여섯 스쿱 20분 전', { kind: 'feed', amount_ml: 200, at: mins(20) }],
+  ['여덟 숟가락 먹였어', { kind: 'feed', amount_ml: 267, at: NOW.getTime() }],
+  ['브레짜 210', { kind: 'feed', amount_ml: 233, at: NOW.getTime() }],
+  ['수유 브레짜 이백사십 10분 전', { kind: 'feed', amount_ml: 267, at: mins(10) }],
   ['기저귀 대변', { kind: 'diaper', type: 'poo', at: NOW.getTime() }],
   ['기저귀 소변', { kind: 'diaper', type: 'pee', at: NOW.getTime() }],
   ['기저귀 응가', { kind: 'diaper', type: 'poo', at: NOW.getTime() }],
@@ -78,6 +85,9 @@ for (const text of ['', '안녕', '기저귀', '수유', '잠 잤어', '오늘 �
 test('라벨', () => {
   assert.equal(parseUtterance('수유 160', NOW).label, '수유 160ml · 지금');
   assert.equal(parseUtterance('수유 160 20분 전', NOW).label, '수유 160ml · 20분 전');
+  assert.equal(parseUtterance('수유 일곱 스푼', NOW).label, '수유 233ml(7스푼) · 지금');
+  assert.equal(parseUtterance('브레짜 180', NOW).label, '수유 200ml(브레짜 180) · 지금');
+  assert.equal(parseUtterance('브레짜 200', NOW).ok, false, '브레짜에 없는 칸');
   assert.equal(parseUtterance('기저귀 대변', NOW).label, '기저귀 대변 · 지금');
   assert.equal(parseUtterance('잠 1시 10분부터 2시 40분까지', NOW).label, '잠 13:10~14:40');
 });

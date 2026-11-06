@@ -2,6 +2,8 @@
 // ../config.js 는 빌드 없이 고칠 수 있게 일반 <script> 로 읽어 window.ALBAM_CONFIG 에 둔다.
 // Supabase 주소·키만은 기기에서 직접 넣을 수 있어서(로그인 화면) localStorage 값이 있으면 그것을 쓴다.
 
+import { APTAMIL, BREZZA } from './formula.js';
+
 const CONNECTION_KEY = 'albam.config';
 
 /** config.js 에 값이 빠졌을 때 쓰는 기본값 */
@@ -16,7 +18,9 @@ const DEFAULTS = {
   pollSeconds: 20,
   shiftMinutes: 3,
   hungryMinutes: 180,
-  defaultAmounts: [180, 200, 220],
+  defaultAmounts: [200, 233, 267],
+  formula: APTAMIL,
+  machine: BREZZA,
   dailyReloadHour: 4,
 };
 

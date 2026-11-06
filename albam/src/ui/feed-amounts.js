@@ -1,22 +1,24 @@
 // 수유량 설정: 수유 창의 빠른 선택 양 세 개를 바꾸는 창.
+// 브레짜로 타므로 브레짜 한 칸(물 30ml) 단위로만 바꾼다(브레짜 180 = 200ml, 210 = 233ml, 240 = 267ml).
 // 저장하면 Supabase care_settings.feed_amounts 에 들어가 모든 기기가 같은 양을 쓴다.
 // 연결이 끊겼으면 기록처럼 쌓아 두었다가 보낸다(api/index.js updateFeedAmounts).
 
 import { $, el } from './dom.js';
 import { openSheet } from './sheets.js';
-import { clampAmount } from './quick-record.js';
+import { amountSteppers, amountView } from './amount.js';
+import { APTAMIL, BREZZA, stepMachine } from '../formula.js';
 
 /** 칸 수. 수유 창에 버튼 세 개가 들어간다 */
 export const SLOT_COUNT = 3;
-const STEPS = [-10, -5, 5, 10];
 
 /**
- * 지금 양 목록을 칸 수에 맞춘다(순수 함수). 모자라면 마지막 양에서 20ml씩 더해 채운다.
+ * 지금 양 목록을 칸 수에 맞춘다(순수 함수). 모자라면 마지막 양에서 브레짜 한 칸씩 더해 채운다.
  * @param {number[]} amounts
+ * @param {import('./amount.js').Mixing} [mixing]
  */
-export function toSlots(amounts) {
+export function toSlots(amounts, { formula = APTAMIL, machine = BREZZA } = {}) {
   const slots = [...amounts].sort((a, b) => a - b).slice(0, SLOT_COUNT);
-  while (slots.length < SLOT_COUNT) slots.push(clampAmount((slots.at(-1) ?? 180) + 20));
+  while (slots.length < SLOT_COUNT) slots.push(stepMachine(slots.at(-1) ?? 167, +1, formula, machine));
   return slots;
 }
 
@@ -25,30 +27,29 @@ export function toSlots(amounts) {
  * @param {{current: () => number[], back: () => void}} deps  current: 지금 빠른 선택, back: 수유 창으로 돌아가기
  */
 export function setupFeedAmounts(ctx, { current, back }) {
-  const { sfx } = ctx;
+  const { sfx, cfg } = ctx;
   let slots = [];
 
   function render() {
-    $('#amountSlots').replaceChildren(...slots.map((ml, i) => el('div', { className: 'row slot' },
-      el('span', { className: 'lbl' }, `${i + 1}`),
-      ...STEPS.slice(0, 2).map((d) => stepButton(i, d)),
-      el('div', { className: 'val t24' }, `${ml}ml`),
-      ...STEPS.slice(2).map((d) => stepButton(i, d)),
-    )));
+    $('#amountSlots').replaceChildren(...slots.map((ml, i) => {
+      // 칸마다 [-30 브레짜] 233ml 브레짜 210 [+30 브레짜]
+      const steps = amountSteppers({
+        get: () => slots[i],
+        set: (v) => { slots[i] = v; render(); },
+        mixing: cfg,
+        tap: sfx.tap,
+        fine: false,
+      });
+      return el('div', { className: 'row slot' },
+        el('span', { className: 'lbl' }, `${i + 1}`), ...steps.before, amountView(ml, cfg, { inline: true }), ...steps.after);
+    }));
     const dup = new Set(slots).size < slots.length;
     $('#amountMsg').textContent = dup ? '같은 양이 있어요. 하나로 합쳐 저장돼요' : '';
   }
 
-  function stepButton(i, delta) {
-    return el('button', {
-      className: 'px',
-      onClick: () => { sfx.tap(); slots[i] = clampAmount(slots[i] + delta); render(); },
-    }, delta > 0 ? `+${delta}` : String(delta));
-  }
-
   $('#amountEditBtn').addEventListener('click', () => {
     sfx.tap();
-    slots = toSlots(current());
+    slots = toSlots(current(), cfg);
     render();
     openSheet('amountSheet');
   });

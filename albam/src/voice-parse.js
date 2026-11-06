@@ -13,12 +13,13 @@
 // 새 말투를 넣을 때는 아래 WORDS 의 정규식에 낱말을 더하고, 시험(tests/unit/voice-parse.test.mjs)에 문장을 하나 더한다.
 
 import { DIAPER_LABEL, KIND } from './domain.js';
+import { APTAMIL, BREZZA, mlForScoops, mlForWater } from './formula.js';
 import { formatClock } from './time.js';
 
 /** 종류를 알아보는 낱말. 정규화한 문장에 맞춘다 */
 const WORDS = {
   sleep: /잠|수면|잤|재웠|자기/,
-  feed: /수유|분유|먹였|먹었|먹음|맘마|ml/,
+  feed: /수유|분유|먹였|먹었|먹음|맘마|ml|스푼|브레짜/,
   diaper: /기저귀|소변|대변|응가|오줌/,
   pee: /소변|쉬야|(^|\s)쉬(\s|했|$)|오줌/,
   poo: /대변|응가|똥/,
@@ -40,7 +41,7 @@ const NATIVE_HOURS = [
   ['열두', 12], ['열한', 11], ['열', 10], ['아홉', 9], ['여덟', 8], ['일곱', 7], ['여섯', 6],
   ['다섯', 5], ['네', 4], ['세', 3], ['두', 2], ['한', 1],
 ];
-const UNIT = '시간|시|분|ml';
+const UNIT = '시간|시|분|ml|스푼';
 
 /** 한자어 수사 → 정수. "백육십" → 160. 수사가 아니면 null */
 export function sinoToInt(text) {
@@ -63,11 +64,12 @@ export function normalize(text) {
   let t = ` ${String(text || '')} `
     .toLowerCase()
     .replace(/[.,!?~"'“”‘’]/g, ' ')
-    .replace(/(밀리\s*리터|밀리리터|밀리|미리|씨씨|cc|㎖|ml)/gi, 'ml');
+    .replace(/(밀리\s*리터|밀리리터|밀리|미리|씨씨|cc|㎖|ml)/gi, 'ml')
+    .replace(/(스쿱|숟가락|숟갈|스푼)/g, '스푼');
 
-  // 고유어 시각·시간: "한 시" → "1시", "두시간" → "2시간"
+  // 고유어 수: "한 시" → "1시", "두시간" → "2시간", "일곱 스푼" → "7스푼"
   for (const [word, n] of NATIVE_HOURS) {
-    t = t.replace(new RegExp(`(^|[^가-힣])${word}\\s*(?=시)`, 'g'), `$1${n}`);
+    t = t.replace(new RegExp(`(^|[^가-힣])${word}\\s*(?=시|스푼)`, 'g'), `$1${n}`);
   }
 
   // 띄어 말한 한자어 수사 붙이기: "백 육십" → "백육십".
@@ -177,10 +179,25 @@ function parseDiaper(t, now) {
   return ok({ kind: KIND.DIAPER, occurred_at: when.at, detail: { type } }, `기저귀 ${DIAPER_LABEL[type]} · ${whenLabel(when)}`);
 }
 
-/** "수유 160", "160 먹였어", "분유 백육십 이십 분 전" */
-function parseFeed(t, now) {
+/** "수유 160", "160 먹였어", "분유 백육십 이십 분 전", "수유 7스푼", "브레짜 210"(뒤 둘은 완성량으로 바꿈) */
+function parseFeed(t, now, formula, machine) {
   const when = parseWhen(t, now);
   const rest = when.matched ? t.replace(when.matched, ' ') : t;
+  // 브레짜 숫자는 물 양 → 완성량
+  const brezza = rest.match(/브레짜\s*(\d+)/);
+  if (brezza) {
+    const water = +brezza[1];
+    if (water < machine.minWaterMl || water > machine.maxWaterMl || water % machine.stepWaterMl) return fail('feed_amount');
+    const ml = mlForWater(water, formula);
+    return ok({ kind: KIND.FEED, amount_ml: ml, occurred_at: when.at, detail: {} }, `수유 ${ml}ml(${machine.name} ${water}) · ${whenLabel(when)}`);
+  }
+  const scoops = rest.match(/(\d+)스푼/);
+  if (scoops) {
+    const n = +scoops[1];
+    const ml = mlForScoops(n, formula);
+    if (ml < FEED_ML.min || ml > FEED_ML.max) return fail('feed_amount');
+    return ok({ kind: KIND.FEED, amount_ml: ml, occurred_at: when.at, detail: {} }, `수유 ${ml}ml(${n}스푼) · ${whenLabel(when)}`);
+  }
   const numbers = [...rest.matchAll(/(\d+)(?!\d)(?!\s*(?:시간|시|분))/g)].map((x) => +x[1]);
   const ml = numbers.find((n) => n >= FEED_ML.min && n <= FEED_ML.max);
   if (!ml) return fail('feed_amount');
@@ -192,9 +209,10 @@ function parseFeed(t, now) {
 /**
  * @param {string} text  음성 인식 원문
  * @param {Date} now
+ * @param {{formula?: import('./formula.js').Formula, machine?: import('./formula.js').Machine}} [opts]  "n스푼"·"브레짜 n"을 완성량으로 바꿀 때
  * @returns {{ok: true, event: import('./domain.js').CareEvent, label: string} | {ok: false, reason: string}}
  */
-export function parseUtterance(text, now = new Date()) {
+export function parseUtterance(text, now = new Date(), { formula = APTAMIL, machine = BREZZA } = {}) {
   const t = normalize(text);
   if (!t) return fail('empty');
 
@@ -205,6 +223,6 @@ export function parseUtterance(text, now = new Date()) {
     if (!/수유|분유|기저귀|먹/.test(t)) return fail('sleep_needs_range');
   }
   if (WORDS.diaper.test(t)) return parseDiaper(t, now);
-  if (WORDS.feed.test(t)) return parseFeed(t, now);
+  if (WORDS.feed.test(t)) return parseFeed(t, now, formula, machine);
   return fail('unknown');
 }
