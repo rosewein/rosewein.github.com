@@ -1,13 +1,13 @@
 // 밤 화면. 화면을 끄지 않고 거의 검게 바꿔서 앱이 살아 있게 한다(터치·음성을 바로 받으려고).
-// 아주 어두운 글자로 경과 시간만 띄우고, 번인이 생기지 않게 1분마다 자리를 옮긴다.
+// 아주 어두운 글자로 마지막 수유 뒤 지난 시간만 띄우고, 번인이 생기지 않게 1분마다 자리를 옮긴다.
 // 터치하면 몇 초 동안 원래 화면을 어둡게(brightness) 보여 준다.
 
 import { $, el, setHidden } from './dom.js';
-import { formatClock, formatElapsed } from '../time.js';
+import { formatAgo, formatClock } from '../time.js';
 
 const MOVE_EVERY_MS = 60000;
-/** 글자 덩어리가 놓일 수 있는 범위(논리 픽셀). 곡면 가장자리는 피함 */
-const AREA = { left: 24, top: 12, width: 230, height: 120 };
+/** 글자 덩어리가 놓일 수 있는 범위(논리 픽셀). 곡면 가장자리는 피하고, 가장 긴 글("12시간 35분 전", 약 180)이 오른쪽 곡면에 닿지 않게 */
+const AREA = { left: 24, top: 12, width: 150, height: 120 };
 
 /** @param {import('../main.js').AppContext} ctx */
 export function setupNight(ctx) {
@@ -40,12 +40,15 @@ export function setupNight(ctx) {
       };
     }
     const now = ctx.now();
+    const feed = state.summary?.last_feed;
     const text = $('#nightText');
     text.style.left = `${spot.x}px`;
     text.style.top = `${spot.y}px`;
+    // "2시간 35분 전" / "마지막 수유 21:05 · 지금 23:40"
     text.replaceChildren(
-      el('div', { className: 't24' }, formatElapsed(state.summary?.last_feed?.at, now)),
-      el('div', { className: 't9', style: { marginTop: '4px' } }, `수유 후 · ${formatClock(now)}`),
+      el('div', { className: 't24' }, feed ? formatAgo(feed.at, now) : '수유 기록 없음'),
+      el('div', { className: 't9', style: { marginTop: '4px' } },
+        `${feed ? `마지막 수유 ${formatClock(feed.at)} · ` : ''}지금 ${formatClock(now)}`),
     );
   }
 

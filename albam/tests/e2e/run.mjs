@@ -58,7 +58,14 @@ async function demoFlow(browser, base) {
   await shot(page, 'main');
 
   check((await page.evaluate(() => document.querySelector('#stage').style.zoom)) === '2', 'S10 에서 6배(기기 화소) = CSS zoom 2');
-  check(await text(page, '#elapsed') === '2:35', '경과 시간 표시');
+  const label = (sel) => page.getAttribute(sel, 'aria-label');
+  check(await label('#elapsed') === '2시간 35분 전', '큰 글씨: 마지막 수유 뒤 "2시간 35분 전"');
+  check(await text(page, '#lastFeed') === '마지막 수유11:25 · 160ml', '마지막 수유 시각에 이름표');
+  check(await text(page, '#clock') === '지금14:00', '현재 시각에 "지금"');
+  check(await text(page, '#today') === '오늘 수유3회 · 420ml', '오늘 수유 한 줄');
+  check(await text(page, '#lastDiaper') === '마지막 기저귀소변 · 1시간 10분 전', '마지막 기저귀 "1시간 10분 전"');
+  const overflow = await page.$$eval('#status > div', (els) => els.filter((e) => e.getBoundingClientRect().right > document.querySelector('#status').getBoundingClientRect().right + 0.5).map((e) => e.id));
+  check(overflow.length === 0, `상태 칸 글이 넘치지 않음 ${overflow.join()}`);
   const sizes = await page.$$eval('#actions .action', (bs) => bs.map((b) => {
     const r = b.getBoundingClientRect();
     const i = b.querySelector('.ico').getBoundingClientRect();
@@ -72,9 +79,9 @@ async function demoFlow(browser, base) {
   check((await text(page, '#amountRow .on')) === '160', '기본 선택은 마지막 양');
   await page.click('#feedSave');
   await page.waitForSelector('#undo:not(.hidden)');
-  check(await text(page, '#elapsed') === '0:00', '저장하면 상태 칸이 바로 바뀜');
+  check(await page.getAttribute('#elapsed', 'aria-label') === '방금', '저장하면 상태 칸이 바로 바뀜(방금)');
   check(await page.isVisible('#micBtn'), '저장 알림 동안에도 [말하기]는 보임');
-  check(await text(page, '#todayCount') === '4회', '오늘 횟수 증가(예시 3회 + 1)');
+  check(await text(page, '#today') === '오늘 수유4회 · 580ml', '오늘 횟수 증가(예시 3회 + 1)');
   await shot(page, 'saved');
 
   await page.click('#undoMsg');
@@ -102,7 +109,7 @@ async function demoFlow(browser, base) {
   for (let i = 0; i < 3; i += 1) await page.click('#lateSteps [data-min="-60"]');
   await page.click('#lateSave');
   await page.waitForTimeout(300);
-  check((await text(page, '#lastFeed')).startsWith('수유 14:00'), '3시간 전 기록은 마지막 수유를 바꾸지 않음');
+  check((await text(page, '#lastFeed')).startsWith('마지막 수유14:00'), '3시간 전 기록은 마지막 수유를 바꾸지 않음');
   await page.click('#undoMsg');
   await page.click('#lateBtn');
   await page.click('#recentBtn');
@@ -110,6 +117,31 @@ async function demoFlow(browser, base) {
   check(rows.some((r) => r.includes('10:30')) && rows.indexOf(rows.find((r) => r.includes('10:30'))) > 0, '최근 기록에서 실제 시각 순서로 자리 잡음');
   await shot(page, 'recent');
   check(errors.length === 0, `페이지 오류 없음 ${errors.join(' ')}`);
+}
+
+// 가장 긴 글(12시간 넘게 지남, 소변+대변)도 상태 칸을 넘지 않는지
+async function longTextFlow(browser, base) {
+  const page = await (await browser.newContext(DEVICE)).newPage();
+  await page.clock.setFixedTime(DAYTIME);
+  await page.goto(`${base}?demo`);
+  await page.evaluate(() => {
+    localStorage.clear();
+    const ago = (m) => new Date(Date.now() - m * 60000).toISOString();
+    localStorage.setItem('albam.demo.events', JSON.stringify([
+      { id: 'a', kind: 'feed', occurred_at: ago(12 * 60 + 35), amount_ml: 160, detail: {} },
+      { id: 'b', kind: 'diaper', occurred_at: ago(11 * 60 + 59), detail: { type: 'both' } },
+    ]));
+  });
+  await page.reload();
+  await page.waitForTimeout(500);
+  check(await page.getAttribute('#elapsed', 'aria-label') === '12시간 35분 전', '10시간 넘어도 분까지(큰 글씨)');
+  check((await text(page, '#lastDiaper')).endsWith('11시간 전'), '기저귀 줄은 10시간 넘으면 시간만');
+  const overflow = await page.$$eval('#status > div', (els) => {
+    const right = document.querySelector('#status').getBoundingClientRect().right;
+    return els.filter((e) => e.getBoundingClientRect().right > right + 0.5).map((e) => e.id);
+  });
+  check(overflow.length === 0, `긴 글도 상태 칸 안 ${overflow.join()}`);
+  await shot(page, 'long');
 }
 
 // 미리 보기에서도 오프라인 저장·"대기 n건"이 실제와 똑같이 동작하고, 실제 큐와 섞이지 않는지
@@ -193,7 +225,7 @@ async function supabaseFlow(browser, base) {
   await page.click('#feedSave');
   await page.waitForTimeout(400);
   check(fake.events.length === 1, '기록이 Supabase 로 감');
-  check(await text(page, '#todayCount') === '1회', '요약 다시 받음');
+  check((await text(page, '#today')).startsWith('오늘 수유1회'), '요약 다시 받음');
   await page.click('#undoMsg');
 
   await fake.goOffline();
@@ -234,7 +266,7 @@ async function supabaseFlow(browser, base) {
   await page.reload();
   await page.waitForTimeout(600);
   check(fake.calls.some((c) => c.includes('grant_type=refresh_token')), '토큰이 만료되면 갱신');
-  check(await text(page, '#todayCount') === '1회', '갱신 뒤 요약');
+  check((await text(page, '#today')).startsWith('오늘 수유1회'), '갱신 뒤 요약');
   check(errors.length === 0, `페이지 오류 없음 ${errors.join(' ')}`);
 }
 
@@ -243,6 +275,7 @@ const base = `http://localhost:${server.address().port}/albam/`;
 const browser = await chromium.launch();
 try {
   console.log('# 미리 보기'); await demoFlow(browser, base);
+  console.log('# 긴 글'); await longTextFlow(browser, base);
   console.log('# 미리 보기 오프라인'); await demoOfflineFlow(browser, base);
   console.log('# 밤 화면'); await nightFlow(browser, base);
   console.log('# Supabase(가짜)'); await supabaseFlow(browser, base);

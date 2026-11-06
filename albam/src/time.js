@@ -11,20 +11,25 @@ export function formatClock(value) {
   return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 }
 
-/** 경과 시간을 "시:분"으로. 기록이 없으면 "-:--". 시는 99에서 멈춘다 */
-export function formatElapsed(from, now) {
-  if (!from) return '-:--';
-  const min = Math.max(0, Math.floor((now - new Date(from)) / MINUTE));
-  return `${Math.min(99, Math.floor(min / 60))}:${pad2(min % 60)}`;
-}
-
-/** "35분 전", "1시간 10분 전", "2시간 전" */
-export function formatAgo(from, now) {
+/**
+ * 지난 시간을 [숫자, 단위] 조각으로. 화면에서 숫자는 크게, 단위는 작게 그리려고 나눈다.
+ *   35분 → [['35','분']], 2시간 35분 → [['2','시간'],['35','분']], 2시간 → [['2','시간']], 1분 안 → []
+ * @param {{hoursOnlyFrom?: number}} [opts]  이 시간 이상 지나면 분은 뺀다(좁은 줄에 넣을 때)
+ */
+export function agoParts(from, now, { hoursOnlyFrom = Infinity } = {}) {
   const min = Math.max(0, Math.floor((now - new Date(from)) / MINUTE));
   const h = Math.floor(min / 60);
   const m = min % 60;
-  if (!h) return `${m}분 전`;
-  return m ? `${h}시간 ${m}분 전` : `${h}시간 전`;
+  const parts = [];
+  if (h) parts.push([String(h), '시간']);
+  if (m && h < hoursOnlyFrom) parts.push([String(m), '분']);
+  return parts;
+}
+
+/** "방금", "35분 전", "1시간 10분 전", "2시간 전" */
+export function formatAgo(from, now, opts) {
+  const parts = agoParts(from, now, opts);
+  return parts.length ? `${parts.map(([n, u]) => n + u).join(' ')} 전` : '방금';
 }
 
 /** "오늘", "어제", 그 전은 "11/4" */

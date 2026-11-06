@@ -93,17 +93,22 @@ button.px.acc { color: var(--accent); }
 
 /* ── 오른쪽 위: 상태 ── */
 #status { left: 134px; top: 4px; width: 230px; height: 122px; }
-#elapsedLabel { position: absolute; left: 0; top: 4px; }
-#elapsed { position: absolute; left: 0; top: 18px; letter-spacing: 0; white-space: nowrap; }
+/* 줄마다 무엇인지 앞에 흐린 글씨로 붙인다(.lbl) */
+#status .lbl { color: var(--dim); margin-right: 6px; }
+#lastFeed { position: absolute; left: 0; top: 0; white-space: nowrap; }
+#clock { position: absolute; right: 0; top: 0; white-space: nowrap; }
+/* "2시간 35분 전": 숫자 48, 단위 24. 10시간 넘으면 숫자를 36으로 줄여 한 줄에 들어가게 */
+#elapsed { position: absolute; left: 0; top: 14px; height: 52px; display: flex; align-items: baseline; white-space: nowrap; }
+#elapsed .num { font-size: 48px; }
+#elapsed.long .num { font-size: 36px; }
+#elapsed .unit { font-size: 24px; margin-right: 8px; }
+#elapsed .unit:last-child { margin-right: 0; }
+#elapsed .none { font-size: 24px; color: var(--dim); }
 #elapsed.warn { color: var(--warn); }
-#lastFeed { position: absolute; left: 0; top: 70px; white-space: nowrap; }
-#lastDiaper { position: absolute; left: 0; top: 86px; white-space: nowrap; }
-#today { position: absolute; right: 0; top: 4px; width: 84px; text-align: right; }
-#todayCount { margin-top: 6px; }
-#todayMl { margin-top: 4px; }
-#clock { position: absolute; right: 0; top: 70px; text-align: right; }
-/* 못 보낸 기록·연결 상태: 위쪽, '오늘' 칸 왼쪽 */
-#net { position: absolute; right: 92px; top: 6px; text-align: right; white-space: nowrap; }
+#today { position: absolute; left: 0; top: 68px; white-space: nowrap; }
+/* 못 보낸 기록·연결 상태: '오늘 수유' 줄 오른쪽 */
+#net { position: absolute; right: 0; top: 70px; text-align: right; white-space: nowrap; }
+#lastDiaper { position: absolute; left: 0; top: 84px; white-space: nowrap; }
 #lateBtn { position: absolute; left: 0; top: 102px; width: 230px; height: 20px; font-size: 12px; }
 
 /* ── 오른쪽 아래: 큰 버튼 ── */

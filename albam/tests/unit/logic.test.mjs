@@ -1,7 +1,7 @@
 // 화면과 떨어진 순수 함수들: 시각 글자, 기록 이름, 캐릭터 기분, 수유량 빠른 선택, 못 보낸 기록 얹기
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { formatAgo, formatClock, formatDay, formatDuration, formatElapsed, isWithinHours } from '../../src/time.js';
+import { agoParts, formatAgo, formatClock, formatDay, formatDuration, isWithinHours } from '../../src/time.js';
 import { describeEvent, describeRecent } from '../../src/domain.js';
 import { applyPending, findLocalDuplicate } from '../../src/api/pending.js';
 
@@ -14,9 +14,14 @@ const ago = (min) => new Date(NOW - min * 60000);
 
 test('시각 글자', () => {
   assert.equal(formatClock(new Date(2026, 0, 1, 9, 5)), '09:05');
-  assert.equal(formatElapsed(ago(155), NOW), '2:35');
-  assert.equal(formatElapsed(null, NOW), '-:--');
-  assert.equal(formatElapsed(ago(200 * 60), NOW), '99:00');
+  assert.deepEqual(agoParts(ago(155), NOW), [['2', '시간'], ['35', '분']]);
+  assert.deepEqual(agoParts(ago(35), NOW), [['35', '분']]);
+  assert.deepEqual(agoParts(ago(0.5), NOW), []);
+  assert.equal(formatAgo(ago(155), NOW), '2시간 35분 전');
+  assert.equal(formatAgo(ago(0.5), NOW), '방금');
+  assert.equal(formatAgo(ago(12 * 60 + 5), NOW), '12시간 5분 전');
+  assert.equal(formatAgo(ago(11 * 60 + 59), NOW, { hoursOnlyFrom: 10 }), '11시간 전');
+  assert.equal(formatAgo(ago(9 * 60 + 59), NOW, { hoursOnlyFrom: 10 }), '9시간 59분 전');
   assert.equal(formatAgo(ago(35), NOW), '35분 전');
   assert.equal(formatAgo(ago(70), NOW), '1시간 10분 전');
   assert.equal(formatAgo(ago(120), NOW), '2시간 전');

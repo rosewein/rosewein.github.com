@@ -24,19 +24,14 @@
       <div id="bubble"></div>
     </div>
 
-    <!-- 오른쪽 위: 상태 -->
+    <!-- 오른쪽 위: 상태. 시각마다 무엇의 시각인지 글로 붙인다 -->
     <div class="box" id="status">
-      <div id="elapsedLabel" class="dim">수유 후</div>
-      <div id="elapsed" class="t48">-:--</div>
-      <div id="today">
-        <div class="dim">오늘</div>
-        <div id="todayCount" class="t24">-회</div>
-        <div id="todayMl">-ml</div>
-      </div>
-      <div id="lastFeed" class="dim">마지막 수유 -</div>
-      <div id="lastDiaper" class="dim">기저귀 -</div>
-      <div id="clock" class="dim">--:--</div>
-      <div id="net" class="t9 faint"></div>
+      <div id="lastFeed"></div>                 <!-- 마지막 수유 11:25 · 160ml -->
+      <div id="clock"></div>                    <!-- 지금 14:00 -->
+      <div id="elapsed"></div>                  <!-- 2시간 35분 전 (숫자 크게) -->
+      <div id="today"></div>                    <!-- 오늘 수유 3회 · 420ml -->
+      <div id="net" class="t9 faint"></div>     <!-- 대기 n건 / 연결 안 됨 -->
+      <div id="lastDiaper"></div>               <!-- 마지막 기저귀 소변 · 1시간 10분 전 -->
       <button class="px ghost" id="lateBtn"><span class="spr ico ico-clock"></span>지난 기록 넣기 · 시각 고치기</button>
     </div>
 
