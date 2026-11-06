@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>알밤케어</title>
+<meta name="description" content="세훈이 수유·기저귀 기록 거실 화면">
+<meta name="theme-color" content="#0e0b09">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="preload" href="fonts/Galmuri11.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="styles/app.css">
+</head>
+<body>
+<div id="wrap"><div id="stage">
+  <div id="shift">
+    <!-- 왼쪽 위: 캐릭터 -->
+    <div class="box" id="charPanel">
+      <div id="albam" class="spr"></div>
+      <div id="bubble"></div>
+    </div>
+
+    <!-- 오른쪽 위: 상태 -->
+    <div class="box" id="status">
+      <div id="elapsedLabel" class="dim">수유 후</div>
+      <div id="elapsed" class="t48">-:--</div>
+      <div id="today">
+        <div class="dim">오늘</div>
+        <div id="todayCount" class="t24">-회</div>
+        <div id="todayMl">-ml</div>
+      </div>
+      <div id="lastFeed" class="dim">마지막 수유 -</div>
+      <div id="lastDiaper" class="dim">기저귀 -</div>
+      <div id="clock" class="dim">--:--</div>
+      <div id="net" class="t9 faint"></div>
+      <button class="px ghost" id="lateBtn"><span class="spr ico ico-clock"></span>지난 기록 넣기 · 시각 고치기</button>
+    </div>
+
+    <!-- 아래: 큰 버튼 셋, 너비 똑같이 -->
+    <div class="box" id="actions">
+      <button class="px action" id="micBtn"><span class="spr ico x2 ico-mic"></span>말하기</button>
+      <button class="px action" id="feedBtn"><span class="spr ico x2 ico-bottle"></span>수유</button>
+      <button class="px action" id="diaperBtn"><span class="spr ico x2 ico-diaper"></span>기저귀</button>
+    </div>
+    <div class="box hidden" id="undo">
+      <div id="undoMsg"><span class="spr ico ico-check"></span><span id="undoText">저장됨</span></div>
+      <button class="px" id="undoBtn">취소 <span id="undoCount"></span></button>
+    </div>
+
+    <!-- 수유량 고르기 -->
+    <div class="sheet hidden" id="feedSheet">
+      <h2>수유량 · 지금</h2>
+      <div class="row" id="amountRow"></div>
+      <div class="row" id="stepRow">
+        <button class="px" data-step="-10">-10</button>
+        <button class="px" data-step="-5">-5</button>
+        <div id="stepVal" class="t24">160ml</div>
+        <button class="px" data-step="5">+5</button>
+        <button class="px" data-step="10">+10</button>
+      </div>
+      <div class="foot">
+        <button class="px ghost" data-close>닫기</button>
+        <button class="px main acc" id="feedSave">저장</button>
+      </div>
+    </div>
+
+    <!-- 기저귀 -->
+    <div class="sheet hidden" id="diaperSheet">
+      <h2>기저귀 · 지금</h2>
+      <div class="choices">
+        <button class="px" data-type="pee">소변</button>
+        <button class="px" data-type="poo">대변</button>
+        <button class="px" data-type="both">둘 다</button>
+      </div>
+      <div class="foot"><button class="px ghost" data-close>닫기</button></div>
+    </div>
+
+    <!-- 비슷한 기록 확인 -->
+    <div class="sheet hidden" id="confirmSheet">
+      <h2>확인</h2>
+      <div id="confirmText" class="t12"></div>
+      <div class="foot">
+        <button class="px ghost" id="confirmNo">안 넣기</button>
+        <button class="px main acc" id="confirmYes">그래도 저장</button>
+      </div>
+    </div>
+
+    <!-- 음성 -->
+    <div class="sheet hidden" id="voiceSheet">
+      <h2 id="voiceTitle">듣는 중…</h2>
+      <div id="voiceLabel" class="t24"></div>
+      <div id="voiceRaw"></div>
+      <div id="voiceBar"><div id="voiceBarFill"></div></div>
+      <div class="foot" id="voiceFoot">
+        <button class="px ghost" id="voiceCancel">취소</button>
+        <button class="px main hidden" id="voiceRetry">다시 말하기</button>
+      </div>
+    </div>
+
+    <!-- 지난 기록 넣기 -->
+    <div class="sheet hidden" id="lateSheet">
+      <h2>지난 기록 넣기</h2>
+      <div class="kinds">
+        <button class="px" data-kind="feed">수유</button>
+        <button class="px" data-kind="diaper">기저귀</button>
+        <button class="px" data-kind="sleep">잠</button>
+      </div>
+      <div class="timeRow" id="lateStartRow"><span class="lbl" id="lateStartLbl">시각</span><span id="lateStart" class="t24"></span></div>
+      <div class="timeRow" id="lateEndRow" style="margin-top:4px"><span class="lbl">끝</span><span id="lateEnd" class="t24"></span><span id="lateDur" class="dim"></span></div>
+      <div class="row" id="lateSteps" style="margin-top:6px">
+        <button class="px" data-min="-60">-1시간</button>
+        <button class="px" data-min="-10">-10분</button>
+        <button class="px" data-min="-1">-1분</button>
+        <button class="px" data-min="1">+1분</button>
+        <button class="px" data-min="10">+10분</button>
+        <button class="px" data-min="60">+1시간</button>
+      </div>
+      <div class="row" id="lateDetail" style="margin-top:6px"></div>
+      <div class="foot">
+        <button class="px ghost" data-close>닫기</button>
+        <button class="px ghost" id="recentBtn">최근 기록</button>
+        <button class="px main acc" id="lateSave">저장</button>
+      </div>
+    </div>
+
+    <!-- 최근 기록 -->
+    <div class="sheet hidden" id="recentSheet">
+      <h2>최근 기록 (실제 시각 순)</h2>
+      <div id="recentList"></div>
+      <div class="foot"><button class="px ghost" data-close>닫기</button></div>
+    </div>
+
+    <!-- 로그인 -->
+    <div class="sheet hidden" id="loginSheet">
+      <h2>알밤케어 로그인 (가족 계정)</h2>
+      <form id="loginForm" autocomplete="on">
+        <div id="setupFields" class="hidden">
+          <div class="row">
+            <div class="grow"><label for="cfgUrl">Supabase URL</label><input id="cfgUrl" type="url" placeholder="https://xxxx.supabase.co"></div>
+            <div class="grow"><label for="cfgKey">anon key</label><input id="cfgKey" type="text" autocomplete="off"></div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="grow"><label for="email">이메일</label><input id="email" type="email" autocomplete="username"></div>
+          <div class="grow"><label for="password">비밀번호</label><input id="password" type="password" autocomplete="current-password"></div>
+        </div>
+        <div id="loginMsg"></div>
+        <div class="foot">
+          <a class="px-btn px ghost" href="?demo" style="text-decoration:none;flex:1;height:32px">미리 보기(demo)</a>
+          <button class="px main acc" type="submit" id="loginBtn">로그인</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 밤 화면 -->
+  <div id="night" class="hidden"><div id="nightText"></div></div>
+</div></div>
+
+<script src="config.js"></script>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>

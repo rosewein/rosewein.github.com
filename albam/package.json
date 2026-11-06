@@ -1,0 +1,13 @@
+{
+  "name": "albam-care",
+  "private": true,
+  "description": "알밤케어 거실 화면 (빌드 없음, 의존성 없음. 스크립트는 시험용)",
+  "type": "module",
+  "scripts": {
+    "test": "node --test \"tests/unit/*.test.mjs\" && python3 -m unittest discover -s tests/tools",
+    "test:sql": "tests/sql/run.sh",
+    "test:e2e": "node tests/e2e/run.mjs",
+    "sprites": "python3 tools/make_sprites.py",
+    "serve": "cd .. && python3 -m http.server 8000"
+  }
+}
