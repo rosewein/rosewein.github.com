@@ -112,6 +112,39 @@ async function demoFlow(browser, base) {
   check(errors.length === 0, `페이지 오류 없음 ${errors.join(' ')}`);
 }
 
+// 미리 보기에서도 오프라인 저장·"대기 n건"이 실제와 똑같이 동작하고, 실제 큐와 섞이지 않는지
+async function demoOfflineFlow(browser, base) {
+  const context = await browser.newContext(DEVICE);
+  const page = await context.newPage();
+  await page.clock.setFixedTime(DAYTIME);
+  await page.goto(`${base}?demo`);
+  await page.evaluate(() => { localStorage.clear(); indexedDB.deleteDatabase('albam-demo'); indexedDB.deleteDatabase('albam'); });
+  await page.reload();
+  await page.waitForTimeout(400);
+  check(await text(page, '#net') === '미리 보기', '미리 보기 표시');
+
+  await context.setOffline(true);
+  await page.click('#diaperBtn');
+  await page.click('#diaperSheet [data-type="poo"]');
+  await page.waitForTimeout(300);
+  check(await text(page, '#net') === '대기 1건', '미리 보기에서 오프라인 기록 → "대기 1건"');
+  check((await text(page, '#undoText')).includes('(대기)'), '저장 알림에 (대기) 표시');
+  await shot(page, 'demo-pending');
+  const realQueue = await page.evaluate(() => new Promise((res) => {
+    const r = indexedDB.open('albam');
+    r.onupgradeneeded = () => r.result.createObjectStore('queue', { keyPath: 'seq', autoIncrement: true });
+    r.onsuccess = () => { const q = r.result.transaction('queue').objectStore('queue').count(); q.onsuccess = () => res(q.result); };
+  }));
+  check(realQueue === 0, '미리 보기 기록은 실제 큐(albam)에 들어가지 않음');
+
+  await context.setOffline(false);
+  await page.evaluate(() => window.dispatchEvent(new Event('online')));
+  await page.waitForTimeout(500);
+  check(await text(page, '#net') === '미리 보기', '다시 연결되면 "대기" 사라짐');
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('albam.demo.events')).filter((e) => e.kind === 'diaper' && e.detail.type === 'poo').length);
+  check(saved === 1, '쌓였던 기록이 (가짜) 서버로 들어감');
+}
+
 async function nightFlow(browser, base) {
   const page = await (await browser.newContext(DEVICE)).newPage();
   await page.clock.install({ time: NIGHT });
@@ -210,6 +243,7 @@ const base = `http://localhost:${server.address().port}/albam/`;
 const browser = await chromium.launch();
 try {
   console.log('# 미리 보기'); await demoFlow(browser, base);
+  console.log('# 미리 보기 오프라인'); await demoOfflineFlow(browser, base);
   console.log('# 밤 화면'); await nightFlow(browser, base);
   console.log('# Supabase(가짜)'); await supabaseFlow(browser, base);
 } finally {

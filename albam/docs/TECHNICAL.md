@@ -96,7 +96,7 @@ albam/
 │  │  ├─ queue.js          못 보낸 기록 IndexedDB
 │  │  ├─ pending.js        못 보낸 기록을 요약에 얹기, 기기 안 중복 확인 (순수 함수)
 │  │  ├─ errors.js         AuthError · NetworkError
-│  │  └─ demo.js           ?demo 가짜 통신
+│  │  └─ demo.js           ?demo 가짜 서버 (index.js 에 끼워 실제와 같은 흐름으로)
 │  └─ ui/
 │     ├─ dom.js            $, $$, el() 도움 함수
 │     ├─ stage.js          정수배 확대, 번인 대비 이동, 화면 켜짐 유지
@@ -361,6 +361,7 @@ flowchart TD
 - **아직 못 보낸 기록을 취소하면** 큐에서 빼기만 한다. 서버에는 아무것도 가지 않는다.
 - **서버가 형식 오류로 거절한 기록은 버린다.** 큐가 계속 막히지 않게 하려는 것이다. 버릴 때 콘솔에 남긴다.
 - **오프라인 요약은 근사치다.** 마지막으로 받은 요약 위에 못 보낸 기록을 얹을 뿐이다. 연결되면 서버 값으로 바뀐다.
+- **미리 보기(?demo)도 같은 코드를 탄다.** `createApi()`에 Supabase 대신 `demo.js`의 `DemoServer`를 끼운 것이라, 기기가 오프라인이면 똑같이 쌓이고 "대기 n건"이 뜬다. 기기 안 이름은 따로 쓴다(`STORAGE.demo`: 큐 `albam-demo`, 캐시 `albam.demo.summary`). 미리 보기 기록이 실제 Supabase 로 갈 일은 없다.
 
 ### 6.3 로그인과 토큰
 

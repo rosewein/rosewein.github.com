@@ -3,7 +3,7 @@
 // 구조는 docs/TECHNICAL.md 에 그림으로 있다.
 
 import { loadConfig } from './config.js';
-import { createApi, AuthError } from './api/index.js';
+import { createApi, AuthError, STORAGE } from './api/index.js';
 import { createDemoApi } from './api/demo.js';
 import { isWithinHours } from './time.js';
 import { createSound } from './ui/sound.js';
@@ -18,7 +18,6 @@ import { setupVoiceInput } from './ui/voice-input.js';
 import { setupLogin } from './ui/login.js';
 
 const DEMO = new URLSearchParams(location.search).has('demo');
-const SUMMARY_CACHE_KEY = 'albam.summary';
 /** 기기 시계가 서버와 이보다 덜 어긋나면 보정하지 않는다 */
 const IGNORE_SKEW_MS = 5000;
 const ANIMATION_MS = 600;
@@ -66,7 +65,7 @@ function main() {
 
   /** @type {AppState} */
   const state = {
-    summary: DEMO ? null : readCachedSummary(),
+    summary: readCachedSummary(DEMO ? STORAGE.demo.summaryKey : STORAGE.real.summaryKey),
     stale: false,
     pending: 0,
     clockSkewMs: 0,
@@ -153,7 +152,7 @@ function main() {
   startBurnInShift(cfg.shiftMinutes);
   document.addEventListener('pointerdown', () => { state.lastTouchAt = Date.now(); }, true);
   document.addEventListener('contextmenu', (e) => e.preventDefault());
-  if ('serviceWorker' in navigator && !DEMO) navigator.serviceWorker.register('sw.js').catch(() => {});
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 
   // ── 주기 작업 ──
   setInterval(() => { status.nextFrame(); night.update(); }, ANIMATION_MS);
@@ -176,8 +175,9 @@ function measureSkew(summary) {
   return Math.abs(skew) < IGNORE_SKEW_MS ? 0 : skew;
 }
 
-function readCachedSummary() {
-  try { return JSON.parse(localStorage.getItem(SUMMARY_CACHE_KEY) || 'null'); } catch (e) { return null; }
+/** 마지막으로 받은 요약(연결 없이 켜도 바로 보이게) */
+function readCachedSummary(key) {
+  try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch (e) { return null; }
 }
 
 /** 24시간 켜 두면 쌓일 수 있는 것을 비우려고 하루 한 번(새벽) 새로 고친다. 누가 쓰는 중이면 미룬다 */

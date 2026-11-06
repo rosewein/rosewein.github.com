@@ -3,16 +3,16 @@
 //   addEvent()    기록 추가
 //   cancelEvent() 저장 직후 취소(지우지 않고 취소 표시)
 // 기기를 바꿀 때(개인 폰, ESP32) 다시 짜야 하는 범위를 이 폴더로 줄이려는 것이다.
-// 같은 모양의 가짜 구현이 demo.js 에 있다(?demo).
+// 미리 보기(?demo)도 이 함수를 그대로 쓰고, Supabase 대신 demo.js 의 가짜 서버만 끼운다.
+// 그래서 미리 보기에서도 오프라인 저장·"대기 n건"·다시 보내기가 실제와 똑같이 동작한다.
 
 import { AuthError, NetworkError } from './errors.js';
 import { SupabaseRest } from './supabase-rest.js';
-import { queue } from './queue.js';
+import { createQueue } from './queue.js';
 import { applyPending, findLocalDuplicate } from './pending.js';
 
 export { AuthError, NetworkError };
 
-const SUMMARY_CACHE_KEY = 'albam.summary';
 const DEFAULT_DUP_WINDOW_MIN = 10;
 
 /** @typedef {import('../domain.js').CareEvent} CareEvent */
@@ -49,11 +49,32 @@ const DEFAULT_DUP_WINDOW_MIN = 10;
  */
 
 /**
+ * 서버 쪽 창구. SupabaseRest 와 demo.js 의 DemoServer 가 이 모양이다.
+ * @typedef {Object} Transport
+ * @property {boolean} configured
+ * @property {boolean} loggedIn
+ * @property {{email: string}|null} session
+ * @property {() => void} onSessionChange
+ * @property {(email: string, password: string) => Promise<void>} signIn
+ * @property {() => void} signOut
+ * @property {(name: string, args?: Object) => Promise<any>} rpc   연결 문제는 NetworkError, 로그인 문제는 AuthError
+ */
+
+/** 기기 안에 남기는 것들의 이름. 실제와 미리 보기가 섞이지 않게 따로 쓴다 */
+export const STORAGE = {
+  real: { queueDb: 'albam', summaryKey: 'albam.summary' },
+  demo: { queueDb: 'albam-demo', summaryKey: 'albam.demo.summary' },
+};
+
+/**
  * @param {{supabaseUrl: string, supabaseAnonKey: string}} cfg
+ * @param {{transport?: Transport, storage?: {queueDb: string, summaryKey: string}}} [opts]  미리 보기·시험용
  * @returns {CareApi}
  */
-export function createApi(cfg) {
-  const rest = new SupabaseRest({ url: cfg.supabaseUrl, anonKey: cfg.supabaseAnonKey });
+export function createApi(cfg, { transport, storage = STORAGE.real } = {}) {
+  const rest = transport ?? new SupabaseRest({ url: cfg.supabaseUrl, anonKey: cfg.supabaseAnonKey });
+  const queue = createQueue(storage.queueDb);
+  const SUMMARY_CACHE_KEY = storage.summaryKey;
   const listeners = new Set();
   const notify = () => listeners.forEach((fn) => fn());
   rest.onSessionChange = notify;

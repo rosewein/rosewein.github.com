@@ -10,20 +10,19 @@
  * @property {number} created
  */
 
-const DB_NAME = 'albam';
 const STORE = 'queue';
 
-function open() {
+function open(dbName) {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, 1);
+    const req = indexedDB.open(dbName, 1);
     req.onupgradeneeded = () => req.result.createObjectStore(STORE, { keyPath: 'seq', autoIncrement: true });
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
   });
 }
 
-async function run(mode, action) {
-  const db = await open();
+async function run(dbName, mode, action) {
+  const db = await open(dbName);
   try {
     return await new Promise((resolve, reject) => {
       const tx = db.transaction(STORE, mode);
@@ -36,10 +35,15 @@ async function run(mode, action) {
   }
 }
 
-export const queue = {
-  /** @returns {Promise<QueueItem[]>} 들어간 순서대로 */
-  all: () => run('readonly', (s) => s.getAll()).catch(() => []),
-  /** @param {QueueItem} item */
-  push: (item) => run('readwrite', (s) => s.add(item)),
-  remove: (seq) => run('readwrite', (s) => s.delete(seq)),
-};
+/**
+ * @param {string} dbName  실제는 'albam', 미리 보기는 'albam-demo'. 둘이 섞이면 가짜 기록이 Supabase 로 갈 수 있다
+ */
+export function createQueue(dbName) {
+  return {
+    /** @returns {Promise<QueueItem[]>} 들어간 순서대로 */
+    all: () => run(dbName, 'readonly', (s) => s.getAll()).catch(() => []),
+    /** @param {QueueItem} item */
+    push: (item) => run(dbName, 'readwrite', (s) => s.add(item)),
+    remove: (seq) => run(dbName, 'readwrite', (s) => s.delete(seq)),
+  };
+}
