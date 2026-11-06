@@ -90,124 +90,153 @@ def parse_dt(text):
 
 
 def parse_amount(key, value):
-    """'9.5 (fl_oz)', '160 ml', '160' → ml(int). 단위가 온스면 바꾼다."""
+    """'9.5 (fl_oz)', '160 ml', '160' → ml(정수). 온스면 ml 로 바꾼다.
+    'Amount(ml): 9.5 (fl_oz)' 처럼 이름과 값의 단위가 다르면 값 쪽 단위를 믿는다."""
     m = re.search(r'(\d+(?:\.\d+)?)', value)
     if not m:
         return None
     n = float(m.group(1))
-    unit = (value[m.end():] + ' ' + key).lower()
-    # 'Amount(ml): 9.5 (fl_oz)' 처럼 이름과 값의 단위가 다르면 값 쪽 단위를 믿는다
-    val_unit = value[m.end():].lower()
-    if 'oz' in val_unit or ('oz' in unit and 'ml' not in val_unit):
+    value_unit = value[m.end():].lower()
+    key_unit = key.lower()
+    if 'oz' in value_unit or ('oz' in key_unit and 'ml' not in value_unit):
         n *= FL_OZ_ML
     return int(round(n))
 
 
 def parse_minutes(value):
-    m = re.search(r'(\d+)\s*(?:시간|h)', value)
-    hours = int(m.group(1)) if m else 0
-    m2 = re.search(r'(\d+)\s*(?:\(min\)|min|분)', value)
-    if m2:
-        return hours * 60 + int(m2.group(1))
-    m3 = re.search(r'(\d+)', value)
-    return hours * 60 if m else (int(m3.group(1)) if m3 else None)
+    """'95 (min)', '1시간 35분', '35분', '95' → 분"""
+    hours = re.search(r'(\d+)\s*(?:시간|h)', value)
+    mins = re.search(r'(\d+)\s*(?:\(min\)|min|분)', value)
+    h = int(hours.group(1)) if hours else 0
+    if mins:
+        return h * 60 + int(mins.group(1))
+    if hours:
+        return h * 60
+    bare = re.search(r'(\d+)', value)
+    return int(bare.group(1)) if bare else None
 
 
 def read_blocks(text):
+    """구분선(=====)으로 나눈 기록 덩어리들. 빈 줄은 뺀다."""
     block = []
     for line in text.splitlines():
         if SEP.match(line):
             if block:
                 yield block
             block = []
-        else:
-            block.append(line.rstrip('﻿').rstrip())
-    if any(l.strip() for l in block):
+        elif line.strip():
+            block.append(line.rstrip('\ufeff').rstrip())
+    if block:
         yield block
 
 
-def parse_block(lines, report):
-    lines = [l for l in lines if l.strip()]
-    if not lines:
-        return None
-    head = lines[0]
-    parts = re.split(r'\s+~\s+', head)
+def bump(report, name, key=None):
+    """보고서 숫자 올리기. key 가 있으면 report[name][key] 를 센다."""
+    if key is None:
+        report[name] += 1
+    else:
+        report[name][key] = report[name].get(key, 0) + 1
+
+
+def parse_header(line):
+    """'2024-11-27 05:41 AM ~ 2024-11-27 06:20 AM' → (시작, 끝 또는 None)"""
+    parts = re.split(r'\s+~\s+', line)
     start = parse_dt(parts[0])
     end = parse_dt(parts[1]) if len(parts) > 1 else None
-    if not start:
-        report['bad_date'] += 1
-        return None
+    return start, end
+
+
+def parse_fields(lines):
+    """'이름: 값' 줄들 → dict. 'Memo:' 뒤는 여러 줄이어도 모두 메모로 합친다."""
     fields = {}
-    for i, line in enumerate(lines[1:], 1):
+    for i, line in enumerate(lines):
         if ':' not in line:
             continue
-        k, v = line.split(':', 1)
-        k, v = k.strip(), v.strip()
-        if k.lower() in MEMO_KEYS:
-            fields['memo'] = '\n'.join([v] + lines[i + 1:]).strip()
+        key, value = (x.strip() for x in line.split(':', 1))
+        if key.lower() in MEMO_KEYS:
+            fields['memo'] = '\n'.join([value] + lines[i + 1:]).strip()
             break
-        fields[k] = v
-    type_val = next((v for k, v in fields.items() if k.lower() in TYPE_KEYS), None)
-    if not type_val:
-        report['no_type'] += 1
-        return None
-    t = type_val.strip().lower()
+        fields[key] = value
+    return fields
+
+
+def classify(type_value):
+    """베이비타임 종류 → (kind, detail) / 'skip' / None(모름)"""
+    t = type_value.strip().lower()
     if t in SKIP_TYPES:
-        report['skipped'][type_val] = report['skipped'].get(type_val, 0) + 1
-        return None
-    mapped = TYPE_MAP.get(t)
-    if not mapped:
-        for name, val in TYPE_MAP.items():  # "Breastfeeding (Left)" 같은 변형
-            if t.startswith(name):
-                mapped = val
-                break
-    if not mapped:
-        report['unknown_types'][type_val] = report['unknown_types'].get(type_val, 0) + 1
-        return None
-    kind, detail = mapped[0], dict(mapped[1])
-    detail['babytime_type'] = type_val
-    ev = {'kind': kind, 'occurred_at': start, 'ended_at': None, 'amount_ml': None, 'detail': detail}
+        return 'skip'
+    if t in TYPE_MAP:
+        return TYPE_MAP[t]
+    # "Breastfeeding (Left)" 같은 변형
+    return next((val for name, val in TYPE_MAP.items() if t.startswith(name)), None)
 
-    known = TYPE_KEYS | MEMO_KEYS
-    for k, v in fields.items():
-        kl = k.lower()
-        if kl in known or k == 'memo':
-            continue
-        if kl in DIAPER_KEYS:
-            dv = DIAPER_VALUES.get(v.strip().lower())
-            if dv:
-                detail['type'] = dv
-            continue
-        if kl in DURATION_KEYS:
-            mins = parse_minutes(v)
-            if mins is not None:
-                detail['duration_min'] = mins
-            continue
-        if 'amount' in kl or '양' in k or 'ml' in kl:
-            # 여러 양 줄(왼쪽·오른쪽·합계)이 있으면 합계를 쓴다
-            if ev['amount_ml'] is None or 'total' in kl or '합계' in k or '총' in k:
-                ev['amount_ml'] = parse_amount(k, v)
-            continue
-        report['unknown_keys'][k] = report['unknown_keys'].get(k, 0) + 1
-    if 'memo' in fields:
-        detail['memo'] = fields['memo']
 
-    if kind == 'diaper':
-        if 'type' not in detail:
-            report['diaper_without_type'] += 1
-            return None
+def apply_fields(ev, fields, report):
+    """종류 말고 나머지 항목(기저귀 종류, 시간, 양, 메모)을 기록에 채운다."""
+    detail = ev['detail']
+    for key, value in fields.items():
+        k = key.lower()
+        if k in TYPE_KEYS:
+            continue
+        if key == 'memo':
+            detail['memo'] = value
+        elif k in DIAPER_KEYS:
+            if value.strip().lower() in DIAPER_VALUES:
+                detail['type'] = DIAPER_VALUES[value.strip().lower()]
+        elif k in DURATION_KEYS:
+            minutes = parse_minutes(value)
+            if minutes is not None:
+                detail['duration_min'] = minutes
+        elif 'amount' in k or '양' in key or 'ml' in k:
+            # 양 줄이 여럿(왼쪽·오른쪽·합계)이면 합계를 쓴다
+            if ev['amount_ml'] is None or 'total' in k or '합계' in key or '총' in key:
+                ev['amount_ml'] = parse_amount(key, value)
+        else:
+            bump(report, 'unknown_keys', key)
+
+
+def parse_block(lines, report):
+    """기록 덩어리 하나 → care_events 한 줄(dict). 옮기지 않을 것이면 None 이고 이유를 report 에 센다."""
+    start, end = parse_header(lines[0])
+    if not start:
+        bump(report, 'bad_date')
+        return None
+
+    fields = parse_fields(lines[1:])
+    type_value = next((v for k, v in fields.items() if k.lower() in TYPE_KEYS), None)
+    if not type_value:
+        bump(report, 'no_type')
+        return None
+    mapped = classify(type_value)
+    if mapped == 'skip':
+        bump(report, 'skipped', type_value)
+        return None
+    if mapped is None:
+        bump(report, 'unknown_types', type_value)
+        return None
+
+    kind, base_detail = mapped
+    ev = {'kind': kind, 'occurred_at': start, 'ended_at': None, 'amount_ml': None,
+          'detail': {**base_detail, 'babytime_type': type_value}}
+    apply_fields(ev, fields, report)
+
+    # 종류별 마무리 확인
+    if kind == 'diaper' and 'type' not in ev['detail']:
+        bump(report, 'diaper_without_type')
+        return None
     if kind == 'sleep':
-        if end is None and detail.get('duration_min'):
-            end = start + timedelta(minutes=detail['duration_min'])
+        if end is None and ev['detail'].get('duration_min'):
+            end = start + timedelta(minutes=ev['detail']['duration_min'])
         if end is None or end <= start:
-            report['sleep_without_end'] += 1
+            bump(report, 'sleep_without_end')
             return None
         ev['ended_at'] = end
-    if kind == 'feed' and ev['amount_ml'] is not None and not (0 <= ev['amount_ml'] <= 1000):
-        report['bad_amount'] += 1
+    if kind == 'feed' and ev['amount_ml'] is not None and not 0 <= ev['amount_ml'] <= 1000:
+        bump(report, 'bad_amount')
         ev['amount_ml'] = None
 
-    key = '|'.join(['babytime', kind, start.isoformat(), str(ev['amount_ml']), detail.get('type', ''), type_val])
+    # 내용으로 id 를 정해 같은 파일을 다시 넣어도 한 번만 들어가게
+    key = '|'.join(['babytime', kind, start.isoformat(), str(ev['amount_ml']), ev['detail'].get('type', ''), type_value])
     ev['id'] = str(uuid.uuid5(NS, key))
     return ev
 

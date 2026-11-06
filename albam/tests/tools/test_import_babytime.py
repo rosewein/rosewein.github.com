@@ -1,4 +1,4 @@
-"""python3 -m unittest discover -s tests -p 'test_*.py'"""
+"""python3 -m unittest discover -s tests/tools  (npm test)"""
 import os
 import sys
 import tempfile
@@ -6,7 +6,7 @@ import unittest
 import zipfile
 from datetime import date, datetime
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'tools'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'tools'))
 import import_babytime as ib  # noqa: E402
 
 EN = """2024-10-27 07:37 PM

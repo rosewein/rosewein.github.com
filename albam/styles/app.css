@@ -1,0 +1,168 @@
+/* 알밤케어 거실 화면
+ *
+ * 단위는 모두 '논리 픽셀'이다. #stage 가 380x180 이고 src/ui/stage.js 가 기기 화소의 정수배로 zoom 한다.
+ * 글자 크기는 갈무리11의 정수배(12·24·36·48px)만 쓴다. 그래야 도트가 흐려지지 않는다.
+ * 좌우 16px 은 S10 곡면이라 버튼·글자를 두지 않는다.
+ * 순서: 글꼴 → 색 → 바탕 → 공통 부품 → 왼쪽(캐릭터) → 오른쪽(상태·버튼) → 덮는 창 → 밤
+ */
+
+@font-face { font-family: 'Galmuri11'; src: url('../fonts/Galmuri11.woff2') format('woff2'); font-display: block; }
+@font-face { font-family: 'Galmuri9'; src: url('../fonts/Galmuri9.woff2') format('woff2'); font-display: block; }
+
+:root {
+  /* 어두운 바탕, 밝고 넓은 면 없이 (AMOLED 번인 대비) */
+  --bg: #0b0908;
+  --panel: #15100d;
+  --line: #3b2c21;
+  --line-hi: #6a4e36;
+  --text: #d9c9b1;
+  --dim: #8c7b66;
+  --faint: #4a3d31;
+  --accent: #e9a253;
+  --warn: #e8734f;
+  --ok: #92c26f;
+  --btn: #1e1610;
+  --btn-press: #3a2a1c;
+  --night: #2a1f17;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  height: 100%; background: var(--bg); color: var(--text); overflow: hidden;
+  overscroll-behavior: none; touch-action: manipulation;
+  -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent;
+}
+body { font: 12px/1 'Galmuri11', monospace; -webkit-font-smoothing: none; font-smooth: never; }
+img, .spr { image-rendering: pixelated; image-rendering: crisp-edges; }
+
+/* 논리 해상도 380x180. src/ui/stage.js 가 기기 화소의 정수배가 되도록 zoom 을 정한다 */
+#wrap { position: absolute; left: 0; top: 0; }
+#stage {
+  position: relative; width: 380px; height: 180px;
+  background: var(--bg); overflow: hidden;
+}
+#shift { position: absolute; inset: 0; transition: none; }
+.hidden { display: none !important; }
+
+/* ── 공통 부품 ── */
+.box { position: absolute; }
+.t9 { font-family: 'Galmuri9', monospace; font-size: 10px; }
+.t12 { font-size: 12px; }
+.t24 { font-size: 24px; }
+.t36 { font-size: 36px; }
+.t48 { font-size: 48px; }
+.dim { color: var(--dim); }
+.faint { color: var(--faint); }
+.acc { color: var(--accent); }
+.warn { color: var(--warn); }
+.ok { color: var(--ok); }
+
+button.px, .px-btn {
+  font: inherit; color: var(--text); background: var(--btn);
+  border: 2px solid var(--line-hi); border-radius: 0;
+  clip-path: polygon(2px 0, calc(100% - 2px) 0, 100% 2px, 100% calc(100% - 2px), calc(100% - 2px) 100%, 2px 100%, 0 calc(100% - 2px), 0 2px);
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+  cursor: pointer; outline: none;
+}
+button.px:active, button.px.on { background: var(--btn-press); border-color: var(--accent); color: #f3e3c8; }
+button.px.on { color: var(--accent); }
+button.px:disabled { opacity: .4; }
+button.px.big { font-size: 24px; }
+button.px.ghost { background: transparent; border-color: var(--line); color: var(--dim); }
+button.px.acc { color: var(--accent); }
+
+.spr { display: inline-block; background-repeat: no-repeat; flex: none; }
+.ico { width: 12px; height: 12px; background-image: url('../sprites/icons.png'); background-size: 72px 12px; }
+.ico.x2 { width: 24px; height: 24px; background-size: 144px 24px; }
+.ico-bottle { background-position: 0 0; }   .x2.ico-bottle { background-position: 0 0; }
+.ico-diaper { background-position: -12px 0; } .x2.ico-diaper { background-position: -24px 0; }
+.ico-mic { background-position: -24px 0; }   .x2.ico-mic { background-position: -48px 0; }
+.ico-clock { background-position: -36px 0; } .x2.ico-clock { background-position: -72px 0; }
+.ico-moon { background-position: -48px 0; }  .x2.ico-moon { background-position: -96px 0; }
+.ico-check { background-position: -60px 0; } .x2.ico-check { background-position: -120px 0; }
+
+/* ── 왼쪽: 캐릭터 칸 (곡면 가장자리 16px 비움) ── */
+#charPanel { left: 16px; top: 4px; width: 108px; height: 172px; }
+#albam {
+  position: absolute; left: 6px; top: 4px; width: 96px; height: 96px;
+  background-image: url('../sprites/albam.png'); background-size: 192px 384px;
+}
+#bubble { position: absolute; left: 0; top: 104px; width: 108px; text-align: center; line-height: 12px; height: 24px; color: var(--dim); }
+#micBtn { position: absolute; left: 0; top: 130px; width: 108px; height: 42px; font-size: 12px; }
+#micBtn.listening { border-color: var(--accent); color: var(--accent); }
+
+/* ── 오른쪽 위: 상태 ── */
+#status { left: 132px; top: 4px; width: 232px; height: 122px; }
+#elapsedLabel { position: absolute; left: 0; top: 4px; }
+#elapsed { position: absolute; left: 0; top: 18px; letter-spacing: 0; white-space: nowrap; }
+#elapsed.warn { color: var(--warn); }
+#lastFeed { position: absolute; left: 0; top: 70px; white-space: nowrap; }
+#lastDiaper { position: absolute; left: 0; top: 86px; white-space: nowrap; }
+#today { position: absolute; right: 0; top: 4px; width: 84px; text-align: right; }
+#todayCount { margin-top: 6px; }
+#todayMl { margin-top: 4px; }
+#clock { position: absolute; right: 0; top: 70px; text-align: right; }
+#net { position: absolute; right: 0; top: 86px; text-align: right; white-space: nowrap; }
+#lateBtn { position: absolute; left: 0; top: 102px; width: 232px; height: 20px; font-size: 12px; }
+
+/* ── 오른쪽 아래: 큰 버튼 ── */
+#actions { left: 132px; top: 132px; width: 232px; height: 42px; display: flex; gap: 8px; }
+#actions button { flex: 1; height: 42px; }
+
+/* 저장 직후 알림 (버튼 자리를 잠깐 덮음) */
+#undo { left: 132px; top: 132px; width: 232px; height: 42px; display: flex; gap: 6px; background: var(--bg); }
+#undoMsg { flex: 1; display: flex; align-items: center; gap: 4px; border: 2px solid var(--ok); color: var(--ok); padding: 0 6px; overflow: hidden; white-space: nowrap; }
+#undoBtn { width: 76px; }
+
+/* ── 덮는 창 ── */
+.sheet {
+  position: absolute; left: 16px; top: 4px; width: 348px; height: 172px;
+  background: var(--panel); border: 2px solid var(--line-hi); padding: 6px;
+}
+.sheet h2 { font-size: 12px; font-weight: normal; color: var(--dim); margin-bottom: 6px; }
+.row { display: flex; gap: 6px; align-items: center; }
+.row + .row { margin-top: 6px; }
+.grow { flex: 1; }
+.sheet .foot { position: absolute; left: 6px; right: 6px; bottom: 6px; display: flex; gap: 6px; }
+.sheet .foot button { height: 32px; flex: 1; }
+.sheet .foot button.main { flex: 2; }
+
+#amountRow button { flex: 1; height: 40px; font-size: 24px; }
+#stepRow button { width: 40px; height: 28px; }
+#stepVal { flex: 1; text-align: center; }
+#diaperSheet .choices { display: flex; gap: 8px; margin-top: 8px; }
+#diaperSheet .choices button { flex: 1; height: 82px; font-size: 24px; flex-direction: column; gap: 8px; }
+
+#confirmText { line-height: 18px; margin: 10px 0; }
+#voiceSheet { text-align: center; }
+#voiceLabel { margin-top: 26px; line-height: 30px; }
+#voiceRaw { margin-top: 10px; line-height: 14px; color: var(--dim); min-height: 14px; }
+#voiceBar { position: absolute; left: 6px; right: 6px; bottom: 46px; height: 4px; background: var(--line); }
+#voiceBarFill { height: 100%; width: 100%; background: var(--accent); }
+
+/* 지난 기록 넣기 */
+#lateSheet .kinds { position: absolute; right: 6px; top: 4px; display: flex; gap: 4px; }
+#lateSheet .kinds button { width: 52px; height: 20px; }
+.timeRow { height: 26px; border: 2px solid var(--line); display: flex; align-items: center; padding: 0 6px; gap: 8px; }
+.timeRow.sel { border-color: var(--accent); }
+.timeRow .lbl { width: 24px; color: var(--dim); }
+#lateSteps button { flex: 1; height: 24px; font-size: 12px; }
+#lateDetail { height: 28px; }
+#lateDetail button { height: 26px; }
+#lateDetail .amt { flex: 1; text-align: center; }
+
+#recentList { line-height: 15px; }
+#recentList .pending { color: var(--accent); }
+
+/* 로그인 */
+#loginSheet input {
+  font: inherit; font-size: 12px; color: var(--text); background: var(--bg); border: 2px solid var(--line-hi);
+  height: 22px; padding: 0 4px; width: 100%; border-radius: 0; outline: none; -webkit-user-select: text; user-select: text;
+}
+#loginSheet input:focus { border-color: var(--accent); }
+#loginSheet label { display: block; color: var(--dim); margin: 4px 0 2px; }
+#loginMsg { color: var(--warn); line-height: 14px; min-height: 14px; margin-top: 4px; }
+
+/* ── 밤 화면: 거의 검게, 글자만 아주 어둡게 ── */
+#night { position: absolute; inset: 0; background: #000; }
+#nightText { position: absolute; color: var(--night); text-align: center; line-height: 1; }
+body.nightWake #stage { filter: brightness(.55); }

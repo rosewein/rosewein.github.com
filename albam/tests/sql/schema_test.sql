@@ -1,4 +1,4 @@
--- 001_care_schema.sql 시험. tests/run_sql_tests.sh 가 부른다.
+-- 001_care_schema.sql 시험. tests/sql/run.sh 가 부른다.
 \set ON_ERROR_STOP on
 \set QUIET on
 

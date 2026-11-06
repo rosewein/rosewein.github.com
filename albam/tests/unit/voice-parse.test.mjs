@@ -1,7 +1,7 @@
-// node --test tests/  (Node 18+)
+// 음성 규칙 시험 (npm test)
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseUtterance, sinoToInt, normalize } from '../voice-parse.js';
+import { parseUtterance, sinoToInt, normalize } from '../../src/voice-parse.js';
 
 // 기준 시각: 2026-11-06 15:00 (기기 시간대 기준)
 const NOW = new Date(2026, 10, 6, 15, 0, 0);
