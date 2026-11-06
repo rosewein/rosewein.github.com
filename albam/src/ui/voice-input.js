@@ -39,10 +39,7 @@ export function setupVoiceInput(ctx) {
     openSheet('voiceSheet');
   }
 
-  function setMic(listening) {
-    $('#micBtn').classList.toggle('listening', listening);
-    $('#micLabel').textContent = listening ? '듣는 중' : '말하기';
-  }
+  const setMic = (listening) => $('#micBtn').classList.toggle('listening', listening);
 
   function stop() {
     clearInterval(countdown);

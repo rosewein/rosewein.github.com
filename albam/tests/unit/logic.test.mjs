@@ -18,7 +18,8 @@ test('시각 글자', () => {
   assert.equal(formatElapsed(null, NOW), '-:--');
   assert.equal(formatElapsed(ago(200 * 60), NOW), '99:00');
   assert.equal(formatAgo(ago(35), NOW), '35분 전');
-  assert.equal(formatAgo(ago(70), NOW), '1:10 전');
+  assert.equal(formatAgo(ago(70), NOW), '1시간 10분 전');
+  assert.equal(formatAgo(ago(120), NOW), '2시간 전');
   assert.equal(formatDay(ago(60), NOW), '오늘');
   assert.equal(formatDay(ago(16 * 60), NOW), '어제');
   assert.equal(formatDay(ago(3 * 24 * 60), NOW), '11/3');

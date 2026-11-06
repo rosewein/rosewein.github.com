@@ -18,10 +18,13 @@ export function formatElapsed(from, now) {
   return `${Math.min(99, Math.floor(min / 60))}:${pad2(min % 60)}`;
 }
 
-/** "35분 전", "1:10 전" */
+/** "35분 전", "1시간 10분 전", "2시간 전" */
 export function formatAgo(from, now) {
   const min = Math.max(0, Math.floor((now - new Date(from)) / MINUTE));
-  return min < 60 ? `${min}분 전` : `${Math.floor(min / 60)}:${pad2(min % 60)} 전`;
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  if (!h) return `${m}분 전`;
+  return m ? `${h}시간 ${m}분 전` : `${h}시간 전`;
 }
 
 /** "오늘", "어제", 그 전은 "11/4" */

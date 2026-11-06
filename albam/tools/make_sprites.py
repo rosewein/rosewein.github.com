@@ -191,17 +191,17 @@ def character_frames():
 ICON = 12
 ICONS = {
     'bottle': [
-        '    ww      ',
-        '    OO      ',
-        '   OOOO     ',
-        '   wwww     ',
-        '   w..w     ',
-        '   wSSw     ',
-        '   wSSw     ',
-        '   wSSw     ',
-        '   wSSw     ',
-        '   wSSw     ',
-        '   wwww     ',
+        '     OO     ',
+        '    OOOO    ',
+        '   wwwwww   ',
+        '   w    w   ',
+        '   wSSSSw   ',
+        '   wSSSSw   ',
+        '   wSSSSw   ',
+        '   wSSSSw   ',
+        '   wSSSSw   ',
+        '   wSSSSw   ',
+        '   wwwwww   ',
         '            ',
     ],
     'diaper': [
