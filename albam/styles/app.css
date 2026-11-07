@@ -68,7 +68,7 @@ html, body {
 }
 body {
   font: 400 12px/1 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
-  -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; letter-spacing: -0.05em;   /* 자간 -50 */
 }
 /* 글씨 두께: 이름표·버튼은 보통, 수치(.val, 큰 숫자)는 굵게(600) + 가장 진한 색 */
 .val, #elapsed .num, #elapsed .unit, #bigClock, #nightText .num, #nightText .vn, .wheel .item.c { font-weight: 600; }
