@@ -1,5 +1,5 @@
 // 수유량 설정: 수유 창의 빠른 선택 양 세 개를 바꾸는 창.
-// 브레짜로 타므로 브레짜 한 칸(물 30ml) 단위로만 바꾼다(브레짜 180 = 200ml, 210 = 233ml, 240 = 267ml).
+// 브레짜로 타므로 브레짜 한 칸(물 30ml) 단위로만 바꾼다(브레짜 180 = 200ml, 210 = 230ml, 240 = 270ml).
 // 저장하면 Supabase care_settings.feed_amounts 에 들어가 모든 기기가 같은 양을 쓴다.
 // 연결이 끊겼으면 기록처럼 쌓아 두었다가 보낸다(api/index.js updateFeedAmounts).
 
@@ -18,7 +18,7 @@ export const SLOT_COUNT = 3;
  */
 export function toSlots(amounts, { formula = APTAMIL, machine = BREZZA } = {}) {
   const slots = [...amounts].sort((a, b) => a - b).slice(0, SLOT_COUNT);
-  while (slots.length < SLOT_COUNT) slots.push(stepMachine(slots.at(-1) ?? 167, +1, formula, machine));
+  while (slots.length < SLOT_COUNT) slots.push(stepMachine(slots.at(-1) ?? 170, +1, formula, machine));
   return slots;
 }
 
@@ -32,7 +32,7 @@ export function setupFeedAmounts(ctx, { current, back }) {
 
   function render() {
     $('#amountSlots').replaceChildren(...slots.map((ml, i) => {
-      // 칸마다 [-30 브레짜] 233ml 브레짜 210 [+30 브레짜]
+      // 칸마다 [-30 브레짜] 230ml 브레짜 210 [+30 브레짜]
       const steps = amountSteppers({
         get: () => slots[i],
         set: (v) => { slots[i] = v; render(); },

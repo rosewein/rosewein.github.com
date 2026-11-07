@@ -15,12 +15,13 @@ window.ALBAM_CONFIG = {
   pollSeconds: 20,           // 다른 기기 기록을 다시 읽는 주기
   shiftMinutes: 3,           // 번인 대비로 화면을 옮기는 주기
   hungryMinutes: 180,        // 마지막 수유 후 이만큼 지나면 캐릭터가 배고파함
-  defaultAmounts: [200, 233, 267], // 수유량 빠른 선택을 아직 못 받았을 때(평소엔 화면의 '수유량 설정' 값). 브레짜 180·210·240
+  defaultAmounts: [200, 230, 270], // 수유량 빠른 선택을 아직 못 받았을 때(평소엔 화면의 '수유량 설정' 값). 브레짜 180·210·240
 
   // 분유·기계: 수유량은 '완성량'으로 기록하고, 화면에 브레짜에서 고를 물 양을 같이 보여 준다.
   // 압타밀: 물 30ml 에 1스푼, 다 타면 약 33.3ml. 브레짜: 물 60~300ml, 30ml 단위
-  // → 브레짜 180 = 200ml, 210 = 233ml, 240 = 267ml
-  formula: { name: '압타밀', waterMlPerScoop: 30, mlPerScoop: 100 / 3 },
+  // → 브레짜 180 = 200ml, 210 = 230ml, 240 = 270ml
+  // 완성량은 10ml 단위로 반올림해 기록한다(roundMl)
+  formula: { name: '압타밀', waterMlPerScoop: 30, mlPerScoop: 100 / 3, roundMl: 10 },
   machine: { name: '브레짜', minWaterMl: 60, maxWaterMl: 300, stepWaterMl: 30 },
   dailyReloadHour: 4,        // 24시간 켜 둘 때 하루 한 번 새로 고침하는 시각
 };

@@ -18,7 +18,7 @@ const DEFAULTS = {
   pollSeconds: 20,
   shiftMinutes: 3,
   hungryMinutes: 180,
-  defaultAmounts: [200, 233, 267],
+  defaultAmounts: [200, 230, 270],
   formula: APTAMIL,
   machine: BREZZA,
   dailyReloadHour: 4,
