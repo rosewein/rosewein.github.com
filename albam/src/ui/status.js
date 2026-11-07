@@ -19,12 +19,12 @@ const SPRITE_PX = 96;
 /** 기저귀 줄은 좁아서 이 시간 넘으면 "11시간 전"처럼 분을 뺀다 */
 const DIAPER_HOURS_ONLY = 10;
 
-/** 흐린 이름표 + 값 한 줄. 글이 같으면 다시 그리지 않는다 */
+/** 흐린 이름표 + 굵은 값 한 줄. 글이 같으면 다시 그리지 않는다 */
 function setLine(node, label, value) {
   const key = `${label}|${value}`;
   if (node.dataset.key === key) return;
   node.dataset.key = key;
-  node.replaceChildren(el('span', { className: 'lbl' }, label), value);
+  node.replaceChildren(el('span', { className: 'lbl' }, label), el('span', { className: 'val' }, value));
 }
 
 /**
