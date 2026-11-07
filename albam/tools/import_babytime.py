@@ -3,6 +3,7 @@
 
     python3 tools/import_babytime.py activity_세훈_202610.zip activity_세훈_202611.txt > import.sql
     python3 tools/import_babytime.py --until 2026-11-10 activity_*.zip > import.sql
+    python3 tools/import_babytime.py activity_*.zip -o import.sql --stats stats.md   # 날짜별 통계도
 
 만든 import.sql 을 Supabase SQL Editor 에 붙여 실행한다. 표준 라이브러리만 쓴다(Python 3.9+).
 
@@ -302,14 +303,46 @@ def to_sql(events):
     return '\n'.join(out) + '\n'
 
 
+def daily_stats(events, day_start_hour=0):
+    """날짜별 통계(서울 시각). 베이비타임 앱의 통계 화면과 맞춰 보려고 쓴다.
+    하루는 day_start_hour 시에 시작한다. 잠은 시작한 날에 넣는다."""
+    days = {}
+    for e in events:
+        local = e['occurred_at'].astimezone(TZ) - timedelta(hours=day_start_hour)
+        d = days.setdefault(local.date(), {'feed_count': 0, 'feed_ml': 0, 'pee': 0, 'poo': 0, 'both': 0, 'sleep_min': 0})
+        if e['kind'] == 'feed':
+            d['feed_count'] += 1
+            d['feed_ml'] += e['amount_ml'] or 0
+        elif e['kind'] == 'diaper':
+            d[e['detail']['type']] += 1
+        elif e['kind'] == 'sleep':
+            d['sleep_min'] += int((e['ended_at'] - e['occurred_at']).total_seconds() // 60)
+    return dict(sorted(days.items()))
+
+
+def stats_table(days):
+    """날짜별 통계를 마크다운 표로"""
+    rows = ['| 날짜 | 수유 | 수유량 | 기저귀 소변 | 대변 | 둘 다 | 잠 |', '| --- | ---: | ---: | ---: | ---: | ---: | ---: |']
+    for d, v in days.items():
+        sleep = f"{v['sleep_min'] // 60}시간 {v['sleep_min'] % 60}분" if v['sleep_min'] else '-'
+        rows.append(f"| {d.isoformat()} ({'월화수목금토일'[d.weekday()]}) | {v['feed_count']}회 | {v['feed_ml']}ml | "
+                    f"{v['pee']} | {v['poo']} | {v['both']} | {sleep} |")
+    return '\n'.join(rows) + '\n'
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('files', nargs='+', help='activity_이름_연월.txt 또는 .zip')
     ap.add_argument('--since', type=date.fromisoformat, help='이 날짜(포함)부터만')
     ap.add_argument('--until', type=date.fromisoformat, help='이 날짜(제외) 전까지만. 거실 화면을 쓰기 시작한 날')
     ap.add_argument('-o', '--output', help='SQL 파일 (없으면 화면에)')
+    ap.add_argument('--stats', help='날짜별 통계 표(마크다운)를 이 파일에. 베이비타임 앱 통계와 맞춰 볼 때')
+    ap.add_argument('--day-start-hour', type=int, default=0, help='하루를 끊는 시각(기본 0시). care_settings.day_start_hour 와 같게')
     args = ap.parse_args(argv)
     events, report = parse_files(args.files, args.since, args.until)
+    if args.stats:
+        with open(args.stats, 'w', encoding='utf-8') as fh:
+            fh.write(stats_table(daily_stats(events, args.day_start_hour)))
     sql = to_sql(events)
     if args.output:
         with open(args.output, 'w', encoding='utf-8') as fh:

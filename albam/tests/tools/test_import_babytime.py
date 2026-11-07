@@ -101,6 +101,20 @@ class ImportTest(unittest.TestCase):
         self.assertTrue(all(e['occurred_at'].date() < date(2024, 10, 27) for e in c))
         self.assertGreater(rep['out_of_range'], 0)
 
+    def test_daily_stats(self):
+        events, _ = self.parse(EN)
+        days = ib.daily_stats(events)
+        d26, d27 = days[date(2024, 10, 26)], days[date(2024, 10, 27)]
+        self.assertEqual((d26['feed_count'], d26['feed_ml']), (1, 160))
+        self.assertEqual(d26['sleep_min'], 141, '23:58~02:19 잠은 시작한 날(26일)에')
+        self.assertEqual((d27['feed_count'], d27['feed_ml'], d27['poo']), (1, 148, 1))
+        self.assertEqual(d27['sleep_min'], 95)
+        table = ib.stats_table(days)
+        self.assertIn('| 2024-10-26 (토) | 1회 | 160ml |', table)
+        # 하루를 새벽 5시에 끊으면 26일 22:06 수유와 27일 08:25 수유가 각자 날짜에 남는다
+        days5 = ib.daily_stats(events, day_start_hour=5)
+        self.assertEqual(days5[date(2024, 10, 26)]['feed_count'], 1)
+
     def test_zip_and_sql(self):
         with tempfile.TemporaryDirectory() as d:
             z = os.path.join(d, 'activity_Sehun_202410.zip')

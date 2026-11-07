@@ -53,6 +53,13 @@ python3 tools/import_babytime.py --until 2026-11-10 activity_세훈_*.zip -o imp
 ```
 
 `import.sql` 을 SQL Editor에서 실행한다(두 번 넣어도 한 번만 들어감). `--until` 은 거실 화면을 쓰기 시작한 날.
+
+**통계 맞춰 보기**: `--stats stats.md` 를 붙이면 날짜별 수유 횟수·양, 기저귀, 잠 합계 표를 만든다. 베이비타임 앱의 통계 화면과 비교하고,
+넣은 뒤에는 [`supabase/queries/daily_stats.sql`](supabase/queries/daily_stats.sql) 을 SQL Editor에서 돌려 같은 숫자가 나오는지 본다.
+
+```sh
+python3 tools/import_babytime.py activity_세훈_*.zip -o import.sql --stats stats.md
+```
 끝에 "모르는 종류/항목" 보고가 나오면 스크립트의 `TYPE_MAP`·`*_KEYS` 를 맞춘다.
 
 ## 바꾸기 쉬운 값
