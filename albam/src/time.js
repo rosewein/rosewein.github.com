@@ -42,10 +42,13 @@ export function formatDay(value, now) {
   return `${day.getMonth() + 1}/${day.getDate()}`;
 }
 
-/** "1시간 30분" */
+/** "1시간 30분", 한 시간이 안 되면 "15분", 분이 0이면 "2시간" */
 export function formatDuration(ms) {
-  const min = Math.round(ms / MINUTE);
-  return `${Math.floor(min / 60)}시간 ${min % 60}분`;
+  const min = Math.max(0, Math.round(ms / MINUTE));
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  if (!h) return `${m}분`;
+  return m ? `${h}시간 ${m}분` : `${h}시간`;
 }
 
 /**

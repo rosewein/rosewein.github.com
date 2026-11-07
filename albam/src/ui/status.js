@@ -8,8 +8,8 @@
 //   마지막 기저귀 소변 · 1시간 10분 전
 
 import { $, el } from './dom.js';
-import { DIAPER_LABEL } from '../domain.js';
-import { agoParts, formatAgo, formatClock } from '../time.js';
+import { DIAPER_LABEL, sleepingNow } from '../domain.js';
+import { agoParts, formatAgo, formatClock, formatDuration } from '../time.js';
 
 /** 스프라이트 시트(sprites/albam.png)의 줄 순서. sprites.json 과 같다 */
 const MOOD_ROW = { normal: 0, hungry: 1, sleep: 2, happy: 3 };
@@ -29,12 +29,13 @@ function setLine(node, label, value) {
 
 /**
  * 캐릭터 기분 고르기(순수 함수).
- * 기쁨(방금 저장) > 잠(밤, 화면 꺼진 상태) > 배고픔(수유 후 오래) > 밤이면 잠 > 평소
- * @param {{happy: boolean, night: boolean, nightAwake: boolean, minutesSinceFeed: number|null, hungryMinutes: number}} p
+ * 기쁨(방금 저장) > 자는 중(잠 기록이 열려 있음) > 잠(밤, 화면 꺼진 상태) > 배고픔(수유 후 오래) > 밤이면 잠 > 평소
+ * @param {{happy: boolean, sleeping?: boolean, night: boolean, nightAwake: boolean, minutesSinceFeed: number|null, hungryMinutes: number}} p
  * @returns {'normal'|'hungry'|'sleep'|'happy'}
  */
-export function chooseMood({ happy, night, nightAwake, minutesSinceFeed, hungryMinutes }) {
+export function chooseMood({ happy, sleeping = false, night, nightAwake, minutesSinceFeed, hungryMinutes }) {
   if (happy) return 'happy';
+  if (sleeping) return 'sleep';
   if (night && !nightAwake) return 'sleep';
   if (minutesSinceFeed != null && minutesSinceFeed > hungryMinutes) return 'hungry';
   if (night) return 'sleep';
@@ -85,8 +86,10 @@ export function createStatusView(ctx) {
   function tick() {
     const now = ctx.now();
     const lastFeedAt = state.summary?.last_feed?.at;
+    const sleeping = sleepingNow(state.summary);
     const mood = chooseMood({
       happy: Date.now() < state.happyUntil,
+      sleeping: !!sleeping,
       night: ctx.isNightTime(),
       nightAwake: ctx.isNightAwake(),
       minutesSinceFeed: lastFeedAt ? (now - new Date(lastFeedAt)) / 60000 : null,
@@ -99,8 +102,16 @@ export function createStatusView(ctx) {
     setLine($('#lastDiaper'), '마지막 기저귀', diaper ? `${DIAPER_LABEL[diaper.type] || ''} · ${formatAgo(diaper.at, now, { hoursOnlyFrom: DIAPER_HOURS_ONLY })}` : '기록 없음');
     $('#albam').style.backgroundPosition = `${-frame * SPRITE_PX}px ${-MOOD_ROW[mood] * SPRITE_PX}px`;
 
-    // 말풍선(알밤 위): 알밤이 하는 말만. 할 말이 없으면(평소) 숨김
-    const words = MOOD_TEXT[mood];
+    // [잠] 버튼: 자는 중이면 "깼어요"
+    const sleepBtn = $('#sleepBtn');
+    if (sleepBtn.classList.contains('on') !== !!sleeping) {
+      sleepBtn.classList.toggle('on', !!sleeping);
+      sleepBtn.setAttribute('aria-label', sleeping ? '깼어요' : '잠들었어요');
+      $('#sleepBtnText').textContent = sleeping ? '깼어요' : '';
+    }
+
+    // 말풍선(알밤 위): 알밤이 하는 말만. 할 말이 없으면(평소) 숨김. 자는 중이면 얼마나 잤는지
+    const words = sleeping && mood === 'sleep' ? `쿨쿨 ${formatDuration(now - new Date(sleeping.at))}` : MOOD_TEXT[mood];
     $('#bubbleText').textContent = words;
     $('#bubble').className = words ? '' : 'empty';
   }

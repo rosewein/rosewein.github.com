@@ -3,7 +3,8 @@
 // 터치하면 몇 초 동안 원래 화면을 어둡게(brightness) 보여 준다.
 
 import { $, el, setHidden } from './dom.js';
-import { formatAgo, formatClock } from '../time.js';
+import { formatAgo, formatClock, formatDuration } from '../time.js';
+import { sleepingNow } from '../domain.js';
 
 const MOVE_EVERY_MS = 60000;
 /** 글자 덩어리(약 180x40)가 놓일 수 있는 왼쪽 위 범위(논리 픽셀). 위·아래 곡면 8px 과 좌우 16px 을 넘지 않게 */
@@ -44,11 +45,13 @@ export function setupNight(ctx) {
     const text = $('#nightText');
     text.style.left = `${spot.x}px`;
     text.style.top = `${spot.y}px`;
-    // "2시간 35분 전" / "마지막 수유 21:05 · 지금 23:40"
+    // "2시간 35분 전" / "마지막 수유 21:05 · 지금 23:40" / (자는 중이면) "자는 중 2시간 10분"
+    const sleeping = sleepingNow(state.summary);
     text.replaceChildren(
       el('div', { className: 't24' }, feed ? formatAgo(feed.at, now) : '수유 기록 없음'),
       el('div', { className: 't9', style: { marginTop: '4px' } },
         `${feed ? `마지막 수유 ${formatClock(feed.at)} · ` : ''}지금 ${formatClock(now)}`),
+      ...(sleeping ? [el('div', { className: 't9', style: { marginTop: '4px' } }, `자는 중 ${formatDuration(now - new Date(sleeping.at))}`)] : []),
     );
   }
 

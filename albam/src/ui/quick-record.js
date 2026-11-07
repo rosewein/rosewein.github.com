@@ -1,11 +1,13 @@
-// 큰 버튼 [수유] [기저귀] 과 그 창.
+// 큰 버튼 [수유] [기저귀] 과 그 창, 그리고 [잠](달) 버튼.
+// [잠]: 안 자고 있으면 누르는 순간 '잠 시작(지금)'을 넣고, 자는 중이면 '깼어요(지금)'로 끝을 넣는다.
+//       언제 깰지 모르니 잠은 끝 없이 먼저 넣는다(supabase/004_sleep_end.sql). 둘 다 저장 직후 [취소]가 뜬다.
 // 수유 창의 빠른 선택 양은 '수유량 설정'(feed-amounts.js)에서 정한 값이다.
 // 양은 완성량(ml)으로 기록하고, 브레짜에서 고를 물 양을 같이 보여 준다(../formula.js).
 
 import { $, $$, el } from './dom.js';
 import { openSheet } from './sheets.js';
 import { amountSteppers, amountView, quickAmountLabel } from './amount.js';
-import { KIND, SOURCE } from '../domain.js';
+import { KIND, SOURCE, sleepingNow } from '../domain.js';
 
 export { clampAmount } from './amount.js';
 
@@ -62,6 +64,14 @@ export function setupQuickRecord(ctx) {
       kind: KIND.DIAPER, occurred_at: ctx.now(), detail: { type: btn.dataset.type }, source: SOURCE.TOUCH,
     }));
   }
+
+  // ── 잠: 시작 / 깼어요 ──
+  $('#sleepBtn').addEventListener('click', () => {
+    sfx.tap();
+    const sleeping = sleepingNow(state.summary);
+    if (sleeping) ctx.wake(sleeping);
+    else ctx.save({ kind: KIND.SLEEP, occurred_at: ctx.now(), detail: {}, source: SOURCE.TOUCH });
+  });
 
   return { openFeed, quickAmounts };
 }

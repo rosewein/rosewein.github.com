@@ -4,6 +4,7 @@
 //    ├ 비슷한 기록이 있음(confirm) → 확인 창 → [그래도 저장] → save(ev, {force: true})
 //    ├ 저장됨/대기(queued) → 효과음, 캐릭터 기쁨, 버튼 자리에 "저장됨 + [취소 n]"
 //    └ 실패 → 아래 알림 막대에 이유, 로그인 문제면 로그인 창
+//   wake(sleep)  자는 중인 잠에 끝(지금)을 넣는다. [취소]를 누르면 다시 자는 중으로
 //
 // 아래 알림 막대(#notice)는 저장·취소 결과를 잠깐 보여 준다. 말풍선은 알밤이 하는 말만 쓴다.
 
@@ -11,7 +12,7 @@ import { $, setHidden } from './dom.js';
 import { closeSheets, openSheet } from './sheets.js';
 import { AuthError } from '../api/index.js';
 import { describeEvent } from '../domain.js';
-import { formatClock } from '../time.js';
+import { formatClock, formatDuration } from '../time.js';
 
 const HAPPY_MS = 3000;
 const NOTICE_MS = 3000;
@@ -45,6 +46,26 @@ export function setupRecorder(ctx) {
     sfx.save();
     state.happyUntil = Date.now() + HAPPY_MS;
     showUndo(result.id, describeEvent(ev, ctx.now()) + (result.status === 'queued' ? ' (대기)' : ''));
+    await ctx.refresh();
+  }
+
+  /** 깼어요: 자는 중인 잠에 끝을 넣는다 */
+  async function wake(sleep) {
+    const end = ctx.now();
+    let result;
+    try {
+      result = await ctx.api.endSleep(sleep.id, end);
+    } catch (e) {
+      sfx.error();
+      if (e instanceof AuthError) ctx.showLogin('다시 로그인해 주세요');
+      else notify('저장 못 했어요', 'warn');
+      console.error(e);
+      return;
+    }
+    if (result.status === 'not_found') { sfx.error(); notify('자는 중인 잠을 못 찾았어요', 'warn'); await ctx.refresh(); return; }
+    sfx.save();
+    const text = `잠 ${formatDuration(end - new Date(sleep.at))}${result.status === 'queued' ? ' (대기)' : ''}`;
+    showUndo(sleep.id, text, async () => { await ctx.api.endSleep(sleep.id, null); });
     await ctx.refresh();
   }
 
@@ -87,7 +108,8 @@ export function setupRecorder(ctx) {
   $('#notice').addEventListener('click', hideNotice);
 
   // ── 저장 직후 취소 ──
-  function showUndo(id, text) {
+  /** @param {() => Promise<any>} [revert] [취소]를 누르면 할 일. 없으면 그 기록을 취소 */
+  function showUndo(id, text, revert) {
     hideUndo();
     hideNotice();
     const until = Date.now() + cfg.undoSeconds * 1000;
@@ -96,7 +118,7 @@ export function setupRecorder(ctx) {
       if (left <= 0) hideUndo();
       else $('#undoCount').textContent = String(left);
     };
-    undo = { id, timer: setInterval(update, 250) };
+    undo = { id, revert: revert ?? (() => ctx.api.cancelEvent(id)), timer: setInterval(update, 250) };
     $('#undoText').textContent = `${text} 저장됨`;
     setHidden($('#undo'), false);
     update();
@@ -108,10 +130,10 @@ export function setupRecorder(ctx) {
   }
   $('#undoBtn').addEventListener('click', async () => {
     if (!undo) return;
-    const { id } = undo;
+    const { revert } = undo;
     hideUndo();
     try {
-      await ctx.api.cancelEvent(id);
+      await revert();
       sfx.cancel();
       state.happyUntil = 0;
       notify('취소했어요');
@@ -124,5 +146,5 @@ export function setupRecorder(ctx) {
   // 알림 부분을 누르면 바로 버튼으로 돌아감
   $('#undoMsg').addEventListener('click', hideUndo);
 
-  return { save, notify, isUndoShowing: () => !!undo };
+  return { save, wake, notify, isUndoShowing: () => !!undo };
 }

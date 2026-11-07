@@ -28,7 +28,7 @@ import { formatClock } from './time.js';
  * @property {{id: string, at: string, ml: number|null} | null} last_feed
  * @property {{feed_count: number, feed_ml: number}} today
  * @property {{id: string, at: string, type: DiaperType} | null} last_diaper
- * @property {{id: string, at: string, ended_at: string} | null} last_sleep
+ * @property {{id: string, at: string, ended_at: string|null} | null} last_sleep  ended_at 이 null 이면 자는 중
  * @property {number[]} feed_amounts                 수유량 빠른 선택(ml, 작은 것부터). '수유량 설정'에서 바꾼다
  * @property {RecentItem[]} recent                  최근 기록, 실제 시각 역순
  * @property {Array} due_chores                     2단계
@@ -57,6 +57,16 @@ export const SOURCE = Object.freeze({
 
 /** 기저귀 종류 → 화면 이름. 순서는 버튼 순서 */
 export const DIAPER_LABEL = Object.freeze({ pee: '소변', poo: '대변', both: '소변+대변' });
+/**
+ * 지금 자는 중인 잠(끝이 아직 없는 마지막 잠). 없으면 null
+ * @param {Summary|null} summary
+ * @returns {{id: string, at: string} | null}
+ */
+export function sleepingNow(summary) {
+  const s = summary?.last_sleep;
+  return s && !s.ended_at ? s : null;
+}
+
 /** 버튼에 쓰는 짧은 이름 */
 export const DIAPER_BUTTON = Object.freeze({ pee: '소변', poo: '대변', both: '둘 다' });
 
@@ -69,7 +79,7 @@ const SHOW_TIME_AFTER_MS = 2 * 60000;
  * @param {Date} now
  */
 export function describeEvent(ev, now = new Date()) {
-  if (ev.kind === KIND.SLEEP) return `잠 ${formatClock(ev.occurred_at)}~${formatClock(ev.ended_at)}`;
+  if (ev.kind === KIND.SLEEP) return ev.ended_at ? `잠 ${formatClock(ev.occurred_at)}~${formatClock(ev.ended_at)}` : `잠 시작 ${formatClock(ev.occurred_at)}`;
   let text = ev.kind;
   if (ev.kind === KIND.FEED) text = `수유 ${ev.amount_ml ?? ''}ml`;
   if (ev.kind === KIND.DIAPER) text = `기저귀 ${DIAPER_LABEL[ev.detail?.type] || ''}`;
@@ -85,6 +95,6 @@ export function describeEvent(ev, now = new Date()) {
 export function describeRecent(r) {
   if (r.kind === KIND.FEED) return `수유 ${r.ml ?? ''}ml`;
   if (r.kind === KIND.DIAPER) return `기저귀 ${DIAPER_LABEL[r.detail?.type] || ''}`;
-  if (r.kind === KIND.SLEEP) return `잠 ~${r.ended_at ? formatClock(r.ended_at) : ''}`;
+  if (r.kind === KIND.SLEEP) return r.ended_at ? `잠 ~${formatClock(r.ended_at)}` : '잠 (자는 중)';
   return r.kind;
 }

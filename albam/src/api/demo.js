@@ -48,6 +48,7 @@ class DemoServer {
       case 'care_cancel_event': return this.cancelEvent(args.p_id);
       case 'care_set_feed_amounts': return this.setFeedAmounts(args.p_amounts);
       case 'care_stats': return this.stats(args.p_days);
+      case 'care_set_sleep_end': return this.setSleepEnd(args.p_id, args.p_ended_at);
       default: throw new Error(`unknown function ${name}`);
     }
   }
@@ -59,7 +60,7 @@ class DemoServer {
     const all = this.live();
     const feeds = all.filter((e) => e.kind === 'feed');
     const todayFeeds = feeds.filter((e) => new Date(e.occurred_at) >= dayStart);
-    const [feed, diaper, sleep] = ['feed', 'diaper', 'sleep'].map((kind) => all.find((e) => e.kind === kind));
+    const [feed, diaper, sleep] = ['feed', 'diaper', 'sleep'].map((kind) => all.find((e) => e.kind === kind));  // live() 는 실제 시각 역순
     return {
       server_time: now.toISOString(),
       day_start: dayStart.toISOString(),
@@ -125,6 +126,14 @@ class DemoServer {
       });
     }
     return out;
+  }
+
+  setSleepEnd(id, endedAt) {
+    const e = this.events.find((x) => x.id === id && x.kind === 'sleep' && !x.deleted_at);
+    if (!e) return { status: 'not_found', id };
+    e.ended_at = endedAt ?? null;
+    this.save();
+    return { status: 'saved', id, ended_at: e.ended_at };
   }
 
   setFeedAmounts(amounts) {
