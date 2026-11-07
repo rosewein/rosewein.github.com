@@ -142,6 +142,9 @@ async function demoFlow(browser, base) {
   check(true, '10분 안 같은 종류는 확인을 물음');
   await shot(page, 'confirm');
   await page.click('#confirmNo');
+  check(await text(page, '#notice') === '안 넣었어요' && await page.isVisible('#notice'), '결과 알림은 아래 막대에("안 넣었어요")');
+  const bubbleNow = await page.$eval('#bubble', (b) => (b.classList.contains('empty') ? '' : b.textContent));
+  check(['', '고마워요!', '배고파요…', '쿨쿨'].includes(bubbleNow), `말풍선에는 알밤 말만 ("${bubbleNow}")`);
 
   await page.click('#diaperBtn');
   await page.click('#diaperSheet [data-type="poo"]');
@@ -150,6 +153,8 @@ async function demoFlow(browser, base) {
   await page.click('#undoBtn');
   await page.waitForTimeout(300);
   check((await text(page, '#lastDiaper')).includes('소변'), '취소하면 이전 기록으로');
+  check(await text(page, '#notice') === '취소했어요', '취소 결과는 아래 막대에("취소했어요")');
+  check(!(await text(page, '#bubble')).includes('취소'), '말풍선에는 취소 알림이 안 뜸');
   const kept = await page.evaluate(() => JSON.parse(localStorage.getItem('albam.demo.events')).filter((e) => e.deleted_at).length);
   check(kept === 1, '취소한 기록은 지우지 않고 표시만');
 

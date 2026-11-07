@@ -99,11 +99,10 @@ export function createStatusView(ctx) {
     setLine($('#lastDiaper'), '마지막 기저귀', diaper ? `${DIAPER_LABEL[diaper.type] || ''} · ${formatAgo(diaper.at, now, { hoursOnlyFrom: DIAPER_HOURS_ONLY })}` : '기록 없음');
     $('#albam').style.backgroundPosition = `${-frame * SPRITE_PX}px ${-MOOD_ROW[mood] * SPRITE_PX}px`;
 
-    // 말풍선(알밤 위): 잠깐 띄운 말 > 로그인 문제 > 기분. 할 말이 없으면 숨김
-    const bubble = state.bubble && Date.now() < state.bubble.until ? state.bubble : null;
-    const words = bubble?.text ?? (state.authProblem || MOOD_TEXT[mood]);
+    // 말풍선(알밤 위): 알밤이 하는 말만. 할 말이 없으면(평소) 숨김
+    const words = MOOD_TEXT[mood];
     $('#bubbleText').textContent = words;
-    $('#bubble').className = [bubble?.tone || (state.authProblem ? 'warn' : ''), words ? '' : 'empty'].join(' ').trim();
+    $('#bubble').className = words ? '' : 'empty';
   }
 
   /** 캐릭터 두 칸 애니메이션 */

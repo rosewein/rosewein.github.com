@@ -96,7 +96,6 @@ button.px.acc { color: var(--accent); }
   display: flex; align-items: center; justify-content: center; padding: 0 4px;
 }
 #bubble.empty { visibility: hidden; }
-#bubble.warn { color: var(--warn); }
 #bubbleText { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* 꼬리: 계단 모양 도트 삼각형 */
 #bubble::after {
@@ -135,6 +134,10 @@ button.px.acc { color: var(--accent); }
 #actions button { flex: 1 1 0; min-width: 0; }
 #actions .square { flex: 0 0 40px; }
 
+/* 저장·취소 결과 알림: 저장 알림과 같은 자리에 잠깐 */
+#notice { left: 62px; top: 130px; width: 256px; height: 40px; display: flex; align-items: center; justify-content: center;
+  border: 2px solid var(--line-hi); background: var(--bg); color: var(--text); }
+#notice.warn { border-color: var(--warn); color: var(--warn); }
 /* 저장 직후 알림: [수유] [기저귀] 자리만 잠깐 덮는다(마이크·지난 기록은 그대로) */
 #undo { left: 62px; top: 130px; width: 256px; height: 40px; display: flex; gap: 6px; background: var(--bg); }
 #undoMsg { flex: 1; display: flex; align-items: center; gap: 4px; border: 2px solid var(--ok); color: var(--ok); padding: 0 6px; overflow: hidden; white-space: nowrap; }

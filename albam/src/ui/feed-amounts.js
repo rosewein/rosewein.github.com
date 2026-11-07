@@ -58,7 +58,7 @@ export function setupFeedAmounts(ctx, { current, back }) {
     try {
       const r = await ctx.api.updateFeedAmounts(slots);
       sfx.save();
-      ctx.say(r.status === 'queued' ? '나중에 보낼게요' : '수유량 바꿨어요');
+      // 따로 알리지 않는다: 돌아간 수유 창에 새 양이 바로 보이고, 못 보냈으면 "대기 n건"이 뜬다
       await ctx.refresh();
       // 연결이 끊겨 refresh 가 못 받아도 바로 보이게
       if (ctx.state.summary) ctx.state.summary.feed_amounts = r.feed_amounts;

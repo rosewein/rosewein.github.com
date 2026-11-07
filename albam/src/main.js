@@ -40,7 +40,7 @@ const RELOAD_MIN_UPTIME_MS = 3 * 3600000;
  * @property {() => void} render              상태 칸 전체 다시 그리기
  * @property {() => void} tick                시계·캐릭터·밤 화면만 다시 그리기
  * @property {() => Promise<void>} refresh    요약 다시 받기
- * @property {(text: string, seconds?: number, tone?: string) => void} say  말풍선에 잠깐
+ * @property {(text: string, tone?: 'warn'|'') => void} notify  아래 알림 막대에 저장·취소 결과를 잠깐(말풍선은 알밤 말만)
  * @property {(ev: import('./domain.js').CareEvent, opts?: {force?: boolean}) => Promise<void>} save
  * @property {(message?: string) => void} showLogin
  * @property {() => void} reconnect           Supabase 주소·키를 바꾼 뒤 통신을 새로 만든다
@@ -53,11 +53,9 @@ const RELOAD_MIN_UPTIME_MS = 3 * 3600000;
  * @property {number} pending           못 보낸 기록 수
  * @property {number} clockSkewMs       서버 시각 - 기기 시각
  * @property {number} happyUntil        캐릭터 기쁨 끝 시각(ms)
- * @property {{text: string, until: number, tone?: string}|null} bubble
  * @property {number} nightWakeUntil    밤에 밝혀 둔 끝 시각(ms)
  * @property {number} lastTouchAt
  * @property {number} startedAt
- * @property {string} authProblem       가족 계정이 아닐 때 말풍선 문구
  */
 
 function main() {
@@ -71,11 +69,9 @@ function main() {
     pending: 0,
     clockSkewMs: 0,
     happyUntil: 0,
-    bubble: null,
     nightWakeUntil: 0,
     lastTouchAt: Date.now(),
     startedAt: Date.now(),
-    authProblem: '',
   };
 
   /** @type {AppContext} */
@@ -91,10 +87,7 @@ function main() {
     render: () => status.render(),
     tick: () => { status.tick(); night.update(); },
     refresh,
-    say(text, seconds = 4, tone = '') {
-      state.bubble = { text, until: Date.now() + seconds * 1000, tone };
-      ctx.tick();
-    },
+    notify: (text, tone) => recorder.notify(text, tone),
     save: (ev, opts) => recorder.save(ev, opts),
     showLogin: (message) => login.show(message),
     reconnect() {
@@ -127,8 +120,9 @@ function main() {
       if (!result.stale) state.clockSkewMs = measureSkew(result.summary);
       state.stale = result.stale;
       state.pending = result.pending;
-      state.authProblem = result.error instanceof AuthError ? '가족 계정 아님' : '';
       ctx.render();
+      // 로그인은 됐는데 가족 명단(care_family)에 없는 계정
+      if (result.error instanceof AuthError) ctx.showLogin('이 계정은 가족 명단에 없어요. 가족 계정으로 로그인해 주세요');
     } catch (e) {
       if (e instanceof AuthError) ctx.showLogin('다시 로그인해 주세요');
       else console.error(e);
