@@ -63,13 +63,14 @@ TYPE_MAP = {
     '밤잠': ('sleep', {'when': 'night'}),
 }
 # 옮기지 않는 종류(엄마 유축, 투약 등). 보고에만 센다
-SKIP_TYPES = {'pumping', '유축', 'medicine', '투약', 'baby food', '이유식', 'bath', '목욕', 'temperature', '체온',
+SKIP_TYPES = {'pumping', '유축', 'medicine', '투약', 'baby food', '이유식', 'bath', '목욕', 'temperature', '체온', '열', '기타',
               'hospital', '병원', 'play', '놀이', 'tummy time', '터미타임', 'snack', '간식', 'growth', '성장'}
 
-TYPE_KEYS = {'type', '종류', '타입', '유형'}
-DIAPER_KEYS = {'diaper type', '기저귀 종류', '기저귀 상태', '배변'}
+TYPE_KEYS = {'type', '종류', '기록 종류', '타입', '유형'}
+DIAPER_KEYS = {'diaper type', '기저귀 종류', '기저귀 상태', '배변', '배변 형태'}
 DURATION_KEYS = {'duration', '시간', '소요 시간', '소요시간'}
 MEMO_KEYS = {'memo', '메모'}
+COLOR_KEYS = {'배변색', 'poop color'}
 DIAPER_VALUES = {'pee': 'pee', 'wet': 'pee', '소변': 'pee', 'poop': 'poo', 'poo': 'poo', 'dirty': 'poo', '대변': 'poo',
                  'both': 'both', 'mixed': 'both', 'pee and poop': 'both', '둘 다': 'both', '둘다': 'both', '소변+대변': 'both', '혼합': 'both'}
 
@@ -181,6 +182,8 @@ def apply_fields(ev, fields, report):
             continue
         if key == 'memo':
             detail['memo'] = value
+        elif k in COLOR_KEYS:
+            detail['color'] = value
         elif k in DIAPER_KEYS:
             if value.strip().lower() in DIAPER_VALUES:
                 detail['type'] = DIAPER_VALUES[value.strip().lower()]
@@ -303,13 +306,22 @@ def to_sql(events):
     return '\n'.join(out) + '\n'
 
 
+def stat_day(e, day_start_hour=0):
+    """통계에서 이 기록을 셀 날짜(supabase/003_stats.sql 의 규칙과 같다).
+    수유·기저귀·낮잠은 일어난 날, 밤잠은 깨는 아침의 날(시작 + 12시간)."""
+    start = e['occurred_at'].astimezone(TZ)
+    if e['kind'] == 'sleep':
+        when = e['detail'].get('when') or ('night' if start.hour >= 18 or start.hour < 6 else 'day')
+        if when == 'night':
+            return (start + timedelta(hours=12)).date()
+    return (start - timedelta(hours=day_start_hour)).date()
+
+
 def daily_stats(events, day_start_hour=0):
-    """날짜별 통계(서울 시각). 베이비타임 앱의 통계 화면과 맞춰 보려고 쓴다.
-    하루는 day_start_hour 시에 시작한다. 잠은 시작한 날에 넣는다."""
+    """날짜별 통계(서울 시각). 베이비타임 앱의 통계 화면과 맞춰 보려고 쓴다. 날짜 규칙은 stat_day()"""
     days = {}
     for e in events:
-        local = e['occurred_at'].astimezone(TZ) - timedelta(hours=day_start_hour)
-        d = days.setdefault(local.date(), {'feed_count': 0, 'feed_ml': 0, 'pee': 0, 'poo': 0, 'both': 0, 'sleep_min': 0})
+        d = days.setdefault(stat_day(e, day_start_hour), {'feed_count': 0, 'feed_ml': 0, 'pee': 0, 'poo': 0, 'both': 0, 'sleep_min': 0})
         if e['kind'] == 'feed':
             d['feed_count'] += 1
             d['feed_ml'] += e['amount_ml'] or 0

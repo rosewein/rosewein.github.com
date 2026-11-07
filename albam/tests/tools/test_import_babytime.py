@@ -106,9 +106,9 @@ class ImportTest(unittest.TestCase):
         days = ib.daily_stats(events)
         d26, d27 = days[date(2024, 10, 26)], days[date(2024, 10, 27)]
         self.assertEqual((d26['feed_count'], d26['feed_ml']), (1, 160))
-        self.assertEqual(d26['sleep_min'], 141, '23:58~02:19 잠은 시작한 날(26일)에')
+        self.assertEqual(d26['sleep_min'], 0)
         self.assertEqual((d27['feed_count'], d27['feed_ml'], d27['poo']), (1, 148, 1))
-        self.assertEqual(d27['sleep_min'], 95)
+        self.assertEqual(d27['sleep_min'], 95 + 141, '낮잠 95분 + 26일 23:58~27일 02:19 밤잠(깨는 아침 27일) 141분')
         table = ib.stats_table(days)
         self.assertIn('| 2024-10-26 (토) | 1회 | 160ml |', table)
         # 하루를 새벽 5시에 끊으면 26일 22:06 수유와 27일 08:25 수유가 각자 날짜에 남는다

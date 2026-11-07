@@ -3,6 +3,7 @@
 //   addEvent()    기록 추가
 //   cancelEvent() 저장 직후 취소(지우지 않고 취소 표시)
 //   updateFeedAmounts() 수유량 빠른 선택 바꾸기
+//   getStats()    날짜별 통계(통계 화면)
 // 기기를 바꿀 때(개인 폰, ESP32) 다시 짜야 하는 범위를 이 폴더로 줄이려는 것이다.
 // 미리 보기(?demo)도 이 함수를 그대로 쓰고, Supabase 대신 demo.js 의 가짜 서버만 끼운다.
 // 그래서 미리 보기에서도 오프라인 저장·"대기 n건"·다시 보내기가 실제와 똑같이 동작한다.
@@ -18,6 +19,20 @@ const DEFAULT_DUP_WINDOW_MIN = 10;
 
 /** @typedef {import('../domain.js').CareEvent} CareEvent */
 /** @typedef {import('../domain.js').Summary} Summary */
+
+/**
+ * care_stats() 의 하루. 베이비타임 과거 기록 + 거실 화면 기록
+ * @typedef {Object} DayStat
+ * @property {string} day   YYYY-MM-DD(서울)
+ * @property {number} feed_count
+ * @property {number} feed_ml
+ * @property {number} diaper_total
+ * @property {number} diaper_pee
+ * @property {number} diaper_poo
+ * @property {number} diaper_both
+ * @property {number} sleep_min
+ * @property {boolean} from_history
+ */
 
 /**
  * @typedef {Object} SummaryResult
@@ -48,6 +63,7 @@ const DEFAULT_DUP_WINDOW_MIN = 10;
  * @property {(ev: CareEvent, opts?: {force?: boolean}) => Promise<AddResult>} addEvent
  * @property {(id: string) => Promise<{status: string}>} cancelEvent
  * @property {(amounts: number[]) => Promise<{status: 'saved'|'queued', feed_amounts: number[]}>} updateFeedAmounts
+ * @property {(days?: number) => Promise<DayStat[]>} getStats   최근 n일 날짜별 통계. 연결이 안 되면 NetworkError
  */
 
 /**
@@ -188,6 +204,8 @@ export function createApi(cfg, { transport, storage = STORAGE.real } = {}) {
         return { status: 'queued', id };
       }
     },
+
+    getStats: (days = 7) => rest.rpc('care_stats', { p_days: days }),
 
     async updateFeedAmounts(amounts) {
       const clean = [...new Set(amounts)].sort((a, b) => a - b);

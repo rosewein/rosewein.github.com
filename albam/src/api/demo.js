@@ -47,6 +47,7 @@ class DemoServer {
       case 'care_add_event': return this.addEvent(args.p);
       case 'care_cancel_event': return this.cancelEvent(args.p_id);
       case 'care_set_feed_amounts': return this.setFeedAmounts(args.p_amounts);
+      case 'care_stats': return this.stats(args.p_days);
       default: throw new Error(`unknown function ${name}`);
     }
   }
@@ -97,6 +98,32 @@ class DemoServer {
     e.deleted_at = new Date().toISOString();
     this.save();
     return { status: 'cancelled', id };
+  }
+
+  /** 최근 n일 날짜별 통계. 미리 보기라 지난날은 그럴듯한 가짜 숫자로 채운다 */
+  stats(days = 7) {
+    const out = [];
+    for (let i = days - 1; i >= 0; i -= 1) {
+      const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - i);
+      const next = new Date(d); next.setDate(d.getDate() + 1);
+      const inDay = this.live().filter((e) => new Date(e.occurred_at) >= d && new Date(e.occurred_at) < next);
+      const feeds = inDay.filter((e) => e.kind === 'feed');
+      const diapers = inDay.filter((e) => e.kind === 'diaper');
+      const fake = i > 0;   // 오늘은 실제 미리 보기 기록, 지난날은 고정 예시
+      const seed = (d.getDate() * 37) % 7;
+      out.push({
+        day: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`,
+        feed_count: fake ? 4 + (seed % 2) : feeds.length,
+        feed_ml: fake ? 760 + seed * 20 : feeds.reduce((s, e) => s + (e.amount_ml || 0), 0),
+        diaper_total: fake ? 6 + (seed % 3) : diapers.length,
+        diaper_pee: fake ? 4 : diapers.filter((e) => e.detail.type === 'pee').length,
+        diaper_poo: fake ? 1 + (seed % 2) : diapers.filter((e) => e.detail.type === 'poo').length,
+        diaper_both: fake ? 1 : diapers.filter((e) => e.detail.type === 'both').length,
+        sleep_min: fake ? 640 + seed * 15 : 0,
+        from_history: fake,
+      });
+    }
+    return out;
   }
 
   setFeedAmounts(amounts) {

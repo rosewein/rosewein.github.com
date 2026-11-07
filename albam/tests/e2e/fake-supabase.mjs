@@ -64,6 +64,14 @@ export async function createFakeSupabase(context) {
     switch (url.pathname) {
       case '/rest/v1/rpc/care_summary': return reply(200, summary());
       case '/rest/v1/rpc/care_add_event': return reply(200, addEvent(body.p));
+      case '/rest/v1/rpc/care_stats': {
+        const days = [];
+        for (let i = (body.p_days || 7) - 1; i >= 0; i -= 1) {
+          const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - i);
+          days.push({ day: d.toISOString().slice(0, 10), feed_count: 4, feed_ml: 800, diaper_total: 6, diaper_pee: 4, diaper_poo: 1, diaper_both: 1, sleep_min: 660, from_history: true });
+        }
+        return reply(200, days);
+      }
       case '/rest/v1/rpc/care_set_feed_amounts':
         feedAmounts = [...new Set(body.p_amounts)].sort((a, b) => a - b);
         return reply(200, { status: 'saved', feed_amounts: feedAmounts });
