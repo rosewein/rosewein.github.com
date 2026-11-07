@@ -2,7 +2,8 @@
  *
  * 단위는 모두 '논리 픽셀'이다. #stage 가 380x180 이고 src/ui/stage.js 가 기기 화소의 정수배로 zoom 한다.
  * 글자 크기는 갈무리11의 정수배(12·24·36·48px)만 쓴다. 그래야 도트가 흐려지지 않는다.
- * 좌우 16px 은 S10 곡면이라 버튼·글자를 두지 않는다.
+ * S10 을 가로로 두면 곡면은 위·아래다. 위·아래 8px 에는 버튼·글자를 두지 않는다(창 테두리·바탕만 가능).
+ * 좌우 16px 도 비운다(앞카메라 구멍, 손에 쥐는 쪽).
  * 순서: 글꼴 → 색 → 바탕 → 공통 부품 → 왼쪽(캐릭터) → 오른쪽(상태·버튼) → 덮는 창 → 밤
  */
 
@@ -68,7 +69,7 @@ button.px.on { color: var(--accent); }
 button.px:disabled { opacity: .4; }
 button.px.big { font-size: 24px; }
 /* 큰 버튼 셋([말하기] [수유] [기저귀])은 모양을 똑같이: 높이 42, 글자 24, 아이콘 24, 사이 6 */
-button.px.action { height: 42px; font-size: 24px; gap: 6px; }
+button.px.action { height: 40px; font-size: 24px; gap: 6px; }
 button.px.ghost { background: transparent; border-color: var(--line); color: var(--dim); }
 button.px.acc { color: var(--accent); }
 
@@ -82,8 +83,8 @@ button.px.acc { color: var(--accent); }
 .ico-moon { background-position: -48px 0; }  .x2.ico-moon { background-position: -96px 0; }
 .ico-check { background-position: -60px 0; } .x2.ico-check { background-position: -120px 0; }
 
-/* ── 왼쪽: 말풍선(위) + 알밤(아래). 곡면 가장자리 16px 비움 ── */
-#charPanel { left: 16px; top: 4px; width: 112px; height: 124px; }
+/* ── 왼쪽: 말풍선(위) + 알밤(아래) ── */
+#charPanel { left: 16px; top: 8px; width: 112px; height: 120px; }
 /* 말풍선: 한 줄, 길면 … 로 자른다. 할 말이 없으면 숨김(.empty) */
 #bubble {
   position: absolute; left: 0; top: 2px; width: 112px; height: 20px;
@@ -99,16 +100,16 @@ button.px.acc { color: var(--accent); }
   clip-path: polygon(0 0, 8px 0, 8px 2px, 6px 2px, 6px 4px, 5px 4px, 5px 6px, 3px 6px, 3px 4px, 2px 4px, 2px 2px, 0 2px);
 }
 #albam {
-  position: absolute; left: 8px; top: 30px; width: 96px; height: 96px;
+  position: absolute; left: 8px; top: 24px; width: 96px; height: 96px;
   background-image: url('../sprites/albam.png'); background-size: 192px 384px;
 }
 #micBtn.listening { border-color: var(--accent); color: var(--accent); }
 
 /* ── 오른쪽 위: 상태 ── */
-#status { left: 134px; top: 4px; width: 230px; height: 122px; }
+#status { left: 134px; top: 8px; width: 230px; height: 116px; }
 /* 줄마다 무엇인지 앞에 흐린 글씨로 붙인다(.lbl) */
 #status .lbl { color: var(--dim); margin-right: 6px; }
-/* 줄 간격: 위 이름표 → 큰 글씨 → (여백) → 오늘 수유 → 마지막 기저귀 → (여백) → 버튼 */
+/* 줄 간격(화면 기준): 이름표 10 → 큰 글씨 30~68 → 오늘 수유 80 → 마지막 기저귀 98 → (여백) → 버튼 130~170 */
 #lastFeed { position: absolute; left: 0; top: 2px; white-space: nowrap; }
 #clock { position: absolute; right: 0; top: 2px; white-space: nowrap; }
 /* "2시간 35분 전": 숫자 36, 단위 24. 가장 긴 "12시간 35분 전"도 한 줄(약 216) */
@@ -118,20 +119,19 @@ button.px.acc { color: var(--accent); }
 #elapsed .unit:last-child { margin-right: 0; }
 #elapsed .none { font-size: 24px; color: var(--dim); }
 #elapsed.warn { color: var(--warn); }
-#today { position: absolute; left: 0; top: 66px; white-space: nowrap; }
+#today { position: absolute; left: 0; top: 72px; white-space: nowrap; }
 /* 못 보낸 기록·연결 상태: '오늘 수유' 줄 오른쪽 */
-#net { position: absolute; right: 0; top: 68px; text-align: right; white-space: nowrap; }
-#lastDiaper { position: absolute; left: 0; top: 82px; white-space: nowrap; }
-#lateBtn { position: absolute; left: 0; top: 100px; width: 230px; height: 20px; font-size: 12px; }
+#net { position: absolute; right: 0; top: 74px; text-align: right; white-space: nowrap; }
+#lastDiaper { position: absolute; left: 0; top: 90px; white-space: nowrap; }
 
 /* ── 오른쪽 아래: 큰 버튼 ── */
-/* 아래 줄: 마이크는 아이콘만 42x42 정사각형, 수유·기저귀는 남은 자리를 반씩 (348 - 42 - 6*2) / 2 = 147 */
-#actions { left: 16px; top: 132px; width: 348px; height: 42px; display: flex; gap: 6px; }
+/* 아래 줄: [마이크][수유][기저귀][지난 기록]. 정사각형 40 두 개, 수유·기저귀는 (348 - 40*2 - 6*3) / 2 = 125 */
+#actions { left: 16px; top: 130px; width: 348px; height: 40px; display: flex; gap: 6px; }
 #actions button { flex: 1 1 0; min-width: 0; }
-#actions #micBtn { flex: 0 0 42px; }
+#actions .square { flex: 0 0 40px; }
 
-/* 저장 직후 알림: [수유] [기저귀] 자리만 잠깐 덮는다(마이크는 그대로) */
-#undo { left: 64px; top: 132px; width: 300px; height: 42px; display: flex; gap: 6px; background: var(--bg); }
+/* 저장 직후 알림: [수유] [기저귀] 자리만 잠깐 덮는다(마이크·지난 기록은 그대로) */
+#undo { left: 62px; top: 130px; width: 256px; height: 40px; display: flex; gap: 6px; background: var(--bg); }
 #undoMsg { flex: 1; display: flex; align-items: center; gap: 4px; border: 2px solid var(--ok); color: var(--ok); padding: 0 6px; overflow: hidden; white-space: nowrap; }
 #undoBtn { width: 76px; }
 
