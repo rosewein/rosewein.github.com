@@ -72,7 +72,8 @@ class ImportTest(unittest.TestCase):
     def test_english(self):
         events, rep = self.parse(EN)
         kinds = [e['kind'] for e in events]
-        self.assertEqual(kinds, ['feed', 'sleep', 'feed', 'sleep', 'diaper'])
+        self.assertEqual(kinds, ['feed', 'medication', 'sleep', 'feed', 'sleep', 'diaper'], '투약도 옮긴다(008)')
+        events = [e for e in events if e['kind'] != 'medication']
         formula = events[0]
         self.assertEqual(formula['amount_ml'], 160)
         self.assertEqual(formula['occurred_at'], datetime(2024, 10, 26, 22, 6, tzinfo=ib.TZ))
@@ -82,7 +83,7 @@ class ImportTest(unittest.TestCase):
         pumped = events[2]
         self.assertEqual(pumped['amount_ml'], 148)  # 5 fl oz
         self.assertEqual(events[4]['detail']['type'], 'poo')
-        self.assertEqual(rep['skipped'], {'Pumping': 1, 'Medicine': 1})
+        self.assertEqual(rep['skipped'], {'Pumping': 1}, '엄마 유축만 건너뜀')
         self.assertEqual(rep['bad_date'] + rep['no_type'], 1)
 
     def test_korean_guess(self):
@@ -156,6 +157,52 @@ class ImportTest(unittest.TestCase):
         legacy = line.replace('|2026-11-01 06:22|', '||')
         self.assertEqual(timed['id'], ib.line_id(legacy), '처음 옮긴 때(끝 없음)와 같은 id')
         self.assertIn("regexp_replace(l, '^(feed\\|[^|]*\\|)[^|]*', '\\1')", ib.SQL_TEMPLATE)
+
+
+    def test_other_kinds(self):
+        ko = '''====================
+2026-08-18 08:53 AM
+기록 종류: 열
+체온: 37.1 (°C)
+====================
+2026-07-14 04:45 PM ~ 2026-07-14 04:50 PM
+기록 종류: 목욕
+소요시간: 5 (분)
+메모: 보습로션
+====================
+2026-09-01 08:12 AM
+기록 종류: 투약
+약 종류: 기침감기약&비염콧물약
+메모: 암브로콜시럽/코미에스시럽
+====================
+2026-08-18 08:50 AM
+기록 종류: 병원
+방문유형: 문진
+병원명: 고려대학교 구로병원
+방문사유: 예방접종(2개월 접종)
+====================
+2026-09-17 04:40 PM
+기록 종류: 터미타임
+소요시간: 4 (분)
+====================
+'''
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, 'activity_Sehun_202609.txt')
+            with open(path, 'w', encoding='utf-8') as fh:
+                fh.write(ko)
+            events, rep = ib.parse_files([path])
+        by = {e['kind']: e for e in events}
+        self.assertEqual(set(by), {'temperature', 'bath', 'medication', 'hospital', 'tummy_time'})
+        self.assertEqual(by['temperature']['value_num'], 37.1)
+        self.assertTrue(ib.compact_line(by['temperature']).endswith('|37.1'), '체온은 여섯째 칸')
+        self.assertEqual(by['bath']['ended_at'] - by['bath']['occurred_at'], ib.timedelta(minutes=5))
+        self.assertEqual(by['bath']['detail']['memo'], '보습로션')
+        self.assertEqual(by['medication']['detail']['medicine'], '기침감기약&비염콧물약')
+        self.assertEqual(by['hospital']['detail']['hospital'], '고려대학교 구로병원')
+        self.assertEqual(by['hospital']['detail']['reason'], '예방접종(2개월 접종)')
+        self.assertEqual(by['tummy_time']['ended_at'] - by['tummy_time']['occurred_at'], ib.timedelta(minutes=4), '소요시간으로 끝')
+        self.assertFalse(rep['unknown_keys'], rep['unknown_keys'])
+        self.assertIn("nullif(split_part(l, '|', 6), '')::numeric", ib.SQL_TEMPLATE)
 
 
 if __name__ == '__main__':
