@@ -112,12 +112,13 @@ button.px.acc { color: var(--accent); }
 #lateBtn { position: absolute; left: 0; top: 102px; width: 230px; height: 20px; font-size: 12px; }
 
 /* ── 오른쪽 아래: 큰 버튼 ── */
-/* 큰 버튼 셋: (348 - 6*2) / 3 = 112 씩 똑같이. 둘째 버튼 왼쪽(134)이 상태 칸 왼쪽과 맞는다 */
+/* 아래 줄: 마이크는 아이콘만 42x42 정사각형, 수유·기저귀는 남은 자리를 반씩 (348 - 42 - 6*2) / 2 = 147 */
 #actions { left: 16px; top: 132px; width: 348px; height: 42px; display: flex; gap: 6px; }
 #actions button { flex: 1 1 0; min-width: 0; }
+#actions #micBtn { flex: 0 0 42px; }
 
-/* 저장 직후 알림: [수유] [기저귀] 자리만 잠깐 덮는다([말하기]는 그대로) */
-#undo { left: 134px; top: 132px; width: 230px; height: 42px; display: flex; gap: 6px; background: var(--bg); }
+/* 저장 직후 알림: [수유] [기저귀] 자리만 잠깐 덮는다(마이크는 그대로) */
+#undo { left: 64px; top: 132px; width: 300px; height: 42px; display: flex; gap: 6px; background: var(--bg); }
 #undoMsg { flex: 1; display: flex; align-items: center; gap: 4px; border: 2px solid var(--ok); color: var(--ok); padding: 0 6px; overflow: hidden; white-space: nowrap; }
 #undoBtn { width: 76px; }
 

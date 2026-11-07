@@ -66,12 +66,12 @@ async function demoFlow(browser, base) {
   check(await text(page, '#lastDiaper') === '마지막 기저귀소변 · 1시간 10분 전', '마지막 기저귀 "1시간 10분 전"');
   const overflow = await page.$$eval('#status > div', (els) => els.filter((e) => e.getBoundingClientRect().right > document.querySelector('#status').getBoundingClientRect().right + 0.5).map((e) => e.id));
   check(overflow.length === 0, `상태 칸 글이 넘치지 않음 ${overflow.join()}`);
-  const sizes = await page.$$eval('#actions .action', (bs) => bs.map((b) => {
-    const r = b.getBoundingClientRect();
-    const i = b.querySelector('.ico').getBoundingClientRect();
-    return [r.width, r.height, r.top, i.width, i.height, getComputedStyle(b).fontSize].join('/');
-  }));
-  check(sizes.length === 3 && new Set(sizes).size === 1, `큰 버튼 셋 크기·아이콘·글자 똑같음 ${sizes.join(' | ')}`);
+  const box = (sel) => page.$eval(sel, (b) => { const r = b.getBoundingClientRect(); const i = b.querySelector('.ico').getBoundingClientRect();
+    return { w: r.width, h: r.height, top: r.top, ico: `${i.width}x${i.height}`, font: getComputedStyle(b).fontSize }; });
+  const [mic, feed, diaper] = [await box('#micBtn'), await box('#feedBtn'), await box('#diaperBtn')];
+  check(mic.w === mic.h && (await text(page, '#micBtn')) === '' && (await page.getAttribute('#micBtn', 'aria-label')) === '말하기', `마이크는 아이콘만, 정사각형 ${mic.w}x${mic.h}`);
+  check(JSON.stringify(feed) === JSON.stringify(diaper), `수유·기저귀 크기·아이콘·글자 똑같음 ${JSON.stringify(feed)}`);
+  check(feed.w > mic.w * 3 && feed.h === mic.h && feed.top === mic.top && feed.ico === mic.ico, '수유·기저귀가 크게, 높이·줄·아이콘 크기는 마이크와 같음');
 
   await page.click('#feedBtn');
   const quick = () => page.$$eval('#amountRow button', (b) => b.map((x) => `${x.querySelector('.t24').textContent}/${x.querySelector('.machine').textContent}`).join());
