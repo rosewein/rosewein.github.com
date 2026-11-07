@@ -77,6 +77,8 @@ export async function createFakeSupabase(context) {
       case '/rest/v1/rpc/care_set_feed_amounts':
         feedAmounts = [...new Set(body.p_amounts)].sort((a, b) => a - b);
         return reply(200, { status: 'saved', feed_amounts: feedAmounts });
+      case '/rest/v1/rpc/care_timeline':
+        return reply(200, live().reverse().map((e) => ({ id: e.id, kind: e.kind, at: e.occurred_at, ended_at: e.ended_at ?? null, ml: e.amount_ml ?? null, type: e.detail?.type ?? null })));
       case '/rest/v1/rpc/care_set_sleep_end': {
         const e = events.find((x) => x.id === body.p_id && x.kind === 'sleep' && !x.deleted);
         if (e) e.ended_at = body.p_ended_at;

@@ -29,7 +29,7 @@
 
 1. 대시보드에서 프로젝트가 **일시정지(Paused)** 상태면 Restore 한다.
 2. Table Editor에서 기존 표를 확인한다. 새 표는 모두 `care_` 로 시작해 겹치지 않는다.
-3. SQL Editor에 [`supabase/001_care_schema.sql`](supabase/001_care_schema.sql), [`002_feed_amounts.sql`](supabase/002_feed_amounts.sql), [`003_stats.sql`](supabase/003_stats.sql), [`004_sleep_end.sql`](supabase/004_sleep_end.sql)을 **차례로** 붙여 실행한다(여러 번 실행해도 안전).
+3. SQL Editor에 [`supabase/001_care_schema.sql`](supabase/001_care_schema.sql), [`002_feed_amounts.sql`](supabase/002_feed_amounts.sql), [`003_stats.sql`](supabase/003_stats.sql), [`004_sleep_end.sql`](supabase/004_sleep_end.sql), [`005_timeline.sql`](supabase/005_timeline.sql)을 **차례로** 붙여 실행한다(여러 번 실행해도 안전).
 4. Authentication → Users → Add user 로 가족 계정을 만든다(이메일+비밀번호, Auto confirm). 거실 기기용 계정을 따로 두면 기기만 로그아웃시키기 쉽다.
 5. 가족으로 등록한다. 여기 없는 계정은 로그인해도 아무것도 못 읽고 못 쓴다.
    ```sql
@@ -38,7 +38,7 @@
    ```
 6. Authentication → Providers → Email 에서 회원가입(Allow new users to sign up)을 끈다.
 7. Project Settings → API 의 Project URL과 publishable(또는 `anon`) key를 [`config.js`](config.js) 에 넣는다(비워 두면 기기 첫 화면에서 넣음). **service_role 키는 넣지 않는다.**
-   지금은 `baby_archive_AlbamWiki` 프로젝트에 연결돼 있고 001~004 실행, 이지·준희 계정 가족 등록, 회원가입 끄기까지 끝났다(2026-11-07).
+   지금은 `baby_archive_AlbamWiki` 프로젝트에 연결돼 있고 001~005 실행, 이지·준희 계정 가족 등록, 회원가입 끄기까지 끝났다(2026-11-07).
 
 ### 2. 거실 S10
 
@@ -80,7 +80,8 @@ python3 tools/check_babytime_stats.py --activity activity_세훈_*_asc.txt --sta
 | 밤 화면 | 21~6시, 터치하면 30초 | `config.js nightStartHour·nightEndHour·nightWakeSeconds` |
 | 저장 직후 취소 / 음성 자동 저장 | 6초 / 4초 | `config.js undoSeconds·voiceConfirmSeconds` |
 | 다른 기기 기록 다시 읽기 | 20초 | `config.js pollSeconds` |
-| 통계 쪽 날 수 / 안 만지면 대시보드로 | 7일 / 60초 | `config.js statsDays·statsIdleSeconds` |
+| 통계 쪽 날 수 / 안 만지면 대시보드로 | 7일 / 60초(타임라인·통계) | `config.js statsDays·statsIdleSeconds` |
+| 밝은/어두운 화면 | 해 뜬 동안 밝게(서울 기준) | `config.js theme·location` |
 | 캐릭터 배고픔 | 수유 후 3시간 | `config.js hungryMinutes` |
 | 캐릭터 그림 | 밤톨 도트 | `tools/make_sprites.py` → `npm run sprites` |
 

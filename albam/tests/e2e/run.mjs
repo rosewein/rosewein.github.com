@@ -282,44 +282,86 @@ async function statsFlow(browser, base) {
     await page.mouse.move((fromX + toX) / 2, y); await page.mouse.move(toX, y); await page.mouse.up();
     await page.clock.runFor(500);   // 밀고 난 직후(0.4초) 클릭은 무시되므로
   };
-  const onStats = () => page.isVisible('#pageStats');
+  const pageNow = () => page.evaluate(() => ['Clock', 'Main', 'Timeline', 'Stats'].find((n) => !document.querySelector(`#page${n}`).classList.contains('hidden')));
+  const dot = (i) => page.click(`#pageDots .dot:nth-child(${i})`);
 
-  check(!(await onStats()) && await page.isVisible('#pageDots'), '처음엔 대시보드, 아래에 쪽 표시');
+  check(await pageNow() === 'Main' && (await page.$$eval('#pageDots .dot', (d) => d.length)) === 4, '처음엔 대시보드, 아래에 쪽 표시 점 넷');
+  check(await page.evaluate(() => document.body.classList.contains('light')), '낮(14시)에는 밝은 화면');
+  await shot(page, 'main-light');
+
+  // 시계 쪽: 오른쪽으로 밀면
+  await swipe(200, 560);
+  check(await pageNow() === 'Clock', '오른쪽으로 밀면 시계 쪽');
+  check(await text(page, '#bigClock') === '14:00' && await text(page, '#bigDate') === '11월 6일 금요일', `시각·날짜·요일 크게(${await text(page, '#bigDate')})`);
+  check((await curvedEdgeOffenders(page, '#bigClock, #bigDate, #pageDots')).length === 0, '시계 쪽: 위·아래 곡면에 글 없음');
+  await shot(page, 'clock');
+  await page.clock.runFor(65000);
+  check(await pageNow() === 'Clock', '시계 쪽은 안 만져도 그대로(탁상시계)');
+  check(await text(page, '#bigClock') === '14:01', '시계가 간다');
+
+  // 타임라인 쪽
+  await swipe(560, 200);
   await swipe(560, 200, 290);   // 수유 버튼 위에서 시작해 왼쪽으로
-  check(await onStats(), '왼쪽으로 밀면 통계 쪽');
+  check(await pageNow() === 'Timeline', '대시보드에서 왼쪽으로 밀면 타임라인');
   check(await page.isHidden('#feedSheet'), '밀다가 버튼 위에서 떼도 버튼은 안 눌림');
-  check(await page.isVisible('#actions'), '통계 쪽에서도 큰 버튼 줄은 그대로');
-  check((await page.$$eval('#statsChart .col', (c) => c.length)) === 7, '막대 일곱 개');
-  const labels = await page.$$eval('#statsChart .d', (d) => d.map((x) => x.textContent));
-  check(labels[6] === '오늘' && labels[0] === '10/31', `날짜 아래 표시 ${labels.join(' ')}`);
+  check(await page.isVisible('#actions'), '다른 쪽에서도 큰 버튼 줄은 그대로');
+  await page.clock.runFor(500);
+  const tl = await page.$$eval('.tlRow', (rows) => rows.map((r) => ({
+    label: r.querySelector('.tlLabel').textContent, feeds: r.querySelectorAll('.tlFeed').length,
+    sleeps: r.querySelectorAll('.tlSleep').length, diapers: r.querySelectorAll('.tlDiaper').length, now: !!r.querySelector('.tlNow') })));
+  check(tl.length === 3 && tl[0].label === '오늘' && tl[1].label === '어제' && tl[0].now, `줄 셋(오늘·어제·그저께), 오늘에 지금 선 ${JSON.stringify(tl.map((r) => r.label))}`);
+  check(tl[0].feeds === 3 && tl[0].diapers === 1 && tl[0].sleeps === 1, `오늘 줄: 수유 3·기저귀 1·잠 1 ${JSON.stringify(tl[0])}`);
+  const tlOut = await page.$$eval('.tlTrack *', (els) => {
+    const box = document.querySelector('#timelineRows').getBoundingClientRect();
+    return els.filter((e) => { const r = e.getBoundingClientRect(); return r.right > box.right + 0.5 || r.left < box.left - 0.5; }).length;
+  });
+  check(tlOut === 0, '타임라인 표시가 칸 밖으로 안 나감');
+  check((await curvedEdgeOffenders(page, '#timelineHead span, #timelineAxis span, .tlRow, #pageDots')).length === 0, '타임라인 쪽: 위·아래 곡면에 글 없음');
+  await shot(page, 'timeline');
+  // 기록하면 바로 타임라인에도(대시보드로 돌아갔다 와도)
+  await page.click('#diaperBtn');
+  await page.click('#diaperSheet [data-type="poo"]');
+  await page.clock.runFor(500);
+  await dot(3);
+  await page.clock.runFor(500);
+  check((await page.$$eval('.tlRow:first-child .tlDiaper.poo', (d) => d.length)) === 1, '방금 넣은 대변이 타임라인에');
+
+  // 통계 쪽
+  await swipe(560, 200);
+  check(await pageNow() === 'Stats', '한 번 더 밀면 통계');
+  check((await page.$$eval('#statsChart .card', (c) => c.length)) === 7, '날짜 카드 일곱 장');
+  const labels = await page.$$eval('#statsChart .card .d', (d) => d.map((x) => x.textContent));
+  check(labels[6] === '오늘' && labels[0] === '10/31', `카드 위에 날짜 ${labels.join(' ')}`);
   check((await text(page, '#statsFoot')).startsWith('지난 6일 평균'), '아래에 평균(오늘 빼고)');
-  check((await text(page, '#statsLegend')) === '', '수유 탭은 한 색이라 색 설명 없음');
-  const curved = await curvedEdgeOffenders(page, '#statsHead > span, #statsLegend span, #statsTabs button, #statsChart .v, #statsChart .d, #statsChart .bar, #statsFoot, #pageDots');
+  check((await text(page, '#statsLegend')).startsWith('숫자 = 횟수'), '카드 읽는 법');
+  const curved = await curvedEdgeOffenders(page, '#statsLegend span, #statsTabs button, #statsChart .card, #statsFoot, #pageDots');
   check(curved.length === 0, `통계 쪽: 위·아래 곡면에 글·버튼 없음 ${curved.join(' ')}`);
-  const over = await page.$$eval('#statsChart .v', (v) => v.filter((x) => x.getBoundingClientRect().top < document.querySelector('#statsChart').getBoundingClientRect().top - 0.5).length);
-  check(over === 0, '막대 위 값이 그래프 칸 안');
+  const cardOverflow = await page.$$eval('#statsChart .card', (cs) => cs.filter((c) => [...c.children].some((x) => {
+    const r = x.getBoundingClientRect(); const b = c.getBoundingClientRect(); return r.left < b.left - 0.5 || r.right > b.right + 0.5 || r.bottom > b.bottom + 0.5;
+  })).length);
+  check(cardOverflow === 0, '카드 안 글·칸이 카드 밖으로 안 나감');
   await shot(page, 'stats-feed');
   await page.click('#statsTabs [data-metric="diaper"]');
-  check((await page.$$eval('#statsChart .v', (v) => v[0].textContent)).endsWith('회'), '기저귀 탭');
-  check((await text(page, '#statsLegend')) === '소변만대변 있음', '기저귀 탭: 색 설명(■ 소변만 ■ 대변 있음)');
+  check((await page.$$eval('#statsChart .card .badge .ico-poo', (v) => v.length)) === 7, '기저귀 탭: 카드마다 💩 칸');
+  check((await text(page, '#statsLegend')) === '숫자 = 전체 ·  = 대변 있음', '기저귀 탭: 읽는 법');
   await shot(page, 'stats-diaper');
   await page.click('#statsTabs [data-metric="sleep"]');
-  check((await page.$$eval('#statsChart .v', (v) => v[0].textContent)).endsWith('시간'), '잠 탭');
+  check((await page.$$eval('#statsChart .card .badge', (v) => v[0].textContent)).startsWith('낮'), '잠 탭: 낮잠 칸');
   check((await text(page, '#statsFoot')).includes('낮잠') && (await text(page, '#statsFoot')).includes('밤잠'), '잠 평균: 낮잠·밤잠');
   await shot(page, 'stats-sleep');
+  await page.evaluate(() => document.body.classList.remove('light'));
+  await shot(page, 'stats-sleep-dark');
+  await page.evaluate(() => document.body.classList.add('light'));
 
-  await swipe(200, 560);
-  check(!(await onStats()), '오른쪽으로 밀면 대시보드');
-  await page.click('#pageDots');
-  await page.clock.runFor(300);
-  check(await onStats(), '점을 눌러도 통계 쪽');
   await page.clock.runFor(65000);
-  check(!(await onStats()), '1분 동안 안 만지면 대시보드로');
-  await page.click('#pageDots');
+  check(await pageNow() === 'Main', '1분 동안 안 만지면 대시보드로');
+  await dot(4);
+  await page.clock.runFor(300);
+  check(await pageNow() === 'Stats', '넷째 점을 누르면 통계');
   await page.click('#diaperBtn');
-  check(!(await onStats()) && await page.isVisible('#diaperSheet'), '통계 쪽에서 큰 버튼 누르면 대시보드로 돌아와 창이 열림');
+  check(await pageNow() === 'Main' && await page.isVisible('#diaperSheet'), '다른 쪽에서 큰 버튼 누르면 대시보드로 돌아와 창이 열림');
   await swipe(560, 200, 200);
-  check(!(await onStats()), '창이 열려 있으면 밀어도 안 넘김');
+  check(await pageNow() === 'Main', '창이 열려 있으면 밀어도 안 넘김');
   check(errors.length === 0, `페이지 오류 없음 ${errors.join(' ')}`);
 }
 
@@ -388,7 +430,11 @@ async function nightFlow(browser, base) {
   await page.evaluate(() => localStorage.clear());
   await page.reload();
   await page.clock.runFor(2000);
-  check(!(await page.isHidden('#night')), '밤에는 거의 검은 화면');
+  check(!(await page.isHidden('#night')), '밤에는 검은 화면');
+  check(!(await page.evaluate(() => document.body.classList.contains('light'))), '밤에는 어두운 화면');
+  const nightText = await page.$eval('#nightText', (n) => ({ t: n.textContent, r: n.getBoundingClientRect(), s: document.querySelector('#stage').getBoundingClientRect() }));
+  check(nightText.t.includes('전') && nightText.t.includes('마지막 수유') && nightText.t.includes('지금'), `밤 화면: 지난 시간·마지막 수유·지금 (${nightText.t})`);
+  check(nightText.r.right <= nightText.s.right + 0.5 && nightText.r.bottom <= nightText.s.bottom + 0.5, '밤 화면 글이 화면 안');
   await shot(page, 'night');
   await page.touchscreen.tap(300, 200);
   await page.clock.runFor(1000);

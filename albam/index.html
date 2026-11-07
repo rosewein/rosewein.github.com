@@ -18,7 +18,14 @@
 <body>
 <div id="wrap"><div id="stage">
   <div id="shift">
-    <!-- 첫 쪽: 대시보드. 옆으로 밀면 통계(src/ui/pages.js) -->
+    <!-- 쪽: [시계] ← [대시보드] → [타임라인] → [통계]. 옆으로 밀거나 아래 점을 눌러 넘긴다(src/ui/pages.js) -->
+    <!-- 시계: 지금 시각, 날짜·요일 크게(src/ui/clock-page.js) -->
+    <div class="page hidden" id="pageClock">
+      <div class="box" id="bigClock"></div>
+      <div class="box t24" id="bigDate"></div>
+    </div>
+
+    <!-- 대시보드(처음 쪽) -->
     <div class="page" id="pageMain">
     <!-- 왼쪽 위: 캐릭터 -->
     <div class="box" id="charPanel">
@@ -37,10 +44,24 @@
     </div>
     </div>
 
-    <!-- 둘째 쪽: 최근 7일 통계(src/ui/stats.js) -->
+    <!-- 타임라인: 최근 3일을 0~24시 줄로(src/ui/timeline.js) -->
+    <div class="page hidden" id="pageTimeline">
+      <div class="box t9" id="timelineHead">
+        <span class="dim t12">타임라인</span>
+        <span class="lg feed"></span><span>수유</span><span class="lg sleep"></span><span>잠</span>
+        <span class="lg pee"></span><span>소변</span><span class="lg poo"></span><span>대변</span>
+        <span id="timelineNote" class="warn"></span>
+      </div>
+      <div class="box t9" id="timelineAxis">
+        <span style="left:40px">0</span><span style="left:115px">6</span><span style="left:190px">12</span><span style="left:265px">18</span><span style="left:340px">24</span>
+      </div>
+      <div class="box" id="timelineRows"></div>
+    </div>
+
+    <!-- 통계: 최근 7일 날짜 카드(src/ui/stats.js) -->
     <div class="page hidden" id="pageStats">
       <div class="box" id="statsHead">
-        <span class="dim">최근 7일</span><span id="statsLegend" class="t9"></span><span id="statsNote" class="t9 warn"></span>
+        <span id="statsLegend" class="t9"></span><span id="statsNote" class="t9 warn"></span>
         <div id="statsTabs">
           <button class="px on" data-metric="feed">수유</button>
           <button class="px" data-metric="diaper">기저귀</button>
@@ -50,8 +71,8 @@
       <div class="box" id="statsChart"></div>   <!-- 날짜별 막대 일곱 개 -->
       <div class="box" id="statsFoot"></div>    <!-- 지난 6일 평균 -->
     </div>
-    <!-- 쪽 표시(누르면 넘김) -->
-    <button class="box" id="pageDots" aria-label="통계 보기"><span class="dot on"></span><span class="dot"></span></button>
+    <!-- 쪽 표시: 점 하나 = 쪽 하나(누르면 그 쪽으로) -->
+    <div class="box" id="pageDots"></div>
 
     <!-- 아래: [마이크] [수유] [기저귀] [잠] [지난 기록]. 마이크·잠·지난 기록은 아이콘(정사각형), 수유·기저귀는 크게.
          [잠]은 누르면 잠 시작, 자는 중이면 "깼어요"로 바뀌어 누르면 끝 -->

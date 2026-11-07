@@ -36,6 +36,8 @@ PAL = {
     'Y': (255, 214, 90),    # 반짝
     'w': (236, 230, 218),   # 아이콘 흰색
     'O': (255, 168, 72),    # 주황 강조
+    'D': (150, 92, 44),     # 응가
+    'd': (104, 60, 26),     # 응가 그늘
 }
 
 CELL = 32
@@ -272,6 +274,34 @@ ICONS = {
         '   OO       ',
         '            ',
         '            ',
+        '            ',
+    ],
+    'poo': [
+        '     DD     ',
+        '    DDd     ',
+        '     dDD    ',
+        '   DDDDDD   ',
+        '  DDWDDWDD  ',
+        '  dDEDDEDd  ',
+        ' DDDDDDDDDD ',
+        'DDdDDDDDDdDD',
+        'DDDDdddDDDDD',
+        ' dDDDDDDDDd ',
+        '            ',
+        '            ',
+    ],
+    'alarm': [
+        ' OO      OO ',
+        'OO  OOOO  OO',
+        'O  OwwwwO  O',
+        '  OwwwKwwO  ',
+        ' OwwwwKwwwO ',
+        ' OwwwwKwwwO ',
+        ' OwwwwKKKwO ',
+        ' OwwwwwwwwO ',
+        '  OwwwwwwO  ',
+        '   OOOOOO   ',
+        '  OO    OO  ',
         '            ',
     ],
 }

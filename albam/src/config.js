@@ -24,6 +24,8 @@ const DEFAULTS = {
   dailyReloadHour: 4,
   statsDays: 7,
   statsIdleSeconds: 60,
+  theme: 'auto',
+  location: { lat: 37.5665, lon: 126.978 },
 };
 
 /** @typedef {typeof DEFAULTS} Config */

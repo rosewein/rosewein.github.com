@@ -48,6 +48,7 @@ class DemoServer {
       case 'care_cancel_event': return this.cancelEvent(args.p_id);
       case 'care_set_feed_amounts': return this.setFeedAmounts(args.p_amounts);
       case 'care_stats': return this.stats(args.p_days);
+      case 'care_timeline': return this.timeline(args.p_days);
       case 'care_set_sleep_end': return this.setSleepEnd(args.p_id, args.p_ended_at);
       default: throw new Error(`unknown function ${name}`);
     }
@@ -126,6 +127,12 @@ class DemoServer {
       });
     }
     return out;
+  }
+
+  timeline(days = 3) {
+    const from = new Date(); from.setHours(0, 0, 0, 0); from.setDate(from.getDate() - (days - 1));
+    return this.live().filter((e) => new Date(e.occurred_at) >= from || (e.kind === 'sleep' && (!e.ended_at || new Date(e.ended_at) >= from)))
+      .reverse().map((e) => ({ id: e.id, kind: e.kind, at: e.occurred_at, ended_at: e.ended_at ?? null, ml: e.amount_ml ?? null, type: e.detail?.type ?? null }));
   }
 
   setSleepEnd(id, endedAt) {
