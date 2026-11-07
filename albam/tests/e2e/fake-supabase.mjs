@@ -68,7 +68,7 @@ export async function createFakeSupabase(context) {
         const days = [];
         for (let i = (body.p_days || 7) - 1; i >= 0; i -= 1) {
           const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - i);
-          days.push({ day: d.toISOString().slice(0, 10), feed_count: 4, feed_ml: 800, diaper_total: 6, diaper_pee: 4, diaper_poo: 1, diaper_both: 1, sleep_min: 660, from_history: true });
+          days.push({ day: d.toISOString().slice(0, 10), feed_count: 4, feed_ml: 800, diaper_total: 6, diaper_pee: 4, diaper_poo: 1, diaper_both: 1, nap_min: 120, night_min: 540, sleep_min: 660 });
         }
         return reply(200, days);
       }

@@ -119,8 +119,9 @@ class DemoServer {
         diaper_pee: fake ? 4 : diapers.filter((e) => e.detail.type === 'pee').length,
         diaper_poo: fake ? 1 + (seed % 2) : diapers.filter((e) => e.detail.type === 'poo').length,
         diaper_both: fake ? 1 : diapers.filter((e) => e.detail.type === 'both').length,
-        sleep_min: fake ? 640 + seed * 15 : 0,
-        from_history: fake,
+        nap_min: fake ? 120 + seed * 10 : 0,
+        night_min: fake ? 600 + seed * 5 : 0,
+        sleep_min: fake ? 720 + seed * 15 : 0,
       });
     }
     return out;

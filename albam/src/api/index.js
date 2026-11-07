@@ -30,8 +30,9 @@ const DEFAULT_DUP_WINDOW_MIN = 10;
  * @property {number} diaper_pee
  * @property {number} diaper_poo
  * @property {number} diaper_both
- * @property {number} sleep_min
- * @property {boolean} from_history
+ * @property {number} nap_min     낮잠(시작한 날)
+ * @property {number} night_min   밤잠(깨는 아침의 날)
+ * @property {number} sleep_min   낮잠 + 밤잠
  */
 
 /**

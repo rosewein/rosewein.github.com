@@ -23,4 +23,6 @@ window.ALBAM_CONFIG = {
   formula: { name: '압타밀', waterMlPerScoop: 30, mlPerScoop: 100 / 3, roundMl: 10 },
   machine: { name: '브레짜', minWaterMl: 60, maxWaterMl: 300, stepWaterMl: 30 },
   dailyReloadHour: 4,        // 24시간 켜 둘 때 하루 한 번 새로 고침하는 시각
+  statsDays: 7,              // 통계 쪽에 보여 줄 날 수(오늘 포함)
+  statsIdleSeconds: 60,      // 통계 쪽에서 이만큼 안 만지면 대시보드로 돌아옴
 };

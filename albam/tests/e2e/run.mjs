@@ -182,6 +182,60 @@ async function demoFlow(browser, base) {
   check(errors.length === 0, `페이지 오류 없음 ${errors.join(' ')}`);
 }
 
+// 옆으로 밀면 통계 쪽, 점을 눌러도 넘어감, 1분 안 만지면 대시보드로
+async function statsFlow(browser, base) {
+  const page = await (await browser.newContext(DEVICE)).newPage();
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await page.clock.install({ time: DAYTIME });
+  await page.goto(`${base}?demo`);
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.clock.runFor(500);
+  const swipe = async (fromX, toX, y = 180) => {
+    await page.mouse.move(fromX, y); await page.mouse.down();
+    await page.mouse.move((fromX + toX) / 2, y); await page.mouse.move(toX, y); await page.mouse.up();
+    await page.clock.runFor(500);   // 밀고 난 직후(0.4초) 클릭은 무시되므로
+  };
+  const onStats = () => page.isVisible('#pageStats');
+
+  check(!(await onStats()) && await page.isVisible('#pageDots'), '처음엔 대시보드, 아래에 쪽 표시');
+  await swipe(560, 200, 290);   // 수유 버튼 위에서 시작해 왼쪽으로
+  check(await onStats(), '왼쪽으로 밀면 통계 쪽');
+  check(await page.isHidden('#feedSheet'), '밀다가 버튼 위에서 떼도 버튼은 안 눌림');
+  check(await page.isVisible('#actions'), '통계 쪽에서도 큰 버튼 줄은 그대로');
+  check((await page.$$eval('#statsChart .col', (c) => c.length)) === 7, '막대 일곱 개');
+  const labels = await page.$$eval('#statsChart .d', (d) => d.map((x) => x.textContent));
+  check(labels[6] === '오늘' && labels[0] === '10/31', `날짜 아래 표시 ${labels.join(' ')}`);
+  check((await text(page, '#statsFoot')).startsWith('지난 6일 평균'), '아래에 평균(오늘 빼고)');
+  const curved = await curvedEdgeOffenders(page, '#statsHead span, #statsTabs button, #statsChart .v, #statsChart .d, #statsChart .bar, #statsFoot, #pageDots');
+  check(curved.length === 0, `통계 쪽: 위·아래 곡면에 글·버튼 없음 ${curved.join(' ')}`);
+  const over = await page.$$eval('#statsChart .v', (v) => v.filter((x) => x.getBoundingClientRect().top < document.querySelector('#statsChart').getBoundingClientRect().top - 0.5).length);
+  check(over === 0, '막대 위 값이 그래프 칸 안');
+  await shot(page, 'stats-feed');
+  await page.click('#statsTabs [data-metric="diaper"]');
+  check((await page.$$eval('#statsChart .v', (v) => v[0].textContent)).endsWith('회'), '기저귀 탭');
+  await shot(page, 'stats-diaper');
+  await page.click('#statsTabs [data-metric="sleep"]');
+  check((await page.$$eval('#statsChart .v', (v) => v[0].textContent)).endsWith('시간'), '잠 탭');
+  check((await text(page, '#statsFoot')).includes('낮잠') && (await text(page, '#statsFoot')).includes('밤잠'), '잠 평균: 낮잠·밤잠');
+  await shot(page, 'stats-sleep');
+
+  await swipe(200, 560);
+  check(!(await onStats()), '오른쪽으로 밀면 대시보드');
+  await page.click('#pageDots');
+  await page.clock.runFor(300);
+  check(await onStats(), '점을 눌러도 통계 쪽');
+  await page.clock.runFor(65000);
+  check(!(await onStats()), '1분 동안 안 만지면 대시보드로');
+  await page.click('#pageDots');
+  await page.click('#diaperBtn');
+  check(!(await onStats()) && await page.isVisible('#diaperSheet'), '통계 쪽에서 큰 버튼 누르면 대시보드로 돌아와 창이 열림');
+  await swipe(560, 200, 200);
+  check(!(await onStats()), '창이 열려 있으면 밀어도 안 넘김');
+  check(errors.length === 0, `페이지 오류 없음 ${errors.join(' ')}`);
+}
+
 // 가장 긴 글(12시간 넘게 지남, 소변+대변)도 상태 칸을 넘지 않는지
 async function longTextFlow(browser, base) {
   const page = await (await browser.newContext(DEVICE)).newPage();
@@ -262,6 +316,11 @@ async function nightFlow(browser, base) {
 async function supabaseFlow(browser, base) {
   const context = await browser.newContext(DEVICE);
   const fake = await createFakeSupabase(context);
+  // config.js 에 실제 주소·키가 들어 있으므로, 이 시험에서는 빈 설정으로 바꿔 '처음 설치' 화면부터 본다
+  await context.route('**/albam/config.js', async (route) => {
+    const body = (await (await route.fetch()).text()).replace(/supabaseUrl: '[^']*'/, "supabaseUrl: ''").replace(/supabaseAnonKey: '[^']*'/, "supabaseAnonKey: ''");
+    await route.fulfill({ body, contentType: 'text/javascript' });
+  });
   const page = await context.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push(String(e)));
@@ -350,6 +409,7 @@ const base = `http://localhost:${server.address().port}/albam/`;
 const browser = await chromium.launch();
 try {
   console.log('# 미리 보기'); await demoFlow(browser, base);
+  console.log('# 통계 쪽'); await statsFlow(browser, base);
   console.log('# 긴 글'); await longTextFlow(browser, base);
   console.log('# 미리 보기 오프라인'); await demoOfflineFlow(browser, base);
   console.log('# 밤 화면'); await nightFlow(browser, base);

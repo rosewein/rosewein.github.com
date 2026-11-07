@@ -29,7 +29,7 @@
 
 1. 대시보드에서 프로젝트가 **일시정지(Paused)** 상태면 Restore 한다.
 2. Table Editor에서 기존 표를 확인한다. 새 표는 모두 `care_` 로 시작해 겹치지 않는다.
-3. SQL Editor에 [`supabase/001_care_schema.sql`](supabase/001_care_schema.sql), [`002_feed_amounts.sql`](supabase/002_feed_amounts.sql)을 **차례로** 붙여 실행한다(여러 번 실행해도 안전).
+3. SQL Editor에 [`supabase/001_care_schema.sql`](supabase/001_care_schema.sql), [`002_feed_amounts.sql`](supabase/002_feed_amounts.sql), [`003_stats.sql`](supabase/003_stats.sql)을 **차례로** 붙여 실행한다(여러 번 실행해도 안전).
 4. Authentication → Users → Add user 로 가족 계정을 만든다(이메일+비밀번호, Auto confirm). 거실 기기용 계정을 따로 두면 기기만 로그아웃시키기 쉽다.
 5. 가족으로 등록한다. 여기 없는 계정은 로그인해도 아무것도 못 읽고 못 쓴다.
    ```sql
@@ -37,7 +37,8 @@
    select id, '이지' from auth.users where email = '이지 이메일';
    ```
 6. Authentication → Providers → Email 에서 회원가입(Allow new users to sign up)을 끈다.
-7. Project Settings → API 의 Project URL과 `anon` key를 [`config.js`](config.js) 에 넣는다(비워 두면 기기 첫 화면에서 넣음). **service_role 키는 넣지 않는다.**
+7. Project Settings → API 의 Project URL과 publishable(또는 `anon`) key를 [`config.js`](config.js) 에 넣는다(비워 두면 기기 첫 화면에서 넣음). **service_role 키는 넣지 않는다.**
+   지금은 `baby_archive_AlbamWiki` 프로젝트에 연결돼 있고 001~003 실행, 이지 계정 가족 등록까지 끝났다(2026-11-07).
 
 ### 2. 거실 S10
 
@@ -53,13 +54,19 @@ python3 tools/import_babytime.py --until 2026-11-10 activity_세훈_*.zip -o imp
 ```
 
 `import.sql` 을 SQL Editor에서 실행한다(두 번 넣어도 한 번만 들어감). `--until` 은 거실 화면을 쓰기 시작한 날.
+기록 한 건이 한 줄(`종류|시작|끝|ml|세부`)이고 id 는 그 줄의 md5 라서, 파일이 커서 한 번에 안 들어가면 줄을 나눠 여러 번 실행해도 된다.
+
+2026-11-07 에 2026-07-07 ~ 11-07 08:30 기록 2,283건(수유 700, 기저귀 960, 잠 623)을 넣었다. 그 뒤 기록은 거실 화면의 '지난 기록 넣기'로 넣는다.
 
 **통계 맞춰 보기**: `--stats stats.md` 를 붙이면 날짜별 수유 횟수·양, 기저귀, 잠 합계 표를 만든다. 베이비타임 앱의 통계 화면과 비교하고,
 넣은 뒤에는 [`supabase/queries/daily_stats.sql`](supabase/queries/daily_stats.sql) 을 SQL Editor에서 돌려 같은 숫자가 나오는지 본다.
 
 ```sh
 python3 tools/import_babytime.py activity_세훈_*.zip -o import.sql --stats stats.md
+# 베이비타임 '통계 내보내기'(stat_*.zip)와 날짜별로 자동 비교
+python3 tools/check_babytime_stats.py --activity activity_세훈_*_asc.txt --stat stat_세훈_*.zip
 ```
+2026-11-07 비교 결과: 122일 중 수유는 모든 날 같고, 기저귀는 2일(종류 없이 적힌 기저귀 2건은 옮기지 않음), 잠은 19일(7월 말~8월 초 베이비타임이 밤잠을 다르게 나눔, 8/17) 다르다. 기록 자체는 같다.
 끝에 "모르는 종류/항목" 보고가 나오면 스크립트의 `TYPE_MAP`·`*_KEYS` 를 맞춘다.
 
 ## 바꾸기 쉬운 값
@@ -73,6 +80,7 @@ python3 tools/import_babytime.py activity_세훈_*.zip -o import.sql --stats sta
 | 밤 화면 | 21~6시, 터치하면 30초 | `config.js nightStartHour·nightEndHour·nightWakeSeconds` |
 | 저장 직후 취소 / 음성 자동 저장 | 6초 / 4초 | `config.js undoSeconds·voiceConfirmSeconds` |
 | 다른 기기 기록 다시 읽기 | 20초 | `config.js pollSeconds` |
+| 통계 쪽 날 수 / 안 만지면 대시보드로 | 7일 / 60초 | `config.js statsDays·statsIdleSeconds` |
 | 캐릭터 배고픔 | 수유 후 3시간 | `config.js hungryMinutes` |
 | 캐릭터 그림 | 밤톨 도트 | `tools/make_sprites.py` → `npm run sprites` |
 
