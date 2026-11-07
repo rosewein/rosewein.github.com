@@ -40,7 +40,7 @@
     <!-- 둘째 쪽: 최근 7일 통계(src/ui/stats.js) -->
     <div class="page hidden" id="pageStats">
       <div class="box" id="statsHead">
-        <span class="dim">최근 7일</span><span id="statsNote" class="t9 warn"></span>
+        <span class="dim">최근 7일</span><span id="statsLegend" class="t9"></span><span id="statsNote" class="t9 warn"></span>
         <div id="statsTabs">
           <button class="px on" data-metric="feed">수유</button>
           <button class="px" data-metric="diaper">기저귀</button>
@@ -130,17 +130,10 @@
         <button class="px" data-kind="diaper">기저귀</button>
         <button class="px" data-kind="sleep">잠</button>
       </div>
-      <div class="timeRow" id="lateStartRow"><span class="lbl" id="lateStartLbl">시각</span><span id="lateStart" class="t24"></span></div>
-      <div class="timeRow" id="lateEndRow" style="margin-top:4px"><span class="lbl">끝</span><span id="lateEnd" class="t24"></span><span id="lateDur" class="dim"></span></div>
-      <div class="row" id="lateSteps" style="margin-top:6px">
-        <button class="px" data-min="-60">-1시간</button>
-        <button class="px" data-min="-10">-10분</button>
-        <button class="px" data-min="-1">-1분</button>
-        <button class="px" data-min="1">+1분</button>
-        <button class="px" data-min="10">+10분</button>
-        <button class="px" data-min="60">+1시간</button>
-      </div>
-      <div class="row" id="lateDetail" style="margin-top:6px"></div>
+      <!-- 시각: 날짜·시·분 바퀴(굴리기, 위아래 누르기, 가운데 누르면 직접 입력). 잠은 시작·끝 두 묶음 -->
+      <div id="lateTimes"></div>
+      <input type="time" id="lateTimeInput" tabindex="-1" aria-hidden="true">
+      <div class="row" id="lateDetail"></div>
       <div class="foot">
         <button class="px ghost" data-close>닫기</button>
         <button class="px ghost" id="recentBtn">최근 기록</button>

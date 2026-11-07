@@ -163,13 +163,59 @@ async function demoFlow(browser, base) {
   await shot(page, 'late-sleep');
   await page.click('#lateSheet [data-kind="feed"]');
   await shot(page, 'late-feed');
-  check((await curvedEdgeOffenders(page, '#lateSheet h2, #lateSheet button, #lateSheet .timeRow, #lateSheet .amount')).length === 0, '지난 기록 창: 위·아래 곡면에 글·버튼 없음');
-  const lateOverflow = await page.$$eval('#lateSheet .row, #lateSheet .timeRow', (rows) => {
+  check((await curvedEdgeOffenders(page, '#lateSheet h2, #lateSheet button, #lateSheet .wheel, #lateSheet .amount')).length === 0, '지난 기록 창: 위·아래 곡면에 글·버튼 없음');
+  const lateOverflow = await page.$$eval('#lateSheet .row, #lateTimes', (rows) => {
     const foot = document.querySelector('#lateSheet .foot').getBoundingClientRect().top;
     return rows.filter((r) => r.offsetParent && r.getBoundingClientRect().bottom > foot).map((r) => r.id);
   });
   check(lateOverflow.length === 0, `지난 기록 창: 줄이 아래 버튼과 안 겹침 ${lateOverflow.join()}`);
-  for (let i = 0; i < 3; i += 1) await page.click('#lateSteps [data-min="-60"]');
+  // 시각 바퀴: 처음은 30분 전(13:30)
+  const lateTime = async (which = 'start') => (await page.$$eval(`#late-${which} .item.c`, (c) => c.map((x) => x.textContent))).join(' ');
+  const wheelBox = (which, unit) => page.$eval(`#late-${which} .wheel.${unit}`, (w) => { const r = w.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y, h: r.height }; });
+  check(await lateTime() === '오늘 13 30' && await page.getAttribute('#lateTimes .lateAgo', 'aria-label') === '30분 전', '처음 시각은 30분 전, 옆에 "30분 전"');
+  // 천천히 끌기: 한 칸 = 22 논리 픽셀. 아래로 끌면 작은 값이 가운데로
+  const drag = async (which, unit, rows) => {
+    const b = await wheelBox(which, unit);
+    const unitPx = b.h / 66;
+    await page.mouse.move(b.x, b.y + b.h / 2);
+    await page.mouse.down();
+    for (let i = 1; i <= 10; i += 1) { await page.mouse.move(b.x, b.y + b.h / 2 + (rows * 22 * unitPx * i) / 10); await page.waitForTimeout(20); }
+    await page.waitForTimeout(150);
+    await page.mouse.up();
+    await page.waitForTimeout(100);
+  };
+  await drag('start', 'hour', 3);
+  check(await lateTime() === '오늘 10 30', `시 바퀴를 아래로 세 칸 끌면 3시간 앞(${await lateTime()})`);
+  const mb = await wheelBox('start', 'minute');
+  await page.mouse.click(mb.x, mb.y + mb.h - 5);
+  check(await lateTime() === '오늘 10 31', '분 바퀴 아래 칸을 누르면 +1분');
+  await page.mouse.click(mb.x, mb.y + 5);
+  check(await lateTime() === '오늘 10 30', '위 칸을 누르면 -1분');
+  // 빠르게 튕기면 관성으로 여러 칸
+  await page.mouse.move(mb.x, mb.y + mb.h / 2);
+  await page.mouse.down();
+  for (let i = 1; i <= 4; i += 1) await page.mouse.move(mb.x, mb.y + mb.h / 2 - i * 12);
+  await page.mouse.up();
+  await page.waitForTimeout(1500);
+  const flung = Number((await lateTime()).split(' ')[2]);
+  check(flung > 33, `분 바퀴를 위로 튕기면 관성으로 여러 칸(10:${flung})`);
+  // 가운데를 누르면 직접 입력. 지금(14:00)보다 늦은 시각은 어제로
+  await page.$eval('#lateTimeInput', (i) => { i.value = '23:15'; i.dispatchEvent(new Event('change')); });
+  check(await lateTime() === '어제 23 15', '지금보다 늦은 시각을 넣으면 어제로');
+  await page.$eval('#lateTimeInput', (i) => { i.value = '10:30'; i.dispatchEvent(new Event('change')); });
+  check(await lateTime() === '어제 10 30', '날짜는 고른 날 그대로');
+  await drag('start', 'day', -1);
+  check(await lateTime() === '오늘 10 30', '날짜 바퀴를 위로 한 칸 끌면 오늘');
+  await drag('start', 'hour', -5);
+  check(await lateTime() === '오늘 14 00', '미래로는 못 감(지금에서 멈춤)');
+  await drag('start', 'hour', 3);   // 14:00 → 11:00
+  await page.$eval('#lateTimeInput', (i) => { i.value = '10:30'; i.dispatchEvent(new Event('change')); });
+  check(await lateTime() === '오늘 10 30', '직접 입력 10:30');
+  await page.click('#lateSheet [data-kind="sleep"]');
+  check(await page.isVisible('#late-end') && await lateTime('end') === '오늘 14 00', '잠은 시작·끝 바퀴가 나란히');
+  check((await text(page, '#lateDetail')).includes('3시간 30분'), '잠 길이 표시');
+  await shot(page, 'late-sleep-wheels');
+  await page.click('#lateSheet [data-kind="feed"]');
   await page.click('#lateSave');
   await page.waitForTimeout(300);
   check((await text(page, '#lastFeed')).startsWith('마지막 수유14:00'), '3시간 전 기록은 마지막 수유를 바꾸지 않음');
@@ -208,13 +254,15 @@ async function statsFlow(browser, base) {
   const labels = await page.$$eval('#statsChart .d', (d) => d.map((x) => x.textContent));
   check(labels[6] === '오늘' && labels[0] === '10/31', `날짜 아래 표시 ${labels.join(' ')}`);
   check((await text(page, '#statsFoot')).startsWith('지난 6일 평균'), '아래에 평균(오늘 빼고)');
-  const curved = await curvedEdgeOffenders(page, '#statsHead span, #statsTabs button, #statsChart .v, #statsChart .d, #statsChart .bar, #statsFoot, #pageDots');
+  check((await text(page, '#statsLegend')) === '', '수유 탭은 한 색이라 색 설명 없음');
+  const curved = await curvedEdgeOffenders(page, '#statsHead > span, #statsLegend span, #statsTabs button, #statsChart .v, #statsChart .d, #statsChart .bar, #statsFoot, #pageDots');
   check(curved.length === 0, `통계 쪽: 위·아래 곡면에 글·버튼 없음 ${curved.join(' ')}`);
   const over = await page.$$eval('#statsChart .v', (v) => v.filter((x) => x.getBoundingClientRect().top < document.querySelector('#statsChart').getBoundingClientRect().top - 0.5).length);
   check(over === 0, '막대 위 값이 그래프 칸 안');
   await shot(page, 'stats-feed');
   await page.click('#statsTabs [data-metric="diaper"]');
   check((await page.$$eval('#statsChart .v', (v) => v[0].textContent)).endsWith('회'), '기저귀 탭');
+  check((await text(page, '#statsLegend')) === '소변만대변 있음', '기저귀 탭: 색 설명(■ 소변만 ■ 대변 있음)');
   await shot(page, 'stats-diaper');
   await page.click('#statsTabs [data-metric="sleep"]');
   check((await page.$$eval('#statsChart .v', (v) => v[0].textContent)).endsWith('시간'), '잠 탭');
@@ -373,6 +421,7 @@ async function supabaseFlow(browser, base) {
 
   await page.reload();
   await page.waitForTimeout(600);
+
   check((await text(page, '#net')) === '대기 1건', '앱을 다시 열어도 남아 있음');
 
   // 오프라인에서 수유량 설정 바꾸기 → 쌓였다가 연결되면 보냄

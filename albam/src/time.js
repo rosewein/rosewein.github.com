@@ -60,3 +60,17 @@ export function isWithinHours(date, startHour, endHour) {
 }
 
 export const minutes = (n) => n * MINUTE;
+
+/**
+ * 직접 입력한 시·분을 고른 날에 맞춘다. 그 시각이 아직 안 왔으면 하루 앞으로(새벽 1시에 23:30 → 어제 23:30)
+ * @param {Date} day     지금 고른 날짜(시각은 무시)
+ * @param {number} hour
+ * @param {number} minute
+ * @param {Date} now
+ */
+export function clockOnDay(day, hour, minute, now) {
+  const d = new Date(day);
+  d.setHours(hour, minute, 0, 0);
+  if (d > now) d.setDate(d.getDate() - 1);
+  return d;
+}

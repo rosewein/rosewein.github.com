@@ -153,3 +153,11 @@ test('기기 안 중복 확인', () => {
   assert.equal(findLocalDuplicate(base, { kind: 'diaper', occurred_at: ago(40).toISOString() }, 10), null);
   assert.equal(findLocalDuplicate(base, { id: 'd1', kind: 'diaper', occurred_at: ago(60).toISOString() }, 10), null);
 });
+
+test('직접 입력한 시각: 고른 날에 맞추고, 아직 안 온 시각이면 하루 앞으로', async () => {
+  const { clockOnDay } = await import('../../src/time.js');
+  const now = new Date(2026, 10, 7, 1, 0);
+  assert.deepEqual(clockOnDay(now, 0, 30, now), new Date(2026, 10, 7, 0, 30));
+  assert.deepEqual(clockOnDay(now, 23, 30, now), new Date(2026, 10, 6, 23, 30), '새벽 1시에 23:30 → 어제');
+  assert.deepEqual(clockOnDay(new Date(2026, 10, 5, 9, 0), 23, 30, now), new Date(2026, 10, 5, 23, 30), '지난날은 그날 그대로');
+});

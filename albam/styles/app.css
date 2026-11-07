@@ -26,6 +26,7 @@
   --btn: #1e1610;
   --btn-press: #3a2a1c;
   --night: #2a1f17;
+  --bar: #7a6a58;      /* 통계 막대: 주황 강조와 확실히 다른 회갈색 */
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body {
@@ -154,6 +155,11 @@ button.px.acc { color: var(--accent); }
 /* ── 통계 쪽: 위 탭(10~28) → 막대(30~102) → 평균(105~117) ── */
 #statsHead { left: 16px; top: 10px; width: 348px; height: 18px; display: flex; align-items: center; gap: 6px; }
 #statsTabs { margin-left: auto; display: flex; gap: 4px; }
+/* 색 설명: 막대와 같은 색 네모 + 이름 */
+#statsLegend { display: flex; align-items: center; gap: 3px; margin-left: 4px; color: var(--text); }
+#statsLegend .sw { width: 8px; height: 8px; }
+#statsLegend .sw.base { background: var(--bar); }
+#statsLegend .sw.part { background: var(--accent); margin-left: 5px; }
 #statsTabs button { width: 52px; height: 18px; }
 #statsChart { left: 16px; top: 30px; width: 348px; height: 72px; display: flex; gap: 2px; }
 #statsChart .empty { margin: auto; }
@@ -162,11 +168,11 @@ button.px.acc { color: var(--accent); }
 #statsChart .v { color: var(--strong); }
 #statsChart .d { bottom: 2px; color: var(--dim); }
 /* 막대: 밝은 면이 넓지 않게 어두운 갈색. 강조 부분(대변·낮잠)은 주황 */
-#statsChart .bar { position: absolute; left: 10px; right: 10px; bottom: 14px; background: var(--line-hi);
+#statsChart .bar { position: absolute; left: 10px; right: 10px; bottom: 14px; background: var(--bar);
   display: flex; flex-direction: column; justify-content: flex-end; }
-#statsChart .part { background: var(--accent); }
+#statsChart .part { background: var(--accent); color: var(--bg); display: flex; align-items: center; justify-content: center; overflow: hidden; }
 /* 오늘은 아직 안 끝났으니 테두리만 */
-#statsChart .today .bar { background: none; box-shadow: inset 0 0 0 2px var(--line-hi); }
+#statsChart .today .bar { background: none; box-shadow: inset 0 0 0 2px var(--bar); }
 #statsChart .today .part { opacity: .5; }
 #statsChart .today .d { color: var(--accent); }
 #statsFoot { left: 16px; top: 105px; width: 348px; height: 12px; white-space: nowrap; color: var(--dim); }
@@ -218,12 +224,28 @@ button.machineBtn { width: 44px; flex-direction: column; gap: 1px; line-height: 
 /* 지난 기록 넣기 */
 #lateSheet .kinds { position: absolute; right: 6px; top: 4px; display: flex; gap: 4px; }
 #lateSheet .kinds button { width: 52px; height: 20px; }
-.timeRow { height: 26px; border: 2px solid var(--line); display: flex; align-items: center; padding: 0 6px; gap: 8px; }
-.timeRow.sel { border-color: var(--accent); }
-.timeRow .lbl { width: 24px; color: var(--dim); }
-#lateSteps button { flex: 1; height: 24px; font-size: 12px; }
-#lateDetail button { height: 26px; }
-#lateDetail { height: 38px; }
+/* 시각 바퀴: 세 칸(22px)이 보이고 가운데 칸이 고른 값. 끌어서 굴린다(src/ui/wheel.js) */
+#lateTimes { display: flex; align-items: center; gap: 14px; height: 66px; }
+.timeGroup { display: flex; align-items: center; gap: 2px; }
+.timeGroup .lbl { width: 26px; color: var(--dim); }
+.timeGroup .colon { color: var(--dim); width: 8px; text-align: center; }
+.wheel { position: relative; height: 66px; overflow: hidden; touch-action: none; cursor: ns-resize; }
+.wheel.day { width: 40px; }
+.wheel.hour, .wheel.minute { width: 34px; }
+.wheel .band { position: absolute; left: 0; right: 0; top: 22px; height: 22px; background: var(--btn); border-top: 2px solid var(--line-hi); border-bottom: 2px solid var(--line-hi); }
+.wheel .col { position: absolute; left: 0; right: 0; top: -22px; }
+.wheel .item { height: 22px; display: flex; align-items: center; justify-content: center; color: var(--faint); white-space: nowrap; }
+.wheel .item.c { color: var(--strong); font-size: 24px; }
+.wheel.day .item.c { font-size: 12px; color: var(--accent); }
+/* 직접 입력용 시간 칸: 보이지 않게 두고 showPicker() 로 안드로이드 시간 고르기 창만 띄운다 */
+#lateTimeInput { position: absolute; left: 60px; top: 50px; width: 1px; height: 1px; opacity: 0; pointer-events: none; border: 0; }
+.lateAgo { margin-left: auto; display: flex; align-items: baseline; white-space: nowrap; gap: 2px; }
+.lateAgo .unit { color: var(--dim); margin-right: 4px; }
+.lateAgo .unit:last-child { margin-right: 0; }
+#lateDetail { height: 32px; margin-top: 4px; }
+#lateDetail button { height: 28px; }
+#lateDetail .sleepLen { display: flex; align-items: baseline; gap: 8px; }
+#lateDetail .sleepLen .lbl { color: var(--dim); }
 
 #recentList { line-height: 15px; }
 #recentList .pending { color: var(--accent); }
