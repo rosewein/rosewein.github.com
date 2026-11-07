@@ -28,7 +28,7 @@ export function setupRecorder(ctx) {
     } catch (e) {
       sfx.error();
       if (e instanceof AuthError) ctx.showLogin('다시 로그인해 주세요');
-      else ctx.say(`저장 못 함: ${e.message}`.slice(0, 40), 6, 'warn');
+      else ctx.say('저장 못 했어요', 6, 'warn');
       console.error(e);
       return;
     }

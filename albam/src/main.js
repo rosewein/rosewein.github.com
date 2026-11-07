@@ -127,7 +127,7 @@ function main() {
       if (!result.stale) state.clockSkewMs = measureSkew(result.summary);
       state.stale = result.stale;
       state.pending = result.pending;
-      state.authProblem = result.error instanceof AuthError ? '가족 계정이 아니에요' : '';
+      state.authProblem = result.error instanceof AuthError ? '가족 계정 아님' : '';
       ctx.render();
     } catch (e) {
       if (e instanceof AuthError) ctx.showLogin('다시 로그인해 주세요');

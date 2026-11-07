@@ -82,34 +82,47 @@ button.px.acc { color: var(--accent); }
 .ico-moon { background-position: -48px 0; }  .x2.ico-moon { background-position: -96px 0; }
 .ico-check { background-position: -60px 0; } .x2.ico-check { background-position: -120px 0; }
 
-/* ── 왼쪽: 캐릭터 칸 (곡면 가장자리 16px 비움) ── */
+/* ── 왼쪽: 말풍선(위) + 알밤(아래). 곡면 가장자리 16px 비움 ── */
 #charPanel { left: 16px; top: 4px; width: 112px; height: 124px; }
+/* 말풍선: 한 줄, 길면 … 로 자른다. 할 말이 없으면 숨김(.empty) */
+#bubble {
+  position: absolute; left: 0; top: 2px; width: 112px; height: 20px;
+  border: 2px solid var(--line-hi); background: var(--panel); color: var(--text);
+  display: flex; align-items: center; justify-content: center; padding: 0 4px;
+}
+#bubble.empty { visibility: hidden; }
+#bubble.warn { color: var(--warn); }
+#bubbleText { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* 꼬리: 계단 모양 도트 삼각형 */
+#bubble::after {
+  content: ''; position: absolute; left: 50px; bottom: -8px; width: 8px; height: 6px; background: var(--line-hi);
+  clip-path: polygon(0 0, 8px 0, 8px 2px, 6px 2px, 6px 4px, 5px 4px, 5px 6px, 3px 6px, 3px 4px, 2px 4px, 2px 2px, 0 2px);
+}
 #albam {
-  position: absolute; left: 8px; top: 4px; width: 96px; height: 96px;
+  position: absolute; left: 8px; top: 30px; width: 96px; height: 96px;
   background-image: url('../sprites/albam.png'); background-size: 192px 384px;
 }
-#bubble { position: absolute; left: 0; top: 104px; width: 112px; text-align: center; line-height: 12px; height: 24px; color: var(--dim); }
 #micBtn.listening { border-color: var(--accent); color: var(--accent); }
 
 /* ── 오른쪽 위: 상태 ── */
 #status { left: 134px; top: 4px; width: 230px; height: 122px; }
 /* 줄마다 무엇인지 앞에 흐린 글씨로 붙인다(.lbl) */
 #status .lbl { color: var(--dim); margin-right: 6px; }
-#lastFeed { position: absolute; left: 0; top: 0; white-space: nowrap; }
-#clock { position: absolute; right: 0; top: 0; white-space: nowrap; }
-/* "2시간 35분 전": 숫자 48, 단위 24. 10시간 넘으면 숫자를 36으로 줄여 한 줄에 들어가게 */
-#elapsed { position: absolute; left: 0; top: 14px; height: 52px; display: flex; align-items: baseline; white-space: nowrap; }
-#elapsed .num { font-size: 48px; }
-#elapsed.long .num { font-size: 36px; }
+/* 줄 간격: 위 이름표 → 큰 글씨 → (여백) → 오늘 수유 → 마지막 기저귀 → (여백) → 버튼 */
+#lastFeed { position: absolute; left: 0; top: 2px; white-space: nowrap; }
+#clock { position: absolute; right: 0; top: 2px; white-space: nowrap; }
+/* "2시간 35분 전": 숫자 36, 단위 24. 가장 긴 "12시간 35분 전"도 한 줄(약 216) */
+#elapsed { position: absolute; left: 0; top: 22px; height: 38px; display: flex; align-items: baseline; white-space: nowrap; }
+#elapsed .num { font-size: 36px; }
 #elapsed .unit { font-size: 24px; margin-right: 8px; }
 #elapsed .unit:last-child { margin-right: 0; }
 #elapsed .none { font-size: 24px; color: var(--dim); }
 #elapsed.warn { color: var(--warn); }
-#today { position: absolute; left: 0; top: 68px; white-space: nowrap; }
+#today { position: absolute; left: 0; top: 66px; white-space: nowrap; }
 /* 못 보낸 기록·연결 상태: '오늘 수유' 줄 오른쪽 */
-#net { position: absolute; right: 0; top: 70px; text-align: right; white-space: nowrap; }
-#lastDiaper { position: absolute; left: 0; top: 84px; white-space: nowrap; }
-#lateBtn { position: absolute; left: 0; top: 102px; width: 230px; height: 20px; font-size: 12px; }
+#net { position: absolute; right: 0; top: 68px; text-align: right; white-space: nowrap; }
+#lastDiaper { position: absolute; left: 0; top: 82px; white-space: nowrap; }
+#lateBtn { position: absolute; left: 0; top: 100px; width: 230px; height: 20px; font-size: 12px; }
 
 /* ── 오른쪽 아래: 큰 버튼 ── */
 /* 아래 줄: 마이크는 아이콘만 42x42 정사각형, 수유·기저귀는 남은 자리를 반씩 (348 - 42 - 6*2) / 2 = 147 */
