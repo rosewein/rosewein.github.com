@@ -175,7 +175,9 @@ button.px.acc { color: var(--btn-on); }
 #actions .square { flex: 0 0 40px; }
 /* 자는 중: 달 버튼이 주황 테두리 + 아래 작은 "깼어요" */
 #sleepBtn { flex-direction: column; gap: 0; }
-#sleepBtn.on { border-color: var(--accent); color: var(--accent); }
+/* 자는 중: 테두리·바탕은 다른 버튼과 같게(주황 테두리는 굵어 보여 튀었다). 아래 "깼어요"만 밝은 주황 */
+#sleepBtn.on { background: var(--btn); border-color: var(--line-hi); color: var(--btn-on); }
+#sleepBtn.on:active { background: var(--btn-press); border-color: var(--accent); }
 #sleepBtnText:empty { display: none; }
 #sleepBtnText { line-height: 10px; }
 
