@@ -86,7 +86,8 @@ export function layoutTimeline(events, now, { days = 3, dayStartHour = 0 } = {})
 export function mergePending(events, recent = []) {
   const ids = new Set(events.map((e) => e.id));
   const extra = recent.filter((r) => r.pending && !ids.has(r.id))
-    .map((r) => ({ id: r.id, kind: r.kind, at: r.at, ended_at: r.ended_at ?? null, ml: r.ml ?? null, type: r.detail?.type ?? null, feeding: !!r.detail?.feeding }));
+    .map((r) => ({ id: r.id, kind: r.kind, at: r.at, ended_at: r.ended_at ?? null, ml: r.ml ?? null, type: r.detail?.type ?? null, feeding: !!r.detail?.feeding,
+      ...(r.value != null && { value: r.value }), ...(r.detail?.memo && { memo: r.detail.memo }), ...(!['feed', 'diaper', 'sleep'].includes(r.kind) && { detail: r.detail || {} }) }));
   // 못 보낸 '깼어요'가 있으면 요약 쪽 끝 시각을 따른다
   const known = new Map(recent.filter((r) => r.kind === 'sleep' || r.kind === 'feed').map((r) => [r.id, r]));
   return [...events.map((e) => {

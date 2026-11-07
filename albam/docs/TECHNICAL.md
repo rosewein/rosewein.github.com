@@ -110,7 +110,8 @@ albam/
 │     ├─ quick-record.js   [수유] [기저귀] 버튼과 창
 │     ├─ amount.js         수유량 표시와 [±30 브레짜] [±10] 버튼(세 창이 같이 씀)
 │     ├─ feed-amounts.js   수유량 설정(빠른 선택 세 개)
-│     ├─ late-entry.js     지난 기록 넣기, 최근 기록
+│     ├─ late-entry.js     지난 기록 넣기, 다른 종류 넣기(숫자 ±·메모), 기록 고치기
+│     ├─ more.js           [+] 더보기 창: 기록 종류 표의 종류 버튼, [오늘 기록] [지난 기록 넣기]
 │     ├─ wheel.js          굴리는 바퀴(날짜·시·분): 끌기·관성·위아래 누르기·가운데 누르면 직접 입력
 │     ├─ voice-input.js    음성 입력
 │     ├─ pages.js          쪽 넘기기(시계 ← 대시보드 → 타임라인 → 통계): 옆으로 밀기, 점, 1분 뒤 돌아오기
@@ -127,6 +128,7 @@ albam/
 │  ├─ 005_timeline.sql      타임라인 care_timeline()(최근 며칠 기록, 시각 순)
 │  ├─ 006_edit_and_age.sql  기록 고치기 care_update_event(), 고친 내역 표·트리거, 아기 프로필과 나이
 │  ├─ 007_feed_duration.sql 수유 걸린 시간: 요약 last_feed 에 ended_at·feeding, 통계에 feed_min
+│  ├─ 008_record_types.sql  기록 종류 표(목욕·체온·투약…), care_events.value_num, 요약 record_types
 │  └─ queries/              SQL Editor 에서 돌려 보는 확인용 질의
 ├─ sprites/                도트 그림 원본 PNG + sprites.json
 ├─ fonts/                  갈무리 글꼴 (SIL OFL 1.1)
@@ -271,6 +273,13 @@ flowchart TD
 - 요약에 `baby`와 `age`로 들어간다. 생일·예정일을 고칠 때는 SQL Editor에서 `update care_baby_profile …`.
 
 **수유 걸린 시간**(007): `care_summary()`의 `last_feed`에 `ended_at`(다 먹은 시각, 모르면 null)과 `feeding`(먹이는 중: 끝이 없고 `detail.feeding = true`)을 더했다. `care_stats()`의 하루에 `feed_min`(끝이 있는 수유의 평균 걸린 분, 없으면 null)을 더했다. 다 먹음·되돌리기는 새 함수 없이 `care_update_event`로 한다.
+
+**기록 종류 표**(008): `care_record_types(key, label, shape, unit, step, min_value, max_value, default_value, icon, voice_aliases, show_in_more, sort, active)`. `shape`은 `instant`(한 시각) / `range`(시작~끝) / `number`(한 시각 + 숫자) / `text`(한 시각 + 글).
+- 들어 있는 종류: 수유·기저귀·잠(큰 버튼, 더보기에는 없음), 목욕(range), 체온(number °C, 0.1, 34~42, 처음 36.8), 투약, 체중(kg, 0.01, 1~30), 키(cm, 0.1, 30~120), 메모(text), 터미타임·놀이·기타(range), 병원.
+- 숫자는 `care_events.value_num`. `care_add_event`·`care_update_event`가 `value_num`을 받고, number 종류는 값이 없거나 범위 밖이면 `22023`(`bad_value`)로 거절한다.
+- 글은 `detail.memo`(투약은 약 이름, 병원은 병원·이유 등 베이비타임에서 온 항목도 `detail`에 있다: `medicine`, `what`, `hospital`, `reason`, `visit_type`, `doctor`).
+- `care_summary()`에 `record_types`(정렬된 목록, `in_more`), `recent`에 `value`. `care_timeline()`에 `value`, `memo`, `feeding`, `detail`.
+- 화면은 이 표를 그대로 따른다(`domain.js`의 `setRecordTypes`). 표에 한 줄 더하고 `show_in_more = true`면 [+] 창에 버튼이 생긴다. 연결 전·미리 보기에서는 `DEFAULT_RECORD_TYPES`를 쓴다.
 
 **`care_timeline(p_days int default 3) → jsonb`** (005): 오늘 포함 최근 n일(1~7) 기록을 실제 시각 순으로. `[{id, kind, at, ended_at, ml, type}]`(type은 기저귀 종류). 그날 시작 전에 잠들어 그날 깬 잠도 들어간다.
 
@@ -424,6 +433,11 @@ flowchart TD
 
 - 쪽을 열 때, 그리고 보이는 동안 요약을 다시 받을 때마다(20초, 저장 직후) `getTimeline(3)`으로 새로 받는다. 못 보낸 기록은 요약의 `recent`에서 얹는다(`mergePending`).
 - **날짜 줄 전체가 버튼**이다. 누르면 그날 기록 목록이 뜬다(표시가 작아서 하나하나 누르게 하지 않았다).
+
+**[+] 더보기**(`more.js`): 아래 줄 맨 오른쪽 [+]. 기록 종류 표에서 `in_more`인 종류가 5칸씩 버튼으로 뜨고, 아래에 [오늘 기록] [지난 기록 넣기].
+- 종류를 누르면 지난 기록 넣기 창이 그 종류로 열린다(`openNew`). 시각은 지금, 시작~끝 종류(목욕·터미타임·놀이·기타)는 10분 전~지금이고 [끝 시각]을 끄면 한 시각만 넣는다.
+- 숫자 종류(체온·체중·키)는 아랫줄이 [-1.0] [-0.1] 37.9°C [+0.1] [+1.0](한 칸 = step, 큰 칸 = step×10, 범위 안으로). 나머지는 글 칸(메모, 약 이름 등 → `detail.memo`). 메모 종류는 글이 비면 저장이 꺼진다.
+- 기록 목록·알림 막대·말풍선 글은 `describeOther`: "체온 37.9°C", "목욕 · 10분 · 보습로션", "투약 · 해열제".
 
 **기록 고치기**(`day-list.js` → `late-entry.js`의 `openEdit`)
 1. 타임라인 날짜 줄, 또는 지난 기록 넣기의 [오늘 기록]을 누르면 **그날 기록 목록**이 뜬다. 글이 많아 이 창만 **프리텐다드**(14px)를 쓴다. 줄 높이 24, 시각 순, 위아래로 끌어 넘긴다(마우스 휠도). [◀ 전날] [다음날 ▶]로 최근 3일을 오간다. 오늘은 가장 최근 것이 보이게 아래 끝에서 연다.
@@ -701,7 +715,7 @@ flowchart LR
 - 이 저장소는 GitHub Pages로 나간다. main에 합치면 `https://rosewein.github.io/albam/`에 반영된다.
 - 서비스 워커는 네트워크를 먼저 쓴다. 그래서 고친 파일은 다음에 열 때 바로 보인다. 오프라인일 때만 캐시를 쓴다.
 - 파일을 더하거나 이름을 바꾸면 `sw.js`의 `FILES`에 반영하고 `VERSION`을 올린다.
-- SQL은 Supabase SQL Editor에서 번호 순서대로 직접 실행한다(지금 `001`~`007`). 바꿀 때는 `008_…sql`처럼 번호를 붙여 새 파일로 더하고, 이미 실행한 파일은 고치지 않는다. 함수를 바꿀 때는 새 파일에 `create or replace`로 함수 전체를 다시 쓴다(002의 `care_summary()`처럼).
+- SQL은 Supabase SQL Editor에서 번호 순서대로 직접 실행한다(지금 `001`~`008`). 바꿀 때는 `008_…sql`처럼 번호를 붙여 새 파일로 더하고, 이미 실행한 파일은 고치지 않는다. 함수를 바꿀 때는 새 파일에 `create or replace`로 함수 전체를 다시 쓴다(002의 `care_summary()`처럼).
 - `config.js`에는 publishable(anon) key만 둔다. 공개돼도 되는 값이고, 읽고 쓰기는 RLS와 가족 명단이 막는다. service_role 키는 절대 넣지 않는다.
 
 ## 12. 고치고 늘리는 법

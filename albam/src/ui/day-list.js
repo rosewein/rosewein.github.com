@@ -13,7 +13,7 @@ import { $, el, setHidden } from './dom.js';
 import { openSheet } from './sheets.js';
 import { LOGICAL } from './stage.js';
 import { mergePending } from './timeline.js';
-import { DIAPER_LABEL } from '../domain.js';
+import { DIAPER_LABEL, describeOther, isBuiltinKind } from '../domain.js';
 import { formatClock, formatDay, formatDuration } from '../time.js';
 
 const DAYS = 3;
@@ -52,6 +52,10 @@ export function describeRow(e, now) {
     return [formatClock(e.at), `수유 ${e.ml ?? ''}ml`];
   }
   if (e.kind === 'diaper') return [formatClock(e.at), `기저귀 ${DIAPER_LABEL[e.type] || ''}`];
+  if (!isBuiltinKind(e.kind)) {
+    const time = e.ended_at ? `${formatClock(e.at)}~${formatClock(e.ended_at)}` : formatClock(e.at);
+    return [time, describeOther(e.kind, { value: e.value, at: e.at, ended_at: e.ended_at, detail: { ...(e.detail || {}), ...(e.memo && { memo: e.memo }) } })];
+  }
   return [formatClock(e.at), e.kind];
 }
 

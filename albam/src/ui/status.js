@@ -9,7 +9,7 @@
 //   D+143 · 4개월 21일 · 교정 3개월 29일
 
 import { $, el } from './dom.js';
-import { DIAPER_LABEL, feedingNow, sleepingNow } from '../domain.js';
+import { DIAPER_LABEL, feedingNow, setRecordTypes, sleepingNow } from '../domain.js';
 import { agoParts, formatAgo, formatClock, formatDuration } from '../time.js';
 
 /** 스프라이트 시트(sprites/albam.png)의 줄 순서. sprites.json 과 같다 */
@@ -60,6 +60,7 @@ export function createStatusView(ctx) {
 
   function render() {
     const s = state.summary;
+    setRecordTypes(s?.record_types);
     const feed = s?.last_feed;
     setLine($('#lastFeed'), '마지막 수유', feed ? `${formatClock(feed.at)}${feed.ml != null ? ` · ${feed.ml}ml` : ''}` : '기록 없음');
     setLine($('#today'), '오늘 수유', s ? `${s.today?.feed_count ?? 0}회 · ${s.today?.feed_ml ?? 0}ml` : '-');

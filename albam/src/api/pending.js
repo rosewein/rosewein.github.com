@@ -30,7 +30,7 @@ export function applyPending(summary, items) {
     const p = item.payload;
     if (s.recent.some((r) => r.id === p.id)) continue;
     const at = time(p.occurred_at);
-    s.recent.push({ id: p.id, kind: p.kind, at: p.occurred_at, ended_at: p.ended_at ?? null, ml: p.amount_ml ?? null, detail: p.detail, pending: true });
+    s.recent.push({ id: p.id, kind: p.kind, at: p.occurred_at, ended_at: p.ended_at ?? null, ml: p.amount_ml ?? null, value: p.value_num ?? null, detail: p.detail, pending: true });
 
     if (p.kind === 'feed') {
       if (at > time(s.last_feed?.at)) {
@@ -75,6 +75,7 @@ export function applyPending(summary, items) {
       if (p.occurred_at) r.at = p.occurred_at;
       if ('ended_at' in p) r.ended_at = p.ended_at;
       if (p.amount_ml != null) r.ml = p.amount_ml;
+      if (p.value_num != null) r.value = p.value_num;
       if (p.detail) r.detail = { ...(r.detail || {}), ...p.detail };
     }
     if (s.last_feed?.id === item.id) {
