@@ -15,6 +15,7 @@ import { setupRecorder } from './ui/recorder.js';
 import { setupQuickRecord } from './ui/quick-record.js';
 import { setupFeedAmounts } from './ui/feed-amounts.js';
 import { setupLateEntry } from './ui/late-entry.js';
+import { setupDayList } from './ui/day-list.js';
 import { setupVoiceInput } from './ui/voice-input.js';
 import { setupLogin } from './ui/login.js';
 import { setupStats } from './ui/stats.js';
@@ -48,6 +49,9 @@ const RELOAD_MIN_UPTIME_MS = 3 * 3600000;
  * @property {(text: string, tone?: 'warn'|'') => void} notify  아래 알림 막대에 저장·취소 결과를 잠깐(말풍선은 알밤 말만)
  * @property {(ev: import('./domain.js').CareEvent, opts?: {force?: boolean}) => Promise<void>} save
  * @property {(sleep: {id: string, at: string}) => Promise<void>} wake   자는 중인 잠 끝내기(깼어요)
+ * @property {(id: string, patch: Object, ev: import('./domain.js').CareEvent) => Promise<void>} update  기록 고치기
+ * @property {(id: string, ev: import('./domain.js').CareEvent) => Promise<void>} remove  기록 지우기(취소 표시)
+ * @property {(back: number) => void} openDayList  그날 기록 목록(0 = 오늘)
  * @property {(message?: string) => void} showLogin
  * @property {() => void} reconnect           Supabase 주소·키를 바꾼 뒤 통신을 새로 만든다
  */
@@ -96,6 +100,9 @@ function main() {
     notify: (text, tone) => recorder.notify(text, tone),
     save: (ev, opts) => recorder.save(ev, opts),
     wake: (sleep) => recorder.wake(sleep),
+    update: (id, patch, ev) => recorder.update(id, patch, ev),
+    remove: (id, ev) => recorder.remove(id, ev),
+    openDayList: (back) => dayList.open(back),
     showLogin: (message) => login.show(message),
     reconnect() {
       Object.assign(cfg, loadConfig());
@@ -113,7 +120,8 @@ function main() {
   const login = setupLogin(ctx);
   const quick = setupQuickRecord(ctx);
   setupFeedAmounts(ctx, { current: quick.quickAmounts, back: () => quick.openFeed({ keepAmount: true }) });
-  setupLateEntry(ctx);
+  const lateEntry = setupLateEntry(ctx, { openDayList: (back) => dayList.open(back) });
+  const dayList = setupDayList(ctx, { onEdit: (e) => lateEntry.openEdit(e) });
   setupCloseButtons(() => ctx.sfx.tap());
   const stats = setupStats(ctx);
   const timeline = setupTimeline(ctx);

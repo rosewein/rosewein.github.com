@@ -5,6 +5,7 @@
 //    ├ 저장됨/대기(queued) → 효과음, 캐릭터 기쁨, 버튼 자리에 "저장됨 + [취소 n]"
 //    └ 실패 → 아래 알림 막대에 이유, 로그인 문제면 로그인 창
 //   wake(sleep)  자는 중인 잠에 끝(지금)을 넣는다. [취소]를 누르면 다시 자는 중으로
+//   update(id, patch, ev) / remove(id, ev)  기록 고치기 / 지우기 → 아래 알림 막대에 결과
 //
 // 아래 알림 막대(#notice)는 저장·취소 결과를 잠깐 보여 준다. 말풍선은 알밤이 하는 말만 쓴다.
 
@@ -66,6 +67,37 @@ export function setupRecorder(ctx) {
     sfx.save();
     const text = `잠 ${formatDuration(end - new Date(sleep.at))}${result.status === 'queued' ? ' (대기)' : ''}`;
     showUndo(sleep.id, text, async () => { await ctx.api.endSleep(sleep.id, null); });
+    await ctx.refresh();
+  }
+
+  /** 기록 고치기 */
+  async function update(id, patch, ev) {
+    try {
+      const r = await ctx.api.updateEvent(id, patch);
+      closeSheets();
+      if (r.status === 'not_found') { sfx.error(); notify('그 기록을 못 찾았어요', 'warn'); }
+      else { sfx.save(); notify(`고쳤어요 · ${describeEvent(ev, ctx.now())}${r.status === 'queued' ? ' (대기)' : ''}`); }
+    } catch (e) {
+      sfx.error();
+      if (e instanceof AuthError) ctx.showLogin('다시 로그인해 주세요');
+      else notify('고치지 못했어요', 'warn');
+      console.error(e);
+    }
+    await ctx.refresh();
+  }
+
+  /** 기록 지우기(지우지 않고 취소 표시. 서버가 내역에 남긴다) */
+  async function remove(id, ev) {
+    try {
+      const r = await ctx.api.cancelEvent(id);
+      sfx.cancel();
+      closeSheets();
+      notify(`지웠어요 · ${describeEvent(ev, ctx.now())}${r.status === 'queued' ? ' (대기)' : ''}`);
+    } catch (e) {
+      sfx.error();
+      notify('지우지 못했어요', 'warn');
+      console.error(e);
+    }
     await ctx.refresh();
   }
 
@@ -146,5 +178,5 @@ export function setupRecorder(ctx) {
   // 알림 부분을 누르면 바로 버튼으로 돌아감
   $('#undoMsg').addEventListener('click', hideUndo);
 
-  return { save, wake, notify, isUndoShowing: () => !!undo };
+  return { save, wake, update, remove, notify, isUndoShowing: () => !!undo };
 }

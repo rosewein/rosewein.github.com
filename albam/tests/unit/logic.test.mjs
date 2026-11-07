@@ -181,3 +181,41 @@ test('잠: 끝이 없으면 자는 중, 못 보낸 깼어요/되돌리기를 요
   const undone = applyPending(base, [{ op: 'sleep_end', id: 's1', ended_at: NOW.toISOString() }, { op: 'sleep_end', id: 's1', ended_at: null }]);
   assert.equal(sleepingNow(undone)?.id, 's1', '깼어요를 취소하면 다시 자는 중');
 });
+
+test('그날 기록 목록: 그날 것만 시각 순, 자정 넘은 잠은 시작한 날', async () => {
+  const { eventsOfDay, describeRow } = await import('../../src/ui/day-list.js');
+  const now = new Date(2026, 10, 7, 14, 0);
+  const at = (d, h, m = 0) => new Date(2026, 10, d, h, m).toISOString();
+  const ev = [
+    { id: 'b', kind: 'feed', at: at(7, 6), ml: 200 },
+    { id: 'a', kind: 'sleep', at: at(6, 20), ended_at: at(7, 5, 40) },
+    { id: 'c', kind: 'diaper', at: at(7, 8, 30), type: 'both' },
+  ];
+  assert.deepEqual(eventsOfDay(ev, now, 0).list.map((e) => e.id), ['b', 'c']);
+  assert.deepEqual(eventsOfDay(ev, now, 1).list.map((e) => e.id), ['a']);
+  assert.deepEqual(describeRow(ev[1], now), ['20:00~05:40', '잠 9시간 40분']);
+  assert.deepEqual(describeRow(ev[0], now), ['06:00', '수유 200ml']);
+  assert.deepEqual(describeRow(ev[2], now), ['08:30', '기저귀 소변+대변']);
+  assert.deepEqual(describeRow({ kind: 'sleep', at: at(7, 13), ended_at: null }, now), ['13:00~', '잠 (자는 중 1시간)']);
+});
+
+test('나이 줄 조각', async () => {
+  const { ageParts } = await import('../../src/ui/status.js');
+  const text = (p) => p.map(([t]) => t).join('');
+  assert.equal(text(ageParts({ day: 143, months: 4, days: 21, corrected_months: 3, corrected_days: 29 })), 'D+143 · 4개월 21일 · 교정 3개월 29일');
+  assert.equal(text(ageParts({ day: 10, months: 0, days: 10, corrected_months: null })), 'D+10 · 0개월 10일', '예정일 전에는 교정 나이 없음');
+});
+
+test('못 보낸 고치기를 요약에 얹기', () => {
+  const base = {
+    day_start: ago(600).toISOString(), today: { feed_count: 1, feed_ml: 200 },
+    last_feed: { id: 'f', at: ago(60).toISOString(), ml: 200 },
+    recent: [{ id: 'f', kind: 'feed', at: ago(60).toISOString(), ml: 200, detail: { memo: 'x' } }],
+  };
+  const s = applyPending(base, [{ op: 'update', id: 'f', patch: { amount_ml: 230, occurred_at: ago(90).toISOString() } }]);
+  assert.equal(s.last_feed.ml, 230);
+  assert.equal(s.last_feed.at, ago(90).toISOString());
+  assert.equal(s.today.feed_ml, 230, '오늘 합계는 양 차이만큼');
+  assert.equal(s.recent[0].ml, 230);
+  assert.equal(s.recent[0].detail.memo, 'x');
+});

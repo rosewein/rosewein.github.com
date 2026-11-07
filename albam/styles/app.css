@@ -146,7 +146,7 @@ button.px.acc { color: var(--btn-on); }
 /* 줄마다 무엇인지 앞에 흐린 글씨로 붙인다(.lbl) */
 #status .lbl { color: var(--dim); margin-right: 6px; }
 #elapsed .num { color: var(--strong); }
-/* 줄 간격(화면 기준): 이름표 10 → 큰 글씨 30~68 → 오늘 수유 80 → 마지막 기저귀 98 → (여백) → 버튼 130~170 */
+/* 줄 간격(화면 기준): 이름표 10 → 큰 글씨 30~68 → 오늘 수유 72 → 마지막 기저귀 89 → 나이 106 → 쪽 점 122 → 버튼 130~170 */
 #lastFeed { position: absolute; left: 0; top: 2px; white-space: nowrap; }
 #clock { position: absolute; right: 0; top: 2px; white-space: nowrap; }
 /* "2시간 35분 전": 숫자 36, 단위 24. 가장 긴 "12시간 35분 전"도 한 줄(약 216) */
@@ -156,10 +156,13 @@ button.px.acc { color: var(--btn-on); }
 #elapsed .unit:last-child { margin-right: 0; }
 #elapsed .none { font-size: 24px; color: var(--dim); }
 #elapsed.warn, #elapsed.warn .num { color: var(--warn); }
-#today { position: absolute; left: 0; top: 72px; white-space: nowrap; }
+#today { position: absolute; left: 0; top: 64px; white-space: nowrap; }
 /* 못 보낸 기록·연결 상태: '오늘 수유' 줄 오른쪽 */
-#net { position: absolute; right: 0; top: 74px; text-align: right; white-space: nowrap; }
-#lastDiaper { position: absolute; left: 0; top: 90px; white-space: nowrap; }
+#net { position: absolute; right: 0; top: 66px; text-align: right; white-space: nowrap; }
+#lastDiaper { position: absolute; left: 0; top: 81px; white-space: nowrap; }
+/* 나이: D+143 · 4개월 21일 · 교정 3개월 29일 (값은 밝게, 사이 글은 흐리게) */
+#age { position: absolute; left: 0; top: 98px; white-space: nowrap; color: var(--dim); }
+#age .val { color: var(--strong); }
 
 /* ── 오른쪽 아래: 큰 버튼 ── */
 /* 아래 줄: [마이크][수유][기저귀][잠][지난 기록]. 정사각형 40 세 개, 수유·기저귀는 (348 - 40*3 - 4*4) / 2 = 106
@@ -190,9 +193,12 @@ button.px.acc { color: var(--btn-on); }
 #pageDots .dot::after { content: ''; position: absolute; left: 4px; top: 4px; width: 4px; height: 4px; background: var(--faint); }
 #pageDots .dot.on::after { background: var(--dim); }
 
-/* ── 시계 쪽: 시각 72(글꼴 6배), 날짜·요일 24 ── */
-#bigClock { left: 16px; top: 14px; width: 348px; text-align: center; font-size: 72px; line-height: 72px; color: var(--strong); }
-#bigDate { left: 16px; top: 90px; width: 348px; text-align: center; line-height: 24px; color: var(--text); }
+/* ── 시계 쪽: 시각, 날짜·요일, 나이 ── */
+/* 시각 60(글꼴 5배) 14~74 → 날짜·요일 24 80~104 → 나이 12 106~118 → 쪽 점 122 */
+#bigClock { left: 16px; top: 14px; width: 348px; text-align: center; font-size: 60px; line-height: 60px; color: var(--strong); }
+#bigDate { left: 16px; top: 80px; width: 348px; text-align: center; line-height: 24px; color: var(--text); }
+#bigAge { left: 16px; top: 106px; width: 348px; text-align: center; line-height: 12px; color: var(--dim); white-space: pre; }
+#bigAge .val { color: var(--strong); }
 
 /* ── 타임라인 쪽: 머리(10~22) → 시각 눈금(24~34) → 3일 줄(36~114, 줄마다 26) ── */
 #timelineHead { left: 16px; top: 10px; width: 348px; height: 12px; display: flex; align-items: center; gap: 3px; color: var(--text); white-space: nowrap; }
@@ -206,7 +212,9 @@ button.px.acc { color: var(--btn-on); }
 #timelineAxis { left: 16px; top: 24px; width: 348px; height: 10px; color: var(--dim); }
 #timelineAxis span { position: absolute; top: 0; transform: translateX(-50%); }
 #timelineRows { left: 16px; top: 36px; width: 348px; }
-.tlRow { display: flex; height: 26px; }
+/* 날짜 줄 전체가 버튼(누르면 그날 기록 목록) */
+.tlRow { display: flex; height: 26px; width: 100%; padding: 0; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; outline: none; }
+.tlRow:active .tlBand { box-shadow: inset 0 0 0 1px var(--accent); }
 .tlLabel { width: 40px; padding-top: 11px; color: var(--dim); white-space: nowrap; }
 .tlTrack { position: relative; width: 300px; height: 26px; }
 .tlBand { position: absolute; left: 0; right: 0; top: 11px; height: 10px; background: var(--panel); box-shadow: inset 0 0 0 1px var(--line); }
@@ -321,8 +329,17 @@ button.machineBtn { width: 44px; flex-direction: column; gap: 1px; line-height: 
 #lateOngoing { width: 96px; flex: none; }
 #lateDetail .sleepLen .lbl { color: var(--dim); }
 
-#recentList { line-height: 15px; }
-#recentList .pending { color: var(--accent); }
+/* 그날 기록 목록: 줄 높이 22, 끌어서 넘김(overflow 는 숨기고 scrollTop 으로) */
+#recentList { height: 100px; overflow: hidden; touch-action: none; }
+#recentList .dayRow {
+  display: flex; align-items: center; gap: 8px; width: 100%; height: 22px; padding: 0 6px;
+  border: 0; border-bottom: 1px solid var(--line); background: none; font: inherit; color: var(--text); text-align: left; cursor: pointer;
+}
+#recentList .dayRow:active { background: var(--sel-bg); }
+#recentList .dayRow .tm { width: 92px; color: var(--strong); white-space: nowrap; }
+#recentList .dayRow .what { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#recentList .empty { padding: 30px 0; text-align: center; }
+#lateDelete.warn { color: var(--warn); border-color: var(--warn); }
 
 /* 로그인 */
 #loginSheet input {

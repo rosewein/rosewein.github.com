@@ -6,6 +6,7 @@
 //   2시간 35분 전                     ← 마지막 수유 뒤 지난 시간(숫자 크게)
 //   오늘 수유 3회 · 420ml             대기 n건
 //   마지막 기저귀 소변 · 1시간 10분 전
+//   D+143 · 4개월 21일 · 교정 3개월 29일
 
 import { $, el } from './dom.js';
 import { DIAPER_LABEL, sleepingNow } from '../domain.js';
@@ -18,6 +19,16 @@ const MOOD_TEXT = { normal: '', hungry: '배고파요…', sleep: '쿨쿨', happ
 const SPRITE_PX = 96;
 /** 기저귀 줄은 좁아서 이 시간 넘으면 "11시간 전"처럼 분을 뺀다 */
 const DIAPER_HOURS_ONLY = 10;
+
+/**
+ * 나이 줄 조각(순수 함수): [[글, 값인가]]. 교정 나이가 없으면(예정일 전) 실제 나이만
+ * @param {{day: number, months: number, days: number, corrected_months?: number|null, corrected_days?: number|null}} a
+ */
+export function ageParts(a) {
+  const parts = [[`D+${a.day}`, true], [' · ', false], [`${a.months}개월 ${a.days}일`, true]];
+  if (a.corrected_months != null) parts.push([' · 교정 ', false], [`${a.corrected_months}개월 ${a.corrected_days}일`, true]);
+  return parts;
+}
 
 /** 흐린 이름표 + 굵은 값 한 줄. 글이 같으면 다시 그리지 않는다 */
 function setLine(node, label, value) {
@@ -52,6 +63,7 @@ export function createStatusView(ctx) {
     const feed = s?.last_feed;
     setLine($('#lastFeed'), '마지막 수유', feed ? `${formatClock(feed.at)}${feed.ml != null ? ` · ${feed.ml}ml` : ''}` : '기록 없음');
     setLine($('#today'), '오늘 수유', s ? `${s.today?.feed_count ?? 0}회 · ${s.today?.feed_ml ?? 0}ml` : '-');
+    renderAge(s?.age);
     renderConnection();
     tick();
   }
@@ -73,6 +85,15 @@ export function createStatusView(ctx) {
       ...parts.flatMap(([n, unit]) => [el('span', { className: 'num' }, n), el('span', { className: 'unit' }, unit)]),
       el('span', { className: 'unit' }, '전'),
     );
+  }
+
+  /** 나이 줄: D+143 · 4개월 21일 · 교정 3개월 29일 (베이비타임과 같은 규칙, 서버 care_age) */
+  function renderAge(age) {
+    const box = $('#age');
+    const key = JSON.stringify(age ?? null);
+    if (box.dataset.key === key) return;
+    box.dataset.key = key;
+    box.replaceChildren(...(age ? ageParts(age).map(([text, val]) => el('span', { className: val ? 'val' : '' }, text)) : []));
   }
 
   /** '오늘 수유' 줄 오른쪽: 못 보낸 기록 수, 연결 상태 */

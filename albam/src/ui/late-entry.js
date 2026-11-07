@@ -1,4 +1,6 @@
-// 지난 기록 넣기(시각을 고쳐 넣기)와 최근 기록 보기.
+// 지난 기록 넣기(시각을 고쳐 넣기)와 기록 고치기. 같은 창을 쓴다.
+//   - 넣기: [시계] 버튼 → 종류 고르고 시각·양 → [저장]
+//   - 고치기: 그날 기록 목록(day-list.js)에서 하나를 누르면 openEdit(기록) → [저장] / [지우기](두 번 눌러야 지움)
 // 시각은 날짜·시·분 바퀴(./wheel.js)로 고른다. 굴리거나, 위아래 칸을 누르거나,
 // 가운데 숫자를 눌러 직접 입력(안드로이드 시간 고르기 창)한다.
 // 수면은 시작·끝 바퀴가 나란히 있다. 미래로는 못 가고, 끝이 시작보다 앞서지 않는다.
@@ -13,8 +15,8 @@ import { $, $$, el, setHidden } from './dom.js';
 import { openSheet } from './sheets.js';
 import { amountSteppers, amountView } from './amount.js';
 import { createWheel } from './wheel.js';
-import { DIAPER_BUTTON, KIND, SOURCE, describeRecent, sleepingNow } from '../domain.js';
-import { agoParts, clockOnDay, formatClock, formatDay, formatDuration, minutes, pad2 } from '../time.js';
+import { DIAPER_BUTTON, KIND, SOURCE, sleepingNow } from '../domain.js';
+import { agoParts, clockOnDay, formatDay, formatDuration, minutes, pad2 } from '../time.js';
 
 /** 이보다 오래된 시각으로는 못 돌린다 */
 const MAX_DAYS_BACK = 7;
@@ -22,8 +24,15 @@ const DEFAULT_START_AGO_MIN = 30;
 const DEFAULT_SLEEP_MIN = 60;
 const UNIT_MS = { day: 86400000, hour: 3600000, minute: 60000 };
 
-/** @param {import('../main.js').AppContext} ctx */
-export function setupLateEntry(ctx) {
+const KIND_LABEL = { feed: '수유', diaper: '기저귀', sleep: '잠' };
+/** [지우기]를 한 번 누르면 이 시간 동안 "한 번 더 누르면 지워요" */
+const DELETE_CONFIRM_MS = 3000;
+
+/**
+ * @param {import('../main.js').AppContext} ctx
+ * @param {{openDayList: (back: number) => void}} o
+ */
+export function setupLateEntry(ctx, { openDayList }) {
   const { state, sfx, cfg } = ctx;
   /** 화면에서 고치는 중인 기록 */
   const draft = {
@@ -35,6 +44,9 @@ export function setupLateEntry(ctx) {
     /** 잠: 끝 없이 넣기(아직 자는 중) */
     ongoing: false,
   };
+  /** 고치는 중인 기록(넣기면 null) */
+  let editing = null;
+  let deleteArmedUntil = 0;
   const isSleep = () => draft.kind === KIND.SLEEP;
 
   // ── 시각 고르기 ──
@@ -115,6 +127,7 @@ export function setupLateEntry(ctx) {
   function open() {
     const now = ctx.now();
     now.setSeconds(0, 0);
+    editing = null;
     Object.assign(draft, {
       start: new Date(now - minutes(DEFAULT_START_AGO_MIN)),
       end: now,
@@ -125,9 +138,35 @@ export function setupLateEntry(ctx) {
     openSheet('lateSheet');
   }
 
+  /** 기록 고치기: 그날 기록 목록에서 누른 기록으로 창을 채운다 */
+  function openEdit(ev) {
+    const now = ctx.now();
+    editing = ev;
+    deleteArmedUntil = 0;
+    Object.assign(draft, {
+      kind: ev.kind,
+      start: new Date(ev.at),
+      end: ev.ended_at ? new Date(ev.ended_at) : now,
+      ongoing: ev.kind === KIND.SLEEP && !ev.ended_at,
+      amount: ev.ml ?? state.summary?.last_feed?.ml ?? 200,
+      diaperType: ev.type || 'pee',
+    });
+    render();
+    openSheet('lateSheet');
+  }
+
   /** @param {{except?: object}} [o] 지금 끄는 중인 바퀴는 바퀴가 스스로 다시 그린다 */
   function render({ except } = {}) {
-    for (const b of $$('#lateSheet [data-kind]')) b.classList.toggle('on', b.dataset.kind === draft.kind);
+    for (const b of $$('#lateSheet [data-kind]')) {
+      b.classList.toggle('on', b.dataset.kind === draft.kind);
+      setHidden(b, !!editing && b.dataset.kind !== draft.kind);   // 고칠 때는 종류를 못 바꾼다
+    }
+    $('#lateTitle').textContent = editing ? `기록 고치기 · ${KIND_LABEL[draft.kind] || draft.kind}` : '지난 기록 넣기';
+    setHidden($('#recentBtn'), !!editing);
+    setHidden($('#lateDelete'), !editing);
+    const armed = Date.now() < deleteArmedUntil;
+    $('#lateDelete').textContent = armed ? '한 번 더 누르면 지워요' : '지우기';
+    $('#lateDelete').classList.toggle('warn', armed);
     groups.start.label.textContent = isSleep() ? '시작' : '시각';
     groups.end.label.textContent = '끝';
     const open = isSleep() && draft.ongoing;
@@ -168,7 +207,8 @@ export function setupLateEntry(ctx) {
       }, label));
     }
     // 잠: [아직 자는 중] + 잠 길이(또는 안내). 이미 자는 중인 잠이 있으면 하나 더 열 수 없다
-    const alreadyOpen = !!sleepingNow(state.summary);
+    const openSleep = sleepingNow(state.summary);
+    const alreadyOpen = !!openSleep && openSleep.id !== editing?.id;
     const toggle = el('button', {
       className: `px${draft.ongoing ? ' on' : ''}`, id: 'lateOngoing', disabled: alreadyOpen && !draft.ongoing,
       onClick: () => { sfx.tap(); draft.ongoing = !draft.ongoing; render(); },
@@ -198,15 +238,25 @@ export function setupLateEntry(ctx) {
       render();
     });
   }
-  $('#lateSave').addEventListener('click', () => ctx.save(toEvent()));
-  $('#recentBtn').addEventListener('click', () => { sfx.tap(); showRecent(); });
+  $('#lateSave').addEventListener('click', () => {
+    if (!editing) { ctx.save(toEvent()); return; }
+    const ev = toEvent();
+    const patch = { occurred_at: ev.occurred_at };
+    if (draft.kind === KIND.FEED) patch.amount_ml = ev.amount_ml;
+    if (draft.kind === KIND.DIAPER) patch.detail = ev.detail;
+    if (draft.kind === KIND.SLEEP) patch.ended_at = ev.ended_at ?? null;
+    ctx.update(editing.id, patch, ev);
+  });
+  $('#lateDelete').addEventListener('click', () => {
+    if (!editing) return;
+    if (Date.now() < deleteArmedUntil) { ctx.remove(editing.id, toEvent()); return; }
+    sfx.tap();
+    deleteArmedUntil = Date.now() + DELETE_CONFIRM_MS;
+    render();
+    setTimeout(render, DELETE_CONFIRM_MS + 50);
+  });
+  // 그날 기록 목록(눌러서 고치기). 여기서는 오늘
+  $('#recentBtn').addEventListener('click', () => { sfx.tap(); openDayList(0); });
 
-  // ── 최근 기록: 실제 시각 순서로 자리 잡았는지 보는 곳 ──
-  function showRecent() {
-    const now = ctx.now();
-    const rows = (state.summary?.recent || []).map((r) => el('div', { className: `t9${r.pending ? ' pending' : ''}` },
-      `${formatDay(r.at, now)} ${formatClock(r.at)}  ${describeRecent(r)}${r.pending ? '  (대기)' : ''}`));
-    $('#recentList').replaceChildren(...(rows.length ? rows : ['기록이 없어요']));
-    openSheet('recentSheet');
-  }
+  return { openEdit };
 }

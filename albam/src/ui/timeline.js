@@ -6,6 +6,7 @@
 //          ▬▬▬▬▬         ▬▬    ┊           ← 잠: 파란 막대(자는 중이면 지금까지), ┊ 지금
 //          ▪   ▪     ▪                     ← 기저귀: 소변(밝은 네모) / 대변 있음(갈색 네모)
 //   어제   …
+// 날짜 줄을 누르면 그날 기록 목록이 뜬다(day-list.js). 거기서 하나를 눌러 고치거나 지운다.
 //
 // 숫자는 Supabase care_timeline() 이 준다(supabase/005_timeline.sql). 아직 못 보낸 기록은 요약의 recent 에서 얹는다.
 
@@ -107,7 +108,8 @@ export function setupTimeline(ctx) {
     $('#timelineNote').textContent = note;
     const all = mergePending(events || [], ctx.state.summary?.recent);
     const rows = layoutTimeline(all, ctx.now(), { days: 3, dayStartHour: ctx.state.summary?.settings?.day_start_hour ?? 0 });
-    $('#timelineRows').replaceChildren(...rows.map((r) => el('div', { className: 'tlRow' },
+    // 줄 전체가 버튼: 누르면 그날 기록 목록(눌러서 고치기)
+    $('#timelineRows').replaceChildren(...rows.map((r, i) => el('button', { className: 'tlRow', onClick: () => { ctx.sfx.tap(); ctx.openDayList(i); } },
       el('div', { className: `tlLabel${r.now != null ? ' acc' : ''}` }, r.label),
       el('div', { className: 'tlTrack' },
         el('div', { className: 'tlBand' }),

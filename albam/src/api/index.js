@@ -1,7 +1,8 @@
 // 화면 쪽 통신 창구. 화면은 여기 있는 함수만 부른다.
 //   getSummary()  요약 읽기
 //   addEvent()    기록 추가
-//   cancelEvent() 저장 직후 취소(지우지 않고 취소 표시)
+//   cancelEvent() 저장 직후 취소, 기록 지우기(지우지 않고 취소 표시)
+//   updateEvent() 기록 고치기(시각·끝·양·기저귀 종류). 이전 값은 서버가 내역에 남긴다
 //   updateFeedAmounts() 수유량 빠른 선택 바꾸기
 //   endSleep()    자는 중인 잠에 끝 시각 넣기(깼어요), null 이면 되돌리기
 //   getStats()    날짜별 통계(통계 화면)
@@ -65,6 +66,7 @@ const DEFAULT_DUP_WINDOW_MIN = 10;
  * @property {() => Promise<SummaryResult>} getSummary
  * @property {(ev: CareEvent, opts?: {force?: boolean}) => Promise<AddResult>} addEvent
  * @property {(id: string) => Promise<{status: string}>} cancelEvent
+ * @property {(id: string, patch: {occurred_at?: Date, ended_at?: Date|null, amount_ml?: number, detail?: Object}) => Promise<{status: 'saved'|'queued'|'not_found', id: string}>} updateEvent
  * @property {(amounts: number[]) => Promise<{status: 'saved'|'queued', feed_amounts: number[]}>} updateFeedAmounts
  * @property {(days?: number) => Promise<DayStat[]>} getStats   최근 n일 날짜별 통계. 연결이 안 되면 NetworkError
  * @property {(days?: number) => Promise<import('../ui/timeline.js').TimelineEvent[]>} getTimeline  최근 n일 기록(시각 순)
@@ -119,6 +121,8 @@ export function createApi(cfg, { transport, storage = STORAGE.real } = {}) {
             await rest.rpc('care_cancel_event', { p_id: item.id });
           } else if (item.op === 'feed_amounts') {
             await rest.rpc('care_set_feed_amounts', { p_amounts: item.amounts });
+          } else if (item.op === 'update') {
+            await rest.rpc('care_update_event', { p: { ...item.patch, id: item.id } });
           } else if (item.op === 'sleep_end') {
             await rest.rpc('care_set_sleep_end', { p_id: item.id, p_ended_at: item.ended_at });
           }
@@ -214,6 +218,26 @@ export function createApi(cfg, { transport, storage = STORAGE.real } = {}) {
 
     getStats: (days = 7) => rest.rpc('care_stats', { p_days: days }),
     getTimeline: (days = 3) => rest.rpc('care_timeline', { p_days: days }),
+
+    async updateEvent(id, patch) {
+      const iso = (d) => (d instanceof Date ? d.toISOString() : d);
+      const p = {};
+      if (patch.occurred_at) p.occurred_at = iso(patch.occurred_at);
+      if ('ended_at' in patch) p.ended_at = patch.ended_at ? iso(patch.ended_at) : null;
+      if (patch.amount_ml != null) p.amount_ml = patch.amount_ml;
+      if (patch.detail) p.detail = patch.detail;
+      const pending = await flushThenList();
+      if (navigator.onLine && !pending.length) {
+        try {
+          return await rest.rpc('care_update_event', { p: { ...p, id } });
+        } catch (e) {
+          if (!(e instanceof NetworkError)) throw e;
+        }
+      }
+      await queue.push({ op: 'update', id, patch: p, created: Date.now() });
+      notify();
+      return { status: 'queued', id };
+    },
 
     async endSleep(id, endedAt) {
       const ended_at = endedAt instanceof Date ? endedAt.toISOString() : endedAt;

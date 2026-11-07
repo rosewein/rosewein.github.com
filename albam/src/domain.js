@@ -29,6 +29,7 @@ import { formatClock } from './time.js';
  * @property {{feed_count: number, feed_ml: number}} today
  * @property {{id: string, at: string, type: DiaperType} | null} last_diaper
  * @property {{id: string, at: string, ended_at: string|null} | null} last_sleep  ended_at 이 null 이면 자는 중
+ * @property {{day: number, months: number, days: number, corrected_day: number|null, corrected_months: number|null, corrected_days: number|null} | null} [age]  오늘 나이(006)
  * @property {number[]} feed_amounts                 수유량 빠른 선택(ml, 작은 것부터). '수유량 설정'에서 바꾼다
  * @property {RecentItem[]} recent                  최근 기록, 실제 시각 역순
  * @property {Array} due_chores                     2단계

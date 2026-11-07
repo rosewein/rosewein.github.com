@@ -30,6 +30,8 @@ export async function createFakeSupabase(context) {
       last_sleep: sleep ? { id: sleep.id, at: sleep.occurred_at, ended_at: sleep.ended_at ?? null } : null,
       today: { feed_count: feeds.length, feed_ml: feeds.reduce((s, e) => s + (e.amount_ml || 0), 0) },
       feed_amounts: feedAmounts,
+      baby: { name: '세훈', birth_date: '2026-06-18', due_date: '2026-07-10' },
+      age: { day: 142, months: 4, days: 20, corrected_day: 120, corrected_months: 3, corrected_days: 28 },
       recent: all.slice(0, 8).map((e) => ({ id: e.id, kind: e.kind, at: e.occurred_at, ended_at: e.ended_at ?? null, ml: e.amount_ml, detail: e.detail })),
       due_chores: [],
       settings: { dup_window_minutes: 10, day_start_hour: 0 },
@@ -77,6 +79,11 @@ export async function createFakeSupabase(context) {
       case '/rest/v1/rpc/care_set_feed_amounts':
         feedAmounts = [...new Set(body.p_amounts)].sort((a, b) => a - b);
         return reply(200, { status: 'saved', feed_amounts: feedAmounts });
+      case '/rest/v1/rpc/care_update_event': {
+        const e = events.find((x) => x.id === body.p.id && !x.deleted);
+        if (e) Object.assign(e, body.p.occurred_at ? { occurred_at: body.p.occurred_at } : {}, body.p.amount_ml != null ? { amount_ml: body.p.amount_ml } : {});
+        return reply(200, { status: e ? 'saved' : 'not_found', id: body.p.id });
+      }
       case '/rest/v1/rpc/care_timeline':
         return reply(200, live().reverse().map((e) => ({ id: e.id, kind: e.kind, at: e.occurred_at, ended_at: e.ended_at ?? null, ml: e.amount_ml ?? null, type: e.detail?.type ?? null })));
       case '/rest/v1/rpc/care_set_sleep_end': {

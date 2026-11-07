@@ -167,7 +167,7 @@ reset role;
 
 -- ── 하루 끊는 시각 ──────────────────────────────────────
 -- 서울 기준 오늘 00:10, 어제 23:50 수유. 자정 기준이면 오늘 1회, 새벽 5시 기준이면(지금이 5시 이후라고 가정 못 하므로) day_start 만 확인
-truncate public.care_events;
+truncate public.care_event_history, public.care_events;
 insert into public.care_events (kind, occurred_at, amount_ml) values
   ('feed', (date_trunc('day', now() at time zone 'Asia/Seoul') + interval '10 minutes') at time zone 'Asia/Seoul', 100),
   ('feed', (date_trunc('day', now() at time zone 'Asia/Seoul') - interval '10 minutes') at time zone 'Asia/Seoul', 80);
@@ -196,7 +196,7 @@ reset role;
 -- ── 통계 함수(care_stats): 날짜 규칙 ──
 reset role;
 update public.care_settings set value = '0' where key = 'day_start_hour';
-truncate public.care_events;
+truncate public.care_event_history, public.care_events;
 -- 기준: 어제(서울) y, 오늘 t
 create temp table d as select (now() at time zone 'Asia/Seoul')::date as t;
 grant select on d to authenticated;
@@ -289,6 +289,58 @@ do $$ begin
   perform public.care_timeline(3);
   raise exception 'FAIL: stranger timeline';
 exception when insufficient_privilege then raise notice 'ok - non-family cannot read timeline';
+end $$;
+reset role;
+
+-- ── 006: 고치기, 고친 내역, 나이 ─────────────
+set role authenticated;
+set request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+do $$
+declare v_id uuid := gen_random_uuid(); r jsonb; h record; n int;
+begin
+  perform public.care_add_event(jsonb_build_object('id', v_id, 'kind', 'feed', 'amount_ml', 200,
+    'occurred_at', now() - interval '2 hours', 'detail', '{"memo":"유산균"}'::jsonb, 'force', true));
+  r := public.care_update_event(jsonb_build_object('id', v_id, 'amount_ml', 230, 'occurred_at', now() - interval '3 hours'));
+  perform pg_temp.check(r ->> 'status' = 'saved', 'update saved');
+  perform pg_temp.check((select amount_ml = 230 and occurred_at < now() - interval '170 minutes' and detail ->> 'memo' = '유산균'
+                         and updated_by = '11111111-1111-1111-1111-111111111111' from public.care_events where id = v_id),
+                        'update changes amount/time, keeps memo, records who');
+  select * into h from public.care_event_history where event_id = v_id order by id desc limit 1;
+  perform pg_temp.check(h.action = 'update' and (h.before ->> 'amount_ml')::int = 200, 'history keeps the value before');
+  select count(*) into n from public.care_event_history where event_id = v_id;
+  perform public.care_update_event(jsonb_build_object('id', v_id, 'amount_ml', 230));
+  perform pg_temp.check((select count(*) from public.care_event_history where event_id = v_id) = n, 'no history when nothing changed');
+  perform public.care_cancel_event(v_id);
+  perform pg_temp.check((select action from public.care_event_history where event_id = v_id order by id desc limit 1) = 'cancel', 'cancel goes to history');
+  perform pg_temp.check(public.care_update_event(jsonb_build_object('id', v_id, 'amount_ml', 100)) ->> 'status' = 'not_found', 'cancelled record cannot be edited');
+  begin
+    perform public.care_update_event(jsonb_build_object('id', '33333333-3333-3333-3333-333333333333', 'ended_at', now() - interval '10 hours'));
+    raise exception 'FAIL: end before start accepted';
+  exception when sqlstate '22023' then raise notice 'ok - edit: end before start rejected';
+  end;
+  r := public.care_update_event(jsonb_build_object('id', '33333333-3333-3333-3333-333333333333', 'ended_at', null));
+  perform pg_temp.check((select ended_at is null from public.care_events where id = '33333333-3333-3333-3333-333333333333'), 'edit: ended_at null reopens sleep');
+end $$;
+do $$
+declare a jsonb := public.care_age('2026-11-07'); s jsonb := public.care_summary();
+begin
+  perform pg_temp.check(a = '{"day":143,"months":4,"days":21,"corrected_day":121,"corrected_months":3,"corrected_days":29}'::jsonb,
+                        'age on 2026-11-07 matches BabyTime: ' || a::text);
+  perform pg_temp.check((public.care_age('2026-06-18') ->> 'day')::int = 1 and (public.care_age('2026-06-18') ->> 'days')::int = 1, 'birthday is D+1, 0개월 1일');
+  perform pg_temp.check(public.care_months_days('2026-07-18', '2026-06-18') = array[1, 1], 'exactly one month later: 1개월 1일');
+  perform pg_temp.check(public.care_months_days('2026-07-17', '2026-06-18') = array[0, 30], 'day before: 0개월 30일');
+  perform pg_temp.check(public.care_months_days('2026-03-01', '2026-01-31') = array[1, 2], 'month end: 1/31 + 1개월 = 2/28, 3/1 is 1개월 2일');
+  perform pg_temp.check(public.care_age('2026-07-01') -> 'corrected_day' = 'null'::jsonb, 'no corrected age before due date');
+  perform pg_temp.check(s -> 'baby' ->> 'name' = '세훈' and (s -> 'age' ->> 'day')::int > 0, 'summary has baby and age');
+end $$;
+set request.jwt.claim.sub = '22222222-2222-2222-2222-222222222222';
+do $$ begin
+  perform public.care_update_event('{"id":"33333333-3333-3333-3333-333333333333","amount_ml":1}');
+  raise exception 'FAIL: stranger update';
+exception when insufficient_privilege then raise notice 'ok - non-family cannot edit';
+end $$;
+do $$ begin
+  perform pg_temp.check((select count(*) from public.care_event_history) = 0 and (select count(*) from public.care_baby_profile) = 0, 'non-family sees no history or profile');
 end $$;
 reset role;
 

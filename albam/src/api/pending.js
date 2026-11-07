@@ -65,13 +65,28 @@ export function applyPending(summary, items) {
     }
   }
 
-  // 3) 못 보낸 잠 끝(깼어요 / 되돌리기): 순서대로 덮어쓴다
+  // 3) 못 보낸 고치기: 최근 목록과 '마지막 ○○' 에 덮어쓴다(오늘 합계는 양 차이만)
+  for (const item of items.filter((i) => i.op === 'update')) {
+    const p = item.patch || {};
+    for (const r of s.recent.filter((x) => x.id === item.id)) {
+      if (r.kind === 'feed' && p.amount_ml != null && isToday(time(r.at))) s.today.feed_ml += p.amount_ml - (r.ml || 0);
+      if (p.occurred_at) r.at = p.occurred_at;
+      if ('ended_at' in p) r.ended_at = p.ended_at;
+      if (p.amount_ml != null) r.ml = p.amount_ml;
+      if (p.detail) r.detail = { ...(r.detail || {}), ...p.detail };
+    }
+    if (s.last_feed?.id === item.id) s.last_feed = { ...s.last_feed, ...(p.occurred_at && { at: p.occurred_at }), ...(p.amount_ml != null && { ml: p.amount_ml }) };
+    if (s.last_diaper?.id === item.id) s.last_diaper = { ...s.last_diaper, ...(p.occurred_at && { at: p.occurred_at }), ...(p.detail?.type && { type: p.detail.type }) };
+    if (s.last_sleep?.id === item.id) s.last_sleep = { ...s.last_sleep, ...(p.occurred_at && { at: p.occurred_at }), ...('ended_at' in p && { ended_at: p.ended_at }) };
+  }
+
+  // 4) 못 보낸 잠 끝(깼어요 / 되돌리기): 순서대로 덮어쓴다
   for (const item of items.filter((i) => i.op === 'sleep_end')) {
     for (const r of s.recent) if (r.id === item.id) r.ended_at = item.ended_at;
     if (s.last_sleep?.id === item.id) s.last_sleep = { ...s.last_sleep, ended_at: item.ended_at };
   }
 
-  // 4) 못 보낸 수유량 설정: 가장 나중 것
+  // 5) 못 보낸 수유량 설정: 가장 나중 것
   const amounts = items.filter((i) => i.op === 'feed_amounts').pop();
   if (amounts) s.feed_amounts = amounts.amounts;
 

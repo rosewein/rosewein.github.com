@@ -4,11 +4,12 @@
 /**
  * @typedef {Object} QueueItem
  * @property {number} [seq]                자동 번호
- * @property {'add'|'cancel'|'feed_amounts'|'sleep_end'} op
+ * @property {'add'|'cancel'|'feed_amounts'|'sleep_end'|'update'} op
  * @property {string} id                   기록 id
  * @property {Object} [payload]            op='add' 일 때 care_add_event 에 보낼 값
  * @property {number[]} [amounts]          op='feed_amounts' 일 때 수유량 빠른 선택
  * @property {string|null} [ended_at]      op='sleep_end' 일 때 잠 끝(null 이면 다시 자는 중)
+ * @property {Object} [patch]              op='update' 일 때 고친 값(care_update_event 입력에서 id 뺀 것)
  * @property {number} created
  */
 
