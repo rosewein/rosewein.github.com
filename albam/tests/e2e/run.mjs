@@ -46,6 +46,24 @@ function check(ok, label) {
 const shot = (page, name) => (SHOTS ? page.screenshot({ path: join(SHOTS, `${name}.png`) }) : null);
 const text = (page, sel) => page.textContent(sel);
 
+/**
+ * S10 을 가로로 두면 위·아래가 곡면이다. 보이는 글·버튼이 위·아래 8 논리 픽셀 안으로 들어가지 않았는지.
+ * @returns {Promise<string[]>} 들어간 요소 목록
+ */
+const SAFE_Y = 8;
+function curvedEdgeOffenders(page, selector) {
+  return page.evaluate(({ selector, safe }) => {
+    const stage = document.querySelector('#stage');
+    const zoom = parseFloat(stage.style.zoom) || 1;
+    const top = stage.getBoundingClientRect().top;
+    return [...document.querySelectorAll(selector)]
+      .filter((e) => e.offsetParent && getComputedStyle(e).visibility !== 'hidden')
+      .map((e) => { const r = e.getBoundingClientRect(); return { id: e.id || e.className || e.tagName, t: (r.top - top) / zoom, b: (r.bottom - top) / zoom }; })
+      .filter((r) => r.t < safe - 0.5 || r.b > 180 - safe + 0.5)
+      .map((r) => `${r.id}(${r.t.toFixed(0)}~${r.b.toFixed(0)})`);
+  }, { selector, safe: SAFE_Y });
+}
+
 async function demoFlow(browser, base) {
   const page = await (await browser.newContext(DEVICE)).newPage();
   const errors = [];
@@ -66,16 +84,21 @@ async function demoFlow(browser, base) {
   check(await text(page, '#lastDiaper') === '마지막 기저귀소변 · 1시간 10분 전', '마지막 기저귀 "1시간 10분 전"');
   const overflow = await page.$$eval('#status > div', (els) => els.filter((e) => e.getBoundingClientRect().right > document.querySelector('#status').getBoundingClientRect().right + 0.5).map((e) => e.id));
   check(overflow.length === 0, `상태 칸 글이 넘치지 않음 ${overflow.join()}`);
-  const sizes = await page.$$eval('#actions .action', (bs) => bs.map((b) => {
-    const r = b.getBoundingClientRect();
-    const i = b.querySelector('.ico').getBoundingClientRect();
-    return [r.width, r.height, r.top, i.width, i.height, getComputedStyle(b).fontSize].join('/');
-  }));
-  check(sizes.length === 3 && new Set(sizes).size === 1, `큰 버튼 셋 크기·아이콘·글자 똑같음 ${sizes.join(' | ')}`);
+  const box = (sel) => page.$eval(sel, (b) => { const r = b.getBoundingClientRect(); const i = b.querySelector('.ico').getBoundingClientRect();
+    return { w: r.width, h: r.height, top: r.top, ico: `${i.width}x${i.height}`, font: getComputedStyle(b).fontSize }; });
+  const [mic, feed, diaper, late] = [await box('#micBtn'), await box('#feedBtn'), await box('#diaperBtn'), await box('#lateBtn')];
+  check(mic.w === mic.h && JSON.stringify(mic) === JSON.stringify({ ...late, top: mic.top }) && (await text(page, '#micBtn')) === '' && (await text(page, '#lateBtn')) === '',
+    `마이크·지난 기록은 아이콘만, 같은 정사각형 ${mic.w}x${mic.h}`);
+  check((await page.getAttribute('#micBtn', 'aria-label')) === '말하기' && (await page.getAttribute('#lateBtn', 'aria-label')).startsWith('지난 기록'), '아이콘 버튼에 이름(화면 낭독용)');
+  check(JSON.stringify(feed) === JSON.stringify(diaper), `수유·기저귀 크기·아이콘·글자 똑같음 ${JSON.stringify(feed)}`);
+  check(feed.w > mic.w * 3 && feed.h === mic.h && feed.top === mic.top && feed.ico === mic.ico, '수유·기저귀가 크게, 높이·줄·아이콘 크기는 마이크와 같음');
+  const curved = await curvedEdgeOffenders(page, '#status > div, #actions button, #bubble, #albam');
+  check(curved.length === 0, `위·아래 곡면(8px)에 글·버튼 없음 ${curved.join(' ')}`);
 
   await page.click('#feedBtn');
   const quick = () => page.$$eval('#amountRow button', (b) => b.map((x) => `${x.querySelector('.t24').textContent}/${x.querySelector('.machine').textContent}`).join());
   const chosen = async () => `${await text(page, '#stepRow .amount .t24')} ${await text(page, '#stepRow .amount .machine')}`;
+  check((await curvedEdgeOffenders(page, '#feedSheet h2, #feedSheet button, #feedSheet .amount')).length === 0, '수유 창: 위·아래 곡면에 글·버튼 없음');
   check(await quick() === '200/브레짜 180,230/브레짜 210,270/브레짜 240', '빠른 선택 처음 값: 브레짜 180·210·240 (200·230·270)');
   check(await chosen() === '200ml 브레짜 180', '기본 선택은 마지막으로 먹인 양, 브레짜 물 양 같이');
 
@@ -92,6 +115,7 @@ async function demoFlow(browser, base) {
   await page.waitForSelector('#amountSheet:not(.hidden)');
   const slots = () => page.$$eval('#amountSlots .amount .t24', (v) => v.map((x) => x.textContent).join());
   check(await slots() === '200ml,230ml,270ml', '수유량 설정 창에 지금 양');
+  check((await curvedEdgeOffenders(page, '#amountSheet h2, #amountSheet button, #amountSheet .amount')).length === 0, '수유량 설정 창: 위·아래 곡면에 글·버튼 없음');
   check((await page.$$eval('#amountSlots .fineBtn', (b) => b.length)) === 0, '수유량 설정은 브레짜 칸 단위로만');
   await page.click('#amountSlots .slot:nth-child(3) .machineBtn >> nth=1');  // +30 브레짜
   check(await slots() === '200ml,230ml,300ml', '+30 브레짜 → 300ml(브레짜 270)');
@@ -118,6 +142,9 @@ async function demoFlow(browser, base) {
   check(true, '10분 안 같은 종류는 확인을 물음');
   await shot(page, 'confirm');
   await page.click('#confirmNo');
+  check(await text(page, '#notice') === '안 넣었어요' && await page.isVisible('#notice'), '결과 알림은 아래 막대에("안 넣었어요")');
+  const bubbleNow = await page.$eval('#bubble', (b) => (b.classList.contains('empty') ? '' : b.textContent));
+  check(['', '고마워요!', '배고파요…', '쿨쿨'].includes(bubbleNow), `말풍선에는 알밤 말만 ("${bubbleNow}")`);
 
   await page.click('#diaperBtn');
   await page.click('#diaperSheet [data-type="poo"]');
@@ -126,6 +153,8 @@ async function demoFlow(browser, base) {
   await page.click('#undoBtn');
   await page.waitForTimeout(300);
   check((await text(page, '#lastDiaper')).includes('소변'), '취소하면 이전 기록으로');
+  check(await text(page, '#notice') === '취소했어요', '취소 결과는 아래 막대에("취소했어요")');
+  check(!(await text(page, '#bubble')).includes('취소'), '말풍선에는 취소 알림이 안 뜸');
   const kept = await page.evaluate(() => JSON.parse(localStorage.getItem('albam.demo.events')).filter((e) => e.deleted_at).length);
   check(kept === 1, '취소한 기록은 지우지 않고 표시만');
 
@@ -134,6 +163,7 @@ async function demoFlow(browser, base) {
   await shot(page, 'late-sleep');
   await page.click('#lateSheet [data-kind="feed"]');
   await shot(page, 'late-feed');
+  check((await curvedEdgeOffenders(page, '#lateSheet h2, #lateSheet button, #lateSheet .timeRow, #lateSheet .amount')).length === 0, '지난 기록 창: 위·아래 곡면에 글·버튼 없음');
   const lateOverflow = await page.$$eval('#lateSheet .row, #lateSheet .timeRow', (rows) => {
     const foot = document.querySelector('#lateSheet .foot').getBoundingClientRect().top;
     return rows.filter((r) => r.offsetParent && r.getBoundingClientRect().bottom > foot).map((r) => r.id);

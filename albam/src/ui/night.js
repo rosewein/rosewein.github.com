@@ -6,8 +6,8 @@ import { $, el, setHidden } from './dom.js';
 import { formatAgo, formatClock } from '../time.js';
 
 const MOVE_EVERY_MS = 60000;
-/** 글자 덩어리가 놓일 수 있는 범위(논리 픽셀). 곡면 가장자리는 피하고, 가장 긴 글("12시간 35분 전", 약 180)이 오른쪽 곡면에 닿지 않게 */
-const AREA = { left: 24, top: 12, width: 150, height: 120 };
+/** 글자 덩어리(약 180x40)가 놓일 수 있는 왼쪽 위 범위(논리 픽셀). 위·아래 곡면 8px 과 좌우 16px 을 넘지 않게 */
+const AREA = { left: 24, top: 14, width: 150, height: 110 };
 
 /** @param {import('../main.js').AppContext} ctx */
 export function setupNight(ctx) {

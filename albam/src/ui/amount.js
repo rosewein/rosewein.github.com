@@ -14,14 +14,14 @@ export const clampAmount = (ml) => Math.min(AMOUNT.max, Math.max(AMOUNT.min, ml)
 /** 양 + 브레짜 설명. 보통 두 줄, inline 이면 한 줄(좁은 창에서) */
 export function amountView(ml, { formula, machine }, { inline = false } = {}) {
   return el('div', { className: `amount${inline ? ' inline' : ''}` },
-    el('div', { className: 't24' }, `${ml}ml`),
+    el('div', { className: 't24 val' }, `${ml}ml`),
     el('div', { className: 't9 machine' }, machineLabel(ml, formula, machine)));
 }
 
 /** 빠른 선택 버튼 안: "200" + "브레짜 180" */
 export function quickAmountLabel(ml, { formula, machine }) {
   const water = waterFor(ml, formula, machine);
-  return [el('span', { className: 't24' }, String(ml)), el('span', { className: 't9 machine' }, water ? `${machine.name} ${water}` : '')];
+  return [el('span', { className: 't24 val' }, String(ml)), el('span', { className: 't9 machine' }, water ? `${machine.name} ${water}` : '')];
 }
 
 /**

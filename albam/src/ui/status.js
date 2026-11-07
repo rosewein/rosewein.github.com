@@ -16,17 +16,15 @@ const MOOD_ROW = { normal: 0, hungry: 1, sleep: 2, happy: 3 };
 const MOOD_TEXT = { normal: '', hungry: '배고파요…', sleep: '쿨쿨', happy: '고마워요!' };
 /** 스프라이트 한 칸(32px)을 3배로 그린다 */
 const SPRITE_PX = 96;
-/** 이 시간 넘게 지나면 큰 숫자를 줄여 한 줄에 들어가게 */
-const LONG_HOURS = 10;
 /** 기저귀 줄은 좁아서 이 시간 넘으면 "11시간 전"처럼 분을 뺀다 */
 const DIAPER_HOURS_ONLY = 10;
 
-/** 흐린 이름표 + 값 한 줄. 글이 같으면 다시 그리지 않는다 */
+/** 흐린 이름표 + 굵은 값 한 줄. 글이 같으면 다시 그리지 않는다 */
 function setLine(node, label, value) {
   const key = `${label}|${value}`;
   if (node.dataset.key === key) return;
   node.dataset.key = key;
-  node.replaceChildren(el('span', { className: 'lbl' }, label), value);
+  node.replaceChildren(el('span', { className: 'lbl' }, label), el('span', { className: 'val' }, value));
 }
 
 /**
@@ -66,7 +64,6 @@ export function createStatusView(ctx) {
     box.dataset.key = text;
     box.setAttribute('aria-label', text);
     const parts = lastFeedAt ? agoParts(lastFeedAt, now) : [];
-    box.classList.toggle('long', parts.length > 0 && parts[0][1] === '시간' && Number(parts[0][0]) >= LONG_HOURS);
     if (!lastFeedAt || !parts.length) {
       box.replaceChildren(el('span', { className: lastFeedAt ? 'num' : 'none' }, lastFeedAt ? '방금' : text));
       return;
@@ -102,10 +99,10 @@ export function createStatusView(ctx) {
     setLine($('#lastDiaper'), '마지막 기저귀', diaper ? `${DIAPER_LABEL[diaper.type] || ''} · ${formatAgo(diaper.at, now, { hoursOnlyFrom: DIAPER_HOURS_ONLY })}` : '기록 없음');
     $('#albam').style.backgroundPosition = `${-frame * SPRITE_PX}px ${-MOOD_ROW[mood] * SPRITE_PX}px`;
 
-    // 말풍선: 잠깐 띄운 말 > 로그인 문제 > 기분
-    const bubble = state.bubble && Date.now() < state.bubble.until ? state.bubble : null;
-    $('#bubble').textContent = bubble?.text ?? (state.authProblem || MOOD_TEXT[mood]);
-    $('#bubble').className = bubble?.tone || (state.authProblem ? 'warn' : '');
+    // 말풍선(알밤 위): 알밤이 하는 말만. 할 말이 없으면(평소) 숨김
+    const words = MOOD_TEXT[mood];
+    $('#bubbleText').textContent = words;
+    $('#bubble').className = words ? '' : 'empty';
   }
 
   /** 캐릭터 두 칸 애니메이션 */

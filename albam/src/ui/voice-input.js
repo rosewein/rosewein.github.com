@@ -121,7 +121,7 @@ export function setupVoiceInput(ctx) {
     const wasConfirming = phase === 'confirm';
     stop();
     closeSheets();
-    if (wasConfirming) { sfx.cancel(); ctx.say('안 넣었어요'); }
+    if (wasConfirming) { sfx.cancel(); ctx.notify('안 넣었어요'); }
   }
 
   $('#micBtn').addEventListener('click', () => (phase === 'listening' ? cancel() : listen()));

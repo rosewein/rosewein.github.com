@@ -3,7 +3,9 @@
 //   save(ev)
 //    ├ 비슷한 기록이 있음(confirm) → 확인 창 → [그래도 저장] → save(ev, {force: true})
 //    ├ 저장됨/대기(queued) → 효과음, 캐릭터 기쁨, 버튼 자리에 "저장됨 + [취소 n]"
-//    └ 실패 → 말풍선에 이유, 로그인 문제면 로그인 창
+//    └ 실패 → 아래 알림 막대에 이유, 로그인 문제면 로그인 창
+//
+// 아래 알림 막대(#notice)는 저장·취소 결과를 잠깐 보여 준다. 말풍선은 알밤이 하는 말만 쓴다.
 
 import { $, setHidden } from './dom.js';
 import { closeSheets, openSheet } from './sheets.js';
@@ -12,6 +14,7 @@ import { describeEvent } from '../domain.js';
 import { formatClock } from '../time.js';
 
 const HAPPY_MS = 3000;
+const NOTICE_MS = 3000;
 
 /** @param {import('../main.js').AppContext} ctx */
 export function setupRecorder(ctx) {
@@ -20,6 +23,7 @@ export function setupRecorder(ctx) {
   let waitingConfirm = null;
   /** 취소 버튼이 떠 있는 동안의 기록 */
   let undo = null;
+  let noticeTimer = null;
 
   async function save(ev, opts = {}) {
     let result;
@@ -28,7 +32,7 @@ export function setupRecorder(ctx) {
     } catch (e) {
       sfx.error();
       if (e instanceof AuthError) ctx.showLogin('다시 로그인해 주세요');
-      else ctx.say(`저장 못 함: ${e.message}`.slice(0, 40), 6, 'warn');
+      else notify('저장 못 했어요', 'warn');
       console.error(e);
       return;
     }
@@ -66,12 +70,26 @@ export function setupRecorder(ctx) {
     waitingConfirm = null;
     sfx.cancel();
     closeSheets();
-    ctx.say('안 넣었어요');
+    notify('안 넣었어요');
   });
+
+  // ── 아래 알림 막대: 저장·취소 결과를 잠깐 ──
+  /** @param {'warn'|''} [tone] */
+  function notify(text, tone = '') {
+    hideUndo();
+    clearTimeout(noticeTimer);
+    const bar = $('#notice');
+    bar.textContent = text;
+    bar.className = `box${tone ? ` ${tone}` : ''}`;
+    noticeTimer = setTimeout(() => setHidden(bar, true), NOTICE_MS);
+  }
+  const hideNotice = () => { clearTimeout(noticeTimer); setHidden($('#notice'), true); };
+  $('#notice').addEventListener('click', hideNotice);
 
   // ── 저장 직후 취소 ──
   function showUndo(id, text) {
     hideUndo();
+    hideNotice();
     const until = Date.now() + cfg.undoSeconds * 1000;
     const update = () => {
       const left = Math.ceil((until - Date.now()) / 1000);
@@ -96,15 +114,15 @@ export function setupRecorder(ctx) {
       await ctx.api.cancelEvent(id);
       sfx.cancel();
       state.happyUntil = 0;
-      ctx.say('취소했어요');
+      notify('취소했어요');
     } catch (e) {
       sfx.error();
-      ctx.say('취소 못 함', 5, 'warn');
+      notify('취소 못 했어요', 'warn');
     }
     ctx.refresh();
   });
   // 알림 부분을 누르면 바로 버튼으로 돌아감
   $('#undoMsg').addEventListener('click', hideUndo);
 
-  return { save, isUndoShowing: () => !!undo };
+  return { save, notify, isUndoShowing: () => !!undo };
 }

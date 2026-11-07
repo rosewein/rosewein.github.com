@@ -20,8 +20,8 @@
   <div id="shift">
     <!-- 왼쪽 위: 캐릭터 -->
     <div class="box" id="charPanel">
-      <div id="albam" class="spr"></div>
-      <div id="bubble"></div>
+      <div id="bubble" class="empty"><span id="bubbleText"></span></div>   <!-- 말풍선(위) -->
+      <div id="albam" class="spr"></div>                                    <!-- 알밤(아래) -->
     </div>
 
     <!-- 오른쪽 위: 상태. 시각마다 무엇의 시각인지 글로 붙인다 -->
@@ -32,15 +32,16 @@
       <div id="today"></div>                    <!-- 오늘 수유 3회 · 420ml -->
       <div id="net" class="t9 faint"></div>     <!-- 대기 n건 / 연결 안 됨 -->
       <div id="lastDiaper"></div>               <!-- 마지막 기저귀 소변 · 1시간 10분 전 -->
-      <button class="px ghost" id="lateBtn"><span class="spr ico ico-clock"></span>지난 기록 넣기 · 시각 고치기</button>
     </div>
 
-    <!-- 아래: 큰 버튼 셋, 너비 똑같이 -->
+    <!-- 아래: [마이크] [수유] [기저귀] [지난 기록]. 마이크·지난 기록은 아이콘만(정사각형), 수유·기저귀는 크게 -->
     <div class="box" id="actions">
-      <button class="px action" id="micBtn"><span class="spr ico x2 ico-mic"></span>말하기</button>
+      <button class="px action square" id="micBtn" aria-label="말하기" title="말하기"><span class="spr ico x2 ico-mic"></span></button>
       <button class="px action" id="feedBtn"><span class="spr ico x2 ico-bottle"></span>수유</button>
       <button class="px action" id="diaperBtn"><span class="spr ico x2 ico-diaper"></span>기저귀</button>
+      <button class="px action square" id="lateBtn" aria-label="지난 기록 넣기 · 시각 고치기" title="지난 기록 넣기"><span class="spr ico x2 ico-clock"></span></button>
     </div>
+    <div class="box hidden" id="notice"></div>   <!-- 저장·취소 결과 알림(잠깐) -->
     <div class="box hidden" id="undo">
       <div id="undoMsg"><span class="spr ico ico-check"></span><span id="undoText">저장됨</span></div>
       <button class="px" id="undoBtn">취소 <span id="undoCount"></span></button>
