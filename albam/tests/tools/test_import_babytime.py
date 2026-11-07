@@ -122,9 +122,12 @@ class ImportTest(unittest.TestCase):
                 zf.writestr('activity_Sehun_202410.txt', EN)
             events, _ = ib.parse_files([z])
         sql = ib.to_sql(events)
-        self.assertIn("on conflict (id) do nothing", sql)
+        self.assertIn('on conflict (id) do nothing', sql)
         self.assertIn("'import'", sql)
-        self.assertEqual(sql.count("\n  ("), len(events))
+        lines = sql.split('$babytime$')[1].strip().split('\n')
+        self.assertEqual(len(lines), len(events))
+        self.assertEqual([ib.line_id(l) for l in lines], [e['id'] for e in events], 'id = md5(줄)')
+        self.assertTrue(lines[0].startswith('feed|2024-10-26 22:06||160|'))
 
 
 if __name__ == '__main__':

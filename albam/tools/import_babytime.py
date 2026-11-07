@@ -15,10 +15,12 @@
   처럼 날짜 줄, "이름: 값" 줄들, 구분선으로 되어 있다.
 - 한국어로 내보낸 파일의 항목 이름은 아직 예시 파일을 못 봐서 짐작으로 넣어 두었다.
   처음 돌릴 때 끝에 나오는 "모르는 종류/항목" 보고를 보고 TYPE_MAP·KEY 목록을 맞춘다.
-- id 를 기록 내용으로 정해서(uuid5) 같은 파일을 두 번 넣어도 한 번만 들어간다.
+- 기록마다 한 줄('종류|시작|끝|양|세부')로 바꿔 보내고, id 는 그 줄의 md5 로 정한다.
+  그래서 SQL 이 작고(2천여 건에 100KB 안팎), 같은 파일을 두 번 넣어도 한 번만 들어간다.
 - 거실 화면을 쓰기 시작한 뒤의 기록은 --until 로 잘라서 겹치지 않게 한다.
 """
 import argparse
+import hashlib
 import io
 import json
 import re
@@ -29,7 +31,6 @@ from datetime import datetime, timedelta, date
 from zoneinfo import ZoneInfo
 
 TZ = ZoneInfo('Asia/Seoul')
-NS = uuid.UUID('6f1c2b1e-4a51-4d0a-9a37-5a1b0b7c2e11')
 SEP = re.compile(r'^\s*={5,}\s*$')
 FL_OZ_ML = 29.5735
 
@@ -240,8 +241,7 @@ def parse_block(lines, report):
         ev['amount_ml'] = None
 
     # 내용으로 id 를 정해 같은 파일을 다시 넣어도 한 번만 들어가게
-    key = '|'.join(['babytime', kind, start.isoformat(), str(ev['amount_ml']), ev['detail'].get('type', ''), type_value])
-    ev['id'] = str(uuid.uuid5(NS, key))
+    ev['id'] = line_id(compact_line(ev))
     return ev
 
 
@@ -282,28 +282,42 @@ def parse_files(paths, since=None, until=None, report=None):
     return events, report
 
 
-def sql_str(v):
-    if v is None:
-        return 'null'
-    return "'" + str(v).replace("'", "''") + "'"
+def compact_line(e):
+    """기록 → 한 줄. '종류|시작|끝|양|세부JSON'. 시각은 서울 'YYYY-MM-DD HH:MM'.
+    세부에서 베이비타임 원래 이름과 소요시간(끝-시작으로 다시 셀 수 있음)은 뺀다."""
+    fmt = lambda t: t.astimezone(TZ).strftime('%Y-%m-%d %H:%M') if t else ''
+    detail = {k: (str(v).replace('|', '/').replace('\n', ' ') if k == 'memo' else v)
+              for k, v in e['detail'].items() if k not in ('babytime_type', 'duration_min')}
+    ml = '' if e['amount_ml'] is None else str(int(e['amount_ml']))
+    return '|'.join([e['kind'], fmt(e['occurred_at']), fmt(e['ended_at']), ml,
+                     json.dumps(detail, ensure_ascii=False, separators=(',', ':'))])
+
+
+def line_id(line):
+    """한 줄의 id. SQL 의 md5('babytime|' || 줄)::uuid 와 같다"""
+    return str(uuid.UUID(hashlib.md5(('babytime|' + line).encode('utf-8')).hexdigest()))
+
+
+SQL_TEMPLATE = """-- 베이비타임에서 옮긴 기록 {count}건. Supabase SQL Editor 에서 실행(두 번 실행해도 한 번만 들어감)
+insert into public.care_events (id, kind, occurred_at, ended_at, amount_ml, detail, source, recorded_by)
+select md5('babytime|' || l)::uuid,
+       split_part(l, '|', 1),
+       split_part(l, '|', 2)::timestamp at time zone 'Asia/Seoul',
+       nullif(split_part(l, '|', 3), '')::timestamp at time zone 'Asia/Seoul',
+       nullif(split_part(l, '|', 4), '')::int,
+       split_part(l, '|', 5)::jsonb,
+       'import', null
+from unnest(string_to_array($babytime$
+{lines}
+$babytime$, E'\\n')) as l
+where l <> ''
+on conflict (id) do nothing;
+"""
 
 
 def to_sql(events):
-    out = ['-- 베이비타임에서 옮긴 기록. Supabase SQL Editor 에서 실행', 'begin;']
-    for i in range(0, len(events), 500):
-        chunk = events[i:i + 500]
-        out.append('insert into public.care_events (id, kind, occurred_at, ended_at, amount_ml, detail, source, recorded_by) values')
-        rows = []
-        for e in chunk:
-            rows.append('  ({}, {}, {}, {}, {}, {}::jsonb, \'import\', null)'.format(
-                sql_str(e['id']), sql_str(e['kind']), sql_str(e['occurred_at'].isoformat()),
-                sql_str(e['ended_at'].isoformat() if e['ended_at'] else None),
-                'null' if e['amount_ml'] is None else int(e['amount_ml']),
-                sql_str(json.dumps(e['detail'], ensure_ascii=False))))
-        out.append(',\n'.join(rows))
-        out.append('on conflict (id) do nothing;')
-    out.append('commit;')
-    return '\n'.join(out) + '\n'
+    lines = [compact_line(e) for e in events]
+    return SQL_TEMPLATE.format(count=len(lines), lines='\n'.join(lines))
 
 
 def stat_day(e, day_start_hour=0):
