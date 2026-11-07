@@ -239,9 +239,12 @@ def parse_block(lines, report):
     if kind == 'feed' and ev['amount_ml'] is not None and not 0 <= ev['amount_ml'] <= 1000:
         bump(report, 'bad_amount')
         ev['amount_ml'] = None
+    # 수유 '소요시간'은 다 먹은 시각(끝)으로 둔다(supabase/007)
+    if kind == 'feed' and ev['detail'].get('duration_min'):
+        ev['ended_at'] = start + timedelta(minutes=ev['detail']['duration_min'])
 
     # 내용으로 id 를 정해 같은 파일을 다시 넣어도 한 번만 들어가게
-    ev['id'] = line_id(compact_line(ev))
+    ev['id'] = line_id(id_line(compact_line(ev)))
     return ev
 
 
@@ -293,14 +296,24 @@ def compact_line(e):
                      json.dumps(detail, ensure_ascii=False, separators=(',', ':'))])
 
 
+def id_line(line):
+    """id 를 셀 때 쓰는 줄: 수유의 끝 칸은 비운다.
+    2026-11-07 에 처음 옮길 때는 수유 끝을 넣지 않았으므로, 끝을 넣은 지금도 같은 id 가 나와야 다시 넣어도 겹치지 않는다.
+    SQL_TEMPLATE 의 regexp_replace 와 같은 일을 한다."""
+    if line.startswith('feed|'):
+        kind, start, _end, rest = line.split('|', 3)
+        return '|'.join([kind, start, '', rest])
+    return line
+
+
 def line_id(line):
-    """한 줄의 id. SQL 의 md5('babytime|' || 줄)::uuid 와 같다"""
+    """한 줄의 id. SQL 의 md5('babytime|' || 줄)::uuid 와 같다(줄은 id_line 을 거친 것)"""
     return str(uuid.UUID(hashlib.md5(('babytime|' + line).encode('utf-8')).hexdigest()))
 
 
 SQL_TEMPLATE = """-- 베이비타임에서 옮긴 기록 {count}건. Supabase SQL Editor 에서 실행(두 번 실행해도 한 번만 들어감)
 insert into public.care_events (id, kind, occurred_at, ended_at, amount_ml, detail, source, recorded_by)
-select md5('babytime|' || l)::uuid,
+select md5('babytime|' || regexp_replace(l, '^(feed\\|[^|]*\\|)[^|]*', '\\1'))::uuid,   -- id 는 수유 끝 칸을 비우고 센다(id_line)
        split_part(l, '|', 1),
        split_part(l, '|', 2)::timestamp at time zone 'Asia/Seoul',
        nullif(split_part(l, '|', 3), '')::timestamp at time zone 'Asia/Seoul',

@@ -46,7 +46,11 @@ export function describeRow(e, now) {
     const time = e.ended_at ? `${formatClock(e.at)}~${formatClock(e.ended_at)}` : `${formatClock(e.at)}~`;
     return [time, e.ended_at ? `잠 ${formatDuration(new Date(e.ended_at) - new Date(e.at))}` : `잠 (자는 중 ${formatDuration(now - new Date(e.at))})`];
   }
-  if (e.kind === 'feed') return [formatClock(e.at), `수유 ${e.ml ?? ''}ml`];
+  if (e.kind === 'feed') {
+    if (e.ended_at) return [`${formatClock(e.at)}~${formatClock(e.ended_at)}`, `수유 ${e.ml ?? ''}ml · ${formatDuration(new Date(e.ended_at) - new Date(e.at))}`];
+    if (e.feeding) return [`${formatClock(e.at)}~`, `수유 ${e.ml ?? ''}ml (먹는 중 ${formatDuration(now - new Date(e.at))})`];
+    return [formatClock(e.at), `수유 ${e.ml ?? ''}ml`];
+  }
   if (e.kind === 'diaper') return [formatClock(e.at), `기저귀 ${DIAPER_LABEL[e.type] || ''}`];
   return [formatClock(e.at), e.kind];
 }

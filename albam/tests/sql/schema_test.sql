@@ -344,4 +344,23 @@ do $$ begin
 end $$;
 reset role;
 
+-- ── 007: 수유 걸린 시간 ─────────────
+set role authenticated;
+set request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+do $$
+declare v_id uuid := gen_random_uuid(); s jsonb; st jsonb;
+begin
+  perform public.care_add_event(jsonb_build_object('id', v_id, 'kind', 'feed', 'amount_ml', 200,
+    'occurred_at', now() - interval '12 minutes', 'detail', '{"feeding": true}'::jsonb, 'force', true));
+  s := public.care_summary();
+  perform pg_temp.check(s -> 'last_feed' ->> 'id' = v_id::text and (s -> 'last_feed' ->> 'feeding')::boolean, 'feeding now shows in summary');
+  perform public.care_update_event(jsonb_build_object('id', v_id, 'ended_at', now(), 'detail', '{"feeding": false}'::jsonb));
+  s := public.care_summary();
+  perform pg_temp.check(not (s -> 'last_feed' ->> 'feeding')::boolean and (s -> 'last_feed' ->> 'ended_at') is not null, 'done feeding: end saved, not feeding');
+  st := public.care_stats(1);
+  perform pg_temp.check((st -> 0 ->> 'feed_min')::int = 12, 'stats: average feed minutes ' || (st -> 0 ->> 'feed_min'));
+  perform pg_temp.check(public.care_stats(7) -> 0 -> 'feed_min' = 'null'::jsonb or (public.care_stats(7) -> 0) ? 'feed_min', 'feed_min present (null when unknown)');
+end $$;
+reset role;
+
 \echo 'ALL SQL TESTS PASSED'

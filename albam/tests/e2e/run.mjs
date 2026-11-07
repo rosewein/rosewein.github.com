@@ -269,6 +269,56 @@ async function sleepFlow(page) {
   check(ended === 0, '열린 잠 없음');
 }
 
+// [수유] → [먹이기 시작] → 버튼이 [다 먹음] → 누르면 걸린 시간과 함께 저장. 취소하면 다시 먹이는 중
+async function feedTimerFlow(browser, base) {
+  const page = await (await browser.newContext(DEVICE)).newPage();
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await page.clock.install({ time: DAYTIME });
+  await page.goto(`${base}?demo`);
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.clock.runFor(800);
+  await page.click('#feedBtn');
+  check(await page.isVisible('#feedStart') && (await text(page, '#feedSave')) === '지금 저장', '수유 창: [지금 저장] [먹이기 시작]');
+  // 저장·요약 받기는 가짜 시계와 따로 돌므로, 시계를 조금씩 돌리며 기다린다
+  const until = async (fn) => { for (let i = 0; i < 20 && !(await fn()); i += 1) { await page.clock.runFor(300); await page.waitForTimeout(50); } };
+  await page.click('#feedStart');
+  await until(async () => (await text(page, '#feedBtnText')) === '다 먹음');
+  check(await text(page, '#feedBtnText') === '다 먹음', `먹이는 중: [수유]가 [다 먹음] (${await text(page, '#feedBtnText')})`);
+  await page.click('#undoMsg');
+  await page.clock.runFor(12 * 60000);
+  check(await text(page, '#bubble') === '냠냠 12분', `말풍선에 먹은 시간 (${await text(page, '#bubble')})`);
+  const feedFits = await page.$eval('#feedBtn', (b) => b.scrollWidth <= b.clientWidth + 0.5);
+  check(feedFits, '"다 먹음"이 버튼 안에 들어감');
+  await shot(page, 'feeding');
+  await page.click('#feedBtn');
+  await until(async () => (await text(page, '#feedBtnText')) === '수유');
+  check((await text(page, '#undoText')).startsWith('수유 200ml · 12분'), `다 먹음: 걸린 시간과 함께 (${await text(page, '#undoText')})`);
+  check(await text(page, '#feedBtnText') === '수유', '다시 [수유]');
+  await page.click('#undoBtn');
+  await until(async () => (await text(page, '#feedBtnText')) === '다 먹음');
+  check(await text(page, '#feedBtnText') === '다 먹음', '[취소]하면 다시 먹이는 중');
+  await page.click('#feedBtn');
+  await until(async () => (await text(page, '#feedBtnText')) === '수유');
+  await page.click('#undoMsg');
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('albam.demo.events')).filter((e) => e.kind === 'feed' && e.ended_at && e.detail.feeding === false).length);
+  check(saved === 1, '서버(미리 보기)에 끝 시각이 들어감');
+  // 기록 목록과 고치기 창에서 끝 시각
+  await page.click('#lateBtn');
+  await page.click('#recentBtn');
+  await page.clock.runFor(800);
+  const rows = await page.$$eval('#recentList .dayRow', (r) => r.map((x) => x.textContent));
+  check(rows.some((r) => r.includes('수유 200ml · 12분')), `기록 목록에 걸린 시간 ${rows.join(' / ')}`);
+  await page.click('#recentList .dayRow:has-text("· 12분")');
+  check(await page.isVisible('#late-end') && await page.$eval('#lateFeedEnd', (b) => b.classList.contains('on')), '고치기 창: 시작·끝 바퀴, [끝 시각] 켜짐');
+  await shot(page, 'edit-feed-end');
+  await page.click('#lateFeedEnd');
+  check(await page.isHidden('#late-end'), '[끝 시각]을 끄면 끝 바퀴 숨김');
+  await page.click('[data-close]:visible');
+  check(errors.length === 0, `페이지 오류 없음 ${errors.join(' ')}`);
+}
+
 // 옆으로 밀면 통계 쪽, 점을 눌러도 넘어감, 1분 안 만지면 대시보드로
 async function statsFlow(browser, base) {
   const page = await (await browser.newContext(DEVICE)).newPage();
@@ -342,7 +392,7 @@ async function statsFlow(browser, base) {
   await page.click('#recentList .dayRow:has-text("수유 200ml") >> nth=0');
   await page.waitForSelector('#lateSheet:not(.hidden)');
   check((await text(page, '#lateTitle')) === '기록 고치기 · 수유' && await page.isVisible('#lateDelete') && await page.isHidden('#recentBtn'), '고치기 창: 제목, [지우기]');
-  check((await page.$$eval('#lateSheet .kinds button', (b) => b.filter((x) => !x.classList.contains('hidden')).length)) === 1, '고칠 때는 종류를 못 바꿈');
+  check((await page.$$eval('#lateSheet .kinds [data-kind]', (b) => b.filter((x) => !x.classList.contains('hidden')).length)) === 1, '고칠 때는 종류를 못 바꿈');
   await page.click("#lateDetail .machineBtn >> nth=1");   // +30 브레짜
   await shot(page, 'edit-feed');
   await page.click('#lateSave');
@@ -605,6 +655,7 @@ const base = `http://localhost:${server.address().port}/albam/`;
 const browser = await chromium.launch();
 try {
   console.log('# 미리 보기'); await demoFlow(browser, base);
+  console.log('# 수유 걸린 시간'); await feedTimerFlow(browser, base);
   console.log('# 통계 쪽'); await statsFlow(browser, base);
   console.log('# 긴 글'); await longTextFlow(browser, base);
   console.log('# 미리 보기 오프라인'); await demoOfflineFlow(browser, base);

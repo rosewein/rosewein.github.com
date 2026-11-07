@@ -33,7 +33,9 @@ export function applyPending(summary, items) {
     s.recent.push({ id: p.id, kind: p.kind, at: p.occurred_at, ended_at: p.ended_at ?? null, ml: p.amount_ml ?? null, detail: p.detail, pending: true });
 
     if (p.kind === 'feed') {
-      if (at > time(s.last_feed?.at)) s.last_feed = { id: p.id, at: p.occurred_at, ml: p.amount_ml ?? null };
+      if (at > time(s.last_feed?.at)) {
+        s.last_feed = { id: p.id, at: p.occurred_at, ml: p.amount_ml ?? null, ended_at: p.ended_at ?? null, feeding: !p.ended_at && !!p.detail?.feeding };
+      }
       if (isToday(at)) {
         s.today.feed_count += 1;
         s.today.feed_ml += p.amount_ml || 0;
@@ -75,7 +77,10 @@ export function applyPending(summary, items) {
       if (p.amount_ml != null) r.ml = p.amount_ml;
       if (p.detail) r.detail = { ...(r.detail || {}), ...p.detail };
     }
-    if (s.last_feed?.id === item.id) s.last_feed = { ...s.last_feed, ...(p.occurred_at && { at: p.occurred_at }), ...(p.amount_ml != null && { ml: p.amount_ml }) };
+    if (s.last_feed?.id === item.id) {
+      s.last_feed = { ...s.last_feed, ...(p.occurred_at && { at: p.occurred_at }), ...(p.amount_ml != null && { ml: p.amount_ml }),
+        ...('ended_at' in p && { ended_at: p.ended_at }), ...(p.detail && 'feeding' in p.detail && { feeding: !!p.detail.feeding }) };
+    }
     if (s.last_diaper?.id === item.id) s.last_diaper = { ...s.last_diaper, ...(p.occurred_at && { at: p.occurred_at }), ...(p.detail?.type && { type: p.detail.type }) };
     if (s.last_sleep?.id === item.id) s.last_sleep = { ...s.last_sleep, ...(p.occurred_at && { at: p.occurred_at }), ...('ended_at' in p && { ended_at: p.ended_at }) };
   }

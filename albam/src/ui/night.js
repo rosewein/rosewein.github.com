@@ -11,7 +11,7 @@
 
 import { $, el, setHidden } from './dom.js';
 import { agoParts, formatClock } from '../time.js';
-import { sleepingNow } from '../domain.js';
+import { feedingNow, sleepingNow } from '../domain.js';
 
 const MOVE_EVERY_MS = 60000;
 /** 글자 덩어리가 놓일 수 있는 범위(논리 픽셀). 위·아래 곡면 8px 과 좌우 16px 을 넘지 않게 */
@@ -44,7 +44,7 @@ export function setupNight(ctx) {
     const feed = state.summary?.last_feed;
     const sleeping = sleepingNow(state.summary);
     const text = $('#nightText');
-    const key = `${feed?.at}|${formatClock(now)}|${sleeping?.at}`;
+    const key = `${feed?.at}|${feed?.feeding}|${formatClock(now)}|${sleeping?.at}`;
     if (text.dataset.key !== key) {
       text.dataset.key = key;
       const feedParts = feed ? agoParts(feed.at, now) : [];
@@ -58,7 +58,17 @@ export function setupNight(ctx) {
           : [el('span', { className: small ? 'vu' : 'pre' }, '수유 후'), ...amount(feedParts, { tail: '지남', small })]);
       const nowBox = [el('span', { className: 'sep' }), el('span', { className: 'spr ico ico-clock' }), el('span', {}, '지금'), el('span', { className: 'v acc' }, formatClock(now))];
 
-      if (sleeping) {
+      const feeding = feedingNow(state.summary);
+      if (feeding) {
+        // 먹이는 중: "8분째 먹는 중"
+        const parts = agoParts(feeding.at, now);
+        text.replaceChildren(
+          el('div', { className: 'nightMain' }, el('span', { className: 'spr ico x2 ico-bottle' }), el('span', { className: 'sep' }),
+            ...(parts.length ? amount(parts, { last: '째', tail: '먹는 중', tailSmall: true }) : [el('span', { className: 'unit' }, '먹이기 시작')])),
+          el('div', { className: 'nightSub' }, el('span', {}, `${formatClock(feeding.at)}부터 · ${feeding.ml ?? ''}ml`), el('span', { className: 'sep' }),
+            el('span', {}, '지금 '), el('span', { className: 'acc' }, formatClock(now))),
+        );
+      } else if (sleeping) {
         const sleepParts = agoParts(sleeping.at, now);
         text.replaceChildren(
           el('div', { className: 'nightMain' },

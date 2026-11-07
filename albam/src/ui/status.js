@@ -9,7 +9,7 @@
 //   D+143 · 4개월 21일 · 교정 3개월 29일
 
 import { $, el } from './dom.js';
-import { DIAPER_LABEL, sleepingNow } from '../domain.js';
+import { DIAPER_LABEL, feedingNow, sleepingNow } from '../domain.js';
 import { agoParts, formatAgo, formatClock, formatDuration } from '../time.js';
 
 /** 스프라이트 시트(sprites/albam.png)의 줄 순서. sprites.json 과 같다 */
@@ -132,7 +132,16 @@ export function createStatusView(ctx) {
     }
 
     // 말풍선(알밤 위): 알밤이 하는 말만. 할 말이 없으면(평소) 숨김. 자는 중이면 얼마나 잤는지
-    const words = sleeping && mood === 'sleep' ? `쿨쿨 ${formatDuration(now - new Date(sleeping.at))}` : MOOD_TEXT[mood];
+    // [수유] 버튼: 먹이는 중이면 "다 먹음"
+    const feeding = feedingNow(state.summary);
+    const feedBtn = $('#feedBtn');
+    if (feedBtn.classList.contains('feeding') !== !!feeding) {
+      feedBtn.classList.toggle('feeding', !!feeding);
+      $('#feedBtnText').textContent = feeding ? '다 먹음' : '수유';
+      feedBtn.setAttribute('aria-label', feeding ? '다 먹음' : '수유');
+    }
+    const words = feeding && mood !== 'happy' ? `냠냠 ${formatDuration(now - new Date(feeding.at))}`
+      : sleeping && mood === 'sleep' ? `쿨쿨 ${formatDuration(now - new Date(sleeping.at))}` : MOOD_TEXT[mood];
     $('#bubbleText').textContent = words;
     $('#bubble').className = words ? '' : 'empty';
   }

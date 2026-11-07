@@ -126,6 +126,7 @@ albam/
 │  ├─ 004_sleep_end.sql     잠 끝 넣기 care_set_sleep_end()(잠들 때 시작, 깰 때 끝)
 │  ├─ 005_timeline.sql      타임라인 care_timeline()(최근 며칠 기록, 시각 순)
 │  ├─ 006_edit_and_age.sql  기록 고치기 care_update_event(), 고친 내역 표·트리거, 아기 프로필과 나이
+│  ├─ 007_feed_duration.sql 수유 걸린 시간: 요약 last_feed 에 ended_at·feeding, 통계에 feed_min
 │  └─ queries/              SQL Editor 에서 돌려 보는 확인용 질의
 ├─ sprites/                도트 그림 원본 PNG + sprites.json
 ├─ fonts/                  갈무리 글꼴 (SIL OFL 1.1)
@@ -269,6 +270,8 @@ flowchart TD
 - Postgres `age()`의 일 수는 달 길이를 다르게 빌려 와 하루 어긋날 수 있어서 쓰지 않는다.
 - 요약에 `baby`와 `age`로 들어간다. 생일·예정일을 고칠 때는 SQL Editor에서 `update care_baby_profile …`.
 
+**수유 걸린 시간**(007): `care_summary()`의 `last_feed`에 `ended_at`(다 먹은 시각, 모르면 null)과 `feeding`(먹이는 중: 끝이 없고 `detail.feeding = true`)을 더했다. `care_stats()`의 하루에 `feed_min`(끝이 있는 수유의 평균 걸린 분, 없으면 null)을 더했다. 다 먹음·되돌리기는 새 함수 없이 `care_update_event`로 한다.
+
 **`care_timeline(p_days int default 3) → jsonb`** (005): 오늘 포함 최근 n일(1~7) 기록을 실제 시각 순으로. `[{id, kind, at, ended_at, ml, type}]`(type은 기저귀 종류). 그날 시작 전에 잠들어 그날 깬 잠도 들어간다.
 
 **`care_stats(p_days int default 7) → jsonb`** (003): 오늘을 포함한 최근 n일(1~92) 날짜별 합계, 날짜 오름차순. 기록이 없는 날도 0으로 들어간다.
@@ -384,6 +387,21 @@ flowchart TD
 - 잠든 시각을 늦게 넣을 때: 지난 기록 넣기 → [잠] → [아직 자는 중]을 켜면 끝 없이 넣는다. 이미 자는 중인 잠이 있으면 켤 수 없다.
 - 연결이 끊겨 있으면 `sleep_end`로 기기 안에 쌓았다가 순서대로 보낸다(잠 시작이 먼저 가고 끝이 뒤에).
 - 통계는 끝이 있는 잠만 센다.
+
+### 5.5a 수유 걸린 시간: 먹이기 시작 → 다 먹음 (`quick-record.js`, `recorder.js`)
+
+수유도 잠처럼 시작과 끝을 둔다(`occurred_at` = 먹이기 시작, `ended_at` = 다 먹은 시각). 베이비타임에서 쓰던 방식(먹일 때 누르고, 다 먹이면 끝 시각)과 같다.
+
+| 상태 | [수유] 버튼 | 누르면 |
+| --- | --- | --- |
+| 평소 | 젖병 + "수유" | 양 고르는 창: [닫기] [지금 저장] [먹이기 시작] |
+| 먹이는 중(`last_feed.feeding`) | "다 먹음"(밝은 주황, 아이콘 없음) | 끝(지금)을 `updateEvent({ended_at, detail: {feeding: false}})`로 → "수유 200ml · 12분 저장됨" + [취소](다시 먹이는 중) |
+
+- [지금 저장]은 걸린 시간 없이(끝 없이, `feeding` 없음) 넣는다. 끝이 없는 수유가 모두 "먹이는 중"은 아니어서 `detail.feeding`으로 구분한다.
+- 먹이는 동안 말풍선 "냠냠 8분", 밤 화면은 "🍼 8분째 먹는 중".
+- 고치기 창(수유)에는 [끝 시각] 켜기/끄기가 있다. 켜면 시작·끝 바퀴, 끄면 끝 없이. 처음 켤 때 끝은 시작 + 10분(최근 중간값).
+- 기록 목록 "06:03~06:15 · 수유 200ml · 12분", 타임라인 수유 표시는 걸린 시간만큼 넓게, 통계(수유) 아래에 "한 번 11분"(아는 날만 평균).
+- 베이비타임에서 옮긴 수유 700건 중 '소요시간'이 있던 463건은 끝을 채웠다(2026-11-08, 고친 내역에 남음). 가져오기 도구도 이제 끝을 넣고, id는 끝 칸을 비운 줄로 세어 예전 id와 같다(`id_line`).
 
 ### 5.5b 쪽 넘기기: 시계 ← 대시보드 → 타임라인 → 통계 (`pages.js`)
 
@@ -683,7 +701,7 @@ flowchart LR
 - 이 저장소는 GitHub Pages로 나간다. main에 합치면 `https://rosewein.github.io/albam/`에 반영된다.
 - 서비스 워커는 네트워크를 먼저 쓴다. 그래서 고친 파일은 다음에 열 때 바로 보인다. 오프라인일 때만 캐시를 쓴다.
 - 파일을 더하거나 이름을 바꾸면 `sw.js`의 `FILES`에 반영하고 `VERSION`을 올린다.
-- SQL은 Supabase SQL Editor에서 번호 순서대로 직접 실행한다(지금 `001`~`006`). 바꿀 때는 `007_…sql`처럼 번호를 붙여 새 파일로 더하고, 이미 실행한 파일은 고치지 않는다. 함수를 바꿀 때는 새 파일에 `create or replace`로 함수 전체를 다시 쓴다(002의 `care_summary()`처럼).
+- SQL은 Supabase SQL Editor에서 번호 순서대로 직접 실행한다(지금 `001`~`007`). 바꿀 때는 `008_…sql`처럼 번호를 붙여 새 파일로 더하고, 이미 실행한 파일은 고치지 않는다. 함수를 바꿀 때는 새 파일에 `create or replace`로 함수 전체를 다시 쓴다(002의 `care_summary()`처럼).
 - `config.js`에는 publishable(anon) key만 둔다. 공개돼도 되는 값이고, 읽고 쓰기는 RLS와 가족 명단이 막는다. service_role 키는 절대 넣지 않는다.
 
 ## 12. 고치고 늘리는 법

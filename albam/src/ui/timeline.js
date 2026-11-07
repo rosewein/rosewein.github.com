@@ -34,7 +34,7 @@ const LABEL_GAP = 18;
  * @property {string} label            "오늘", "어제", "11/5"
  * @property {Date} start              줄의 0시(하루 끊는 시각)
  * @property {{from: number, to: number, open: boolean}[]} sleeps   시간(0~24)
- * @property {{at: number, ml: number|null, label: boolean}[]} feeds
+ * @property {{at: number, to: number|null, ml: number|null, label: boolean}[]} feeds  to: 다 먹은 시각(모르면 null)
  * @property {{at: number, poo: boolean}[]} diapers
  * @property {number|null} now         오늘 줄이면 지금 시간(0~24)
  */
@@ -65,7 +65,8 @@ export function layoutTimeline(events, now, { days = 3, dayStartHour = 0 } = {})
         if (to <= start || at >= end) continue;
         row.sleeps.push({ from: Math.max(0, hours(at)), to: Math.min(24, hours(to)), open: !e.ended_at });
       } else if (e.kind === 'feed' && inRow(at)) {
-        row.feeds.push({ at: hours(at), ml: e.ml ?? null, label: true });
+        const end = e.ended_at ? new Date(e.ended_at) : null;
+        row.feeds.push({ at: hours(at), to: end ? Math.min(24, hours(end)) : null, ml: e.ml ?? null, label: true });
       } else if (e.kind === 'diaper' && inRow(at)) {
         row.diapers.push({ at: hours(at), poo: e.type === 'poo' || e.type === 'both' });
       }
@@ -85,10 +86,13 @@ export function layoutTimeline(events, now, { days = 3, dayStartHour = 0 } = {})
 export function mergePending(events, recent = []) {
   const ids = new Set(events.map((e) => e.id));
   const extra = recent.filter((r) => r.pending && !ids.has(r.id))
-    .map((r) => ({ id: r.id, kind: r.kind, at: r.at, ended_at: r.ended_at ?? null, ml: r.ml ?? null, type: r.detail?.type ?? null }));
+    .map((r) => ({ id: r.id, kind: r.kind, at: r.at, ended_at: r.ended_at ?? null, ml: r.ml ?? null, type: r.detail?.type ?? null, feeding: !!r.detail?.feeding }));
   // 못 보낸 '깼어요'가 있으면 요약 쪽 끝 시각을 따른다
-  const ends = new Map(recent.filter((r) => r.kind === 'sleep').map((r) => [r.id, r.ended_at ?? null]));
-  return [...events.map((e) => (e.kind === 'sleep' && ends.has(e.id) ? { ...e, ended_at: ends.get(e.id) } : e)), ...extra];
+  const known = new Map(recent.filter((r) => r.kind === 'sleep' || r.kind === 'feed').map((r) => [r.id, r]));
+  return [...events.map((e) => {
+    const r = known.get(e.id);
+    return r ? { ...e, ended_at: r.ended_at ?? null, ...(r.kind === 'feed' && { feeding: !!r.detail?.feeding && !r.ended_at, ml: r.ml ?? e.ml }) } : e;
+  }), ...extra];
 }
 
 /** @param {import('../main.js').AppContext} ctx */
@@ -116,7 +120,8 @@ export function setupTimeline(ctx) {
         ...(r.now != null ? [el('div', { className: 'tlFuture', style: { left: x(r.now), width: x(24 - r.now) } })] : []),
         ...r.sleeps.map((s) => el('div', { className: `tlSleep${s.open ? ' open' : ''}`, style: { left: x(s.from), width: x(Math.max(0.15, s.to - s.from)) } })),
         ...r.feeds.flatMap((f) => [
-          el('div', { className: 'tlFeed', style: { left: x(f.at) } }),
+          // 걸린 시간을 알면 그 폭만큼(최소 2px)
+          el('div', { className: 'tlFeed', style: { left: x(f.at), ...(f.to != null && { width: `${Math.max(2, ((f.to - f.at) / 24) * TRACK)}px`, marginLeft: '0' }) } }),
           ...(f.label && f.ml != null ? [el('div', { className: 'tlMl t9', style: { left: x(f.at) } }, String(f.ml))] : []),
         ]),
         ...r.diapers.map((d) => el('div', { className: `tlDiaper${d.poo ? ' poo' : ''}`, style: { left: x(d.at) } })),

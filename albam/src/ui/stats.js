@@ -37,7 +37,11 @@ const METRICS = {
   feed: {
     legend: [['숫자', 'val'], [' = 횟수 · ', ''], ['', 'ico-bottle'], [' = 하루 양(ml)', '']],
     card: (d, max) => ({ big: String(d.feed_count), small: '', icon: 'bottle', badgeText: '', badge: String(d.feed_ml), bar: share(d.feed_ml, max.feed_ml) }),
-    foot: (past) => [['지난 6일 평균 ', ''], [`${one(avg(past, (d) => d.feed_count))}회 · ${Math.round(avg(past, (d) => d.feed_ml))}ml`, 'val']],
+    foot: (past) => {
+      const timed = past.filter((d) => d.feed_min != null);
+      return [['지난 6일 평균 ', ''], [`${one(avg(past, (d) => d.feed_count))}회 · ${Math.round(avg(past, (d) => d.feed_ml))}ml`, 'val'],
+        ...(timed.length ? [[' · 한 번 ', ''], [`${Math.round(avg(timed, (d) => d.feed_min))}분`, 'val']] : [])];
+    },
   },
   diaper: {
     legend: [['숫자', 'val'], [' = 전체 · ', ''], ['', 'ico-poo'], [' = 대변 있음', 'acc']],
