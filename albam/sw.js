@@ -3,7 +3,7 @@
 // (tests/unit/service-worker.test.mjs 가 src·styles 의 파일이 모두 들어 있는지 확인한다.)
 // Supabase 요청(다른 출처)은 건드리지 않는다. 기록 다시 보내기는 src/api/queue.js 가 맡는다.
 
-const VERSION = 'albam-v20';
+const VERSION = 'albam-v21';
 const FILES = [
   './',
   './index.html',
@@ -45,6 +45,9 @@ const FILES = [
   './src/ui/stats.js',
   './src/ui/pages.js',
   './src/ui/wheel.js',
+  './src/ui/timeline.js',
+  './src/ui/clock-page.js',
+  './src/sun.js',
 ];
 
 self.addEventListener('install', (e) => {

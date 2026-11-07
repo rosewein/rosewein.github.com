@@ -271,4 +271,25 @@ exception when insufficient_privilege then raise notice 'ok - non-family cannot 
 end $$;
 reset role;
 
+-- ── 005: 타임라인 ─────────────────────────────
+set role authenticated;
+set request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+do $$
+declare tl jsonb := public.care_timeline(3); ats timestamptz[];
+begin
+  perform pg_temp.check(jsonb_typeof(tl) = 'array' and jsonb_array_length(tl) > 0, 'timeline returns events');
+  select array_agg((x ->> 'at')::timestamptz order by ord) into ats from jsonb_array_elements(tl) with ordinality as a(x, ord);
+  perform pg_temp.check(ats = (select array_agg(v order by v) from unnest(ats) v), 'timeline in time order');
+  perform pg_temp.check(not exists (select 1 from jsonb_array_elements(tl) x where (x ->> 'at')::timestamptz < now() - interval '4 days'), 'only recent days (plus overnight sleep)');
+  perform pg_temp.check(exists (select 1 from jsonb_array_elements(tl) x where x ->> 'kind' = 'diaper' and x ->> 'type' is not null), 'diaper type included');
+  perform pg_temp.check(jsonb_array_length(public.care_timeline(1)) <= jsonb_array_length(tl), 'fewer days, fewer events');
+end $$;
+set request.jwt.claim.sub = '22222222-2222-2222-2222-222222222222';
+do $$ begin
+  perform public.care_timeline(3);
+  raise exception 'FAIL: stranger timeline';
+exception when insufficient_privilege then raise notice 'ok - non-family cannot read timeline';
+end $$;
+reset role;
+
 \echo 'ALL SQL TESTS PASSED'

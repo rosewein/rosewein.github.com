@@ -19,6 +19,9 @@ import { setupVoiceInput } from './ui/voice-input.js';
 import { setupLogin } from './ui/login.js';
 import { setupStats } from './ui/stats.js';
 import { setupPages } from './ui/pages.js';
+import { setupTimeline } from './ui/timeline.js';
+import { setupClockPage } from './ui/clock-page.js';
+import { isDaylight } from './sun.js';
 
 const DEMO = new URLSearchParams(location.search).has('demo');
 /** 기기 시계가 서버와 이보다 덜 어긋나면 보정하지 않는다 */
@@ -87,7 +90,7 @@ function main() {
     isNightTime: () => isWithinHours(new Date(), cfg.nightStartHour, cfg.nightEndHour),
     isNightAwake: () => Date.now() < state.nightWakeUntil,
     isBusy: () => isSheetOpen() || voice.isBusy() || recorder.isUndoShowing(),
-    render: () => status.render(),
+    render: () => { status.render(); timeline.onSummary(); },
     tick: () => { status.tick(); night.update(); },
     refresh,
     notify: (text, tone) => recorder.notify(text, tone),
@@ -113,7 +116,21 @@ function main() {
   setupLateEntry(ctx);
   setupCloseButtons(() => ctx.sfx.tap());
   const stats = setupStats(ctx);
-  setupPages(ctx, { onShow: { stats: () => stats.load() } });
+  const timeline = setupTimeline(ctx);
+  const clockPage = setupClockPage(ctx);
+  setupPages(ctx, {
+    onShow: { stats: () => stats.load(), timeline: () => timeline.show(), clock: () => clockPage.update() },
+    onHide: { timeline: () => timeline.hide() },
+  });
+
+  /** 해 뜬 동안 밝은 화면, 해 지면 어두운 화면(config.js theme) */
+  function applyTheme() {
+    const light = isDaylight(ctx.now(), cfg);
+    document.body.classList.toggle('light', light);
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', light ? '#efe5d3' : '#0e0b09');
+  }
+  applyTheme();
+  setInterval(applyTheme, 60000);
 
   // ── 요약 받기 ──
   let refreshing = false;
@@ -157,7 +174,7 @@ function main() {
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 
   // ── 주기 작업 ──
-  setInterval(() => { status.nextFrame(); night.update(); }, ANIMATION_MS);
+  setInterval(() => { status.nextFrame(); night.update(); clockPage.update(); }, ANIMATION_MS);
   setInterval(() => { if (document.visibilityState === 'visible') refresh(); }, cfg.pollSeconds * 1000);
   setInterval(() => reloadOncePerDay(ctx), 60000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refresh(); });

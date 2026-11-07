@@ -1,15 +1,23 @@
-// 쪽 넘기기: [대시보드] ↔ [통계]. 아래 큰 버튼 줄은 두 쪽 모두에 그대로 있다.
-//   - 화면을 옆으로 밀면(왼쪽 → 통계, 오른쪽 → 대시보드)
-//   - 아래 가운데 점 두 개를 눌러도
-//   - 통계 쪽에서 cfg.statsIdleSeconds 동안 아무도 안 만지면 대시보드로 돌아온다(거실 화면은 늘 대시보드가 기본)
-//   - 큰 버튼(말하기·수유·기저귀·지난 기록)을 누르면 대시보드로 돌아와 결과를 보여 준다
+// 쪽 넘기기: [시계] ← [대시보드] → [타임라인] → [통계]. 처음과 기본은 대시보드.
+//   - 화면을 옆으로 밀면(왼쪽으로 밀면 오른쪽 쪽으로)
+//   - 아래 가운데 점을 눌러도(점 하나 = 쪽 하나)
+//   - 타임라인·통계에서 cfg.statsIdleSeconds 동안 아무도 안 만지면 대시보드로 돌아온다.
+//     시계 쪽은 탁상시계처럼 두고 보라고 돌아오지 않는다
+//   - 큰 버튼(말하기·수유·기저귀·잠·지난 기록)을 누르면 대시보드로 돌아와 결과를 보여 준다
 // 창이 열려 있거나 밤 화면일 때는 밀어도 넘기지 않는다.
 
-import { $, $$, setHidden } from './dom.js';
+import { $, el, setHidden } from './dom.js';
 import { LOGICAL } from './stage.js';
+import { isSheetOpen } from './sheets.js';
 
-const PAGES = ['main', 'stats'];
-const PAGE_ID = { main: '#pageMain', stats: '#pageStats' };
+/** 쪽 순서. id 는 index.html 의 쪽 요소 */
+export const PAGES = [
+  { name: 'clock', id: '#pageClock', label: '시계', returns: false },
+  { name: 'main', id: '#pageMain', label: '대시보드', returns: false },
+  { name: 'timeline', id: '#pageTimeline', label: '타임라인', returns: true },
+  { name: 'stats', id: '#pageStats', label: '통계', returns: true },
+];
+const HOME = 'main';
 /** 이만큼(논리 픽셀) 옆으로, 위아래보다 1.5배 넘게 밀어야 넘긴다 */
 const SWIPE_MIN = 40;
 const SWIPE_RATIO = 1.5;
@@ -18,24 +26,33 @@ const SUPPRESS_CLICK_MS = 400;
 
 /**
  * @param {import('../main.js').AppContext} ctx
- * @param {{onShow: Record<string, () => void>}} hooks
+ * @param {{onShow?: Record<string, () => void>, onHide?: Record<string, () => void>}} hooks
  */
-export function setupPages(ctx, { onShow }) {
+export function setupPages(ctx, { onShow = {}, onHide = {} }) {
   const stage = $('#stage');
-  let current = 'main';
+  let current = HOME;
   let start = null;
   let suppressUntil = 0;
+  const index = (name) => PAGES.findIndex((p) => p.name === name);
 
-  function show(page) {
-    if (page === current) return;
-    current = page;
-    for (const p of PAGES) setHidden($(PAGE_ID[p]), p !== page);
-    $$('#pageDots .dot').forEach((d, i) => d.classList.toggle('on', PAGES[i] === page));
-    $('#pageDots').setAttribute('aria-label', page === 'main' ? '통계 보기' : '대시보드로');
-    onShow[page]?.();
+  const dots = PAGES.map((p) => el('button', {
+    className: `dot${p.name === current ? ' on' : ''}`, title: p.label,
+    onClick: () => { if (blocked()) return; ctx.sfx.tap(); show(p.name); },
+  }));
+  dots.forEach((d, i) => d.setAttribute('aria-label', PAGES[i].label));
+  $('#pageDots').replaceChildren(...dots);
+
+  function show(name) {
+    if (name === current) return;
+    onHide[current]?.();
+    current = name;
+    for (const p of PAGES) setHidden($(p.id), p.name !== name);
+    dots.forEach((d, i) => d.classList.toggle('on', PAGES[i].name === name));
+    onShow[name]?.();
   }
 
-  const blocked = () => ctx.isBusy() || !$('#night').classList.contains('hidden');
+  // 창이 열려 있거나 밤 화면이면 안 넘긴다. 저장 직후 [취소]가 떠 있을 때는 넘겨도 된다(방금 넣은 걸 타임라인에서 보려고)
+  const blocked = () => isSheetOpen() || !$('#night').classList.contains('hidden');
 
   stage.addEventListener('pointerdown', (e) => {
     start = e.isPrimary ? { x: e.clientX, y: e.clientY } : null;
@@ -49,25 +66,21 @@ export function setupPages(ctx, { onShow }) {
     start = null;
     if (Math.abs(dx) < SWIPE_MIN || Math.abs(dx) < Math.abs(dy) * SWIPE_RATIO || blocked()) return;
     suppressUntil = Date.now() + SUPPRESS_CLICK_MS;
-    const next = PAGES.indexOf(current) + (dx < 0 ? 1 : -1);
+    const next = index(current) + (dx < 0 ? 1 : -1);
     if (next >= 0 && next < PAGES.length) {
       ctx.sfx.tap();
-      show(PAGES[next]);
+      show(PAGES[next].name);
     }
   }, true);
   stage.addEventListener('click', (e) => {
     if (Date.now() < suppressUntil) { e.stopPropagation(); e.preventDefault(); }
   }, true);
 
-  $('#pageDots').addEventListener('click', () => {
-    if (blocked()) return;
-    ctx.sfx.tap();
-    show(current === 'main' ? 'stats' : 'main');
-  });
-  $('#actions').addEventListener('click', () => show('main'), true);
+  $('#actions').addEventListener('click', () => show(HOME), true);
 
   setInterval(() => {
-    if (current !== 'main' && !ctx.isBusy() && Date.now() - ctx.state.lastTouchAt > ctx.cfg.statsIdleSeconds * 1000) show('main');
+    const page = PAGES[index(current)];
+    if (page.returns && !ctx.isBusy() && Date.now() - ctx.state.lastTouchAt > ctx.cfg.statsIdleSeconds * 1000) show(HOME);
   }, 5000);
 
   return { show, current: () => current };

@@ -27,6 +27,36 @@
   --btn-press: #3a2a1c;
   --night: #2a1f17;
   --bar: #7a6a58;      /* 통계 막대: 주황 강조와 확실히 다른 회갈색 */
+  --btn-text: var(--text);   /* 버튼 글자 */
+  --btn-on: var(--accent);   /* 고른 버튼 글자 */
+  --sel-bg: var(--btn);      /* 시각 바퀴 가운데 칸 */
+  --sleep: #5f78b4;          /* 타임라인 잠 */
+  --pee: #cbbd9f;            /* 타임라인 소변 */
+  --poo: #b0702e;            /* 타임라인 대변 */
+  --badge-text: #2a1608;     /* 주황 칸 위 글자 */
+}
+/* 밝은 화면: 해 뜬 동안(src/sun.js, config.js theme). 바탕은 흰색이 아니라 따뜻한 종이색, 버튼은 진한 갈색 칩 */
+body.light {
+  --bg: #efe5d3;
+  --panel: #f8f0e2;
+  --line: #cdbb9e;
+  --line-hi: #8e7050;
+  --text: #3b2b1d;
+  --strong: #1c120a;
+  --dim: #7a6550;
+  --faint: #b9a78c;
+  --accent: #c0600c;
+  --warn: #c0391b;
+  --ok: #4a8228;
+  --btn: #4a3626;
+  --btn-press: #6b4e36;
+  --btn-text: #f4e8d2;
+  --btn-on: #ffb867;
+  --sel-bg: #e6d7bd;
+  --bar: #a8957c;
+  --sleep: #8299cf;
+  --pee: #9a876c;
+  --poo: #9a5a22;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body {
@@ -63,30 +93,32 @@ img, .spr { image-rendering: pixelated; image-rendering: crisp-edges; }
 .ok { color: var(--ok); }
 
 button.px, .px-btn {
-  font: inherit; color: var(--text); background: var(--btn);
+  font: inherit; color: var(--btn-text); background: var(--btn);
   border: 2px solid var(--line-hi); border-radius: 0;
   clip-path: polygon(2px 0, calc(100% - 2px) 0, 100% 2px, 100% calc(100% - 2px), calc(100% - 2px) 100%, 2px 100%, 0 calc(100% - 2px), 0 2px);
   display: flex; align-items: center; justify-content: center; gap: 4px;
   cursor: pointer; outline: none;
 }
-button.px:active, button.px.on { background: var(--btn-press); border-color: var(--accent); color: #f3e3c8; }
-button.px.on { color: var(--accent); }
+button.px:active, button.px.on { background: var(--btn-press); border-color: var(--accent); color: var(--btn-text); }
+button.px.on { color: var(--btn-on); }
 button.px:disabled { opacity: .4; }
 button.px.big { font-size: 24px; }
 /* 큰 버튼 셋([말하기] [수유] [기저귀])은 모양을 똑같이: 높이 42, 글자 24, 아이콘 24, 사이 6 */
 button.px.action { height: 40px; font-size: 24px; gap: 6px; white-space: nowrap; }   /* 폭이 모자라도 "기저귀"가 두 줄로 꺾이지 않게 */
 button.px.ghost { background: transparent; border-color: var(--line); color: var(--dim); }
-button.px.acc { color: var(--accent); }
+button.px.acc { color: var(--btn-on); }
 
 .spr { display: inline-block; background-repeat: no-repeat; flex: none; }
-.ico { width: 12px; height: 12px; background-image: url('../sprites/icons.png'); background-size: 72px 12px; }
-.ico.x2 { width: 24px; height: 24px; background-size: 144px 24px; }
+.ico { width: 12px; height: 12px; background-image: url('../sprites/icons.png'); background-size: 96px 12px; }
+.ico.x2 { width: 24px; height: 24px; background-size: 192px 24px; }
 .ico-bottle { background-position: 0 0; }   .x2.ico-bottle { background-position: 0 0; }
 .ico-diaper { background-position: -12px 0; } .x2.ico-diaper { background-position: -24px 0; }
 .ico-mic { background-position: -24px 0; }   .x2.ico-mic { background-position: -48px 0; }
 .ico-clock { background-position: -36px 0; } .x2.ico-clock { background-position: -72px 0; }
 .ico-moon { background-position: -48px 0; }  .x2.ico-moon { background-position: -96px 0; }
 .ico-check { background-position: -60px 0; } .x2.ico-check { background-position: -120px 0; }
+.ico-poo { background-position: -72px 0; }   .x2.ico-poo { background-position: -144px 0; }
+.ico-alarm { background-position: -84px 0; } .x2.ico-alarm { background-position: -168px 0; }
 
 /* ── 왼쪽: 말풍선(위) + 알밤(아래) ── */
 #charPanel { left: 16px; top: 8px; width: 112px; height: 120px; }
@@ -150,38 +182,73 @@ button.px.acc { color: var(--accent); }
 #undoMsg { flex: 1; display: flex; align-items: center; gap: 4px; border: 2px solid var(--ok); color: var(--ok); padding: 0 6px; overflow: hidden; white-space: nowrap; }
 #undoBtn { width: 76px; }
 
-/* ── 쪽(대시보드 · 통계)과 쪽 표시 ── */
+/* ── 쪽(시계 · 대시보드 · 타임라인 · 통계)과 쪽 표시 ── */
 .page { position: absolute; inset: 0; }
-/* 점 두 개: 상태 칸과 버튼 줄 사이(118~130). 누르는 자리는 점보다 넓게 */
-#pageDots { left: 166px; top: 118px; width: 48px; height: 12px; background: none; border: 0; padding: 0;
-  display: flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer; outline: none; }
-#pageDots .dot { width: 4px; height: 4px; background: var(--faint); }
-#pageDots .dot.on { background: var(--dim); }
+/* 점: 상태 칸과 버튼 줄 사이(118~130). 점 하나가 버튼 하나(12x12), 보이는 점은 4x4 */
+#pageDots { left: 166px; top: 118px; width: 48px; height: 12px; display: flex; }
+#pageDots .dot { flex: 1; height: 12px; background: none; border: 0; padding: 0; position: relative; cursor: pointer; outline: none; }
+#pageDots .dot::after { content: ''; position: absolute; left: 4px; top: 4px; width: 4px; height: 4px; background: var(--faint); }
+#pageDots .dot.on::after { background: var(--dim); }
 
-/* ── 통계 쪽: 위 탭(10~28) → 막대(30~102) → 평균(105~117) ── */
+/* ── 시계 쪽: 시각 72(글꼴 6배), 날짜·요일 24 ── */
+#bigClock { left: 16px; top: 14px; width: 348px; text-align: center; font-size: 72px; line-height: 72px; color: var(--strong); }
+#bigDate { left: 16px; top: 90px; width: 348px; text-align: center; line-height: 24px; color: var(--text); }
+
+/* ── 타임라인 쪽: 머리(10~22) → 시각 눈금(24~34) → 3일 줄(36~114, 줄마다 26) ── */
+#timelineHead { left: 16px; top: 10px; width: 348px; height: 12px; display: flex; align-items: center; gap: 3px; color: var(--text); white-space: nowrap; }
+#timelineHead .t12 { margin-right: 6px; }
+#timelineHead .lg { display: inline-block; margin-left: 5px; }
+#timelineHead .lg.feed { width: 2px; height: 10px; background: var(--accent); }
+#timelineHead .lg.sleep { width: 10px; height: 6px; background: var(--sleep); }
+#timelineHead .lg.pee { width: 4px; height: 4px; background: var(--pee); }
+#timelineHead .lg.poo { width: 4px; height: 4px; background: var(--poo); }
+#timelineNote { margin-left: auto; }
+#timelineAxis { left: 16px; top: 24px; width: 348px; height: 10px; color: var(--dim); }
+#timelineAxis span { position: absolute; top: 0; transform: translateX(-50%); }
+#timelineRows { left: 16px; top: 36px; width: 348px; }
+.tlRow { display: flex; height: 26px; }
+.tlLabel { width: 40px; padding-top: 11px; color: var(--dim); white-space: nowrap; }
+.tlTrack { position: relative; width: 300px; height: 26px; }
+.tlBand { position: absolute; left: 0; right: 0; top: 11px; height: 10px; background: var(--panel); box-shadow: inset 0 0 0 1px var(--line); }
+.tlFuture { position: absolute; top: 11px; height: 10px; background: var(--bg); }
+.tlSleep { position: absolute; top: 12px; height: 8px; background: var(--sleep); }
+.tlSleep.open { box-shadow: inset -2px 0 0 var(--accent); }   /* 자는 중: 오른쪽 끝(지금)에 주황 */
+.tlFeed { position: absolute; top: 9px; width: 2px; height: 14px; margin-left: -1px; background: var(--accent); }
+.tlMl { position: absolute; top: 0; transform: translateX(-50%); color: var(--strong); line-height: 9px; white-space: nowrap; }
+.tlDiaper { position: absolute; top: 22px; width: 4px; height: 4px; margin-left: -2px; background: var(--pee); }
+.tlDiaper.poo { background: var(--poo); }
+.tlNow { position: absolute; top: 8px; width: 1px; height: 16px; background: var(--text); }
+
+/* ── 통계 쪽: 위 탭(10~28) → 날짜 카드(30~102) → 평균(105~117) ── */
 #statsHead { left: 16px; top: 10px; width: 348px; height: 18px; display: flex; align-items: center; gap: 6px; }
 #statsTabs { margin-left: auto; display: flex; gap: 4px; }
-/* 색 설명: 막대와 같은 색 네모 + 이름 */
-#statsLegend { display: flex; align-items: center; gap: 3px; margin-left: 4px; color: var(--text); }
-#statsLegend .sw { width: 8px; height: 8px; }
-#statsLegend .sw.base { background: var(--bar); }
-#statsLegend .sw.part { background: var(--accent); margin-left: 5px; }
 #statsTabs button { width: 52px; height: 18px; }
-#statsChart { left: 16px; top: 30px; width: 348px; height: 72px; display: flex; gap: 2px; }
+/* 카드 읽는 법: "숫자 = 전체 · 💩 = 대변 있음" */
+#statsLegend { display: flex; align-items: center; gap: 2px; color: var(--dim); white-space: nowrap; }
+#statsLegend .val { color: var(--strong); }
+#statsChart { left: 16px; top: 30px; width: 348px; height: 72px; display: flex; gap: 4px; }
 #statsChart .empty { margin: auto; }
-#statsChart .col { position: relative; flex: 1 1 0; }
-#statsChart .v, #statsChart .d { position: absolute; left: 0; right: 0; text-align: center; white-space: nowrap; }
-#statsChart .v { color: var(--strong); }
-#statsChart .d { bottom: 2px; color: var(--dim); }
-/* 막대: 밝은 면이 넓지 않게 어두운 갈색. 강조 부분(대변·낮잠)은 주황 */
-#statsChart .bar { position: absolute; left: 10px; right: 10px; bottom: 14px; background: var(--bar);
-  display: flex; flex-direction: column; justify-content: flex-end; }
-#statsChart .part { background: var(--accent); color: var(--bg); display: flex; align-items: center; justify-content: center; overflow: hidden; }
-/* 오늘은 아직 안 끝났으니 테두리만 */
-#statsChart .today .bar { background: none; box-shadow: inset 0 0 0 2px var(--bar); }
-#statsChart .today .part { opacity: .5; }
-#statsChart .today .d { color: var(--accent); }
-#statsFoot { left: 16px; top: 105px; width: 348px; height: 12px; white-space: nowrap; color: var(--dim); }
+#statsChart .card {
+  flex: 1 1 0; min-width: 0; border: 2px solid var(--line-hi); background: var(--panel);
+  display: flex; flex-direction: column; align-items: center; padding: 2px 0 3px;
+  clip-path: polygon(2px 0, calc(100% - 2px) 0, 100% 2px, 100% calc(100% - 2px), calc(100% - 2px) 100%, 2px 100%, 0 calc(100% - 2px), 0 2px);
+}
+#statsChart .card.today { border-color: var(--accent); }
+#statsChart .card .d { height: 10px; line-height: 10px; color: var(--dim); white-space: nowrap; }
+#statsChart .card.today .d { color: var(--accent); }
+#statsChart .card .n { margin-top: 4px; height: 24px; display: flex; align-items: baseline; color: var(--strong); white-space: nowrap; }
+#statsChart .card .big { font-size: 24px; line-height: 24px; }
+#statsChart .card .small { color: var(--dim); }
+#statsChart .card .badge {
+  margin-top: 4px; height: 14px; padding: 0 3px; background: var(--accent); color: var(--badge-text);
+  display: flex; align-items: center; gap: 2px; white-space: nowrap;
+}
+#statsChart .card .meter { margin-top: auto; width: calc(100% - 8px); height: 4px; background: var(--line); }
+#statsChart .card .meter .fill { height: 100%; background: var(--accent); }
+#statsFoot { left: 16px; top: 105px; width: 348px; height: 12px; white-space: nowrap; color: var(--dim); display: flex; align-items: center; }
+#statsFoot .val { color: var(--strong); }
+/* 조각 사이 띄어쓰기가 flex 에서 사라지지 않게 */
+#statsLegend span, #statsFoot span { white-space: pre; }
 
 /* ── 덮는 창 ── */
 .sheet {
@@ -238,7 +305,7 @@ button.machineBtn { width: 44px; flex-direction: column; gap: 1px; line-height: 
 .wheel { position: relative; height: 66px; overflow: hidden; touch-action: none; cursor: ns-resize; }
 .wheel.day { width: 40px; }
 .wheel.hour, .wheel.minute { width: 34px; }
-.wheel .band { position: absolute; left: 0; right: 0; top: 22px; height: 22px; background: var(--btn); border-top: 2px solid var(--line-hi); border-bottom: 2px solid var(--line-hi); }
+.wheel .band { position: absolute; left: 0; right: 0; top: 22px; height: 22px; background: var(--sel-bg); border-top: 2px solid var(--line-hi); border-bottom: 2px solid var(--line-hi); }
 .wheel .col { position: absolute; left: 0; right: 0; top: -22px; }
 .wheel .item { height: 22px; display: flex; align-items: center; justify-content: center; color: var(--faint); white-space: nowrap; }
 .wheel .item.c { color: var(--strong); font-size: 24px; }
@@ -267,6 +334,23 @@ button.machineBtn { width: 44px; flex-direction: column; gap: 1px; line-height: 
 #loginMsg { color: var(--warn); line-height: 14px; min-height: 14px; margin-top: 4px; }
 
 /* ── 밤 화면: 거의 검게, 글자만 아주 어둡게 ── */
-#night { position: absolute; inset: 0; background: #000; }
-#nightText { position: absolute; color: var(--night); text-align: center; line-height: 1; }
+/* 검은 바탕에 중간 밝기 글자. 어두운 방에서도 읽히되 눈부시지 않게(완전 흰색은 쓰지 않음) */
+#night {
+  position: absolute; inset: 0; background: #000;
+  --n-text: #b3a387; --n-num: #e0a43c; --n-dim: #7d6d58; --n-line: #4f3d2c;
+}
+#nightText { position: absolute; color: var(--n-text); line-height: 1; }
+#nightText .nightMain { display: flex; align-items: center; gap: 2px; white-space: nowrap; }
+#nightText .nightMain .sep { width: 2px; height: 30px; background: var(--n-line); margin: 0 8px; }
+#nightText .num { font-size: 48px; line-height: 48px; color: var(--n-num); }
+#nightText .unit { font-size: 24px; line-height: 24px; margin: 14px 8px 0 2px; }
+#nightText .unit:last-child { margin-right: 0; }
+#nightText .nightBox {
+  margin-top: 8px; border: 2px solid var(--n-line); padding: 5px 8px; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;
+}
+#nightText .nightBox .sep { width: 2px; height: 12px; background: var(--n-line); margin: 0 4px; }
+#nightText .v { color: var(--n-text); font-size: 24px; line-height: 24px; }
+#nightText .v.acc { color: var(--n-num); }
+#nightText .nightSleep { margin-top: 6px; display: flex; align-items: center; gap: 5px; color: var(--n-dim); white-space: nowrap; }
+#nightText .nightSleep .v { font-size: 12px; line-height: 12px; color: var(--n-text); }
 body.nightWake #stage { filter: brightness(.55); }

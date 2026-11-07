@@ -24,5 +24,7 @@ window.ALBAM_CONFIG = {
   machine: { name: '브레짜', minWaterMl: 60, maxWaterMl: 300, stepWaterMl: 30 },
   dailyReloadHour: 4,        // 24시간 켜 둘 때 하루 한 번 새로 고침하는 시각
   statsDays: 7,              // 통계 쪽에 보여 줄 날 수(오늘 포함)
-  statsIdleSeconds: 60,      // 통계 쪽에서 이만큼 안 만지면 대시보드로 돌아옴
+  statsIdleSeconds: 60,      // 타임라인·통계 쪽에서 이만큼 안 만지면 대시보드로 돌아옴(시계 쪽은 그대로)
+  theme: 'auto',             // 'auto' 해 뜬 동안 밝은 화면, 해 지면 어두운 화면 / 'light' / 'dark'
+  location: { lat: 37.5665, lon: 126.978 },  // 해 뜨고 지는 시각을 셀 곳(서울)
 };
