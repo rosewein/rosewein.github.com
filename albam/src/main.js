@@ -49,6 +49,7 @@ const RELOAD_MIN_UPTIME_MS = 3 * 3600000;
  * @property {(text: string, tone?: 'warn'|'') => void} notify  아래 알림 막대에 저장·취소 결과를 잠깐(말풍선은 알밤 말만)
  * @property {(ev: import('./domain.js').CareEvent, opts?: {force?: boolean}) => Promise<void>} save
  * @property {(sleep: {id: string, at: string}) => Promise<void>} wake   자는 중인 잠 끝내기(깼어요)
+ * @property {(feed: {id: string, at: string, ml: number|null}) => Promise<void>} finishFeed  먹이는 중인 수유 끝내기(다 먹음)
  * @property {(id: string, patch: Object, ev: import('./domain.js').CareEvent) => Promise<void>} update  기록 고치기
  * @property {(id: string, ev: import('./domain.js').CareEvent) => Promise<void>} remove  기록 지우기(취소 표시)
  * @property {(back: number) => void} openDayList  그날 기록 목록(0 = 오늘)
@@ -100,6 +101,7 @@ function main() {
     notify: (text, tone) => recorder.notify(text, tone),
     save: (ev, opts) => recorder.save(ev, opts),
     wake: (sleep) => recorder.wake(sleep),
+    finishFeed: (feed) => recorder.finishFeed(feed),
     update: (id, patch, ev) => recorder.update(id, patch, ev),
     remove: (id, ev) => recorder.remove(id, ev),
     openDayList: (back) => dayList.open(back),

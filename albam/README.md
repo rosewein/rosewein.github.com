@@ -29,7 +29,7 @@
 
 1. 대시보드에서 프로젝트가 **일시정지(Paused)** 상태면 Restore 한다.
 2. Table Editor에서 기존 표를 확인한다. 새 표는 모두 `care_` 로 시작해 겹치지 않는다.
-3. SQL Editor에 [`supabase/001_care_schema.sql`](supabase/001_care_schema.sql), [`002_feed_amounts.sql`](supabase/002_feed_amounts.sql), [`003_stats.sql`](supabase/003_stats.sql), [`004_sleep_end.sql`](supabase/004_sleep_end.sql), [`005_timeline.sql`](supabase/005_timeline.sql), [`006_edit_and_age.sql`](supabase/006_edit_and_age.sql)을 **차례로** 붙여 실행한다(여러 번 실행해도 안전).
+3. SQL Editor에 [`supabase/001_care_schema.sql`](supabase/001_care_schema.sql), [`002_feed_amounts.sql`](supabase/002_feed_amounts.sql), [`003_stats.sql`](supabase/003_stats.sql), [`004_sleep_end.sql`](supabase/004_sleep_end.sql), [`005_timeline.sql`](supabase/005_timeline.sql), [`006_edit_and_age.sql`](supabase/006_edit_and_age.sql), [`007_feed_duration.sql`](supabase/007_feed_duration.sql)을 **차례로** 붙여 실행한다(여러 번 실행해도 안전).
 4. Authentication → Users → Add user 로 가족 계정을 만든다(이메일+비밀번호, Auto confirm). 거실 기기용 계정을 따로 두면 기기만 로그아웃시키기 쉽다.
 5. 가족으로 등록한다. 여기 없는 계정은 로그인해도 아무것도 못 읽고 못 쓴다.
    ```sql
@@ -38,7 +38,7 @@
    ```
 6. Authentication → Providers → Email 에서 회원가입(Allow new users to sign up)을 끈다.
 7. Project Settings → API 의 Project URL과 publishable(또는 `anon`) key를 [`config.js`](config.js) 에 넣는다(비워 두면 기기 첫 화면에서 넣음). **service_role 키는 넣지 않는다.**
-   지금은 `baby_archive_AlbamWiki` 프로젝트에 연결돼 있고 001~006 실행, 이지·준희 계정 가족 등록, 회원가입 끄기까지 끝났다(2026-11-07).
+   지금은 `baby_archive_AlbamWiki` 프로젝트에 연결돼 있고 001~007 실행, 이지·준희 계정 가족 등록, 회원가입 끄기까지 끝났다(2026-11-07).
 
 ### 2. 거실 S10
 
@@ -56,7 +56,7 @@ python3 tools/import_babytime.py --until 2026-11-10 activity_세훈_*.zip -o imp
 `import.sql` 을 SQL Editor에서 실행한다(두 번 넣어도 한 번만 들어감). `--until` 은 거실 화면을 쓰기 시작한 날.
 기록 한 건이 한 줄(`종류|시작|끝|ml|세부`)이고 id 는 그 줄의 md5 라서, 파일이 커서 한 번에 안 들어가면 줄을 나눠 여러 번 실행해도 된다.
 
-2026-11-07 에 2026-07-07 ~ 11-07 08:30 기록 2,283건(수유 700, 기저귀 960, 잠 623)을 넣었다. 그 뒤 기록은 거실 화면의 '지난 기록 넣기'로 넣는다.
+2026-11-07 에 2026-07-07 ~ 11-07 08:30 기록 2,283건(수유 700, 기저귀 960, 잠 623)을 넣었다. 2026-11-08 에 수유 '소요시간' 463건을 다 먹은 시각으로 채웠다. 그 뒤 기록은 거실 화면의 '지난 기록 넣기'로 넣는다.
 
 **통계 맞춰 보기**: `--stats stats.md` 를 붙이면 날짜별 수유 횟수·양, 기저귀, 잠 합계 표를 만든다. 베이비타임 앱의 통계 화면과 비교하고,
 넣은 뒤에는 [`supabase/queries/daily_stats.sql`](supabase/queries/daily_stats.sql) 을 SQL Editor에서 돌려 같은 숫자가 나오는지 본다.

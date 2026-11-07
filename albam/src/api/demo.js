@@ -84,7 +84,7 @@ class DemoServer {
     return {
       server_time: now.toISOString(),
       day_start: dayStart.toISOString(),
-      last_feed: feed ? { id: feed.id, at: feed.occurred_at, ml: feed.amount_ml } : null,
+      last_feed: feed ? { id: feed.id, at: feed.occurred_at, ml: feed.amount_ml, ended_at: feed.ended_at ?? null, feeding: !feed.ended_at && !!feed.detail?.feeding } : null,
       today: { feed_count: todayFeeds.length, feed_ml: todayFeeds.reduce((sum, e) => sum + (e.amount_ml || 0), 0) },
       last_diaper: diaper ? { id: diaper.id, at: diaper.occurred_at, type: diaper.detail.type } : null,
       last_sleep: sleep ? { id: sleep.id, at: sleep.occurred_at, ended_at: sleep.ended_at } : null,
@@ -138,6 +138,7 @@ class DemoServer {
         day: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`,
         feed_count: fake ? 4 + (seed % 2) : feeds.length,
         feed_ml: fake ? 760 + seed * 20 : feeds.reduce((s, e) => s + (e.amount_ml || 0), 0),
+        feed_min: fake ? 10 + (seed % 3) : null,
         diaper_total: fake ? 6 + (seed % 3) : diapers.length,
         diaper_pee: fake ? 4 : diapers.filter((e) => e.detail.type === 'pee').length,
         diaper_poo: fake ? 1 + (seed % 2) : diapers.filter((e) => e.detail.type === 'poo').length,

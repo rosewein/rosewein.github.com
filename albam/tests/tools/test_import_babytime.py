@@ -126,8 +126,36 @@ class ImportTest(unittest.TestCase):
         self.assertIn("'import'", sql)
         lines = sql.split('$babytime$')[1].strip().split('\n')
         self.assertEqual(len(lines), len(events))
-        self.assertEqual([ib.line_id(l) for l in lines], [e['id'] for e in events], 'id = md5(줄)')
+        self.assertEqual([ib.line_id(ib.id_line(l)) for l in lines], [e['id'] for e in events], 'id = md5(줄, 수유 끝 칸은 비움)')
         self.assertTrue(lines[0].startswith('feed|2024-10-26 22:06||160|'))
+
+
+    def test_feed_duration_becomes_end_and_keeps_id(self):
+        ko = '''====================
+2026-11-01 06:14 AM
+기록 종류: 분유
+소요시간: 8 (분)
+분유 총 양(ml): 170 (ml)
+메모: 유산균
+====================
+2026-11-01 11:05 AM
+기록 종류: 분유
+분유 총 양(ml): 170 (ml)
+====================
+'''
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, 'activity_Sehun_202611.txt')
+            with open(path, 'w', encoding='utf-8') as fh:
+                fh.write(ko)
+            events, _ = ib.parse_files([path])
+        timed, untimed = events
+        self.assertEqual(timed['ended_at'] - timed['occurred_at'], ib.timedelta(minutes=8), '소요시간 8분 → 끝')
+        self.assertIsNone(untimed['ended_at'], '소요시간이 없으면 끝도 없음')
+        line = ib.compact_line(timed)
+        self.assertTrue(line.startswith('feed|2026-11-01 06:14|2026-11-01 06:22|170|'))
+        legacy = line.replace('|2026-11-01 06:22|', '||')
+        self.assertEqual(timed['id'], ib.line_id(legacy), '처음 옮긴 때(끝 없음)와 같은 id')
+        self.assertIn("regexp_replace(l, '^(feed\\|[^|]*\\|)[^|]*', '\\1')", ib.SQL_TEMPLATE)
 
 
 if __name__ == '__main__':

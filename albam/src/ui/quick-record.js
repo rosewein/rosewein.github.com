@@ -1,4 +1,5 @@
 // 큰 버튼 [수유] [기저귀] 과 그 창, 그리고 [잠](달) 버튼.
+// [수유]: 양을 고르고 [먹이기 시작] → 버튼이 [다 먹음] → 누르면 끝. [지금 저장]은 걸린 시간 없이 바로.
 // [잠]: 안 자고 있으면 누르는 순간 '잠 시작(지금)'을 넣고, 자는 중이면 '깼어요(지금)'로 끝을 넣는다.
 //       언제 깰지 모르니 잠은 끝 없이 먼저 넣는다(supabase/004_sleep_end.sql). 둘 다 저장 직후 [취소]가 뜬다.
 // 수유 창의 빠른 선택 양은 '수유량 설정'(feed-amounts.js)에서 정한 값이다.
@@ -7,7 +8,7 @@
 import { $, $$, el } from './dom.js';
 import { openSheet } from './sheets.js';
 import { amountSteppers, amountView, quickAmountLabel } from './amount.js';
-import { KIND, SOURCE, sleepingNow } from '../domain.js';
+import { KIND, SOURCE, feedingNow, sleepingNow } from '../domain.js';
 
 export { clampAmount } from './amount.js';
 
@@ -52,9 +53,19 @@ export function setupQuickRecord(ctx) {
     openSheet('feedSheet');
   }
 
-  $('#feedBtn').addEventListener('click', () => { sfx.tap(); openFeed(); });
+  // 먹이는 중이면 [수유] 버튼이 [다 먹음]: 누르면 끝(지금)을 넣는다
+  $('#feedBtn').addEventListener('click', () => {
+    sfx.tap();
+    const feeding = feedingNow(state.summary);
+    if (feeding) ctx.finishFeed(feeding);
+    else openFeed();
+  });
+  // [지금 저장]: 걸린 시간 없이 / [먹이기 시작]: 끝 없이 넣고 먹이는 중으로(supabase/007)
   $('#feedSave').addEventListener('click', () => ctx.save({
     kind: KIND.FEED, amount_ml: amount, occurred_at: ctx.now(), detail: {}, source: SOURCE.TOUCH,
+  }));
+  $('#feedStart').addEventListener('click', () => ctx.save({
+    kind: KIND.FEED, amount_ml: amount, occurred_at: ctx.now(), detail: { feeding: true }, source: SOURCE.TOUCH,
   }));
 
   // ── 기저귀: 종류를 누르면 바로 저장 ──

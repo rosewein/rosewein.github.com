@@ -80,7 +80,7 @@
          [잠]은 누르면 잠 시작, 자는 중이면 "깼어요"로 바뀌어 누르면 끝 -->
     <div class="box" id="actions">
       <button class="px action square" id="micBtn" aria-label="말하기" title="말하기"><span class="spr ico x2 ico-mic"></span></button>
-      <button class="px action" id="feedBtn"><span class="spr ico x2 ico-bottle"></span>수유</button>
+      <button class="px action" id="feedBtn"><span class="spr ico x2 ico-bottle"></span><span id="feedBtnText">수유</span></button>
       <button class="px action" id="diaperBtn"><span class="spr ico x2 ico-diaper"></span>기저귀</button>
       <button class="px action square" id="sleepBtn" aria-label="잠들었어요" title="잠"><span class="spr ico x2 ico-moon"></span><span id="sleepBtnText" class="t9"></span></button>
       <button class="px action square" id="lateBtn" aria-label="지난 기록 넣기 · 시각 고치기" title="지난 기록 넣기"><span class="spr ico x2 ico-clock"></span></button>
@@ -99,7 +99,8 @@
       <div class="row" id="stepRow"></div>       <!-- [-10] [-30 브레짜] 200ml·브레짜 180 [+30 브레짜] [+10] -->
       <div class="foot">
         <button class="px ghost" data-close>닫기</button>
-        <button class="px main acc" id="feedSave">저장</button>
+        <button class="px" id="feedSave">지금 저장</button>          <!-- 걸린 시간 없이 바로 -->
+        <button class="px main acc" id="feedStart">먹이기 시작</button>  <!-- 다 먹이면 [수유] 버튼이 [다 먹음] -->
       </div>
     </div>
 
@@ -151,6 +152,7 @@
     <div class="sheet hidden" id="lateSheet">
       <h2 id="lateTitle">지난 기록 넣기</h2>
       <div class="kinds">
+        <button class="px ghost hidden" id="lateFeedEnd">끝 시각</button>   <!-- 수유: 다 먹은 시각도 넣기 -->
         <button class="px" data-kind="feed">수유</button>
         <button class="px" data-kind="diaper">기저귀</button>
         <button class="px" data-kind="sleep">잠</button>

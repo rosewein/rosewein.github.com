@@ -1,7 +1,7 @@
 // 기록(이벤트)과 요약의 모양, 그리고 화면에 보여 줄 이름.
 // 종류를 늘릴 때(예: 이유식) 먼저 고칠 곳이 이 파일이다. docs/TECHNICAL.md '새 기록 종류 추가' 참고.
 
-import { formatClock } from './time.js';
+import { formatClock, formatDuration } from './time.js';
 
 /**
  * 기록 하나. Supabase public.care_events 의 한 줄과 같다.
@@ -25,7 +25,7 @@ import { formatClock } from './time.js';
  * @typedef {Object} Summary
  * @property {string} server_time
  * @property {string} day_start                     오늘이 시작된 시각(설정한 '하루 끊는 시각' 기준)
- * @property {{id: string, at: string, ml: number|null} | null} last_feed
+ * @property {{id: string, at: string, ml: number|null, ended_at?: string|null, feeding?: boolean} | null} last_feed  ended_at: 다 먹은 시각, feeding: 먹이는 중(007)
  * @property {{feed_count: number, feed_ml: number}} today
  * @property {{id: string, at: string, type: DiaperType} | null} last_diaper
  * @property {{id: string, at: string, ended_at: string|null} | null} last_sleep  ended_at 이 null 이면 자는 중
@@ -58,6 +58,17 @@ export const SOURCE = Object.freeze({
 
 /** 기저귀 종류 → 화면 이름. 순서는 버튼 순서 */
 export const DIAPER_LABEL = Object.freeze({ pee: '소변', poo: '대변', both: '소변+대변' });
+
+/**
+ * 지금 먹이는 중인 수유([먹이기 시작]을 누르고 아직 [다 먹음]을 안 누름). 없으면 null
+ * @param {Summary|null} summary
+ * @returns {{id: string, at: string, ml: number|null} | null}
+ */
+export function feedingNow(summary) {
+  const f = summary?.last_feed;
+  return f && f.feeding && !f.ended_at ? f : null;
+}
+
 /**
  * 지금 자는 중인 잠(끝이 아직 없는 마지막 잠). 없으면 null
  * @param {Summary|null} summary
@@ -82,7 +93,7 @@ const SHOW_TIME_AFTER_MS = 2 * 60000;
 export function describeEvent(ev, now = new Date()) {
   if (ev.kind === KIND.SLEEP) return ev.ended_at ? `잠 ${formatClock(ev.occurred_at)}~${formatClock(ev.ended_at)}` : `잠 시작 ${formatClock(ev.occurred_at)}`;
   let text = ev.kind;
-  if (ev.kind === KIND.FEED) text = `수유 ${ev.amount_ml ?? ''}ml`;
+  if (ev.kind === KIND.FEED) text = `수유 ${ev.amount_ml ?? ''}ml${ev.ended_at ? ` · ${formatDuration(new Date(ev.ended_at) - new Date(ev.occurred_at))}` : ''}`;
   if (ev.kind === KIND.DIAPER) text = `기저귀 ${DIAPER_LABEL[ev.detail?.type] || ''}`;
   const at = new Date(ev.occurred_at || now);
   if (now - at > SHOW_TIME_AFTER_MS) text += ` · ${formatClock(at)}`;

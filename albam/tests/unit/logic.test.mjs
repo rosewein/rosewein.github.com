@@ -219,3 +219,21 @@ test('못 보낸 고치기를 요약에 얹기', () => {
   assert.equal(s.recent[0].ml, 230);
   assert.equal(s.recent[0].detail.memo, 'x');
 });
+
+test('수유: 먹이는 중, 다 먹음, 걸린 시간 글', async () => {
+  const { feedingNow } = await import('../../src/domain.js');
+  const { describeRow } = await import('../../src/ui/day-list.js');
+  const f = { id: 'f', at: ago(8).toISOString(), ml: 200, ended_at: null, feeding: true };
+  assert.equal(feedingNow({ last_feed: f })?.id, 'f');
+  assert.equal(feedingNow({ last_feed: { ...f, feeding: false } }), null, '시간 없이 저장한 수유는 먹이는 중이 아님');
+  assert.equal(feedingNow({ last_feed: { ...f, ended_at: NOW.toISOString() } }), null);
+  const done = applyPending({ last_feed: f, recent: [{ id: 'f', kind: 'feed', at: f.at, ml: 200, detail: { feeding: true } }] },
+    [{ op: 'update', id: 'f', patch: { ended_at: NOW.toISOString(), detail: { feeding: false } } }]);
+  assert.equal(feedingNow(done), null, '못 보낸 [다 먹음]도 바로 반영');
+  assert.equal(done.last_feed.ended_at, NOW.toISOString());
+  const started = applyPending({ recent: [] }, [{ op: 'add', id: 'n', payload: { id: 'n', kind: 'feed', occurred_at: NOW.toISOString(), amount_ml: 200, detail: { feeding: true } } }]);
+  assert.equal(feedingNow(started)?.id, 'n', '못 보낸 [먹이기 시작]도 먹이는 중');
+  assert.equal(describeEvent({ kind: 'feed', amount_ml: 200, occurred_at: ago(12), ended_at: NOW }, NOW), '수유 200ml · 12분 · 14:48');
+  assert.deepEqual(describeRow({ kind: 'feed', at: ago(12).toISOString(), ended_at: NOW.toISOString(), ml: 200 }, NOW), ['14:48~15:00', '수유 200ml · 12분']);
+  assert.deepEqual(describeRow({ kind: 'feed', at: ago(8).toISOString(), ended_at: null, ml: 200, feeding: true }, NOW), ['14:52~', '수유 200ml (먹는 중 8분)']);
+});

@@ -50,6 +50,27 @@ export function setupRecorder(ctx) {
     await ctx.refresh();
   }
 
+  /** 다 먹음: 먹이는 중인 수유에 끝(지금)을 넣는다. [취소]는 다시 먹이는 중으로 */
+  async function finishFeed(feed) {
+    const end = ctx.now();
+    let result;
+    try {
+      result = await ctx.api.updateEvent(feed.id, { ended_at: end, detail: { feeding: false } });
+    } catch (e) {
+      sfx.error();
+      if (e instanceof AuthError) ctx.showLogin('다시 로그인해 주세요');
+      else notify('저장 못 했어요', 'warn');
+      console.error(e);
+      return;
+    }
+    if (result.status === 'not_found') { sfx.error(); notify('먹이는 중인 수유를 못 찾았어요', 'warn'); await ctx.refresh(); return; }
+    sfx.save();
+    state.happyUntil = Date.now() + HAPPY_MS;
+    const text = `수유 ${feed.ml ?? ''}ml · ${formatDuration(end - new Date(feed.at))}${result.status === 'queued' ? ' (대기)' : ''}`;
+    showUndo(feed.id, text, () => ctx.api.updateEvent(feed.id, { ended_at: null, detail: { feeding: true } }));
+    await ctx.refresh();
+  }
+
   /** 깼어요: 자는 중인 잠에 끝을 넣는다 */
   async function wake(sleep) {
     const end = ctx.now();
@@ -178,5 +199,5 @@ export function setupRecorder(ctx) {
   // 알림 부분을 누르면 바로 버튼으로 돌아감
   $('#undoMsg').addEventListener('click', hideUndo);
 
-  return { save, wake, update, remove, notify, isUndoShowing: () => !!undo };
+  return { save, wake, finishFeed, update, remove, notify, isUndoShowing: () => !!undo };
 }

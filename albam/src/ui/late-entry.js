@@ -22,6 +22,8 @@ import { agoParts, clockOnDay, formatDay, formatDuration, minutes, pad2 } from '
 const MAX_DAYS_BACK = 7;
 const DEFAULT_START_AGO_MIN = 30;
 const DEFAULT_SLEEP_MIN = 60;
+/** 수유 끝 시각을 처음 켤 때 시작 뒤 몇 분으로 둘지(최근 걸린 시간 중간값 약 10분) */
+const DEFAULT_FEED_MIN = 10;
 const UNIT_MS = { day: 86400000, hour: 3600000, minute: 60000 };
 
 const KIND_LABEL = { feed: '수유', diaper: '기저귀', sleep: '잠' };
@@ -43,11 +45,17 @@ export function setupLateEntry(ctx, { openDayList }) {
     diaperType: 'pee',
     /** 잠: 끝 없이 넣기(아직 자는 중) */
     ongoing: false,
+    /** 수유: 다 먹은 시각도 넣기 */
+    feedEnd: false,
+    /** 수유: 먹이는 중인 기록을 고치는 중 */
+    feeding: false,
   };
   /** 고치는 중인 기록(넣기면 null) */
   let editing = null;
   let deleteArmedUntil = 0;
   const isSleep = () => draft.kind === KIND.SLEEP;
+  /** 시작·끝 두 묶음을 보이나: 잠(끝을 넣을 때), 수유(끝 시각을 켰을 때) */
+  const hasEnd = () => (isSleep() && !draft.ongoing) || (draft.kind === KIND.FEED && draft.feedEnd);
 
   // ── 시각 고르기 ──
   const limits = () => {
@@ -133,6 +141,8 @@ export function setupLateEntry(ctx, { openDayList }) {
       end: now,
       amount: state.summary?.last_feed?.ml ?? 200,
       ongoing: false,
+      feedEnd: false,
+      feeding: false,
     });
     render();
     openSheet('lateSheet');
@@ -146,8 +156,10 @@ export function setupLateEntry(ctx, { openDayList }) {
     Object.assign(draft, {
       kind: ev.kind,
       start: new Date(ev.at),
-      end: ev.ended_at ? new Date(ev.ended_at) : now,
+      end: ev.ended_at ? new Date(ev.ended_at) : (ev.kind === KIND.FEED ? new Date(Math.min(now.getTime(), new Date(ev.at).getTime() + minutes(DEFAULT_FEED_MIN))) : now),
       ongoing: ev.kind === KIND.SLEEP && !ev.ended_at,
+      feedEnd: ev.kind === KIND.FEED && !!ev.ended_at,
+      feeding: ev.kind === KIND.FEED && !ev.ended_at && !!ev.feeding,
       amount: ev.ml ?? state.summary?.last_feed?.ml ?? 200,
       diaperType: ev.type || 'pee',
     });
@@ -167,16 +179,19 @@ export function setupLateEntry(ctx, { openDayList }) {
     const armed = Date.now() < deleteArmedUntil;
     $('#lateDelete').textContent = armed ? '한 번 더 누르면 지워요' : '지우기';
     $('#lateDelete').classList.toggle('warn', armed);
-    groups.start.label.textContent = isSleep() ? '시작' : '시각';
+    groups.start.label.textContent = hasEnd() || isSleep() ? '시작' : '시각';
     groups.end.label.textContent = '끝';
-    const open = isSleep() && draft.ongoing;
-    setHidden(groups.end.box, !isSleep() || open);
-    setHidden(ago, isSleep() && !open);
+    setHidden(groups.end.box, !hasEnd());
+    setHidden(ago, hasEnd());
     groups.start.refresh(except);
-    if (isSleep() && !open) groups.end.refresh(except);
+    if (hasEnd()) groups.end.refresh(except);
     else renderAgo();
+    // 수유: [끝 시각] 켜기/끄기
+    const feedEndBtn = $('#lateFeedEnd');
+    setHidden(feedEndBtn, draft.kind !== KIND.FEED);
+    feedEndBtn.classList.toggle('on', draft.feedEnd);
     $('#lateDetail').replaceChildren(...detailControls());
-    $('#lateSave').disabled = isSleep() && !open && draft.end - draft.start < minutes(1);
+    $('#lateSave').disabled = hasEnd() && draft.end - draft.start < minutes(1);
   }
 
   /** 오른쪽: "1시간 25분 전" (숫자 크게) */
@@ -220,7 +235,10 @@ export function setupLateEntry(ctx, { openDayList }) {
 
   function toEvent() {
     const ev = { kind: draft.kind, occurred_at: draft.start, detail: {}, source: SOURCE.TOUCH };
-    if (draft.kind === KIND.FEED) ev.amount_ml = draft.amount;
+    if (draft.kind === KIND.FEED) {
+      ev.amount_ml = draft.amount;
+      if (draft.feedEnd) ev.ended_at = draft.end;
+    }
     if (draft.kind === KIND.DIAPER) ev.detail = { type: draft.diaperType };
     if (draft.kind === KIND.SLEEP && !draft.ongoing) ev.ended_at = draft.end;
     return ev;
@@ -238,11 +256,24 @@ export function setupLateEntry(ctx, { openDayList }) {
       render();
     });
   }
+  $('#lateFeedEnd').addEventListener('click', () => {
+    sfx.tap();
+    draft.feedEnd = !draft.feedEnd;
+    if (draft.feedEnd && draft.end - draft.start < minutes(1)) {
+      draft.end = new Date(Math.min(ctx.now().getTime(), draft.start.getTime() + minutes(DEFAULT_FEED_MIN)));
+    }
+    render();
+  });
   $('#lateSave').addEventListener('click', () => {
     if (!editing) { ctx.save(toEvent()); return; }
     const ev = toEvent();
     const patch = { occurred_at: ev.occurred_at };
-    if (draft.kind === KIND.FEED) patch.amount_ml = ev.amount_ml;
+    if (draft.kind === KIND.FEED) {
+      patch.amount_ml = ev.amount_ml;
+      // 끝 시각을 넣으면 먹이는 중이 끝난다. 안 넣으면 그대로(먹이는 중이면 계속 먹이는 중)
+      patch.ended_at = draft.feedEnd ? draft.end : null;
+      if (draft.feedEnd) patch.detail = { feeding: false };
+    }
     if (draft.kind === KIND.DIAPER) patch.detail = ev.detail;
     if (draft.kind === KIND.SLEEP) patch.ended_at = ev.ended_at ?? null;
     ctx.update(editing.id, patch, ev);

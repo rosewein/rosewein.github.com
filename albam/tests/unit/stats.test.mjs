@@ -20,7 +20,9 @@ test('수유 카드: 큰 숫자 = 횟수, 주황 칸 = 하루 양, 막대 = 가�
   assert.deepEqual([cards[0].big, cards[0].badge, cards[0].icon, cards[0].bar], ['5', '850', 'bottle', 1]);
   assert.equal(cards[6].bar, 200 / 850);
   assert.ok(cards[6].today && !cards[0].today);
-  assert.equal(text(foot), '지난 6일 평균 5.0회 · 850ml', '평균은 오늘 빼고');
+  assert.equal(text(foot), '지난 6일 평균 5.0회 · 850ml', '평균은 오늘 빼고, 걸린 시간을 모르면 안 씀');
+  const timedWeek = week.map((d, i) => ({ ...d, feed_min: i < 3 ? 12 : null }));
+  assert.equal(text(buildCards(timedWeek, 'feed').foot), '지난 6일 평균 5.0회 · 850ml · 한 번 12분', '걸린 시간을 아는 날만 평균');
   assert.equal(text(legend), '숫자 = 횟수 ·  = 하루 양(ml)');
 });
 
@@ -50,7 +52,7 @@ const at = (d, h, m = 0) => new Date(2026, 10, d, h, m).toISOString();
 test('타임라인: 오늘·어제·그저께 줄, 자정을 넘는 잠은 두 줄로 나눔', () => {
   const rows = layoutTimeline([
     { id: 'a', kind: 'sleep', at: at(6, 20), ended_at: at(7, 5, 30) },
-    { id: 'b', kind: 'feed', at: at(7, 6), ml: 200 },
+    { id: 'b', kind: 'feed', at: at(7, 6), ml: 200, ended_at: at(7, 6, 12) },
     { id: 'c', kind: 'feed', at: at(7, 6, 40), ml: 200 },
     { id: 'd', kind: 'diaper', at: at(7, 8), type: 'both' },
     { id: 'e', kind: 'diaper', at: at(6, 9), type: 'pee' },
@@ -63,6 +65,7 @@ test('타임라인: 오늘·어제·그저께 줄, 자정을 넘는 잠은 두 �
   assert.deepEqual(today.sleeps, [{ from: 0, to: 5.5, open: false }, { from: 13, to: 14, open: true }], '자는 중이면 지금까지');
   assert.deepEqual(yday.sleeps, [{ from: 20, to: 24, open: false }]);
   assert.deepEqual(today.feeds.map((f) => [f.at, f.label]), [[6, true], [6 + 40 / 60, false]], '40분 차이 수유는 양 글자를 하나만');
+  assert.deepEqual(today.feeds.map((f) => f.to), [6.2, null], '다 먹은 시각을 알면 끝(시간)');
   assert.deepEqual(today.diapers, [{ at: 8, poo: true }]);
   assert.deepEqual(yday.diapers, [{ at: 9, poo: false }]);
   assert.equal(yday.now, null);
@@ -75,7 +78,7 @@ test('타임라인: 아직 못 보낸 기록과 못 보낸 깼어요를 얹음',
     { id: 'p', kind: 'diaper', at: at(7, 13, 30), detail: { type: 'poo' }, pending: true },
   ]);
   assert.equal(merged.find((e) => e.id === 's').ended_at, at(7, 13));
-  assert.deepEqual(merged.find((e) => e.id === 'p'), { id: 'p', kind: 'diaper', at: at(7, 13, 30), ended_at: null, ml: null, type: 'poo' });
+  assert.deepEqual(merged.find((e) => e.id === 'p'), { id: 'p', kind: 'diaper', at: at(7, 13, 30), ended_at: null, ml: null, type: 'poo', feeding: false });
 });
 
 test('시계 쪽 날짜', () => {
