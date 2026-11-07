@@ -1,15 +1,14 @@
 /* 알밤케어 거실 화면
  *
  * 단위는 모두 '논리 픽셀'이다. #stage 가 380x180 이고 src/ui/stage.js 가 기기 화소의 정수배로 zoom 한다.
- * 글자 크기는 갈무리11의 정수배(12·24·36·48px)만 쓴다. 그래야 도트가 흐려지지 않는다.
+ * 글꼴은 모두 프리텐다드. 도트는 알밤·아이콘 그림과 테두리(버튼·창)에만 남긴다.
+ * 글자 크기는 12·24·36·48px 을 기본으로 쓴다(작은 글 10px).
  * S10 을 가로로 두면 곡면은 위·아래다. 위·아래 8px 에는 버튼·글자를 두지 않는다(창 테두리·바탕만 가능).
  * 좌우 16px 도 비운다(앞카메라 구멍, 손에 쥐는 쪽).
  * 순서: 글꼴 → 색 → 바탕 → 공통 부품 → 왼쪽(캐릭터) → 오른쪽(상태·버튼) → 덮는 창 → 밤
  */
 
-@font-face { font-family: 'Galmuri11'; src: url('../fonts/Galmuri11.woff2') format('woff2'); font-display: block; }
-@font-face { font-family: 'Galmuri9'; src: url('../fonts/Galmuri9.woff2') format('woff2'); font-display: block; }
-/* 기록 목록처럼 글이 많은 곳은 읽기 쉬운 프리텐다드(자주 쓰는 한글 2,350자만 담은 판) */
+/* 프리텐다드(자주 쓰는 한글 2,780자만 담은 판). 보통(400)과 굵게(600) 두 가지 */
 @font-face { font-family: 'Pretendard'; font-weight: 400; src: url('../fonts/Pretendard-Regular.subset.woff2') format('woff2'); font-display: swap; }
 @font-face { font-family: 'Pretendard'; font-weight: 600; src: url('../fonts/Pretendard-SemiBold.subset.woff2') format('woff2'); font-display: swap; }
 
@@ -67,9 +66,12 @@ html, body {
   overscroll-behavior: none; touch-action: manipulation;
   -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent;
 }
-body { font: 12px/1 'Galmuri11', monospace; -webkit-font-smoothing: none; font-smooth: never; }
-/* 글씨 두께: 갈무리 보통에 획을 반 도트 두껍게(보통과 굵게의 중간). 수치(.val, 큰 숫자)는 굵기는 같고 색만 가장 밝게 */
-body, button.px { text-shadow: 0.5px 0 0 currentColor; }
+body {
+  font: 400 12px/1 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+  -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; letter-spacing: -0.05em;   /* 자간 -50 */
+}
+/* 글씨 두께: 이름표·버튼은 보통, 수치(.val, 큰 숫자)는 굵게(600) + 가장 진한 색 */
+.val, #elapsed .num, #elapsed .unit, #bigClock, #nightText .num, #nightText .vn, .wheel .item.c { font-weight: 600; }
 .val, #elapsed .num { color: var(--strong); }
 img, .spr { image-rendering: pixelated; image-rendering: crisp-edges; }
 
@@ -84,7 +86,7 @@ img, .spr { image-rendering: pixelated; image-rendering: crisp-edges; }
 
 /* ── 공통 부품 ── */
 .box { position: absolute; }
-.t9 { font-family: 'Galmuri9', monospace; font-size: 10px; }
+.t9 { font-size: 10px; }
 .t12 { font-size: 12px; }
 .t24 { font-size: 24px; }
 .t36 { font-size: 36px; }
@@ -263,7 +265,7 @@ button.px.acc { color: var(--btn-on); }
 #statsChart .card .d { height: 10px; line-height: 10px; color: var(--dim); white-space: nowrap; }
 #statsChart .card.today .d { color: var(--accent); }
 #statsChart .card .n { margin-top: 4px; height: 24px; display: flex; align-items: baseline; color: var(--strong); white-space: nowrap; }
-#statsChart .card .big { font-size: 24px; line-height: 24px; }
+#statsChart .card .big { font-size: 24px; line-height: 24px; font-weight: 600; }
 #statsChart .card .small { color: var(--dim); }
 #statsChart .card .badge {
   margin-top: 4px; height: 14px; padding: 0 3px; background: var(--accent); color: var(--badge-text);
@@ -293,7 +295,9 @@ button.px.acc { color: var(--btn-on); }
 #amountRow button { flex: 1; height: 40px; flex-direction: column; gap: 2px; line-height: 1; }
 #amountEditBtn { position: absolute; right: 6px; top: 4px; height: 20px; padding: 0 6px; }
 .machine { color: var(--dim); }
-button.on .machine, button.on .val { color: var(--accent); }
+button.px .val { color: var(--btn-text); }   /* 어두운 버튼 위의 수치는 버튼 글자색 */
+button.px .machine { color: var(--btn-text); opacity: 0.7; }
+button.on .machine, button.on .val { color: var(--accent); opacity: 1; }
 .amount { flex: 1; text-align: center; line-height: 1; }
 .amount .machine { margin-top: 3px; }
 .amount.inline { display: flex; align-items: baseline; justify-content: center; gap: 8px; }
@@ -351,11 +355,6 @@ button.machineBtn { width: 44px; flex-direction: column; gap: 1px; line-height: 
 #lateDetail .sleepLen .lbl { color: var(--dim); }
 
 /* 그날 기록 목록: 줄 높이 22, 끌어서 넘김(overflow 는 숨기고 scrollTop 으로) */
-/* 기록 목록은 프리텐다드: 픽셀 글꼴보다 작은 글이 또렷하다. 도트 효과(글자 그림자·번짐 끄기)는 뺀다 */
-#recentSheet, #recentSheet button.px {
-  font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
-  -webkit-font-smoothing: antialiased; font-smooth: auto; text-shadow: none;
-}
 #recentSheet h2 { font-size: 12px; }
 #recentSheet .foot button { font-size: 13px; font-weight: 600; }
 #recentList { height: 100px; overflow: hidden; touch-action: none; }
@@ -409,10 +408,10 @@ body.nightWake #stage { filter: brightness(.55); }
 /* ── [+] 더보기: 종류 버튼 다섯 칸씩 ── */
 #moreGrid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
 #moreGrid button { height: 34px; }
-/* 지난 기록 넣기의 글 칸(메모·약 이름). 글이 많아 프리텐다드 */
+/* 지난 기록 넣기의 글 칸(메모·약 이름) */
 #lateMemo {
   flex: 1; min-width: 0; height: 28px; padding: 0 6px; border: 2px solid var(--line-hi); border-radius: 0; outline: none;
-  background: var(--bg); color: var(--text); font: 14px 'Pretendard', sans-serif; -webkit-user-select: text; user-select: text; text-shadow: none;
+  background: var(--bg); color: var(--text); font: 14px 'Pretendard', sans-serif; -webkit-user-select: text; user-select: text;
 }
 #lateMemo:focus { border-color: var(--accent); }
 #lateDetail .valueView { flex: 1; text-align: center; }
