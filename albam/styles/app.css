@@ -74,7 +74,7 @@ button.px.on { color: var(--accent); }
 button.px:disabled { opacity: .4; }
 button.px.big { font-size: 24px; }
 /* 큰 버튼 셋([말하기] [수유] [기저귀])은 모양을 똑같이: 높이 42, 글자 24, 아이콘 24, 사이 6 */
-button.px.action { height: 40px; font-size: 24px; gap: 6px; }
+button.px.action { height: 40px; font-size: 24px; gap: 6px; white-space: nowrap; }   /* 폭이 모자라도 "기저귀"가 두 줄로 꺾이지 않게 */
 button.px.ghost { background: transparent; border-color: var(--line); color: var(--dim); }
 button.px.acc { color: var(--accent); }
 

@@ -3,7 +3,7 @@
 // (tests/unit/service-worker.test.mjs 가 src·styles 의 파일이 모두 들어 있는지 확인한다.)
 // Supabase 요청(다른 출처)은 건드리지 않는다. 기록 다시 보내기는 src/api/queue.js 가 맡는다.
 
-const VERSION = 'albam-v19';
+const VERSION = 'albam-v20';
 const FILES = [
   './',
   './index.html',
@@ -59,11 +59,13 @@ self.addEventListener('activate', (e) => {
   );
 });
 
-// 먼저 네트워크(고친 파일이 바로 보이게), 안 되면 캐시
+// 먼저 네트워크(고친 파일이 바로 보이게), 안 되면 캐시.
+// cache: 'no-cache' 로 브라우저 HTTP 캐시(GitHub Pages 는 10분)도 매번 서버에 확인한다(바뀌지 않았으면 304 라 가볍다).
+// 이게 없으면 배포 직후 새 index.html 에 옛 app.css 가 섞일 수 있다.
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET' || new URL(e.request.url).origin !== location.origin) return;
   e.respondWith(
-    fetch(e.request)
+    fetch(e.request, { cache: 'no-cache' })
       .then((res) => {
         if (res.ok) {
           const copy = res.clone();
