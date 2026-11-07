@@ -53,11 +53,13 @@
     <!-- 쪽 표시(누르면 넘김) -->
     <button class="box" id="pageDots" aria-label="통계 보기"><span class="dot on"></span><span class="dot"></span></button>
 
-    <!-- 아래: [마이크] [수유] [기저귀] [지난 기록]. 마이크·지난 기록은 아이콘만(정사각형), 수유·기저귀는 크게 -->
+    <!-- 아래: [마이크] [수유] [기저귀] [잠] [지난 기록]. 마이크·잠·지난 기록은 아이콘(정사각형), 수유·기저귀는 크게.
+         [잠]은 누르면 잠 시작, 자는 중이면 "깼어요"로 바뀌어 누르면 끝 -->
     <div class="box" id="actions">
       <button class="px action square" id="micBtn" aria-label="말하기" title="말하기"><span class="spr ico x2 ico-mic"></span></button>
       <button class="px action" id="feedBtn"><span class="spr ico x2 ico-bottle"></span>수유</button>
       <button class="px action" id="diaperBtn"><span class="spr ico x2 ico-diaper"></span>기저귀</button>
+      <button class="px action square" id="sleepBtn" aria-label="잠들었어요" title="잠"><span class="spr ico x2 ico-moon"></span><span id="sleepBtnText" class="t9"></span></button>
       <button class="px action square" id="lateBtn" aria-label="지난 기록 넣기 · 시각 고치기" title="지난 기록 넣기"><span class="spr ico x2 ico-clock"></span></button>
     </div>
     <div class="box hidden" id="notice"></div>   <!-- 저장·취소 결과 알림(잠깐) -->

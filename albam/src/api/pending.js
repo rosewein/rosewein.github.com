@@ -65,7 +65,13 @@ export function applyPending(summary, items) {
     }
   }
 
-  // 3) 못 보낸 수유량 설정: 가장 나중 것
+  // 3) 못 보낸 잠 끝(깼어요 / 되돌리기): 순서대로 덮어쓴다
+  for (const item of items.filter((i) => i.op === 'sleep_end')) {
+    for (const r of s.recent) if (r.id === item.id) r.ended_at = item.ended_at;
+    if (s.last_sleep?.id === item.id) s.last_sleep = { ...s.last_sleep, ended_at: item.ended_at };
+  }
+
+  // 4) 못 보낸 수유량 설정: 가장 나중 것
   const amounts = items.filter((i) => i.op === 'feed_amounts').pop();
   if (amounts) s.feed_amounts = amounts.amounts;
 

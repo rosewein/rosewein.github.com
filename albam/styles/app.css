@@ -130,17 +130,23 @@ button.px.acc { color: var(--accent); }
 #lastDiaper { position: absolute; left: 0; top: 90px; white-space: nowrap; }
 
 /* ── 오른쪽 아래: 큰 버튼 ── */
-/* 아래 줄: [마이크][수유][기저귀][지난 기록]. 정사각형 40 두 개, 수유·기저귀는 (348 - 40*2 - 6*3) / 2 = 125 */
-#actions { left: 16px; top: 130px; width: 348px; height: 40px; display: flex; gap: 6px; }
+/* 아래 줄: [마이크][수유][기저귀][잠][지난 기록]. 정사각형 40 세 개, 수유·기저귀는 (348 - 40*3 - 4*4) / 2 = 106
+   (아이콘 24 + 사이 6 + "기저귀" 72 + 테두리 4 = 106 에 딱 맞음) */
+#actions { left: 16px; top: 130px; width: 348px; height: 40px; display: flex; gap: 4px; }
 #actions button { flex: 1 1 0; min-width: 0; }
 #actions .square { flex: 0 0 40px; }
+/* 자는 중: 달 버튼이 주황 테두리 + 아래 작은 "깼어요" */
+#sleepBtn { flex-direction: column; gap: 0; }
+#sleepBtn.on { border-color: var(--accent); color: var(--accent); }
+#sleepBtnText:empty { display: none; }
+#sleepBtnText { line-height: 10px; }
 
 /* 저장·취소 결과 알림: 저장 알림과 같은 자리에 잠깐 */
-#notice { left: 62px; top: 130px; width: 256px; height: 40px; display: flex; align-items: center; justify-content: center;
+#notice { left: 60px; top: 130px; width: 260px; height: 40px; display: flex; align-items: center; justify-content: center;
   border: 2px solid var(--line-hi); background: var(--bg); color: var(--text); }
 #notice.warn { border-color: var(--warn); color: var(--warn); }
-/* 저장 직후 알림: [수유] [기저귀] 자리만 잠깐 덮는다(마이크·지난 기록은 그대로) */
-#undo { left: 62px; top: 130px; width: 256px; height: 40px; display: flex; gap: 6px; background: var(--bg); }
+/* 저장 직후 알림: [수유] [기저귀] [잠] 자리만 잠깐 덮는다(마이크·지난 기록은 그대로) */
+#undo { left: 60px; top: 130px; width: 260px; height: 40px; display: flex; gap: 6px; background: var(--bg); }
 #undoMsg { flex: 1; display: flex; align-items: center; gap: 4px; border: 2px solid var(--ok); color: var(--ok); padding: 0 6px; overflow: hidden; white-space: nowrap; }
 #undoBtn { width: 76px; }
 
@@ -245,6 +251,7 @@ button.machineBtn { width: 44px; flex-direction: column; gap: 1px; line-height: 
 #lateDetail { height: 32px; margin-top: 4px; }
 #lateDetail button { height: 28px; }
 #lateDetail .sleepLen { display: flex; align-items: baseline; gap: 8px; }
+#lateOngoing { width: 96px; flex: none; }
 #lateDetail .sleepLen .lbl { color: var(--dim); }
 
 #recentList { line-height: 15px; }

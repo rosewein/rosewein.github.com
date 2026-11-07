@@ -3,6 +3,7 @@
 //   addEvent()    기록 추가
 //   cancelEvent() 저장 직후 취소(지우지 않고 취소 표시)
 //   updateFeedAmounts() 수유량 빠른 선택 바꾸기
+//   endSleep()    자는 중인 잠에 끝 시각 넣기(깼어요), null 이면 되돌리기
 //   getStats()    날짜별 통계(통계 화면)
 // 기기를 바꿀 때(개인 폰, ESP32) 다시 짜야 하는 범위를 이 폴더로 줄이려는 것이다.
 // 미리 보기(?demo)도 이 함수를 그대로 쓰고, Supabase 대신 demo.js 의 가짜 서버만 끼운다.
@@ -65,6 +66,7 @@ const DEFAULT_DUP_WINDOW_MIN = 10;
  * @property {(id: string) => Promise<{status: string}>} cancelEvent
  * @property {(amounts: number[]) => Promise<{status: 'saved'|'queued', feed_amounts: number[]}>} updateFeedAmounts
  * @property {(days?: number) => Promise<DayStat[]>} getStats   최근 n일 날짜별 통계. 연결이 안 되면 NetworkError
+ * @property {(id: string, endedAt: Date|null) => Promise<{status: 'saved'|'queued'|'not_found', id: string}>} endSleep
  */
 
 /**
@@ -115,6 +117,8 @@ export function createApi(cfg, { transport, storage = STORAGE.real } = {}) {
             await rest.rpc('care_cancel_event', { p_id: item.id });
           } else if (item.op === 'feed_amounts') {
             await rest.rpc('care_set_feed_amounts', { p_amounts: item.amounts });
+          } else if (item.op === 'sleep_end') {
+            await rest.rpc('care_set_sleep_end', { p_id: item.id, p_ended_at: item.ended_at });
           }
           await queue.remove(item.seq);
         } catch (e) {
@@ -207,6 +211,22 @@ export function createApi(cfg, { transport, storage = STORAGE.real } = {}) {
     },
 
     getStats: (days = 7) => rest.rpc('care_stats', { p_days: days }),
+
+    async endSleep(id, endedAt) {
+      const ended_at = endedAt instanceof Date ? endedAt.toISOString() : endedAt;
+      // 잠 시작이 아직 안 보내졌거나 앞에 쌓인 게 있으면 순서를 지키려고 뒤에 쌓는다
+      const pending = await flushThenList();
+      if (navigator.onLine && !pending.length) {
+        try {
+          return await rest.rpc('care_set_sleep_end', { p_id: id, p_ended_at: ended_at });
+        } catch (e) {
+          if (!(e instanceof NetworkError)) throw e;
+        }
+      }
+      await queue.push({ op: 'sleep_end', id, ended_at, created: Date.now() });
+      notify();
+      return { status: 'queued', id };
+    },
 
     async updateFeedAmounts(amounts) {
       const clean = [...new Set(amounts)].sort((a, b) => a - b);

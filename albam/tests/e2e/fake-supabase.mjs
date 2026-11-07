@@ -20,15 +20,17 @@ export async function createFakeSupabase(context) {
     const feeds = all.filter((e) => e.kind === 'feed');
     const feed = feeds[0];
     const diaper = all.find((e) => e.kind === 'diaper');
+    const sleep = all.find((e) => e.kind === 'sleep');
     const dayStart = new Date(); dayStart.setHours(0, 0, 0, 0);
     return {
       server_time: new Date().toISOString(),
       day_start: dayStart.toISOString(),
       last_feed: feed ? { id: feed.id, at: feed.occurred_at, ml: feed.amount_ml } : null,
       last_diaper: diaper ? { id: diaper.id, at: diaper.occurred_at, type: diaper.detail.type } : null,
+      last_sleep: sleep ? { id: sleep.id, at: sleep.occurred_at, ended_at: sleep.ended_at ?? null } : null,
       today: { feed_count: feeds.length, feed_ml: feeds.reduce((s, e) => s + (e.amount_ml || 0), 0) },
       feed_amounts: feedAmounts,
-      recent: all.slice(0, 8).map((e) => ({ id: e.id, kind: e.kind, at: e.occurred_at, ml: e.amount_ml, detail: e.detail })),
+      recent: all.slice(0, 8).map((e) => ({ id: e.id, kind: e.kind, at: e.occurred_at, ended_at: e.ended_at ?? null, ml: e.amount_ml, detail: e.detail })),
       due_chores: [],
       settings: { dup_window_minutes: 10, day_start_hour: 0 },
     };
@@ -75,6 +77,11 @@ export async function createFakeSupabase(context) {
       case '/rest/v1/rpc/care_set_feed_amounts':
         feedAmounts = [...new Set(body.p_amounts)].sort((a, b) => a - b);
         return reply(200, { status: 'saved', feed_amounts: feedAmounts });
+      case '/rest/v1/rpc/care_set_sleep_end': {
+        const e = events.find((x) => x.id === body.p_id && x.kind === 'sleep' && !x.deleted);
+        if (e) e.ended_at = body.p_ended_at;
+        return reply(200, { status: e ? 'saved' : 'not_found', id: body.p_id });
+      }
       case '/rest/v1/rpc/care_cancel_event': {
         const e = events.find((x) => x.id === body.p_id);
         if (e) e.deleted = true;

@@ -2,6 +2,7 @@
 // 시각은 날짜·시·분 바퀴(./wheel.js)로 고른다. 굴리거나, 위아래 칸을 누르거나,
 // 가운데 숫자를 눌러 직접 입력(안드로이드 시간 고르기 창)한다.
 // 수면은 시작·끝 바퀴가 나란히 있다. 미래로는 못 가고, 끝이 시작보다 앞서지 않는다.
+// [아직 자는 중]을 켜면 끝 없이 넣는다(잠든 시각만 늦게 넣을 때). 깨면 거실 화면의 [잠](깼어요)으로 끝낸다.
 //
 //   [수유][기저귀][잠]
 //   시각  오늘 │ 14 : 05 │        1시간 25분 전
@@ -12,7 +13,7 @@ import { $, $$, el, setHidden } from './dom.js';
 import { openSheet } from './sheets.js';
 import { amountSteppers, amountView } from './amount.js';
 import { createWheel } from './wheel.js';
-import { DIAPER_BUTTON, KIND, SOURCE, describeRecent } from '../domain.js';
+import { DIAPER_BUTTON, KIND, SOURCE, describeRecent, sleepingNow } from '../domain.js';
 import { agoParts, clockOnDay, formatClock, formatDay, formatDuration, minutes, pad2 } from '../time.js';
 
 /** 이보다 오래된 시각으로는 못 돌린다 */
@@ -31,6 +32,8 @@ export function setupLateEntry(ctx) {
     end: new Date(),
     amount: 200,
     diaperType: 'pee',
+    /** 잠: 끝 없이 넣기(아직 자는 중) */
+    ongoing: false,
   };
   const isSleep = () => draft.kind === KIND.SLEEP;
 
@@ -116,6 +119,7 @@ export function setupLateEntry(ctx) {
       start: new Date(now - minutes(DEFAULT_START_AGO_MIN)),
       end: now,
       amount: state.summary?.last_feed?.ml ?? 200,
+      ongoing: false,
     });
     render();
     openSheet('lateSheet');
@@ -126,13 +130,14 @@ export function setupLateEntry(ctx) {
     for (const b of $$('#lateSheet [data-kind]')) b.classList.toggle('on', b.dataset.kind === draft.kind);
     groups.start.label.textContent = isSleep() ? '시작' : '시각';
     groups.end.label.textContent = '끝';
-    setHidden(groups.end.box, !isSleep());
-    setHidden(ago, isSleep());
+    const open = isSleep() && draft.ongoing;
+    setHidden(groups.end.box, !isSleep() || open);
+    setHidden(ago, isSleep() && !open);
     groups.start.refresh(except);
-    if (isSleep()) groups.end.refresh(except);
+    if (isSleep() && !open) groups.end.refresh(except);
     else renderAgo();
     $('#lateDetail').replaceChildren(...detailControls());
-    $('#lateSave').disabled = isSleep() && draft.end - draft.start < minutes(1);
+    $('#lateSave').disabled = isSleep() && !open && draft.end - draft.start < minutes(1);
   }
 
   /** 오른쪽: "1시간 25분 전" (숫자 크게) */
@@ -162,14 +167,22 @@ export function setupLateEntry(ctx) {
         onClick: () => { sfx.tap(); draft.diaperType = type; render(); },
       }, label));
     }
-    return [el('div', { className: 'sleepLen' }, el('span', { className: 'lbl' }, '잠 길이'), el('span', { className: 't24 val' }, formatDuration(draft.end - draft.start)))];
+    // 잠: [아직 자는 중] + 잠 길이(또는 안내). 이미 자는 중인 잠이 있으면 하나 더 열 수 없다
+    const alreadyOpen = !!sleepingNow(state.summary);
+    const toggle = el('button', {
+      className: `px${draft.ongoing ? ' on' : ''}`, id: 'lateOngoing', disabled: alreadyOpen && !draft.ongoing,
+      onClick: () => { sfx.tap(); draft.ongoing = !draft.ongoing; render(); },
+    }, '아직 자는 중');
+    return [toggle, draft.ongoing
+      ? el('div', { className: 't9 dim' }, '깨면 [잠] 버튼으로 끝내요')
+      : el('div', { className: 'sleepLen' }, el('span', { className: 'lbl' }, '잠 길이'), el('span', { className: 't24 val' }, formatDuration(draft.end - draft.start)))];
   }
 
   function toEvent() {
     const ev = { kind: draft.kind, occurred_at: draft.start, detail: {}, source: SOURCE.TOUCH };
     if (draft.kind === KIND.FEED) ev.amount_ml = draft.amount;
     if (draft.kind === KIND.DIAPER) ev.detail = { type: draft.diaperType };
-    if (draft.kind === KIND.SLEEP) ev.ended_at = draft.end;
+    if (draft.kind === KIND.SLEEP && !draft.ongoing) ev.ended_at = draft.end;
     return ev;
   }
 

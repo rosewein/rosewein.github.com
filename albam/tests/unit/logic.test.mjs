@@ -31,6 +31,8 @@ test('시각 글자', () => {
   assert.equal(formatDay(ago(16 * 60), NOW), '어제');
   assert.equal(formatDay(ago(3 * 24 * 60), NOW), '11/3');
   assert.equal(formatDuration(90 * 60000), '1시간 30분');
+  assert.equal(formatDuration(15 * 60000), '15분', '한 시간이 안 되면 분만');
+  assert.equal(formatDuration(120 * 60000), '2시간', '분이 0이면 시간만');
 });
 
 test('밤 시간대(자정 넘김 포함)', () => {
@@ -46,6 +48,8 @@ test('기록 이름', () => {
   assert.equal(describeEvent({ kind: 'feed', amount_ml: 160, occurred_at: NOW }, NOW), '수유 160ml');
   assert.equal(describeEvent({ kind: 'diaper', detail: { type: 'poo' }, occurred_at: ago(30) }, NOW), '기저귀 대변 · 14:30');
   assert.equal(describeEvent({ kind: 'sleep', occurred_at: ago(120), ended_at: ago(30) }, NOW), '잠 13:00~14:30');
+  assert.equal(describeEvent({ kind: 'sleep', occurred_at: NOW }, NOW), '잠 시작 15:00');
+  assert.equal(describeRecent({ kind: 'sleep', ended_at: null }), '잠 (자는 중)');
   assert.equal(describeRecent({ kind: 'diaper', detail: { type: 'both' } }), '기저귀 소변+대변');
 });
 
@@ -57,6 +61,8 @@ test('캐릭터 기분 우선순위', () => {
   assert.equal(chooseMood({ ...base, night: true, nightAwake: true, minutesSinceFeed: 200 }), 'hungry');
   assert.equal(chooseMood({ ...base, happy: true, night: true }), 'happy');
   assert.equal(chooseMood({ ...base, minutesSinceFeed: null }), 'normal');
+  assert.equal(chooseMood({ ...base, sleeping: true, minutesSinceFeed: 200 }), 'sleep', '자는 중이면 낮에도, 배고픈 시간이어도 잠');
+  assert.equal(chooseMood({ ...base, sleeping: true, happy: true }), 'happy');
 });
 
 test('브레짜(물 30ml 단위) + 압타밀(물 30ml에 1스푼) → 완성량', () => {
@@ -160,4 +166,18 @@ test('직접 입력한 시각: 고른 날에 맞추고, 아직 안 온 시각이
   assert.deepEqual(clockOnDay(now, 0, 30, now), new Date(2026, 10, 7, 0, 30));
   assert.deepEqual(clockOnDay(now, 23, 30, now), new Date(2026, 10, 6, 23, 30), '새벽 1시에 23:30 → 어제');
   assert.deepEqual(clockOnDay(new Date(2026, 10, 5, 9, 0), 23, 30, now), new Date(2026, 10, 5, 23, 30), '지난날은 그날 그대로');
+});
+
+test('잠: 끝이 없으면 자는 중, 못 보낸 깼어요/되돌리기를 요약에 얹기', async () => {
+  const { sleepingNow } = await import('../../src/domain.js');
+  const base = { last_sleep: { id: 's1', at: ago(90).toISOString(), ended_at: null }, recent: [{ id: 's1', kind: 'sleep', at: ago(90).toISOString(), ended_at: null }] };
+  assert.equal(sleepingNow(base)?.id, 's1');
+  assert.equal(sleepingNow({ last_sleep: { id: 's0', at: 'x', ended_at: 'y' } }), null);
+  assert.equal(sleepingNow(null), null);
+  const woke = applyPending(base, [{ op: 'sleep_end', id: 's1', ended_at: NOW.toISOString() }]);
+  assert.equal(woke.last_sleep.ended_at, NOW.toISOString());
+  assert.equal(woke.recent[0].ended_at, NOW.toISOString());
+  assert.equal(sleepingNow(woke), null);
+  const undone = applyPending(base, [{ op: 'sleep_end', id: 's1', ended_at: NOW.toISOString() }, { op: 'sleep_end', id: 's1', ended_at: null }]);
+  assert.equal(sleepingNow(undone)?.id, 's1', '깼어요를 취소하면 다시 자는 중');
 });

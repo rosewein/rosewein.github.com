@@ -91,8 +91,13 @@ async function demoFlow(browser, base) {
     `마이크·지난 기록은 아이콘만, 같은 정사각형 ${mic.w}x${mic.h}`);
   check((await page.getAttribute('#micBtn', 'aria-label')) === '말하기' && (await page.getAttribute('#lateBtn', 'aria-label')).startsWith('지난 기록'), '아이콘 버튼에 이름(화면 낭독용)');
   check(JSON.stringify(feed) === JSON.stringify(diaper), `수유·기저귀 크기·아이콘·글자 똑같음 ${JSON.stringify(feed)}`);
-  check(feed.w > mic.w * 3 && feed.h === mic.h && feed.top === mic.top && feed.ico === mic.ico, '수유·기저귀가 크게, 높이·줄·아이콘 크기는 마이크와 같음');
+  check(feed.w > mic.w * 2.5 && feed.h === mic.h && feed.top === mic.top && feed.ico === mic.ico, '수유·기저귀가 크게, 높이·줄·아이콘 크기는 마이크와 같음');
+  const sleepBox = await box('#sleepBtn');
+  check(sleepBox.w === mic.w && sleepBox.h === mic.h && sleepBox.top === mic.top && (await text(page, '#sleepBtn')) === '', '[잠]은 마이크와 같은 정사각형 달 아이콘');
+  const fits = await page.$$eval('#feedBtn, #diaperBtn', (bs) => bs.every((b) => b.scrollWidth <= b.clientWidth + 0.5));
+  check(fits, '수유·기저귀 버튼 글이 넘치지 않음');
   const curved = await curvedEdgeOffenders(page, '#status > div, #actions button, #bubble, #albam');
+  await sleepFlow(page);
   check(curved.length === 0, `위·아래 곡면(8px)에 글·버튼 없음 ${curved.join(' ')}`);
 
   await page.click('#feedBtn');
@@ -215,6 +220,10 @@ async function demoFlow(browser, base) {
   check(await page.isVisible('#late-end') && await lateTime('end') === '오늘 14 00', '잠은 시작·끝 바퀴가 나란히');
   check((await text(page, '#lateDetail')).includes('3시간 30분'), '잠 길이 표시');
   await shot(page, 'late-sleep-wheels');
+  await page.click('#lateOngoing');
+  check(await page.isHidden('#late-end') && await page.isVisible('#lateTimes .lateAgo'), '[아직 자는 중]: 끝 바퀴 숨김');
+  await page.click('#lateOngoing');
+  check(await page.isVisible('#late-end'), '다시 누르면 끝 바퀴');
   await page.click('#lateSheet [data-kind="feed"]');
   await page.click('#lateSave');
   await page.waitForTimeout(300);
@@ -226,6 +235,36 @@ async function demoFlow(browser, base) {
   check(rows.some((r) => r.includes('10:30')) && rows.indexOf(rows.find((r) => r.includes('10:30'))) > 0, '최근 기록에서 실제 시각 순서로 자리 잡음');
   await shot(page, 'recent');
   check(errors.length === 0, `페이지 오류 없음 ${errors.join(' ')}`);
+}
+
+// [잠]: 누르면 잠 시작(끝 없음) → 알밤이 자고 버튼이 "깼어요" → 누르면 끝. 취소하면 다시 자는 중
+async function sleepFlow(page) {
+  await page.click('#sleepBtn');
+  await page.waitForSelector('#undo:not(.hidden)');
+  check((await text(page, '#undoText')).startsWith('잠 시작 14:00'), `잠 시작 저장(${await text(page, '#undoText')})`);
+  check(await page.getAttribute('#sleepBtn', 'aria-label') === '깼어요' && (await text(page, '#sleepBtn')) === '깼어요', '자는 중이면 버튼이 "깼어요"');
+  await page.click('#undoMsg');
+  await page.evaluate(() => {   // 1시간 20분 전에 잠든 것으로
+    const all = JSON.parse(localStorage.getItem('albam.demo.events'));
+    all.find((e) => e.kind === 'sleep' && !e.ended_at).occurred_at = new Date(Date.now() - 80 * 60000).toISOString();
+    localStorage.setItem('albam.demo.events', JSON.stringify(all));
+  });
+  await page.reload();
+  await page.waitForTimeout(600);
+  check(await text(page, '#bubble') === '쿨쿨 1시간 20분', `말풍선에 잔 시간(${await text(page, '#bubble')})`);
+  await shot(page, 'sleeping');
+  await page.click('#sleepBtn');
+  await page.waitForSelector('#undo:not(.hidden)');
+  check(await text(page, '#undoText') === '잠 1시간 20분 저장됨', `깼어요: 잔 시간과 함께 저장(${await text(page, '#undoText')})`);
+  check(await page.getAttribute('#sleepBtn', 'aria-label') === '잠들었어요', '깨면 버튼이 다시 잠');
+  await page.click('#undoBtn');
+  await page.waitForTimeout(300);
+  check(await page.getAttribute('#sleepBtn', 'aria-label') === '깼어요', '깼어요를 취소하면 다시 자는 중');
+  await page.click('#sleepBtn');
+  await page.waitForSelector('#undo:not(.hidden)');
+  await page.click('#undoMsg');
+  const ended = await page.evaluate(() => JSON.parse(localStorage.getItem('albam.demo.events')).filter((e) => e.kind === 'sleep' && !e.deleted_at && !e.ended_at).length);
+  check(ended === 0, '열린 잠 없음');
 }
 
 // 옆으로 밀면 통계 쪽, 점을 눌러도 넘어감, 1분 안 만지면 대시보드로

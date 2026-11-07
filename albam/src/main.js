@@ -44,6 +44,7 @@ const RELOAD_MIN_UPTIME_MS = 3 * 3600000;
  * @property {() => Promise<void>} refresh    요약 다시 받기
  * @property {(text: string, tone?: 'warn'|'') => void} notify  아래 알림 막대에 저장·취소 결과를 잠깐(말풍선은 알밤 말만)
  * @property {(ev: import('./domain.js').CareEvent, opts?: {force?: boolean}) => Promise<void>} save
+ * @property {(sleep: {id: string, at: string}) => Promise<void>} wake   자는 중인 잠 끝내기(깼어요)
  * @property {(message?: string) => void} showLogin
  * @property {() => void} reconnect           Supabase 주소·키를 바꾼 뒤 통신을 새로 만든다
  */
@@ -91,6 +92,7 @@ function main() {
     refresh,
     notify: (text, tone) => recorder.notify(text, tone),
     save: (ev, opts) => recorder.save(ev, opts),
+    wake: (sleep) => recorder.wake(sleep),
     showLogin: (message) => login.show(message),
     reconnect() {
       Object.assign(cfg, loadConfig());

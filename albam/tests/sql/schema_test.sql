@@ -235,4 +235,40 @@ begin
 end $$;
 reset role;
 
+-- ── 004: 잠은 끝 없이 시작하고, 깨면 끝을 채운다 ─────────────
+set role authenticated;
+set request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+do $$
+declare r jsonb; s jsonb;
+begin
+  r := public.care_add_event(jsonb_build_object('id', '33333333-3333-3333-3333-333333333333', 'kind', 'sleep',
+         'occurred_at', now() - interval '90 minutes', 'force', true));
+  perform pg_temp.check(r ->> 'status' = 'saved', 'sleep can start without an end');
+  s := public.care_summary();
+  perform pg_temp.check(s -> 'last_sleep' ->> 'id' = '33333333-3333-3333-3333-333333333333' and s -> 'last_sleep' -> 'ended_at' = 'null'::jsonb, 'summary shows the open sleep (sleeping)');
+  r := public.care_set_sleep_end('33333333-3333-3333-3333-333333333333', now());
+  perform pg_temp.check(r ->> 'status' = 'saved', 'wake: end saved');
+  perform pg_temp.check((public.care_summary() -> 'last_sleep' ->> 'ended_at') is not null, 'summary shows the end');
+  r := public.care_set_sleep_end('33333333-3333-3333-3333-333333333333', null);
+  perform pg_temp.check((public.care_summary() -> 'last_sleep' -> 'ended_at') = 'null'::jsonb, 'undo wake: sleeping again');
+  perform pg_temp.check(public.care_set_sleep_end(gen_random_uuid(), now()) ->> 'status' = 'not_found', 'unknown id: not_found');
+  begin
+    perform public.care_set_sleep_end('33333333-3333-3333-3333-333333333333', now() - interval '3 hours');
+    raise exception 'FAIL: end before start accepted';
+  exception when sqlstate '22023' then raise notice 'ok - end before start rejected';
+  end;
+  begin
+    perform public.care_set_sleep_end('33333333-3333-3333-3333-333333333333', now() + interval '1 hour');
+    raise exception 'FAIL: future end accepted';
+  exception when sqlstate '22023' then raise notice 'ok - future end rejected';
+  end;
+end $$;
+set request.jwt.claim.sub = '22222222-2222-2222-2222-222222222222';
+do $$ begin
+  perform public.care_set_sleep_end('33333333-3333-3333-3333-333333333333', now());
+  raise exception 'FAIL: stranger set sleep end';
+exception when insufficient_privilege then raise notice 'ok - non-family cannot end sleep';
+end $$;
+reset role;
+
 \echo 'ALL SQL TESTS PASSED'
