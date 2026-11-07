@@ -28,6 +28,10 @@ test('기저귀: 대변 있는 횟수(대변 + 둘 다)를 막대 아래쪽에 �
   assert.equal(columns[0].value, '7회');
   assert.equal(columns[0].part, Math.round((2 / 7) * 46));
   assert.equal(text(foot), '지난 6일 평균 7.0회 · 대변 2.0회');
+  assert.deepEqual(buildChart(week, 'diaper').legend, ['소변만', '대변 있음'], '색 설명');
+  assert.equal(columns[0].partText, '2', '강조 칸이 넉넉하면 안에 대변 횟수');
+  assert.equal(columns[6].partText, '', '좁으면 비움');
+  assert.equal(buildChart(week, 'feed').legend, null, '수유는 한 색이라 설명 없음');
 });
 
 test('잠: 시간(소수 한 자리), 낮잠 강조, 평균은 시간·분', () => {
@@ -36,6 +40,7 @@ test('잠: 시간(소수 한 자리), 낮잠 강조, 평균은 시간·분', () 
   assert.equal(columns[6].value, '11.4시간');
   assert.equal(columns[0].part, Math.round((120 / 720) * 46));
   assert.equal(text(foot), '평균 낮잠 2시간 · 밤잠 10시간');
+  assert.deepEqual(buildChart(week, 'sleep').legend, ['밤잠', '낮잠']);
 });
 
 test('기록이 하나도 없는 날도 그린다(막대 0)', () => {
