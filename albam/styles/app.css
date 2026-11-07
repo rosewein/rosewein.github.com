@@ -292,7 +292,8 @@ button.px.acc { color: var(--btn-on); }
 .sheet .foot button.main { flex: 2; }
 
 /* 수유량: 빠른 선택은 "200 / 브레짜 180" 두 줄, 고르는 줄은 [-10][-30 브레짜] 양 [+30 브레짜][+10] */
-#amountRow button { flex: 1; height: 40px; flex-direction: column; gap: 2px; line-height: 1; }
+#feedSheet h2 { margin-bottom: 10px; }   /* [빠른 선택 바꾸기]와 아래 줄 사이를 띄운다 */
+#amountRow button { flex: 1; height: 44px; flex-direction: column; gap: 5px; line-height: 1; }
 #amountEditBtn { position: absolute; right: 6px; top: 4px; height: 20px; padding: 0 6px; }
 .machine { color: var(--dim); }
 button.px .val { color: var(--btn-text); }   /* 어두운 버튼 위의 수치는 버튼 글자색 */
