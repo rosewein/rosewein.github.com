@@ -9,7 +9,6 @@
 
 @font-face { font-family: 'Galmuri11'; src: url('../fonts/Galmuri11.woff2') format('woff2'); font-display: block; }
 @font-face { font-family: 'Galmuri9'; src: url('../fonts/Galmuri9.woff2') format('woff2'); font-display: block; }
-@font-face { font-family: 'Galmuri11 Bold'; src: url('../fonts/Galmuri11-Bold.woff2') format('woff2'); font-display: block; }
 
 :root {
   /* 어두운 바탕, 밝고 넓은 면 없이 (AMOLED 번인 대비) */
@@ -19,7 +18,7 @@
   --line-hi: #6a4e36;
   --text: #e6d8c0;
   --strong: #f6ead3;   /* 수치(값)는 가장 밝게 */
-  --dim: #a39580;      /* 이름표는 한 단계 흐리게 */
+  --dim: #94866f;      /* 이름표는 흐리게: 값과 색으로만 구분 */
   --faint: #4a3d31;
   --accent: #e9a253;
   --warn: #e8734f;
@@ -35,9 +34,9 @@ html, body {
   -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent;
 }
 body { font: 12px/1 'Galmuri11', monospace; -webkit-font-smoothing: none; font-smooth: never; }
-/* 글씨 두께: 갈무리 보통에 획을 반 도트 두껍게(보통과 굵게의 중간). 수치(.val, 큰 숫자)는 갈무리 굵게 */
+/* 글씨 두께: 갈무리 보통에 획을 반 도트 두껍게(보통과 굵게의 중간). 수치(.val, 큰 숫자)는 굵기는 같고 색만 가장 밝게 */
 body, button.px { text-shadow: 0.5px 0 0 currentColor; }
-.val, #elapsed .num { font-family: 'Galmuri11 Bold', monospace; color: var(--strong); text-shadow: none; }
+.val, #elapsed .num { color: var(--strong); }
 img, .spr { image-rendering: pixelated; image-rendering: crisp-edges; }
 
 /* 논리 해상도 380x180. src/ui/stage.js 가 기기 화소의 정수배가 되도록 zoom 을 정한다 */
