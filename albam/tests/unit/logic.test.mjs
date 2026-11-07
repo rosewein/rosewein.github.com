@@ -237,3 +237,21 @@ test('수유: 먹이는 중, 다 먹음, 걸린 시간 글', async () => {
   assert.deepEqual(describeRow({ kind: 'feed', at: ago(12).toISOString(), ended_at: NOW.toISOString(), ml: 200 }, NOW), ['14:48~15:00', '수유 200ml · 12분']);
   assert.deepEqual(describeRow({ kind: 'feed', at: ago(8).toISOString(), ended_at: null, ml: 200, feeding: true }, NOW), ['14:52~', '수유 200ml (먹는 중 8분)']);
 });
+
+test('그 밖의 기록 종류(체온·목욕·투약)', async () => {
+  const { formatValue, describeOther, recordType, moreTypes, setRecordTypes, DEFAULT_RECORD_TYPES } = await import('../../src/domain.js');
+  const { describeRow } = await import('../../src/ui/day-list.js');
+  assert.equal(formatValue(recordType('temperature'), 37.4), '37.4°C');
+  assert.equal(formatValue(recordType('weight'), 7.346), '7.35kg');
+  assert.equal(describeOther('temperature', { value: 37.9 }), '체온 37.9°C');
+  assert.equal(describeOther('bath', { at: ago(30), ended_at: ago(20), detail: { memo: '보습로션' } }), '목욕 · 10분 · 보습로션');
+  assert.equal(describeOther('medication', { detail: { medicine: '해열제' } }), '투약 · 해열제');
+  assert.ok(moreTypes().every((t) => t.in_more) && !moreTypes().some((t) => t.key === 'feed'), '더보기에 수유·기저귀·잠은 없음');
+  assert.deepEqual(describeRow({ kind: 'temperature', at: new Date(2026, 10, 6, 8, 53), value: 37.1 }, NOW), ['08:53', '체온 37.1°C']);
+  assert.deepEqual(describeRow({ kind: 'bath', at: new Date(2026, 10, 6, 19, 0), ended_at: new Date(2026, 10, 6, 19, 15), memo: '보습' }, NOW), ['19:00~19:15', '목욕 · 15분 · 보습']);
+  assert.equal(describeRecent({ kind: 'temperature', value: 37.2 }), '체온 37.2°C');
+  assert.equal(describeEvent({ kind: 'temperature', value_num: 38, occurred_at: NOW }, NOW), '체온 38.0°C');
+  setRecordTypes([...DEFAULT_RECORD_TYPES, { key: 'vaccine', label: '예방접종', shape: 'instant', in_more: true }]);
+  assert.ok(moreTypes().some((t) => t.label === '예방접종'), '표에 한 줄 더하면 더보기 버튼도 늘어남');
+  setRecordTypes(DEFAULT_RECORD_TYPES);
+});

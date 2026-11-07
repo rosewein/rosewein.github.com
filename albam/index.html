@@ -83,7 +83,7 @@
       <button class="px action" id="feedBtn"><span class="spr ico x2 ico-bottle"></span><span id="feedBtnText">수유</span></button>
       <button class="px action" id="diaperBtn"><span class="spr ico x2 ico-diaper"></span>기저귀</button>
       <button class="px action square" id="sleepBtn" aria-label="잠들었어요" title="잠"><span class="spr ico x2 ico-moon"></span><span id="sleepBtnText" class="t9"></span></button>
-      <button class="px action square" id="lateBtn" aria-label="지난 기록 넣기 · 시각 고치기" title="지난 기록 넣기"><span class="spr ico x2 ico-clock"></span></button>
+      <button class="px action square" id="lateBtn" aria-label="더보기: 목욕·체온·투약… 지난 기록 넣기" title="더보기"><span class="spr ico x2 ico-plus"></span></button>
     </div>
     <div class="box hidden" id="notice"></div>   <!-- 저장·취소 결과 알림(잠깐) -->
     <div class="box hidden" id="undo">
@@ -152,7 +152,8 @@
     <div class="sheet hidden" id="lateSheet">
       <h2 id="lateTitle">지난 기록 넣기</h2>
       <div class="kinds">
-        <button class="px ghost hidden" id="lateFeedEnd">끝 시각</button>   <!-- 수유: 다 먹은 시각도 넣기 -->
+        <button class="px ghost hidden" id="lateFeedEnd">끝 시각</button>   <!-- 수유·목욕 등: 끝 시각도 넣기 -->
+        <button class="px on hidden" id="lateKindOther"></button>          <!-- 목욕·체온 등(기록 종류 표) -->
         <button class="px" data-kind="feed">수유</button>
         <button class="px" data-kind="diaper">기저귀</button>
         <button class="px" data-kind="sleep">잠</button>
@@ -166,6 +167,17 @@
         <button class="px ghost" id="recentBtn">오늘 기록</button>
         <button class="px ghost hidden" id="lateDelete">지우기</button>
         <button class="px main acc" id="lateSave">저장</button>
+      </div>
+    </div>
+
+    <!-- [+] 더보기: 기록 종류 표(in_more)의 종류 + 지난 기록 넣기·오늘 기록(src/ui/more.js) -->
+    <div class="sheet hidden" id="moreSheet">
+      <h2>기록 더하기</h2>
+      <div id="moreGrid"></div>
+      <div class="foot">
+        <button class="px ghost" data-close>닫기</button>
+        <button class="px ghost" id="moreToday">오늘 기록</button>
+        <button class="px main" id="moreLate">지난 기록 넣기</button>
       </div>
     </div>
 

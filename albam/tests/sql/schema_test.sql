@@ -363,4 +363,37 @@ begin
 end $$;
 reset role;
 
+-- ── 008: 기록 종류 표, 숫자 값 ─────────────
+set role authenticated;
+set request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+do $$
+declare s jsonb; r jsonb; v_id uuid := gen_random_uuid(); tl jsonb;
+begin
+  s := public.care_summary();
+  perform pg_temp.check(jsonb_array_length(s -> 'record_types') >= 13, 'summary lists record types');
+  perform pg_temp.check((select count(*) from jsonb_array_elements(s -> 'record_types') x where (x ->> 'in_more')::boolean) >= 10, 'more menu types');
+  perform pg_temp.check(s -> 'record_types' -> 0 ->> 'key' = 'feed', 'record types sorted');
+  r := public.care_add_event(jsonb_build_object('id', v_id, 'kind', 'temperature', 'value_num', 37.4, 'force', true));
+  perform pg_temp.check(r ->> 'status' = 'saved' and (select value_num = 37.4 from public.care_events where id = v_id), 'temperature saved with value');
+  begin
+    perform public.care_add_event('{"kind":"temperature","value_num":45,"force":true}');
+    raise exception 'FAIL: out of range temperature accepted';
+  exception when sqlstate '22023' then raise notice 'ok - temperature out of range rejected';
+  end;
+  begin
+    perform public.care_add_event('{"kind":"weight","force":true}');
+    raise exception 'FAIL: weight without value accepted';
+  exception when sqlstate '22023' then raise notice 'ok - number record needs a value';
+  end;
+  perform public.care_update_event(jsonb_build_object('id', v_id, 'value_num', 37.9));
+  perform pg_temp.check((select value_num = 37.9 from public.care_events where id = v_id), 'update changes value');
+  perform pg_temp.check(public.care_add_event(jsonb_build_object('kind', 'bath', 'occurred_at', now() - interval '20 minutes',
+    'ended_at', now() - interval '10 minutes', 'detail', '{"memo":"보습로션"}'::jsonb, 'force', true)) ->> 'status' = 'saved', 'bath range saved');
+  tl := public.care_timeline(1);
+  perform pg_temp.check(exists (select 1 from jsonb_array_elements(tl) x where x ->> 'kind' = 'temperature' and (x ->> 'value')::numeric = 37.9), 'timeline has value');
+  perform pg_temp.check(exists (select 1 from jsonb_array_elements(tl) x where x ->> 'kind' = 'bath' and x ->> 'memo' = '보습로션'), 'timeline has memo');
+  perform pg_temp.check(exists (select 1 from jsonb_array_elements(public.care_summary() -> 'recent') x where x ->> 'kind' = 'temperature' and (x ->> 'value')::numeric = 37.9), 'recent has value');
+end $$;
+reset role;
+
 \echo 'ALL SQL TESTS PASSED'

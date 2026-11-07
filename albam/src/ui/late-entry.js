@@ -1,5 +1,7 @@
-// 지난 기록 넣기(시각을 고쳐 넣기)와 기록 고치기. 같은 창을 쓴다.
-//   - 넣기: [시계] 버튼 → 종류 고르고 시각·양 → [저장]
+// 지난 기록 넣기(시각을 고쳐 넣기)와 기록 고치기, 그리고 목욕·체온 같은 다른 종류 넣기. 같은 창을 쓴다.
+//   - 넣기: [+] → [지난 기록 넣기] → 종류 고르고 시각·양 → [저장]
+//   - 다른 종류: [+] → [목욕] 등 → openNew(종류). 모양(기록 종류 표의 shape)에 따라 아랫줄이 바뀐다
+//       number(체온·체중·키): [-1][-0.1] 37.4°C [+0.1][+1]   range(목욕·놀이): 시작~끝 + 메모   instant·text: 메모
 //   - 고치기: 그날 기록 목록(day-list.js)에서 하나를 누르면 openEdit(기록) → [저장] / [지우기](두 번 눌러야 지움)
 // 시각은 날짜·시·분 바퀴(./wheel.js)로 고른다. 굴리거나, 위아래 칸을 누르거나,
 // 가운데 숫자를 눌러 직접 입력(안드로이드 시간 고르기 창)한다.
@@ -15,7 +17,7 @@ import { $, $$, el, setHidden } from './dom.js';
 import { openSheet } from './sheets.js';
 import { amountSteppers, amountView } from './amount.js';
 import { createWheel } from './wheel.js';
-import { DIAPER_BUTTON, KIND, SOURCE, sleepingNow } from '../domain.js';
+import { DIAPER_BUTTON, KIND, SOURCE, formatValue, isBuiltinKind, recordType, sleepingNow } from '../domain.js';
 import { agoParts, clockOnDay, formatDay, formatDuration, minutes, pad2 } from '../time.js';
 
 /** 이보다 오래된 시각으로는 못 돌린다 */
@@ -26,7 +28,11 @@ const DEFAULT_SLEEP_MIN = 60;
 const DEFAULT_FEED_MIN = 10;
 const UNIT_MS = { day: 86400000, hour: 3600000, minute: 60000 };
 
-const KIND_LABEL = { feed: '수유', diaper: '기저귀', sleep: '잠' };
+const labelOf = (kind) => recordType(kind)?.label || kind;
+/** 다른 종류를 처음 열 때 시작~끝(분) */
+const DEFAULT_RANGE_MIN = 10;
+/** 글 칸 안내 */
+const MEMO_HINT = { medication: '약 이름 · 메모', hospital: '병원 · 사유 · 메모', play: '놀이 · 메모', bath: '메모(예: 보습로션)', memo: '메모', other: '무엇 · 메모' };
 /** [지우기]를 한 번 누르면 이 시간 동안 "한 번 더 누르면 지워요" */
 const DELETE_CONFIRM_MS = 3000;
 
@@ -45,8 +51,12 @@ export function setupLateEntry(ctx, { openDayList }) {
     diaperType: 'pee',
     /** 잠: 끝 없이 넣기(아직 자는 중) */
     ongoing: false,
-    /** 수유: 다 먹은 시각도 넣기 */
+    /** 수유·목욕 등: 끝 시각도 넣기 */
     feedEnd: false,
+    /** 숫자 기록(체온·체중·키) */
+    value: null,
+    /** 메모·약 이름 */
+    memo: '',
     /** 수유: 먹이는 중인 기록을 고치는 중 */
     feeding: false,
   };
@@ -55,7 +65,10 @@ export function setupLateEntry(ctx, { openDayList }) {
   let deleteArmedUntil = 0;
   const isSleep = () => draft.kind === KIND.SLEEP;
   /** 시작·끝 두 묶음을 보이나: 잠(끝을 넣을 때), 수유(끝 시각을 켰을 때) */
-  const hasEnd = () => (isSleep() && !draft.ongoing) || (draft.kind === KIND.FEED && draft.feedEnd);
+  const shape = () => recordType(draft.kind)?.shape;
+  /** 끝 시각을 켜고 끌 수 있는 종류: 수유, 다른 종류 중 시작~끝(range) */
+  const endToggle = () => draft.kind === KIND.FEED || (!isBuiltinKind(draft.kind) && shape() === 'range');
+  const hasEnd = () => (isSleep() && !draft.ongoing) || (endToggle() && draft.feedEnd);
 
   // ── 시각 고르기 ──
   const limits = () => {
@@ -144,6 +157,27 @@ export function setupLateEntry(ctx, { openDayList }) {
       feedEnd: false,
       feeding: false,
     });
+    if (!isBuiltinKind(draft.kind)) draft.kind = KIND.FEED;
+    render();
+    openSheet('lateSheet');
+  }
+
+  /** 다른 종류 넣기([+] 더보기에서). 시각은 지금, 시작~끝 종류는 10분 전~지금 */
+  function openNew(kind) {
+    const now = ctx.now();
+    now.setSeconds(0, 0);
+    const t = recordType(kind);
+    editing = null;
+    Object.assign(draft, {
+      kind,
+      start: t?.shape === 'range' ? new Date(now - minutes(DEFAULT_RANGE_MIN)) : now,
+      end: now,
+      ongoing: false,
+      feedEnd: t?.shape === 'range',
+      feeding: false,
+      value: t?.default ?? null,
+      memo: '',
+    });
     render();
     openSheet('lateSheet');
   }
@@ -162,18 +196,24 @@ export function setupLateEntry(ctx, { openDayList }) {
       feeding: ev.kind === KIND.FEED && !ev.ended_at && !!ev.feeding,
       amount: ev.ml ?? state.summary?.last_feed?.ml ?? 200,
       diaperType: ev.type || 'pee',
+      value: ev.value ?? recordType(ev.kind)?.default ?? null,
+      memo: ev.memo ?? ev.detail?.memo ?? '',
     });
+    if (!isBuiltinKind(ev.kind)) draft.feedEnd = !!ev.ended_at;
     render();
     openSheet('lateSheet');
   }
 
   /** @param {{except?: object}} [o] 지금 끄는 중인 바퀴는 바퀴가 스스로 다시 그린다 */
   function render({ except } = {}) {
+    const other = !isBuiltinKind(draft.kind);
     for (const b of $$('#lateSheet [data-kind]')) {
       b.classList.toggle('on', b.dataset.kind === draft.kind);
-      setHidden(b, !!editing && b.dataset.kind !== draft.kind);   // 고칠 때는 종류를 못 바꾼다
+      setHidden(b, other || (!!editing && b.dataset.kind !== draft.kind));   // 고칠 때는 종류를 못 바꾼다
     }
-    $('#lateTitle').textContent = editing ? `기록 고치기 · ${KIND_LABEL[draft.kind] || draft.kind}` : '지난 기록 넣기';
+    setHidden($('#lateKindOther'), !other);
+    $('#lateKindOther').textContent = other ? labelOf(draft.kind) : '';
+    $('#lateTitle').textContent = editing ? `기록 고치기 · ${labelOf(draft.kind)}` : other ? `${labelOf(draft.kind)} 넣기` : '지난 기록 넣기';
     setHidden($('#recentBtn'), !!editing);
     setHidden($('#lateDelete'), !editing);
     const armed = Date.now() < deleteArmedUntil;
@@ -188,10 +228,10 @@ export function setupLateEntry(ctx, { openDayList }) {
     else renderAgo();
     // 수유: [끝 시각] 켜기/끄기
     const feedEndBtn = $('#lateFeedEnd');
-    setHidden(feedEndBtn, draft.kind !== KIND.FEED);
+    setHidden(feedEndBtn, !endToggle());
     feedEndBtn.classList.toggle('on', draft.feedEnd);
     $('#lateDetail').replaceChildren(...detailControls());
-    $('#lateSave').disabled = hasEnd() && draft.end - draft.start < minutes(1);
+    $('#lateSave').disabled = (hasEnd() && draft.end - draft.start < minutes(1)) || (shape() === 'text' && !draft.memo.trim());
   }
 
   /** 오른쪽: "1시간 25분 전" (숫자 크게) */
@@ -203,8 +243,30 @@ export function setupLateEntry(ctx, { openDayList }) {
       : [el('span', { className: 't24 val' }, '방금')]));
   }
 
-  /** 종류별 아랫줄: 수유량 / 기저귀 종류 / 잠 길이 */
+  /** 다른 종류의 아랫줄: 숫자면 ± 버튼, 아니면 글 칸(메모·약 이름) */
+  function otherControls() {
+    const t = recordType(draft.kind);
+    if (t?.shape === 'number') {
+      const step = Number(t.step || 1);
+      const clampV = (v) => Number(Math.min(t.max ?? Infinity, Math.max(t.min ?? -Infinity, Math.round(v / step) * step)).toFixed(6));
+      const btn = (d, text) => el('button', { className: 'px stepBtn', onClick: () => { sfx.tap(); draft.value = clampV((draft.value ?? t.default ?? 0) + d); render(); } }, text);
+      const big = step * 10;
+      const fmt = (d) => `${d > 0 ? '+' : '-'}${formatValue({ step }, Math.abs(d))}`;
+      return [btn(-big, fmt(-big)), btn(-step, fmt(-step)),
+        el('div', { className: 'valueView t24 val' }, formatValue(t, draft.value ?? t.default)),
+        btn(step, fmt(step)), btn(big, fmt(big))];
+    }
+    const memo = el('input', { type: 'text', id: 'lateMemo', value: draft.memo, placeholder: MEMO_HINT[draft.kind] || '메모', autocomplete: 'off' });
+    memo.addEventListener('input', () => {
+      draft.memo = memo.value;
+      $('#lateSave').disabled = (hasEnd() && draft.end - draft.start < minutes(1)) || (shape() === 'text' && !draft.memo.trim());
+    });
+    return [memo];
+  }
+
+  /** 종류별 아랫줄: 수유량 / 기저귀 종류 / 잠 길이 / (다른 종류) 숫자·글 */
   function detailControls() {
+    if (!isBuiltinKind(draft.kind)) return otherControls();
     if (draft.kind === KIND.FEED) {
       // 수유 창과 같은 줄: [-10] [-30 브레짜] 200ml 브레짜 180 [+30 브레짜] [+10]
       const steps = amountSteppers({
@@ -241,11 +303,15 @@ export function setupLateEntry(ctx, { openDayList }) {
     }
     if (draft.kind === KIND.DIAPER) ev.detail = { type: draft.diaperType };
     if (draft.kind === KIND.SLEEP && !draft.ongoing) ev.ended_at = draft.end;
+    if (!isBuiltinKind(draft.kind)) {
+      if (shape() === 'number') ev.value_num = draft.value ?? recordType(draft.kind)?.default;
+      if (draft.memo.trim()) ev.detail = { memo: draft.memo.trim() };
+      if (hasEnd()) ev.ended_at = draft.end;
+    }
     return ev;
   }
 
   // ── 연결 ──
-  $('#lateBtn').addEventListener('click', () => { sfx.tap(); open(); });
   for (const b of $$('#lateSheet [data-kind]')) {
     b.addEventListener('click', () => {
       sfx.tap();
@@ -276,6 +342,11 @@ export function setupLateEntry(ctx, { openDayList }) {
     }
     if (draft.kind === KIND.DIAPER) patch.detail = ev.detail;
     if (draft.kind === KIND.SLEEP) patch.ended_at = ev.ended_at ?? null;
+    if (!isBuiltinKind(draft.kind)) {
+      if (shape() === 'number') patch.value_num = ev.value_num;
+      if (endToggle()) patch.ended_at = ev.ended_at ?? null;
+      patch.detail = { memo: draft.memo.trim() };
+    }
     ctx.update(editing.id, patch, ev);
   });
   $('#lateDelete').addEventListener('click', () => {
@@ -289,5 +360,5 @@ export function setupLateEntry(ctx, { openDayList }) {
   // 그날 기록 목록(눌러서 고치기). 여기서는 오늘
   $('#recentBtn').addEventListener('click', () => { sfx.tap(); openDayList(0); });
 
-  return { openEdit };
+  return { open, openNew, openEdit };
 }

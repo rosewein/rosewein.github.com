@@ -16,6 +16,7 @@ import { setupQuickRecord } from './ui/quick-record.js';
 import { setupFeedAmounts } from './ui/feed-amounts.js';
 import { setupLateEntry } from './ui/late-entry.js';
 import { setupDayList } from './ui/day-list.js';
+import { setupMore } from './ui/more.js';
 import { setupVoiceInput } from './ui/voice-input.js';
 import { setupLogin } from './ui/login.js';
 import { setupStats } from './ui/stats.js';
@@ -124,6 +125,7 @@ function main() {
   setupFeedAmounts(ctx, { current: quick.quickAmounts, back: () => quick.openFeed({ keepAmount: true }) });
   const lateEntry = setupLateEntry(ctx, { openDayList: (back) => dayList.open(back) });
   const dayList = setupDayList(ctx, { onEdit: (e) => lateEntry.openEdit(e) });
+  setupMore(ctx, { openNew: (kind) => lateEntry.openNew(kind), openLate: () => lateEntry.open(), openDayList: (back) => dayList.open(back) });
   setupCloseButtons(() => ctx.sfx.tap());
   const stats = setupStats(ctx);
   const timeline = setupTimeline(ctx);

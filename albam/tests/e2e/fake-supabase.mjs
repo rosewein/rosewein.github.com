@@ -85,7 +85,7 @@ export async function createFakeSupabase(context) {
         return reply(200, { status: e ? 'saved' : 'not_found', id: body.p.id });
       }
       case '/rest/v1/rpc/care_timeline':
-        return reply(200, live().reverse().map((e) => ({ id: e.id, kind: e.kind, at: e.occurred_at, ended_at: e.ended_at ?? null, ml: e.amount_ml ?? null, type: e.detail?.type ?? null })));
+        return reply(200, live().reverse().map((e) => ({ id: e.id, kind: e.kind, at: e.occurred_at, ended_at: e.ended_at ?? null, ml: e.amount_ml ?? null, value: e.value_num ?? null, type: e.detail?.type ?? null, memo: e.detail?.memo ?? null, detail: e.detail || {} })));
       case '/rest/v1/rpc/care_set_sleep_end': {
         const e = events.find((x) => x.id === body.p_id && x.kind === 'sleep' && !x.deleted);
         if (e) e.ended_at = body.p_ended_at;

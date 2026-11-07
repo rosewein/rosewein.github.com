@@ -225,6 +225,7 @@ export function createApi(cfg, { transport, storage = STORAGE.real } = {}) {
       if (patch.occurred_at) p.occurred_at = iso(patch.occurred_at);
       if ('ended_at' in patch) p.ended_at = patch.ended_at ? iso(patch.ended_at) : null;
       if (patch.amount_ml != null) p.amount_ml = patch.amount_ml;
+      if (patch.value_num != null) p.value_num = patch.value_num;
       if (patch.detail) p.detail = patch.detail;
       const pending = await flushThenList();
       if (navigator.onLine && !pending.length) {
@@ -285,6 +286,7 @@ function toPayload(ev) {
   };
   if (ev.ended_at) p.ended_at = iso(ev.ended_at);
   if (ev.amount_ml != null) p.amount_ml = ev.amount_ml;
+  if (ev.value_num != null) p.value_num = ev.value_num;
   if (ev.voice_text) p.voice_text = ev.voice_text;
   return p;
 }

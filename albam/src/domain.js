@@ -79,6 +79,59 @@ export function sleepingNow(summary) {
   return s && !s.ended_at ? s : null;
 }
 
+/**
+ * 기록 종류(supabase/008 의 care_record_types). 요약의 record_types 로 받고, 받기 전에는 아래 기본값을 쓴다.
+ * @typedef {{key: string, label: string, shape: 'instant'|'range'|'number'|'text', unit?: string|null,
+ *            step?: number|null, min?: number|null, max?: number|null, default?: number|null, in_more?: boolean}} RecordType
+ */
+/** @type {RecordType[]} */
+export const DEFAULT_RECORD_TYPES = [
+  { key: 'feed', label: '수유', shape: 'instant', unit: 'ml', in_more: false },
+  { key: 'diaper', label: '기저귀', shape: 'instant', in_more: false },
+  { key: 'sleep', label: '잠', shape: 'range', in_more: false },
+  { key: 'bath', label: '목욕', shape: 'range', in_more: true },
+  { key: 'temperature', label: '체온', shape: 'number', unit: '°C', step: 0.1, min: 34, max: 42, default: 36.8, in_more: true },
+  { key: 'medication', label: '투약', shape: 'instant', in_more: true },
+  { key: 'weight', label: '체중', shape: 'number', unit: 'kg', step: 0.01, min: 1, max: 30, default: 7, in_more: true },
+  { key: 'height', label: '키', shape: 'number', unit: 'cm', step: 0.1, min: 30, max: 120, default: 65, in_more: true },
+  { key: 'memo', label: '메모', shape: 'text', in_more: true },
+  { key: 'tummy_time', label: '터미타임', shape: 'range', in_more: true },
+  { key: 'play', label: '놀이', shape: 'range', in_more: true },
+  { key: 'hospital', label: '병원', shape: 'instant', in_more: true },
+  { key: 'other', label: '기타', shape: 'range', in_more: true },
+];
+let recordTypes = new Map(DEFAULT_RECORD_TYPES.map((t) => [t.key, t]));
+/** 요약에서 받은 기록 종류로 바꾼다(비어 있으면 그대로) */
+export function setRecordTypes(list) {
+  if (Array.isArray(list) && list.length) recordTypes = new Map(list.map((t) => [t.key, t]));
+}
+/** @returns {RecordType|undefined} */
+export const recordType = (kind) => recordTypes.get(kind);
+/** [+] 더보기에 보일 종류(표의 순서대로) */
+export const moreTypes = () => [...recordTypes.values()].filter((t) => t.in_more);
+/** 수유·기저귀·잠은 큰 버튼과 따로 만든 창이 있다. 나머지는 기록 종류 표로 움직인다 */
+export const isBuiltinKind = (kind) => kind === KIND.FEED || kind === KIND.DIAPER || kind === KIND.SLEEP;
+/** 소수 자리는 한 번에 움직이는 양(step)을 따른다: 0.1 → 37.4, 0.01 → 7.35 */
+export function formatValue(t, v) {
+  if (v == null || Number.isNaN(Number(v))) return '';
+  const digits = t?.step ? Math.max(0, Math.round(-Math.log10(t.step))) : 0;
+  return `${Number(v).toFixed(digits)}${t?.unit || ''}`;
+}
+/** 세부 글 한 줄(약 이름, 병원, 놀이, 메모) */
+export function detailText(detail = {}) {
+  return ['medicine', 'what', 'hospital', 'reason', 'memo'].map((k) => detail?.[k]).filter(Boolean).join(' · ');
+}
+/** 수유·기저귀·잠 말고 다른 종류의 이름. 예: "체온 37.4°C", "목욕 · 10분 · 보습로션" */
+export function describeOther(kind, { value = null, at = null, ended_at = null, detail = {} } = {}) {
+  const t = recordType(kind);
+  const parts = [t?.label || kind];
+  if (t?.shape === 'number' && value != null) parts[0] += ` ${formatValue(t, value)}`;
+  if (ended_at && at) parts.push(formatDuration(new Date(ended_at) - new Date(at)));
+  const extra = detailText(detail);
+  if (extra) parts.push(extra);
+  return parts.join(' · ');
+}
+
 /** 버튼에 쓰는 짧은 이름 */
 export const DIAPER_BUTTON = Object.freeze({ pee: '소변', poo: '대변', both: '둘 다' });
 
@@ -92,7 +145,7 @@ const SHOW_TIME_AFTER_MS = 2 * 60000;
  */
 export function describeEvent(ev, now = new Date()) {
   if (ev.kind === KIND.SLEEP) return ev.ended_at ? `잠 ${formatClock(ev.occurred_at)}~${formatClock(ev.ended_at)}` : `잠 시작 ${formatClock(ev.occurred_at)}`;
-  let text = ev.kind;
+  let text = isBuiltinKind(ev.kind) ? ev.kind : describeOther(ev.kind, { value: ev.value_num, at: ev.occurred_at, ended_at: ev.ended_at, detail: ev.detail });
   if (ev.kind === KIND.FEED) text = `수유 ${ev.amount_ml ?? ''}ml${ev.ended_at ? ` · ${formatDuration(new Date(ev.ended_at) - new Date(ev.occurred_at))}` : ''}`;
   if (ev.kind === KIND.DIAPER) text = `기저귀 ${DIAPER_LABEL[ev.detail?.type] || ''}`;
   const at = new Date(ev.occurred_at || now);
@@ -108,5 +161,5 @@ export function describeRecent(r) {
   if (r.kind === KIND.FEED) return `수유 ${r.ml ?? ''}ml`;
   if (r.kind === KIND.DIAPER) return `기저귀 ${DIAPER_LABEL[r.detail?.type] || ''}`;
   if (r.kind === KIND.SLEEP) return r.ended_at ? `잠 ~${formatClock(r.ended_at)}` : '잠 (자는 중)';
-  return r.kind;
+  return describeOther(r.kind, { value: r.value, at: r.at, ended_at: r.ended_at, detail: r.detail });
 }

@@ -90,7 +90,7 @@ async function demoFlow(browser, base) {
   const [mic, feed, diaper, late] = [await box('#micBtn'), await box('#feedBtn'), await box('#diaperBtn'), await box('#lateBtn')];
   check(mic.w === mic.h && JSON.stringify(mic) === JSON.stringify({ ...late, top: mic.top }) && (await text(page, '#micBtn')) === '' && (await text(page, '#lateBtn')) === '',
     `마이크·지난 기록은 아이콘만, 같은 정사각형 ${mic.w}x${mic.h}`);
-  check((await page.getAttribute('#micBtn', 'aria-label')) === '말하기' && (await page.getAttribute('#lateBtn', 'aria-label')).startsWith('지난 기록'), '아이콘 버튼에 이름(화면 낭독용)');
+  check((await page.getAttribute('#micBtn', 'aria-label')) === '말하기' && (await page.getAttribute('#lateBtn', 'aria-label')).startsWith('더보기'), '아이콘 버튼에 이름(화면 낭독용)');
   check(JSON.stringify(feed) === JSON.stringify(diaper), `수유·기저귀 크기·아이콘·글자 똑같음 ${JSON.stringify(feed)}`);
   check(feed.w > mic.w * 2.5 && feed.h === mic.h && feed.top === mic.top && feed.ico === mic.ico, '수유·기저귀가 크게, 높이·줄·아이콘 크기는 마이크와 같음');
   const sleepBox = await box('#sleepBtn');
@@ -165,6 +165,7 @@ async function demoFlow(browser, base) {
   check(kept === 1, '취소한 기록은 지우지 않고 표시만');
 
   await page.click('#lateBtn');
+  await page.click('#moreLate');
   await page.click('#lateSheet [data-kind="sleep"]');
   await shot(page, 'late-sleep');
   await page.click('#lateSheet [data-kind="feed"]');
@@ -231,7 +232,7 @@ async function demoFlow(browser, base) {
   check((await text(page, '#lastFeed')).startsWith('마지막 수유14:00'), '3시간 전 기록은 마지막 수유를 바꾸지 않음');
   await page.click('#undoMsg');
   await page.click('#lateBtn');
-  await page.click('#recentBtn');
+  await page.click('#moreToday');
   await page.waitForTimeout(400);
   const rows = await page.$$eval('#recentList .dayRow .tm', (d) => d.map((x) => x.textContent.slice(0, 5)));
   check(rows.includes('10:30') && rows.indexOf('10:30') > 0 && rows.join() === [...rows].sort().join(), `오늘 기록 목록에서 실제 시각 순서로 자리 잡음 ${rows.join(' ')}`);
@@ -306,7 +307,7 @@ async function feedTimerFlow(browser, base) {
   check(saved === 1, '서버(미리 보기)에 끝 시각이 들어감');
   // 기록 목록과 고치기 창에서 끝 시각
   await page.click('#lateBtn');
-  await page.click('#recentBtn');
+  await page.click('#moreToday');
   await page.clock.runFor(800);
   const rows = await page.$$eval('#recentList .dayRow', (r) => r.map((x) => x.textContent));
   check(rows.some((r) => r.includes('수유 200ml · 12분')), `기록 목록에 걸린 시간 ${rows.join(' / ')}`);
@@ -558,6 +559,60 @@ async function nightFlow(browser, base) {
   check((await page.evaluate(() => document.querySelector('#shift').style.transform)) !== '', '몇 분마다 화면 위치 이동');
 }
 
+// [+] 더보기: 체온(숫자 ±), 목욕(시작~끝 + 메모)
+async function moreFlow(browser, base) {
+  const page = await (await browser.newContext(DEVICE)).newPage();
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await page.clock.install({ time: DAYTIME });
+  await page.goto(`${base}?demo`);
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.clock.runFor(800);
+  await page.click('#lateBtn');
+  const labels = await page.$$eval('#moreGrid button', (b) => b.map((x) => x.textContent));
+  check(['목욕', '체온', '투약', '체중', '키', '메모', '터미타임', '놀이', '병원', '기타'].every((l) => labels.includes(l)) && !labels.includes('수유'),
+    `더보기 창에 종류 버튼 ${labels.join(' ')}`);
+  check((await curvedEdgeOffenders(page, '#moreSheet h2, #moreSheet button')).length === 0, '더보기 창: 위·아래 곡면에 글·버튼 없음');
+  await shot(page, 'more');
+  await page.click('#moreGrid button:text-is("체온")');
+  check(await text(page, '#lateTitle') === '체온 넣기' && await text(page, '#lateDetail .valueView') === '36.8°C', '체온 넣기: 처음 값 36.8°C');
+  await page.click('#lateDetail .stepBtn:text-is("+1.0")');
+  await page.click('#lateDetail .stepBtn:text-is("+0.1")');
+  check(await text(page, '#lateDetail .valueView') === '37.9°C', `± 버튼으로 37.9°C (${await text(page, '#lateDetail .valueView')})`);
+  const fits = await page.$eval('#lateDetail', (r) => r.scrollWidth <= r.clientWidth + 0.5);
+  check(fits, '체온 줄이 창 안에 들어감');
+  await shot(page, 'more-temperature');
+  await page.click('#lateSave');
+  await page.waitForTimeout(400);
+  check((await text(page, '#undoText')).startsWith('체온 37.9°C'), `저장: ${await text(page, '#undoText')}`);
+  await page.click('#undoMsg');
+  await page.click('#lateBtn');
+  await page.click('#moreGrid button:text-is("목욕")');
+  check(await page.isVisible('#late-end') || await page.isVisible('#lateFeedEnd'), '목욕: 끝 시각이 있음');
+  await page.fill('#lateMemo', '보습로션');
+  await shot(page, 'more-bath');
+  await page.click('#lateSave');
+  await page.waitForTimeout(400);
+  check((await text(page, '#undoText')).startsWith('목욕 · 10분 · 보습로션'), `목욕 저장: ${await text(page, '#undoText')}`);
+  await page.click('#undoMsg');
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('albam.demo.events')).filter((e) => !['feed', 'diaper', 'sleep'].includes(e.kind)).map((e) => [e.kind, e.value_num, e.detail?.memo || '']));
+  check(JSON.stringify(saved) === JSON.stringify([['temperature', 37.9, ''], ['bath', null, '보습로션']]), `미리 보기에 저장 ${JSON.stringify(saved)}`);
+  await page.click('#lateBtn');
+  await page.click('#moreToday');
+  await page.clock.runFor(800);
+  const rows = await page.$$eval('#recentList .dayRow', (r) => r.map((x) => x.textContent));
+  check(rows.some((r) => r.includes('체온 37.9°C')) && rows.some((r) => r.includes('목욕 · 10분 · 보습로션')), `오늘 기록에 보임 ${rows.join(' / ')}`);
+  await page.click('#recentList .dayRow:has-text("체온")');
+  check(await text(page, '#lateTitle') === '기록 고치기 · 체온' && await text(page, '#lateDetail .valueView') === '37.9°C', '체온 고치기 창: 값 그대로');
+  await page.click('#lateDetail .stepBtn:text-is("-0.1")');
+  await page.click('#lateSave');
+  await page.waitForTimeout(400);
+  const after = await page.evaluate(() => JSON.parse(localStorage.getItem('albam.demo.events')).find((e) => e.kind === 'temperature').value_num);
+  check(after === 37.8, `고친 값 37.8 (${after})`);
+  check(errors.length === 0, `페이지 오류 없음 ${errors.join(' ')}`);
+}
+
 async function supabaseFlow(browser, base) {
   const context = await browser.newContext(DEVICE);
   const fake = await createFakeSupabase(context);
@@ -660,6 +715,7 @@ try {
   console.log('# 긴 글'); await longTextFlow(browser, base);
   console.log('# 미리 보기 오프라인'); await demoOfflineFlow(browser, base);
   console.log('# 밤 화면'); await nightFlow(browser, base);
+  console.log('# 더보기'); await moreFlow(browser, base);
   console.log('# Supabase(가짜)'); await supabaseFlow(browser, base);
 } finally {
   await browser.close();

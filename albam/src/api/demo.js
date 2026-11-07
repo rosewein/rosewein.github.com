@@ -4,6 +4,7 @@
 // 규칙은 supabase/*.sql 의 함수를 흉내 낸다.
 
 import { createApi, STORAGE } from './index.js';
+import { DEFAULT_RECORD_TYPES } from '../domain.js';
 import { NetworkError } from './errors.js';
 
 const EVENTS_KEY = 'albam.demo.events';
@@ -89,10 +90,11 @@ class DemoServer {
       last_diaper: diaper ? { id: diaper.id, at: diaper.occurred_at, type: diaper.detail.type } : null,
       last_sleep: sleep ? { id: sleep.id, at: sleep.occurred_at, ended_at: sleep.ended_at } : null,
       feed_amounts: this.feedAmounts(),
+      record_types: DEFAULT_RECORD_TYPES,
       baby: DEMO_BABY,
       age: ageOn(now, DEMO_BABY),
       recent: all.slice(0, RECENT_LIMIT).map((e) => ({
-        id: e.id, kind: e.kind, at: e.occurred_at, ended_at: e.ended_at ?? null, ml: e.amount_ml ?? null, detail: e.detail, source: e.source,
+        id: e.id, kind: e.kind, at: e.occurred_at, ended_at: e.ended_at ?? null, ml: e.amount_ml ?? null, value: e.value_num ?? null, detail: e.detail, source: e.source,
       })),
       due_chores: [],
       settings: { day_start_hour: 0, dup_window_minutes: DUP_WINDOW_MIN },
@@ -107,7 +109,7 @@ class DemoServer {
       if (dup) return { status: 'confirm', existing: { id: dup.id, kind: dup.kind, at: dup.occurred_at, ml: dup.amount_ml, detail: dup.detail } };
     }
     this.events.push({
-      id: p.id, kind: p.kind, occurred_at: at.toISOString(), ended_at: p.ended_at ?? null, amount_ml: p.amount_ml ?? null,
+      id: p.id, kind: p.kind, occurred_at: at.toISOString(), ended_at: p.ended_at ?? null, amount_ml: p.amount_ml ?? null, value_num: p.value_num ?? null,
       detail: p.detail || {}, source: p.source, voice_text: p.voice_text ?? null, recorded_at: new Date().toISOString(),
     });
     this.save();
@@ -157,6 +159,7 @@ class DemoServer {
     if (p.occurred_at) e.occurred_at = new Date(p.occurred_at).toISOString();
     if ('ended_at' in p) e.ended_at = p.ended_at ?? null;
     if (p.amount_ml != null) e.amount_ml = p.amount_ml;
+    if (p.value_num != null) e.value_num = p.value_num;
     if (p.detail) e.detail = { ...(e.detail || {}), ...p.detail };
     this.save();
     return { status: 'saved', id: p.id };
@@ -165,7 +168,8 @@ class DemoServer {
   timeline(days = 3) {
     const from = new Date(); from.setHours(0, 0, 0, 0); from.setDate(from.getDate() - (days - 1));
     return this.live().filter((e) => new Date(e.occurred_at) >= from || (e.kind === 'sleep' && (!e.ended_at || new Date(e.ended_at) >= from)))
-      .reverse().map((e) => ({ id: e.id, kind: e.kind, at: e.occurred_at, ended_at: e.ended_at ?? null, ml: e.amount_ml ?? null, type: e.detail?.type ?? null }));
+      .reverse().map((e) => ({ id: e.id, kind: e.kind, at: e.occurred_at, ended_at: e.ended_at ?? null, ml: e.amount_ml ?? null, value: e.value_num ?? null,
+        type: e.detail?.type ?? null, memo: e.detail?.memo ?? null, feeding: !!e.detail?.feeding, detail: e.detail || {} }));
   }
 
   setSleepEnd(id, endedAt) {

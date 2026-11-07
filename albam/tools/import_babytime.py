@@ -62,16 +62,29 @@ TYPE_MAP = {
     '수면': ('sleep', {}),
     '낮잠': ('sleep', {'when': 'day'}),
     '밤잠': ('sleep', {'when': 'night'}),
+    # 그 밖의 기록(supabase/008 의 기록 종류 표와 같은 key)
+    'bath': ('bath', {}), '목욕': ('bath', {}),
+    'temperature': ('temperature', {}), '체온': ('temperature', {}), '열': ('temperature', {}),
+    'medicine': ('medication', {}), '투약': ('medication', {}),
+    'tummy time': ('tummy_time', {}), '터미타임': ('tummy_time', {}),
+    'play': ('play', {}), '놀이': ('play', {}),
+    'hospital': ('hospital', {}), '병원': ('hospital', {}),
+    '기타': ('other', {}),
 }
+# 시작~끝이 있는 종류: 머리줄의 끝, 없으면 소요시간으로 끝을 정한다
+RANGE_KINDS = {'sleep', 'bath', 'tummy_time', 'play', 'other'}
 # 옮기지 않는 종류(엄마 유축, 투약 등). 보고에만 센다
-SKIP_TYPES = {'pumping', '유축', 'medicine', '투약', 'baby food', '이유식', 'bath', '목욕', 'temperature', '체온', '열', '기타',
-              'hospital', '병원', 'play', '놀이', 'tummy time', '터미타임', 'snack', '간식', 'growth', '성장'}
+SKIP_TYPES = {'pumping', '유축', 'baby food', '이유식', 'snack', '간식', 'growth', '성장'}
 
 TYPE_KEYS = {'type', '종류', '기록 종류', '타입', '유형'}
 DIAPER_KEYS = {'diaper type', '기저귀 종류', '기저귀 상태', '배변', '배변 형태'}
 DURATION_KEYS = {'duration', '시간', '소요 시간', '소요시간'}
 MEMO_KEYS = {'memo', '메모'}
 COLOR_KEYS = {'배변색', 'poop color'}
+VALUE_KEYS = {'체온', 'temperature'}   # 숫자 하나 → value_num
+# 이름 그대로 detail 에 둘 항목
+DETAIL_KEYS = {'약 종류': 'medicine', 'Medicine type': 'medicine', '놀이 종류': 'what', '기타 항목': 'what',
+               '방문유형': 'visit_type', '병원명': 'hospital', '의사명': 'doctor', '방문사유': 'reason'}
 DIAPER_VALUES = {'pee': 'pee', 'wet': 'pee', '소변': 'pee', 'poop': 'poo', 'poo': 'poo', 'dirty': 'poo', '대변': 'poo',
                  'both': 'both', 'mixed': 'both', 'pee and poop': 'both', '둘 다': 'both', '둘다': 'both', '소변+대변': 'both', '혼합': 'both'}
 
@@ -185,6 +198,12 @@ def apply_fields(ev, fields, report):
             detail['memo'] = value
         elif k in COLOR_KEYS:
             detail['color'] = value
+        elif k in VALUE_KEYS:
+            m = re.search(r'\d+(?:\.\d+)?', value)
+            if m:
+                ev['value_num'] = float(m.group())
+        elif key in DETAIL_KEYS:
+            detail[DETAIL_KEYS[key]] = value
         elif k in DIAPER_KEYS:
             if value.strip().lower() in DIAPER_VALUES:
                 detail['type'] = DIAPER_VALUES[value.strip().lower()]
@@ -221,7 +240,7 @@ def parse_block(lines, report):
         return None
 
     kind, base_detail = mapped
-    ev = {'kind': kind, 'occurred_at': start, 'ended_at': None, 'amount_ml': None,
+    ev = {'kind': kind, 'occurred_at': start, 'ended_at': None, 'amount_ml': None, 'value_num': None,
           'detail': {**base_detail, 'babytime_type': type_value}}
     apply_fields(ev, fields, report)
 
@@ -229,13 +248,14 @@ def parse_block(lines, report):
     if kind == 'diaper' and 'type' not in ev['detail']:
         bump(report, 'diaper_without_type')
         return None
-    if kind == 'sleep':
+    if kind in RANGE_KINDS:
         if end is None and ev['detail'].get('duration_min'):
             end = start + timedelta(minutes=ev['detail']['duration_min'])
-        if end is None or end <= start:
+        if kind == 'sleep' and (end is None or end <= start):
             bump(report, 'sleep_without_end')
             return None
-        ev['ended_at'] = end
+        if end is not None and end > start:
+            ev['ended_at'] = end
     if kind == 'feed' and ev['amount_ml'] is not None and not 0 <= ev['amount_ml'] <= 1000:
         bump(report, 'bad_amount')
         ev['amount_ml'] = None
@@ -289,11 +309,14 @@ def compact_line(e):
     """기록 → 한 줄. '종류|시작|끝|양|세부JSON'. 시각은 서울 'YYYY-MM-DD HH:MM'.
     세부에서 베이비타임 원래 이름과 소요시간(끝-시작으로 다시 셀 수 있음)은 뺀다."""
     fmt = lambda t: t.astimezone(TZ).strftime('%Y-%m-%d %H:%M') if t else ''
-    detail = {k: (str(v).replace('|', '/').replace('\n', ' ') if k == 'memo' else v)
+    detail = {k: (v.replace('|', '/').replace('\n', ' ') if isinstance(v, str) else v)
               for k, v in e['detail'].items() if k not in ('babytime_type', 'duration_min')}
     ml = '' if e['amount_ml'] is None else str(int(e['amount_ml']))
-    return '|'.join([e['kind'], fmt(e['occurred_at']), fmt(e['ended_at']), ml,
-                     json.dumps(detail, ensure_ascii=False, separators=(',', ':'))])
+    parts = [e['kind'], fmt(e['occurred_at']), fmt(e['ended_at']), ml, json.dumps(detail, ensure_ascii=False, separators=(',', ':'))]
+    # 숫자 값(체온 등)이 있을 때만 여섯째 칸. 수유·기저귀·잠 줄은 예전과 똑같다(같은 id)
+    if e.get('value_num') is not None:
+        parts.append(f"{e['value_num']:g}")
+    return '|'.join(parts)
 
 
 def id_line(line):
@@ -312,13 +335,14 @@ def line_id(line):
 
 
 SQL_TEMPLATE = """-- 베이비타임에서 옮긴 기록 {count}건. Supabase SQL Editor 에서 실행(두 번 실행해도 한 번만 들어감)
-insert into public.care_events (id, kind, occurred_at, ended_at, amount_ml, detail, source, recorded_by)
+insert into public.care_events (id, kind, occurred_at, ended_at, amount_ml, detail, value_num, source, recorded_by)
 select md5('babytime|' || regexp_replace(l, '^(feed\\|[^|]*\\|)[^|]*', '\\1'))::uuid,   -- id 는 수유 끝 칸을 비우고 센다(id_line)
        split_part(l, '|', 1),
        split_part(l, '|', 2)::timestamp at time zone 'Asia/Seoul',
        nullif(split_part(l, '|', 3), '')::timestamp at time zone 'Asia/Seoul',
        nullif(split_part(l, '|', 4), '')::int,
        split_part(l, '|', 5)::jsonb,
+       nullif(split_part(l, '|', 6), '')::numeric,
        'import', null
 from unnest(string_to_array($babytime$
 {lines}
