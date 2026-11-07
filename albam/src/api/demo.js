@@ -12,6 +12,24 @@ const DEFAULT_FEED_AMOUNTS = [200, 230, 270];
 const DUP_WINDOW_MIN = 10;
 const RECENT_LIMIT = 8;
 
+/** 미리 보기 아기. 나이 규칙은 supabase/006 의 care_age 와 같다(태어난 날 D+1, 개월 뒤 남은 날 +1) */
+const DEMO_BABY = { name: '세훈', nickname: '알밤', birth_date: '2026-06-18', due_date: '2026-07-10' };
+function monthsDays(on, from) {
+  let m = (on.getFullYear() - from.getFullYear()) * 12 + on.getMonth() - from.getMonth();
+  const plus = (n) => { const d = new Date(from); d.setMonth(d.getMonth() + n); if (d.getDate() !== from.getDate()) d.setDate(0); return d; };
+  if (plus(m) > on) m -= 1;
+  return [m, Math.round((on - plus(m)) / 86400000) + 1];
+}
+function ageOn(now, baby) {
+  const on = new Date(now); on.setHours(0, 0, 0, 0);
+  const day = (s) => { const [y, mo, d] = s.split('-').map(Number); return new Date(y, mo - 1, d); };
+  const birth = day(baby.birth_date);
+  const due = day(baby.due_date);
+  const [months, days] = monthsDays(on, birth);
+  const [cm, cd] = monthsDays(on, due);
+  return { day: Math.round((on - birth) / 86400000) + 1, months, days, corrected_day: Math.round((on - due) / 86400000) + 1, corrected_months: cm, corrected_days: cd };
+}
+
 const minutesAgo = (n) => new Date(Date.now() - n * 60000).toISOString();
 
 function sampleEvents() {
@@ -48,6 +66,7 @@ class DemoServer {
       case 'care_cancel_event': return this.cancelEvent(args.p_id);
       case 'care_set_feed_amounts': return this.setFeedAmounts(args.p_amounts);
       case 'care_stats': return this.stats(args.p_days);
+      case 'care_update_event': return this.updateEvent(args.p);
       case 'care_timeline': return this.timeline(args.p_days);
       case 'care_set_sleep_end': return this.setSleepEnd(args.p_id, args.p_ended_at);
       default: throw new Error(`unknown function ${name}`);
@@ -70,6 +89,8 @@ class DemoServer {
       last_diaper: diaper ? { id: diaper.id, at: diaper.occurred_at, type: diaper.detail.type } : null,
       last_sleep: sleep ? { id: sleep.id, at: sleep.occurred_at, ended_at: sleep.ended_at } : null,
       feed_amounts: this.feedAmounts(),
+      baby: DEMO_BABY,
+      age: ageOn(now, DEMO_BABY),
       recent: all.slice(0, RECENT_LIMIT).map((e) => ({
         id: e.id, kind: e.kind, at: e.occurred_at, ended_at: e.ended_at ?? null, ml: e.amount_ml ?? null, detail: e.detail, source: e.source,
       })),
@@ -127,6 +148,17 @@ class DemoServer {
       });
     }
     return out;
+  }
+
+  updateEvent(p) {
+    const e = this.events.find((x) => x.id === p.id && !x.deleted_at);
+    if (!e) return { status: 'not_found', id: p.id };
+    if (p.occurred_at) e.occurred_at = new Date(p.occurred_at).toISOString();
+    if ('ended_at' in p) e.ended_at = p.ended_at ?? null;
+    if (p.amount_ml != null) e.amount_ml = p.amount_ml;
+    if (p.detail) e.detail = { ...(e.detail || {}), ...p.detail };
+    this.save();
+    return { status: 'saved', id: p.id };
   }
 
   timeline(days = 3) {

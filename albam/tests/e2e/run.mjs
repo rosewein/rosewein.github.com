@@ -78,6 +78,7 @@ async function demoFlow(browser, base) {
   check((await page.evaluate(() => document.querySelector('#stage').style.zoom)) === '2', 'S10 에서 6배(기기 화소) = CSS zoom 2');
   const label = (sel) => page.getAttribute(sel, 'aria-label');
   check(await label('#elapsed') === '2시간 35분 전', '큰 글씨: 마지막 수유 뒤 "2시간 35분 전"');
+  check(await text(page, '#age') === 'D+142 · 4개월 20일 · 교정 3개월 28일', `나이 줄(11/6 기준) ${await text(page, '#age')}`);
   check(await text(page, '#lastFeed') === '마지막 수유11:25 · 200ml', '마지막 수유 시각에 이름표');
   check(await text(page, '#clock') === '지금14:00', '현재 시각에 "지금"');
   check(await text(page, '#today') === '오늘 수유3회 · 570ml', '오늘 수유 한 줄');
@@ -231,8 +232,9 @@ async function demoFlow(browser, base) {
   await page.click('#undoMsg');
   await page.click('#lateBtn');
   await page.click('#recentBtn');
-  const rows = await page.$$eval('#recentList div', (d) => d.map((x) => x.textContent));
-  check(rows.some((r) => r.includes('10:30')) && rows.indexOf(rows.find((r) => r.includes('10:30'))) > 0, '최근 기록에서 실제 시각 순서로 자리 잡음');
+  await page.waitForTimeout(400);
+  const rows = await page.$$eval('#recentList .dayRow .tm', (d) => d.map((x) => x.textContent.slice(0, 5)));
+  check(rows.includes('10:30') && rows.indexOf('10:30') > 0 && rows.join() === [...rows].sort().join(), `오늘 기록 목록에서 실제 시각 순서로 자리 잡음 ${rows.join(' ')}`);
   await shot(page, 'recent');
   check(errors.length === 0, `페이지 오류 없음 ${errors.join(' ')}`);
 }
@@ -293,7 +295,10 @@ async function statsFlow(browser, base) {
   await swipe(200, 560);
   check(await pageNow() === 'Clock', '오른쪽으로 밀면 시계 쪽');
   check(await text(page, '#bigClock') === '14:00' && await text(page, '#bigDate') === '11월 6일 금요일', `시각·날짜·요일 크게(${await text(page, '#bigDate')})`);
-  check((await curvedEdgeOffenders(page, '#bigClock, #bigDate, #pageDots')).length === 0, '시계 쪽: 위·아래 곡면에 글 없음');
+  check(await text(page, '#bigAge') === 'D+142 · 4개월 20일 · 교정 3개월 28일', `시계 쪽에도 나이 ${await text(page, '#bigAge')}`);
+  check((await curvedEdgeOffenders(page, '#bigClock, #bigDate, #bigAge, #pageDots')).length === 0, '시계 쪽: 위·아래 곡면에 글 없음');
+  const clockOverlap = await page.evaluate(() => { const a = document.querySelector('#bigAge span:last-child').getBoundingClientRect(); const d = document.querySelector('#pageDots').getBoundingClientRect(); const t = document.querySelector('#bigDate').getBoundingClientRect(); return a.bottom > d.top + 4 || t.bottom > a.top + 1; });
+  check(!clockOverlap, '시계 쪽: 날짜·나이·점이 안 겹침');
   await shot(page, 'clock');
   await page.clock.runFor(65000);
   check(await pageNow() === 'Clock', '시계 쪽은 안 만져도 그대로(탁상시계)');
@@ -325,6 +330,39 @@ async function statsFlow(browser, base) {
   await dot(3);
   await page.clock.runFor(500);
   check((await page.$$eval('.tlRow:first-child .tlDiaper.poo', (d) => d.length)) === 1, '방금 넣은 대변이 타임라인에');
+
+  // 고치기: 날짜 줄을 누르면 그날 기록 목록 → 줄을 누르면 고치기 창
+  await page.click('.tlRow:first-child');
+  await page.waitForSelector('#recentSheet:not(.hidden)');
+  const dayRows = await page.$$eval('#recentList .dayRow', (r) => r.map((x) => x.textContent));
+  check(dayRows.length >= 4 && (await text(page, '#recentTitle')).startsWith('오늘 기록'), `오늘 기록 목록(${dayRows.length}줄)`);
+  const rowH = await page.$eval('#recentList .dayRow', (r) => r.getBoundingClientRect().height / (parseFloat(document.querySelector('#stage').style.zoom) || 1));
+  check(rowH >= 22, `목록 줄이 누르기 좋게 큼(${rowH})`);
+  await shot(page, 'day-list');
+  await page.click('#recentList .dayRow:has-text("수유 200ml") >> nth=0');
+  await page.waitForSelector('#lateSheet:not(.hidden)');
+  check((await text(page, '#lateTitle')) === '기록 고치기 · 수유' && await page.isVisible('#lateDelete') && await page.isHidden('#recentBtn'), '고치기 창: 제목, [지우기]');
+  check((await page.$$eval('#lateSheet .kinds button', (b) => b.filter((x) => !x.classList.contains('hidden')).length)) === 1, '고칠 때는 종류를 못 바꿈');
+  await page.click("#lateDetail .machineBtn >> nth=1");   // +30 브레짜
+  await shot(page, 'edit-feed');
+  await page.click('#lateSave');
+  await page.clock.runFor(800);
+  check((await text(page, '#notice')).startsWith('고쳤어요 · 수유 230ml'), `고친 결과 알림(${await text(page, '#notice')})`);
+  const edited = await page.evaluate(() => JSON.parse(localStorage.getItem('albam.demo.events')).filter((e) => e.kind === 'feed' && e.amount_ml === 230).length);
+  check(edited === 1, '서버(미리 보기) 기록이 230ml 로');
+  check((await page.$$eval('.tlRow:first-child .tlMl', (m) => m.map((x) => x.textContent))).includes('230'), '타임라인에도 230');
+  // 지우기: 두 번 눌러야
+  await page.click('.tlRow:first-child');
+  await page.waitForSelector('#recentSheet:not(.hidden)');
+  await page.clock.runFor(300);
+  await page.click('#recentList .dayRow:has-text("기저귀") >> nth=0');
+  await page.click('#lateDelete');
+  check(await text(page, '#lateDelete') === '한 번 더 누르면 지워요' && await page.isVisible('#lateSheet'), '[지우기] 한 번은 확인만');
+  await page.click('#lateDelete');
+  await page.clock.runFor(800);
+  check((await text(page, '#notice')).startsWith('지웠어요 · 기저귀'), '두 번 누르면 지움');
+  const deleted = await page.evaluate(() => JSON.parse(localStorage.getItem('albam.demo.events')).filter((e) => e.deleted_at).length);
+  check(deleted === 1, '지운 기록은 취소 표시만(남아 있음)');
 
   // 통계 쪽
   await swipe(560, 200);
