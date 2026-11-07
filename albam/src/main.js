@@ -13,6 +13,7 @@ import { createStatusView } from './ui/status.js';
 import { setupNight } from './ui/night.js';
 import { setupRecorder } from './ui/recorder.js';
 import { setupQuickRecord } from './ui/quick-record.js';
+import { setupFeedAmounts } from './ui/feed-amounts.js';
 import { setupLateEntry } from './ui/late-entry.js';
 import { setupVoiceInput } from './ui/voice-input.js';
 import { setupLogin } from './ui/login.js';
@@ -110,7 +111,8 @@ function main() {
   const recorder = setupRecorder(ctx);
   const voice = setupVoiceInput(ctx);
   const login = setupLogin(ctx);
-  setupQuickRecord(ctx);
+  const quick = setupQuickRecord(ctx);
+  setupFeedAmounts(ctx, { current: quick.quickAmounts, back: () => quick.openFeed({ keepAmount: true }) });
   setupLateEntry(ctx);
   setupCloseButtons(() => ctx.sfx.tap());
 

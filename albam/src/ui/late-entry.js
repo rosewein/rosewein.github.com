@@ -3,7 +3,7 @@
 
 import { $, $$, el, setHidden } from './dom.js';
 import { openSheet } from './sheets.js';
-import { clampAmount } from './quick-record.js';
+import { amountSteppers, amountView } from './amount.js';
 import { DIAPER_BUTTON, KIND, SOURCE, describeRecent } from '../domain.js';
 import { formatClock, formatDay, formatDuration, minutes } from '../time.js';
 
@@ -14,7 +14,7 @@ const DEFAULT_SLEEP_MIN = 60;
 
 /** @param {import('../main.js').AppContext} ctx */
 export function setupLateEntry(ctx) {
-  const { state, sfx } = ctx;
+  const { state, sfx, cfg } = ctx;
   /** 화면에서 고치는 중인 기록 */
   const draft = {
     kind: KIND.FEED,
@@ -22,7 +22,7 @@ export function setupLateEntry(ctx) {
     end: new Date(),
     /** ±버튼이 움직일 줄 */
     editing: /** @type {'start'|'end'} */ ('start'),
-    amount: 160,
+    amount: 200,
     diaperType: 'pee',
   };
   const isSleep = () => draft.kind === KIND.SLEEP;
@@ -34,7 +34,7 @@ export function setupLateEntry(ctx) {
       start: new Date(now - minutes(DEFAULT_START_AGO_MIN)),
       end: now,
       editing: 'start',
-      amount: state.summary?.last_feed?.ml ?? 160,
+      amount: state.summary?.last_feed?.ml ?? 200,
     });
     render();
     openSheet('lateSheet');
@@ -67,8 +67,14 @@ export function setupLateEntry(ctx) {
     }, text);
 
     if (draft.kind === KIND.FEED) {
-      const step = (d) => button(d > 0 ? `+${d}` : String(d), { width: 40 }, () => { draft.amount = clampAmount(draft.amount + d); });
-      return [step(-10), step(-5), el('div', { className: 'amt t24' }, `${draft.amount}ml`), step(5), step(10)];
+      // 수유 창과 같은 줄: [-10] [-30 브레짜] 200ml/브레짜 180 [+30 브레짜] [+10]
+      const steps = amountSteppers({
+        get: () => draft.amount,
+        set: (ml) => { draft.amount = ml; render(); },
+        mixing: cfg,
+        tap: sfx.tap,
+      });
+      return [...steps.before, amountView(draft.amount, cfg), ...steps.after];
     }
     if (draft.kind === KIND.DIAPER) {
       return Object.entries(DIAPER_BUTTON).map(([type, label]) =>

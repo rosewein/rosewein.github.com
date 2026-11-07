@@ -24,19 +24,14 @@
       <div id="bubble"></div>
     </div>
 
-    <!-- 오른쪽 위: 상태 -->
+    <!-- 오른쪽 위: 상태. 시각마다 무엇의 시각인지 글로 붙인다 -->
     <div class="box" id="status">
-      <div id="elapsedLabel" class="dim">수유 후</div>
-      <div id="elapsed" class="t48">-:--</div>
-      <div id="today">
-        <div class="dim">오늘</div>
-        <div id="todayCount" class="t24">-회</div>
-        <div id="todayMl">-ml</div>
-      </div>
-      <div id="lastFeed" class="dim">마지막 수유 -</div>
-      <div id="lastDiaper" class="dim">기저귀 -</div>
-      <div id="clock" class="dim">--:--</div>
-      <div id="net" class="t9 faint"></div>
+      <div id="lastFeed"></div>                 <!-- 마지막 수유 11:25 · 160ml -->
+      <div id="clock"></div>                    <!-- 지금 14:00 -->
+      <div id="elapsed"></div>                  <!-- 2시간 35분 전 (숫자 크게) -->
+      <div id="today"></div>                    <!-- 오늘 수유 3회 · 420ml -->
+      <div id="net" class="t9 faint"></div>     <!-- 대기 n건 / 연결 안 됨 -->
+      <div id="lastDiaper"></div>               <!-- 마지막 기저귀 소변 · 1시간 10분 전 -->
       <button class="px ghost" id="lateBtn"><span class="spr ico ico-clock"></span>지난 기록 넣기 · 시각 고치기</button>
     </div>
 
@@ -53,18 +48,24 @@
 
     <!-- 수유량 고르기 -->
     <div class="sheet hidden" id="feedSheet">
-      <h2>수유량 · 지금</h2>
-      <div class="row" id="amountRow"></div>
-      <div class="row" id="stepRow">
-        <button class="px" data-step="-10">-10</button>
-        <button class="px" data-step="-5">-5</button>
-        <div id="stepVal" class="t24">160ml</div>
-        <button class="px" data-step="5">+5</button>
-        <button class="px" data-step="10">+10</button>
-      </div>
+      <h2>수유량(완성량) · 지금</h2>
+      <button class="px ghost" id="amountEditBtn">빠른 선택 바꾸기</button>
+      <div class="row" id="amountRow"></div>     <!-- 빠른 선택: 200 / 브레짜 180 … -->
+      <div class="row" id="stepRow"></div>       <!-- [-10] [-30 브레짜] 200ml·브레짜 180 [+30 브레짜] [+10] -->
       <div class="foot">
         <button class="px ghost" data-close>닫기</button>
         <button class="px main acc" id="feedSave">저장</button>
+      </div>
+    </div>
+
+    <!-- 수유량 설정: 빠른 선택 세 개 -->
+    <div class="sheet hidden" id="amountSheet">
+      <h2>수유량 빠른 선택 바꾸기 · 모든 기기에 같이 적용</h2>
+      <div id="amountSlots"></div>
+      <div id="amountMsg" class="t9 warn"></div>
+      <div class="foot">
+        <button class="px ghost" id="amountCancel">취소</button>
+        <button class="px main acc" id="amountSave">저장</button>
       </div>
     </div>
 

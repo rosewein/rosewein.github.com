@@ -4,9 +4,10 @@
 /**
  * @typedef {Object} QueueItem
  * @property {number} [seq]                자동 번호
- * @property {'add'|'cancel'} op
+ * @property {'add'|'cancel'|'feed_amounts'} op
  * @property {string} id                   기록 id
  * @property {Object} [payload]            op='add' 일 때 care_add_event 에 보낼 값
+ * @property {number[]} [amounts]          op='feed_amounts' 일 때 수유량 빠른 선택
  * @property {number} created
  */
 

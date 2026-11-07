@@ -1,22 +1,29 @@
 // 화면과 떨어진 순수 함수들: 시각 글자, 기록 이름, 캐릭터 기분, 수유량 빠른 선택, 못 보낸 기록 얹기
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { formatAgo, formatClock, formatDay, formatDuration, formatElapsed, isWithinHours } from '../../src/time.js';
+import { agoParts, formatAgo, formatClock, formatDay, formatDuration, isWithinHours } from '../../src/time.js';
 import { describeEvent, describeRecent } from '../../src/domain.js';
 import { applyPending, findLocalDuplicate } from '../../src/api/pending.js';
 
 // status.js·quick-record.js 는 DOM 도움 함수를 가져오지만, 불러오는 순간에는 DOM 을 쓰지 않는다
 const { chooseMood } = await import('../../src/ui/status.js');
-const { chooseQuickAmounts, clampAmount } = await import('../../src/ui/quick-record.js');
+const { feedAmountsOf, clampAmount } = await import('../../src/ui/quick-record.js');
+const { toSlots } = await import('../../src/ui/feed-amounts.js');
+const { mlForScoops, mlForWater, waterFor, machineLabel, machineAmounts, stepMachine } = await import('../../src/formula.js');
 
 const NOW = new Date(2026, 10, 6, 15, 0);
 const ago = (min) => new Date(NOW - min * 60000);
 
 test('시각 글자', () => {
   assert.equal(formatClock(new Date(2026, 0, 1, 9, 5)), '09:05');
-  assert.equal(formatElapsed(ago(155), NOW), '2:35');
-  assert.equal(formatElapsed(null, NOW), '-:--');
-  assert.equal(formatElapsed(ago(200 * 60), NOW), '99:00');
+  assert.deepEqual(agoParts(ago(155), NOW), [['2', '시간'], ['35', '분']]);
+  assert.deepEqual(agoParts(ago(35), NOW), [['35', '분']]);
+  assert.deepEqual(agoParts(ago(0.5), NOW), []);
+  assert.equal(formatAgo(ago(155), NOW), '2시간 35분 전');
+  assert.equal(formatAgo(ago(0.5), NOW), '방금');
+  assert.equal(formatAgo(ago(12 * 60 + 5), NOW), '12시간 5분 전');
+  assert.equal(formatAgo(ago(11 * 60 + 59), NOW, { hoursOnlyFrom: 10 }), '11시간 전');
+  assert.equal(formatAgo(ago(9 * 60 + 59), NOW, { hoursOnlyFrom: 10 }), '9시간 59분 전');
   assert.equal(formatAgo(ago(35), NOW), '35분 전');
   assert.equal(formatAgo(ago(70), NOW), '1시간 10분 전');
   assert.equal(formatAgo(ago(120), NOW), '2시간 전');
@@ -52,10 +59,37 @@ test('캐릭터 기분 우선순위', () => {
   assert.equal(chooseMood({ ...base, minutesSinceFeed: null }), 'normal');
 });
 
+test('브레짜(물 30ml 단위) + 압타밀(물 30ml에 1스푼) → 완성량', () => {
+  assert.deepEqual(machineAmounts(), [70, 100, 130, 170, 200, 230, 270, 300, 330], '브레짜 60~300, 10ml 단위 반올림');
+  assert.deepEqual([180, 210, 240].map((w) => mlForWater(w)), [200, 230, 270]);
+  assert.equal(mlForScoops(7), 230);
+  assert.equal(waterFor(200), 180);
+  assert.equal(waterFor(230), 210);
+  assert.equal(waterFor(220), null, '브레짜 칸이 아님');
+  assert.equal(waterFor(330), 300);
+  assert.equal(waterFor(170), 150);
+  assert.equal(waterFor(400), null, '브레짜 범위 밖');
+  assert.equal(machineLabel(200), '브레짜 180');
+  assert.equal(machineLabel(220), '브레짜 칸 아님');
+  assert.equal(stepMachine(200, +1), 230);
+  assert.equal(stepMachine(200, -1), 170);
+  assert.equal(stepMachine(230, +1), 270, '반올림한 양에서도 한 칸씩');
+  assert.equal(stepMachine(270, -1), 230);
+  assert.equal(stepMachine(220, +1), 230, '칸이 아니면 위쪽 칸으로 맞춤');
+  assert.equal(stepMachine(220, -1), 200, '칸이 아니면 아래쪽 칸으로 맞춤');
+  assert.equal(stepMachine(70, -1), 70, '브레짜 60 아래로는 안 감');
+  assert.equal(stepMachine(330, +1), 330, '브레짜 300 위로는 안 감');
+  const other = { formula: { name: '다른 분유', waterMlPerScoop: 20, mlPerScoop: 22 }, machine: { name: '기계', minWaterMl: 40, maxWaterMl: 200, stepWaterMl: 20 } };
+  assert.equal(machineLabel(220, other.formula, other.machine), '기계 200', '분유·기계를 바꾸면 설정값만 바꾸면 됨');
+});
+
 test('수유량 빠른 선택', () => {
-  assert.deepEqual(chooseQuickAmounts([160, 140, 180], [120, 140, 160]), [140, 160, 180]);
-  assert.deepEqual(chooseQuickAmounts([150], [120, 140, 160]), [120, 140, 150]);
-  assert.deepEqual(chooseQuickAmounts([], [120, 140, 160]), [120, 140, 160]);
+  assert.deepEqual(feedAmountsOf({ feed_amounts: [270, 200, 230] }, [100]), [200, 230, 270]);
+  assert.deepEqual(feedAmountsOf({ feed_amounts: [] }, [200, 230, 270]), [200, 230, 270], '비어 있으면 기본값');
+  assert.deepEqual(feedAmountsOf(null, [200, 230, 270]), [200, 230, 270], '요약 전에는 기본값');
+  assert.deepEqual(toSlots([230, 200, 270]), [200, 230, 270]);
+  assert.deepEqual(toSlots([200]), [200, 230, 270], '모자라면 브레짜 한 칸씩 채움');
+  assert.deepEqual(toSlots([100, 130, 170, 200]), [100, 130, 170], '세 칸까지');
   assert.equal(clampAmount(1000), 500);
   assert.equal(clampAmount(0), 5);
 });
@@ -99,6 +133,14 @@ test('못 보낸 취소: 다음 기록이 마지막이 된다', () => {
 test('이미 요약에 들어간 기록은 두 번 세지 않는다', () => {
   const s = applyPending(base, [add('f1', 'feed', 120, { amount_ml: 140 })]);
   assert.equal(s.today.feed_count, 2);
+});
+
+test('못 보낸 수유량 설정이 얹힌다(가장 나중 것)', () => {
+  const s = applyPending({ ...base, feed_amounts: [180, 200, 220] }, [
+    { op: 'feed_amounts', id: 'x1', amounts: [190, 200, 210] },
+    { op: 'feed_amounts', id: 'x2', amounts: [200, 210, 220] },
+  ]);
+  assert.deepEqual(s.feed_amounts, [200, 210, 220]);
 });
 
 test('요약이 없을 때(처음부터 오프라인)', () => {

@@ -1,5 +1,5 @@
 // 브라우저 시험용 가짜 Supabase. Playwright 가 https://fake.supabase.co 로 가는 요청을 가로채 대답한다.
-// 규칙은 supabase/001_care_schema.sql 의 함수를 간단히 흉내 낸 것이다.
+// 규칙은 supabase/*.sql 의 함수를 간단히 흉내 낸 것이다.
 
 const URL_BASE = 'https://fake.supabase.co';
 const PASSWORD = 'pw';
@@ -11,6 +11,7 @@ export async function createFakeSupabase(context) {
   const calls = [];
   let offline = false;
   let tokenNo = 0;
+  let feedAmounts = [200, 230, 270];
 
   const live = () => events.filter((e) => !e.deleted).sort((a, b) => new Date(b.occurred_at) - new Date(a.occurred_at));
 
@@ -26,7 +27,7 @@ export async function createFakeSupabase(context) {
       last_feed: feed ? { id: feed.id, at: feed.occurred_at, ml: feed.amount_ml } : null,
       last_diaper: diaper ? { id: diaper.id, at: diaper.occurred_at, type: diaper.detail.type } : null,
       today: { feed_count: feeds.length, feed_ml: feeds.reduce((s, e) => s + (e.amount_ml || 0), 0) },
-      recent_feed_amounts: [...new Set(feeds.map((e) => e.amount_ml))].slice(0, 3),
+      feed_amounts: feedAmounts,
       recent: all.slice(0, 8).map((e) => ({ id: e.id, kind: e.kind, at: e.occurred_at, ml: e.amount_ml, detail: e.detail })),
       due_chores: [],
       settings: { dup_window_minutes: 10, day_start_hour: 0 },
@@ -63,6 +64,9 @@ export async function createFakeSupabase(context) {
     switch (url.pathname) {
       case '/rest/v1/rpc/care_summary': return reply(200, summary());
       case '/rest/v1/rpc/care_add_event': return reply(200, addEvent(body.p));
+      case '/rest/v1/rpc/care_set_feed_amounts':
+        feedAmounts = [...new Set(body.p_amounts)].sort((a, b) => a - b);
+        return reply(200, { status: 'saved', feed_amounts: feedAmounts });
       case '/rest/v1/rpc/care_cancel_event': {
         const e = events.find((x) => x.id === body.p_id);
         if (e) e.deleted = true;
@@ -77,6 +81,7 @@ export async function createFakeSupabase(context) {
     password: PASSWORD,
     events,
     calls,
+    get feedAmounts() { return feedAmounts; },
     async goOffline() { offline = true; await context.setOffline(true); },
     async goOnline() { offline = false; await context.setOffline(false); },
   };

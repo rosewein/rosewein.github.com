@@ -2,6 +2,7 @@
 //   getSummary()  요약 읽기
 //   addEvent()    기록 추가
 //   cancelEvent() 저장 직후 취소(지우지 않고 취소 표시)
+//   updateFeedAmounts() 수유량 빠른 선택 바꾸기
 // 기기를 바꿀 때(개인 폰, ESP32) 다시 짜야 하는 범위를 이 폴더로 줄이려는 것이다.
 // 미리 보기(?demo)도 이 함수를 그대로 쓰고, Supabase 대신 demo.js 의 가짜 서버만 끼운다.
 // 그래서 미리 보기에서도 오프라인 저장·"대기 n건"·다시 보내기가 실제와 똑같이 동작한다.
@@ -46,6 +47,7 @@ const DEFAULT_DUP_WINDOW_MIN = 10;
  * @property {() => Promise<SummaryResult>} getSummary
  * @property {(ev: CareEvent, opts?: {force?: boolean}) => Promise<AddResult>} addEvent
  * @property {(id: string) => Promise<{status: string}>} cancelEvent
+ * @property {(amounts: number[]) => Promise<{status: 'saved'|'queued', feed_amounts: number[]}>} updateFeedAmounts
  */
 
 /**
@@ -92,8 +94,10 @@ export function createApi(cfg, { transport, storage = STORAGE.real } = {}) {
           if (item.op === 'add') {
             // 기기 안에서 이미 확인을 거쳤거나, 확인할 수 없던 기록이므로 force
             await rest.rpc('care_add_event', { p: { ...item.payload, force: true } });
-          } else {
+          } else if (item.op === 'cancel') {
             await rest.rpc('care_cancel_event', { p_id: item.id });
+          } else if (item.op === 'feed_amounts') {
+            await rest.rpc('care_set_feed_amounts', { p_amounts: item.amounts });
           }
           await queue.remove(item.seq);
         } catch (e) {
@@ -183,6 +187,22 @@ export function createApi(cfg, { transport, storage = STORAGE.real } = {}) {
         notify();
         return { status: 'queued', id };
       }
+    },
+
+    async updateFeedAmounts(amounts) {
+      const clean = [...new Set(amounts)].sort((a, b) => a - b);
+      const pending = await flushThenList();
+      if (navigator.onLine && !pending.length) {
+        try {
+          return await rest.rpc('care_set_feed_amounts', { p_amounts: clean });
+        } catch (e) {
+          if (!(e instanceof NetworkError)) throw e;
+        }
+      }
+      // 연결이 안 되면 기록처럼 쌓아 두었다가 보낸다. 그동안 화면은 새 양을 쓴다(pending.js)
+      await queue.push({ op: 'feed_amounts', id: `feed_amounts:${Date.now()}`, amounts: clean, created: Date.now() });
+      notify();
+      return { status: 'queued', feed_amounts: clean };
     },
   };
 }

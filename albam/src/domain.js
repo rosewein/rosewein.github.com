@@ -29,7 +29,7 @@ import { formatClock } from './time.js';
  * @property {{feed_count: number, feed_ml: number}} today
  * @property {{id: string, at: string, type: DiaperType} | null} last_diaper
  * @property {{id: string, at: string, ended_at: string} | null} last_sleep
- * @property {number[]} recent_feed_amounts          최근 먹인 서로 다른 양, 최근 것부터
+ * @property {number[]} feed_amounts                 수유량 빠른 선택(ml, 작은 것부터). '수유량 설정'에서 바꾼다
  * @property {RecentItem[]} recent                  최근 기록, 실제 시각 역순
  * @property {Array} due_chores                     2단계
  * @property {{day_start_hour: number, dup_window_minutes: number}} settings

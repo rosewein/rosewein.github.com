@@ -65,6 +65,10 @@ export function applyPending(summary, items) {
     }
   }
 
+  // 3) 못 보낸 수유량 설정: 가장 나중 것
+  const amounts = items.filter((i) => i.op === 'feed_amounts').pop();
+  if (amounts) s.feed_amounts = amounts.amounts;
+
   s.recent.sort((a, b) => time(b.at) - time(a.at));
   return s;
 }

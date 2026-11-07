@@ -1,15 +1,33 @@
 // 오른쪽 위 상태 칸과 왼쪽 캐릭터.
-// render(): 요약이 바뀌었을 때 전부 다시 그림 / tick(): 0.6초마다 시계·경과 시간·캐릭터만
+// render(): 요약이 바뀌었을 때 / tick(): 0.6초마다(시계, 지난 시간, 캐릭터). 글이 그대로면 DOM 을 건드리지 않는다.
+//
+// 시각은 모두 무엇의 시각인지 글로 붙인다:
+//   마지막 수유 11:25 · 160ml        지금 14:00
+//   2시간 35분 전                     ← 마지막 수유 뒤 지난 시간(숫자 크게)
+//   오늘 수유 3회 · 420ml             대기 n건
+//   마지막 기저귀 소변 · 1시간 10분 전
 
-import { $ } from './dom.js';
+import { $, el } from './dom.js';
 import { DIAPER_LABEL } from '../domain.js';
-import { formatAgo, formatClock, formatElapsed } from '../time.js';
+import { agoParts, formatAgo, formatClock } from '../time.js';
 
 /** 스프라이트 시트(sprites/albam.png)의 줄 순서. sprites.json 과 같다 */
 const MOOD_ROW = { normal: 0, hungry: 1, sleep: 2, happy: 3 };
 const MOOD_TEXT = { normal: '', hungry: '배고파요…', sleep: '쿨쿨', happy: '고마워요!' };
 /** 스프라이트 한 칸(32px)을 3배로 그린다 */
 const SPRITE_PX = 96;
+/** 이 시간 넘게 지나면 큰 숫자를 줄여 한 줄에 들어가게 */
+const LONG_HOURS = 10;
+/** 기저귀 줄은 좁아서 이 시간 넘으면 "11시간 전"처럼 분을 뺀다 */
+const DIAPER_HOURS_ONLY = 10;
+
+/** 흐린 이름표 + 값 한 줄. 글이 같으면 다시 그리지 않는다 */
+function setLine(node, label, value) {
+  const key = `${label}|${value}`;
+  if (node.dataset.key === key) return;
+  node.dataset.key = key;
+  node.replaceChildren(el('span', { className: 'lbl' }, label), value);
+}
 
 /**
  * 캐릭터 기분 고르기(순수 함수).
@@ -33,22 +51,33 @@ export function createStatusView(ctx) {
   function render() {
     const s = state.summary;
     const feed = s?.last_feed;
-    const diaper = s?.last_diaper;
-    const now = ctx.now();
-
-    $('#lastFeed').textContent = feed
-      ? `수유 ${formatClock(feed.at)}${feed.ml != null ? ` · ${feed.ml}ml` : ''}`
-      : '수유 기록 없음';
-    $('#lastDiaper').textContent = diaper
-      ? `기저귀 ${formatClock(diaper.at)} ${DIAPER_LABEL[diaper.type] || ''} · ${formatAgo(diaper.at, now)}`
-      : '기저귀 기록 없음';
-    $('#todayCount').textContent = s ? `${s.today?.feed_count ?? 0}회` : '-회';
-    $('#todayMl').textContent = s ? `${s.today?.feed_ml ?? 0}ml` : '-ml';
+    setLine($('#lastFeed'), '마지막 수유', feed ? `${formatClock(feed.at)}${feed.ml != null ? ` · ${feed.ml}ml` : ''}` : '기록 없음');
+    setLine($('#today'), '오늘 수유', s ? `${s.today?.feed_count ?? 0}회 · ${s.today?.feed_ml ?? 0}ml` : '-');
     renderConnection();
     tick();
   }
 
-  /** 상태 칸 위쪽('오늘' 왼쪽): 못 보낸 기록 수, 연결 상태 */
+  /** 큰 글씨: 마지막 수유 뒤 지난 시간. 숫자는 크게, 단위는 작게 */
+  function renderElapsed(lastFeedAt, now, hungry) {
+    const box = $('#elapsed');
+    const text = lastFeedAt ? formatAgo(lastFeedAt, now) : '수유 기록 없음';
+    box.classList.toggle('warn', hungry);
+    if (box.dataset.key === text) return;
+    box.dataset.key = text;
+    box.setAttribute('aria-label', text);
+    const parts = lastFeedAt ? agoParts(lastFeedAt, now) : [];
+    box.classList.toggle('long', parts.length > 0 && parts[0][1] === '시간' && Number(parts[0][0]) >= LONG_HOURS);
+    if (!lastFeedAt || !parts.length) {
+      box.replaceChildren(el('span', { className: lastFeedAt ? 'num' : 'none' }, lastFeedAt ? '방금' : text));
+      return;
+    }
+    box.replaceChildren(
+      ...parts.flatMap(([n, unit]) => [el('span', { className: 'num' }, n), el('span', { className: 'unit' }, unit)]),
+      el('span', { className: 'unit' }, '전'),
+    );
+  }
+
+  /** '오늘 수유' 줄 오른쪽: 못 보낸 기록 수, 연결 상태 */
   function renderConnection() {
     const net = $('#net');
     if (state.pending) { net.textContent = `대기 ${state.pending}건`; net.className = 't9 acc'; }
@@ -67,9 +96,10 @@ export function createStatusView(ctx) {
       hungryMinutes: cfg.hungryMinutes,
     });
 
-    $('#clock').textContent = formatClock(now);
-    $('#elapsed').textContent = formatElapsed(lastFeedAt, now);
-    $('#elapsed').classList.toggle('warn', mood === 'hungry');
+    setLine($('#clock'), '지금', formatClock(now));
+    renderElapsed(lastFeedAt, now, mood === 'hungry');
+    const diaper = state.summary?.last_diaper;
+    setLine($('#lastDiaper'), '마지막 기저귀', diaper ? `${DIAPER_LABEL[diaper.type] || ''} · ${formatAgo(diaper.at, now, { hoursOnlyFrom: DIAPER_HOURS_ONLY })}` : '기록 없음');
     $('#albam').style.backgroundPosition = `${-frame * SPRITE_PX}px ${-MOOD_ROW[mood] * SPRITE_PX}px`;
 
     // 말풍선: 잠깐 띄운 말 > 로그인 문제 > 기분

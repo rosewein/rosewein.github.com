@@ -41,6 +41,11 @@ do $$ begin
 exception when insufficient_privilege then raise notice 'ok - non-family cannot add';
 end $$;
 do $$ begin
+  perform public.care_set_feed_amounts(array[100]);
+  raise exception 'FAIL: stranger set amounts';
+exception when insufficient_privilege then raise notice 'ok - non-family cannot change feed amounts';
+end $$;
+do $$ begin
   perform public.care_summary();
   raise exception 'FAIL: stranger summary';
 exception when insufficient_privilege then raise notice 'ok - non-family cannot read summary';
@@ -113,7 +118,23 @@ begin
          'amount_ml', 90, 'occurred_at', now() - interval '3 hours'));
   s := public.care_summary();
   perform pg_temp.check((s #>> '{last_feed,id}') = 'aaaaaaaa-0000-0000-0000-000000000002', 'late entry keeps real-time order');
-  perform pg_temp.check(s -> 'recent_feed_amounts' = '[120, 160, 90]'::jsonb, 'recent amounts by recency: ' || (s -> 'recent_feed_amounts')::text);
+  perform pg_temp.check(s -> 'feed_amounts' = '[200, 230, 270]'::jsonb, 'default feed amounts: ' || (s -> 'feed_amounts')::text);
+  perform pg_temp.check(not (s ? 'recent_feed_amounts'), 'recent_feed_amounts replaced by feed_amounts');
+
+  -- 수유량 빠른 선택 바꾸기: 정렬·중복 제거
+  r := public.care_set_feed_amounts(array[220, 190, 190, 210]);
+  perform pg_temp.check(r -> 'feed_amounts' = '[190, 210, 220]'::jsonb, 'feed amounts sorted and deduped');
+  perform pg_temp.check(public.care_summary() -> 'feed_amounts' = '[190, 210, 220]'::jsonb, 'summary shows new feed amounts');
+  begin
+    perform public.care_set_feed_amounts(array[5]);
+    raise exception 'FAIL: tiny amount accepted';
+  exception when invalid_parameter_value then raise notice 'ok - feed amount out of range rejected';
+  end;
+  begin
+    perform public.care_set_feed_amounts(array[]::int[]);
+    raise exception 'FAIL: empty amounts accepted';
+  exception when invalid_parameter_value then raise notice 'ok - empty feed amounts rejected';
+  end;
   perform pg_temp.check(s #>> '{last_diaper,type}' = 'poo', 'last diaper type');
   perform pg_temp.check((s -> 'recent' -> 0 ->> 'kind') = 'diaper', 'recent sorted by occurred_at');
 
