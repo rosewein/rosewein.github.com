@@ -9,6 +9,9 @@
 
 @font-face { font-family: 'Galmuri11'; src: url('../fonts/Galmuri11.woff2') format('woff2'); font-display: block; }
 @font-face { font-family: 'Galmuri9'; src: url('../fonts/Galmuri9.woff2') format('woff2'); font-display: block; }
+/* 기록 목록처럼 글이 많은 곳은 읽기 쉬운 프리텐다드(자주 쓰는 한글 2,350자만 담은 판) */
+@font-face { font-family: 'Pretendard'; font-weight: 400; src: url('../fonts/Pretendard-Regular.subset.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'Pretendard'; font-weight: 600; src: url('../fonts/Pretendard-SemiBold.subset.woff2') format('woff2'); font-display: swap; }
 
 :root {
   /* 어두운 바탕, 밝고 넓은 면 없이 (AMOLED 번인 대비) */
@@ -31,8 +34,8 @@
   --btn-on: var(--accent);   /* 고른 버튼 글자 */
   --sel-bg: var(--btn);      /* 시각 바퀴 가운데 칸 */
   --sleep: #5f78b4;          /* 타임라인 잠 */
-  --pee: #cbbd9f;            /* 타임라인 소변 */
-  --poo: #b0702e;            /* 타임라인 대변 */
+  --pee: #f2cf3a;            /* 타임라인 소변: 노란 물방울 */
+  --poo: #b0702e;            /* 타임라인 대변: 갈색 똥 모양 */
   --badge-text: #2a1608;     /* 주황 칸 위 글자 */
 }
 /* 밝은 화면: 해 뜬 동안(src/sun.js, config.js theme). 바탕은 흰색이 아니라 따뜻한 종이색, 버튼은 진한 갈색 칩 */
@@ -55,8 +58,8 @@ body.light {
   --sel-bg: #e6d7bd;
   --bar: #a8957c;
   --sleep: #8299cf;
-  --pee: #9a876c;
-  --poo: #9a5a22;
+  --pee: #d4a000;
+  --poo: #7a4518;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body {
@@ -206,25 +209,34 @@ button.px.acc { color: var(--btn-on); }
 #timelineHead .lg { display: inline-block; margin-left: 5px; }
 #timelineHead .lg.feed { width: 2px; height: 10px; background: var(--accent); }
 #timelineHead .lg.sleep { width: 10px; height: 6px; background: var(--sleep); }
-#timelineHead .lg.pee { width: 4px; height: 4px; background: var(--pee); }
-#timelineHead .lg.poo { width: 4px; height: 4px; background: var(--poo); }
+#timelineHead .lg.pee, #timelineHead .lg.poo { margin-top: -1px; }
 #timelineNote { margin-left: auto; }
-#timelineAxis { left: 16px; top: 24px; width: 348px; height: 10px; color: var(--dim); }
+#timelineAxis { left: 16px; top: 23px; width: 348px; height: 9px; color: var(--dim); line-height: 9px; }
 #timelineAxis span { position: absolute; top: 0; transform: translateX(-50%); }
-#timelineRows { left: 16px; top: 36px; width: 348px; }
+#timelineRows { left: 16px; top: 32px; width: 348px; }
 /* 날짜 줄 전체가 버튼(누르면 그날 기록 목록) */
-.tlRow { display: flex; height: 26px; width: 100%; padding: 0; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; outline: none; }
+.tlRow { display: flex; height: 28px; width: 100%; padding: 0; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; outline: none; }
 .tlRow:active .tlBand { box-shadow: inset 0 0 0 1px var(--accent); }
 .tlLabel { width: 40px; padding-top: 11px; color: var(--dim); white-space: nowrap; }
-.tlTrack { position: relative; width: 300px; height: 26px; }
+.tlTrack { position: relative; width: 300px; height: 28px; }
 .tlBand { position: absolute; left: 0; right: 0; top: 11px; height: 10px; background: var(--panel); box-shadow: inset 0 0 0 1px var(--line); }
 .tlFuture { position: absolute; top: 11px; height: 10px; background: var(--bg); }
 .tlSleep { position: absolute; top: 12px; height: 8px; background: var(--sleep); }
 .tlSleep.open { box-shadow: inset -2px 0 0 var(--accent); }   /* 자는 중: 오른쪽 끝(지금)에 주황 */
 .tlFeed { position: absolute; top: 9px; width: 2px; height: 14px; margin-left: -1px; background: var(--accent); }
 .tlMl { position: absolute; top: 0; transform: translateX(-50%); color: var(--strong); line-height: 9px; white-space: nowrap; }
-.tlDiaper { position: absolute; top: 22px; width: 4px; height: 4px; margin-left: -2px; background: var(--pee); }
-.tlDiaper.poo { background: var(--poo); }
+/* 기저귀: 소변 = 노란 물방울(6x8), 대변 있음 = 갈색 똥 모양(8x7). 색과 모양이 둘 다 다르다 */
+.tlDiaper, #timelineHead .lg.pee, #timelineHead .lg.poo { position: absolute; top: 21px; }
+#timelineHead .lg.pee, #timelineHead .lg.poo { position: static; display: inline-block; }
+.tlDiaper, #timelineHead .lg.pee {
+  width: 6px; height: 8px; margin-left: -3px; background: var(--pee);
+  clip-path: polygon(2px 0, 4px 0, 4px 2px, 5px 2px, 5px 3px, 6px 3px, 6px 7px, 5px 7px, 5px 8px, 1px 8px, 1px 7px, 0 7px, 0 3px, 1px 3px, 1px 2px, 2px 2px);
+}
+.tlDiaper.poo, #timelineHead .lg.poo {
+  width: 8px; height: 7px; margin-left: -4px; background: var(--poo);
+  clip-path: polygon(3px 0, 5px 0, 5px 2px, 7px 2px, 7px 4px, 8px 4px, 8px 7px, 0 7px, 0 4px, 1px 4px, 1px 2px, 3px 2px);
+}
+#timelineHead .lg.pee, #timelineHead .lg.poo { margin-left: 5px; }
 .tlNow { position: absolute; top: 8px; width: 1px; height: 16px; background: var(--text); }
 
 /* ── 통계 쪽: 위 탭(10~28) → 날짜 카드(30~102) → 평균(105~117) ── */
@@ -330,13 +342,21 @@ button.machineBtn { width: 44px; flex-direction: column; gap: 1px; line-height: 
 #lateDetail .sleepLen .lbl { color: var(--dim); }
 
 /* 그날 기록 목록: 줄 높이 22, 끌어서 넘김(overflow 는 숨기고 scrollTop 으로) */
+/* 기록 목록은 프리텐다드: 픽셀 글꼴보다 작은 글이 또렷하다. 도트 효과(글자 그림자·번짐 끄기)는 뺀다 */
+#recentSheet, #recentSheet button.px {
+  font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+  -webkit-font-smoothing: antialiased; font-smooth: auto; text-shadow: none;
+}
+#recentSheet h2 { font-size: 12px; }
+#recentSheet .foot button { font-size: 13px; font-weight: 600; }
 #recentList { height: 100px; overflow: hidden; touch-action: none; }
 #recentList .dayRow {
-  display: flex; align-items: center; gap: 8px; width: 100%; height: 22px; padding: 0 6px;
+  display: flex; align-items: center; gap: 8px; width: 100%; height: 24px; padding: 0 6px;
   border: 0; border-bottom: 1px solid var(--line); background: none; font: inherit; color: var(--text); text-align: left; cursor: pointer;
 }
 #recentList .dayRow:active { background: var(--sel-bg); }
-#recentList .dayRow .tm { width: 92px; color: var(--strong); white-space: nowrap; }
+#recentList .dayRow { font-size: 14px; }
+#recentList .dayRow .tm { width: 96px; color: var(--strong); font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
 #recentList .dayRow .what { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #recentList .empty { padding: 30px 0; text-align: center; }
 #lateDelete.warn { color: var(--warn); border-color: var(--warn); }
@@ -358,16 +378,21 @@ button.machineBtn { width: 44px; flex-direction: column; gap: 1px; line-height: 
 }
 #nightText { position: absolute; color: var(--n-text); line-height: 1; }
 #nightText .nightMain { display: flex; align-items: center; gap: 2px; white-space: nowrap; }
-#nightText .nightMain .sep { width: 2px; height: 30px; background: var(--n-line); margin: 0 8px; }
+#nightText .nightMain .sep { width: 2px; height: 30px; background: var(--n-line); margin: 0 6px; }
 #nightText .num { font-size: 48px; line-height: 48px; color: var(--n-num); }
-#nightText .unit { font-size: 24px; line-height: 24px; margin: 14px 8px 0 2px; }
+#nightText .unit { font-size: 24px; line-height: 24px; margin: 14px 6px 0 2px; }
 #nightText .unit:last-child { margin-right: 0; }
 #nightText .nightBox {
   margin-top: 8px; border: 2px solid var(--n-line); padding: 5px 8px; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;
 }
-#nightText .nightBox .sep { width: 2px; height: 12px; background: var(--n-line); margin: 0 4px; }
+#nightText .nightBox .sep { width: 2px; height: 12px; background: var(--n-line); margin: 0 6px 0 4px; }
 #nightText .v { color: var(--n-text); font-size: 24px; line-height: 24px; }
 #nightText .v.acc { color: var(--n-num); }
-#nightText .nightSleep { margin-top: 6px; display: flex; align-items: center; gap: 5px; color: var(--n-dim); white-space: nowrap; }
-#nightText .nightSleep .v { font-size: 12px; line-height: 12px; color: var(--n-text); }
+#nightText .pre { font-size: 12px; line-height: 12px; color: var(--n-dim); margin: 22px 6px 0 0; }
+#nightText .vn { font-size: 24px; line-height: 24px; color: var(--n-num); }
+#nightText .vu { font-size: 12px; line-height: 12px; margin: 10px 4px 0 1px; }
+#nightText .nightSub { margin-top: 6px; color: var(--n-dim); white-space: nowrap; display: flex; align-items: center; }
+#nightText .nightSub .sep { width: 2px; height: 10px; background: var(--n-line); margin: 0 6px; }
+#nightText .nightSub .acc { color: var(--n-num); }
+#nightText .nightMain .tail { margin: 22px 0 0 4px; color: var(--n-dim); }
 body.nightWake #stage { filter: brightness(.55); }

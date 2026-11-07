@@ -117,4 +117,4 @@ npm run test:e2e     # S10 크기 브라우저 시험 (Playwright)
 | 베이비타임 기록 반영 | 스크립트 완료, **실제 파일로 확인 필요** |
 | 24시간 켜 두기 | 하루 한 번 새로 고침, **실기 확인 필요** |
 
-글꼴: 갈무리(Galmuri) — SIL Open Font License 1.1, [`fonts/OFL-Galmuri.txt`](fonts/OFL-Galmuri.txt)
+글꼴: 갈무리(Galmuri) — SIL Open Font License 1.1, [`fonts/OFL-Galmuri.txt`](fonts/OFL-Galmuri.txt) / 프리텐다드(Pretendard, 기록 목록) — SIL Open Font License 1.1, [`fonts/OFL-Pretendard.txt`](fonts/OFL-Pretendard.txt)

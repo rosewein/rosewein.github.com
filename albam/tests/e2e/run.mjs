@@ -471,9 +471,33 @@ async function nightFlow(browser, base) {
   check(!(await page.isHidden('#night')), '밤에는 검은 화면');
   check(!(await page.evaluate(() => document.body.classList.contains('light'))), '밤에는 어두운 화면');
   const nightText = await page.$eval('#nightText', (n) => ({ t: n.textContent, r: n.getBoundingClientRect(), s: document.querySelector('#stage').getBoundingClientRect() }));
-  check(nightText.t.includes('전') && nightText.t.includes('마지막 수유') && nightText.t.includes('지금'), `밤 화면: 지난 시간·마지막 수유·지금 (${nightText.t})`);
+  check(/^수유 후\d+시간\d*분?지남/.test(nightText.t) && nightText.t.includes('마지막 수유') && nightText.t.includes('지금'), `밤 화면: "수유 후 … 지남"·마지막 수유·지금 (${nightText.t})`);
   check(nightText.r.right <= nightText.s.right + 0.5 && nightText.r.bottom <= nightText.s.bottom + 0.5, '밤 화면 글이 화면 안');
   await shot(page, 'night');
+  // 자는 중이면 잔 시간이 가장 크게
+  await page.evaluate(() => {
+    const all = JSON.parse(localStorage.getItem('albam.demo.events'));
+    all.push({ id: 'night-sleep', kind: 'sleep', occurred_at: new Date(Date.now() - 113 * 60000).toISOString(), ended_at: null, detail: {} });
+    localStorage.setItem('albam.demo.events', JSON.stringify(all));
+  });
+  await page.reload();
+  await page.clock.runFor(2000);
+  const sleepText = await page.$eval('#nightText', (n) => ({ main: n.querySelector('.nightMain').textContent, box: n.querySelector('.nightBox').textContent, r: n.getBoundingClientRect(), s: document.querySelector('#stage').getBoundingClientRect() }));
+  check(sleepText.main === '1시간53분째자는 중' && sleepText.box.startsWith('수유 후') && sleepText.box.endsWith('지남'), `자는 중: "1시간 53분째 자는 중" 크게, 아래에 수유 후 (${sleepText.main} / ${sleepText.box})`);
+  check(sleepText.r.right <= sleepText.s.right + 0.5 && sleepText.r.bottom <= sleepText.s.bottom + 0.5, '자는 중 밤 화면 글이 화면 안');
+  await shot(page, 'night-sleeping');
+  // 가장 긴 경우: 12시간 넘게 자는 중, 수유 후 13시간도 화면 안
+  await page.evaluate(() => {
+    const all = JSON.parse(localStorage.getItem('albam.demo.events'));
+    all.find((e) => e.id === 'night-sleep').occurred_at = new Date(Date.now() - (12 * 60 + 59) * 60000).toISOString();
+    for (const e of all.filter((x) => x.kind === 'feed')) e.occurred_at = new Date(Date.now() - (13 * 60 + 58) * 60000).toISOString();
+    localStorage.setItem('albam.demo.events', JSON.stringify(all));
+  });
+  await page.reload();
+  await page.clock.runFor(70000);
+  const longest = await page.$eval('#nightText', (n) => { const r = n.getBoundingClientRect(); const s = document.querySelector('#stage').getBoundingClientRect(); return { w: r.width, inside: r.left >= s.left - 0.5 && r.right <= s.right + 0.5 && r.bottom <= s.bottom + 0.5 }; });
+  check(longest.inside, `가장 긴 밤 화면 글도 화면 안(폭 ${Math.round(longest.w)})`);
+  await shot(page, 'night-longest');
   await page.touchscreen.tap(300, 200);
   await page.clock.runFor(1000);
   check(await page.isHidden('#night'), '터치하면 밝아짐');
