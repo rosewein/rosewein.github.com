@@ -42,7 +42,7 @@ img, .spr { image-rendering: pixelated; image-rendering: crisp-edges; }
 /* 논리 해상도 380x180. src/ui/stage.js 가 기기 화소의 정수배가 되도록 zoom 을 정한다 */
 #wrap { position: absolute; left: 0; top: 0; }
 #stage {
-  position: relative; width: 380px; height: 180px;
+  position: relative; width: 380px; height: 180px; touch-action: none;   /* 옆으로 밀기는 src/ui/pages.js 가 받는다 */
   background: var(--bg); overflow: hidden;
 }
 #shift { position: absolute; inset: 0; transition: none; }
@@ -142,6 +142,34 @@ button.px.acc { color: var(--accent); }
 #undo { left: 62px; top: 130px; width: 256px; height: 40px; display: flex; gap: 6px; background: var(--bg); }
 #undoMsg { flex: 1; display: flex; align-items: center; gap: 4px; border: 2px solid var(--ok); color: var(--ok); padding: 0 6px; overflow: hidden; white-space: nowrap; }
 #undoBtn { width: 76px; }
+
+/* ── 쪽(대시보드 · 통계)과 쪽 표시 ── */
+.page { position: absolute; inset: 0; }
+/* 점 두 개: 상태 칸과 버튼 줄 사이(118~130). 누르는 자리는 점보다 넓게 */
+#pageDots { left: 166px; top: 118px; width: 48px; height: 12px; background: none; border: 0; padding: 0;
+  display: flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer; outline: none; }
+#pageDots .dot { width: 4px; height: 4px; background: var(--faint); }
+#pageDots .dot.on { background: var(--dim); }
+
+/* ── 통계 쪽: 위 탭(10~28) → 막대(30~102) → 평균(105~117) ── */
+#statsHead { left: 16px; top: 10px; width: 348px; height: 18px; display: flex; align-items: center; gap: 6px; }
+#statsTabs { margin-left: auto; display: flex; gap: 4px; }
+#statsTabs button { width: 52px; height: 18px; }
+#statsChart { left: 16px; top: 30px; width: 348px; height: 72px; display: flex; gap: 2px; }
+#statsChart .empty { margin: auto; }
+#statsChart .col { position: relative; flex: 1 1 0; }
+#statsChart .v, #statsChart .d { position: absolute; left: 0; right: 0; text-align: center; white-space: nowrap; }
+#statsChart .v { color: var(--strong); }
+#statsChart .d { bottom: 2px; color: var(--dim); }
+/* 막대: 밝은 면이 넓지 않게 어두운 갈색. 강조 부분(대변·낮잠)은 주황 */
+#statsChart .bar { position: absolute; left: 10px; right: 10px; bottom: 14px; background: var(--line-hi);
+  display: flex; flex-direction: column; justify-content: flex-end; }
+#statsChart .part { background: var(--accent); }
+/* 오늘은 아직 안 끝났으니 테두리만 */
+#statsChart .today .bar { background: none; box-shadow: inset 0 0 0 2px var(--line-hi); }
+#statsChart .today .part { opacity: .5; }
+#statsChart .today .d { color: var(--accent); }
+#statsFoot { left: 16px; top: 105px; width: 348px; height: 12px; white-space: nowrap; color: var(--dim); }
 
 /* ── 덮는 창 ── */
 .sheet {

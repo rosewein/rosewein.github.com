@@ -1,10 +1,9 @@
 // 알밤케어 거실 화면 설정.
-// supabaseUrl·supabaseAnonKey 는 Supabase 대시보드 > Project Settings > API 에 있다.
+// supabaseUrl·supabaseAnonKey 는 Supabase 대시보드 > Project Settings > API 에 있다(프로젝트 baby_archive_AlbamWiki).
 // anon key 는 공개돼도 되는 값이다(가족만 읽고 쓰게 하는 건 RLS가 맡는다). service_role 키는 절대 넣지 않는다.
-// 비워 두면 첫 화면에서 직접 넣을 수 있고, 그 값은 이 기기에만 저장된다.
 window.ALBAM_CONFIG = {
-  supabaseUrl: '',
-  supabaseAnonKey: '',
+  supabaseUrl: 'https://dkeiwryjvussejrevigh.supabase.co',
+  supabaseAnonKey: 'sb_publishable_87W4Yg7J_a7vb9XnoSp4OA_OrX5krqY', // publishable(공개) 키
 
   // ── 화면 동작 (아직 정할 것의 임시값) ──
   nightStartHour: 21,        // 밤 화면 시작
@@ -24,4 +23,6 @@ window.ALBAM_CONFIG = {
   formula: { name: '압타밀', waterMlPerScoop: 30, mlPerScoop: 100 / 3, roundMl: 10 },
   machine: { name: '브레짜', minWaterMl: 60, maxWaterMl: 300, stepWaterMl: 30 },
   dailyReloadHour: 4,        // 24시간 켜 둘 때 하루 한 번 새로 고침하는 시각
+  statsDays: 7,              // 통계 쪽에 보여 줄 날 수(오늘 포함)
+  statsIdleSeconds: 60,      // 통계 쪽에서 이만큼 안 만지면 대시보드로 돌아옴
 };

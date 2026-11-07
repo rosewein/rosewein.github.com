@@ -11,8 +11,6 @@ insert into public.care_settings (key, value, note) values
   ('feed_amounts', '[200, 230, 270]', '수유량 빠른 선택(완성량 ml). 화면의 수유량 설정에서 바꾼다')
 on conflict (key) do nothing;
 
-delete from public.care_settings where key = 'quick_amount_count';
-
 -- 빠른 선택 양 저장. 1~6개, 각 10~500ml. 같은 양은 하나로, 작은 것부터
 create or replace function public.care_set_feed_amounts(p_amounts int[])
 returns jsonb

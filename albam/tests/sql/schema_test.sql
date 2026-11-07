@@ -193,4 +193,46 @@ begin
 end $$;
 reset role;
 
+-- ── 통계 함수(care_stats): 날짜 규칙 ──
+reset role;
+update public.care_settings set value = '0' where key = 'day_start_hour';
+truncate public.care_events;
+-- 기준: 어제(서울) y, 오늘 t
+create temp table d as select (now() at time zone 'Asia/Seoul')::date as t;
+grant select on d to authenticated;
+insert into public.care_events (kind, occurred_at, ended_at, amount_ml, detail)
+select k, s at time zone 'Asia/Seoul', e at time zone 'Asia/Seoul', ml, det::jsonb from d, (values
+  -- 어제 낮 수유 2번
+  ('feed',   (select t from d) - 1 + time '10:00', null::timestamp, 200, '{}'),
+  ('feed',   (select t from d) - 1 + time '14:00', null, 230, '{}'),
+  -- 어제 기저귀 둘 다
+  ('diaper', (select t from d) - 1 + time '11:00', null, null, '{"type":"both"}'),
+  -- 어제 낮잠 60분
+  ('sleep',  (select t from d) - 1 + time '13:00', (select t from d) - 1 + time '14:00', null, '{"when":"day"}'),
+  -- 어제 저녁 20시 ~ 오늘 5시 밤잠 540분: 오늘(깨는 아침)로
+  ('sleep',  (select t from d) - 1 + time '20:00', (select t from d) + time '05:00', null, '{"when":"night"}'),
+  -- when 이 없는 잠(거실 화면): 21시 시작이면 밤잠 → 다음 날, 그래서 오늘 이후라 7일 안 오늘엔 안 들어감
+  ('sleep',  (select t from d) - 2 + time '21:00', (select t from d) - 2 + time '23:00', null, '{}')
+) as v(k, s, e, ml, det);
+set role authenticated;
+set request.jwt.claim.sub = '22222222-2222-2222-2222-222222222222';
+do $$ begin
+  perform public.care_stats(7);
+  raise exception 'FAIL: stranger stats';
+exception when insufficient_privilege then raise notice 'ok - non-family cannot read stats';
+end $$;
+set request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+do $$
+declare st jsonb := public.care_stats(7); y jsonb := st -> 5; t jsonb := st -> 6;
+begin
+  perform pg_temp.check(jsonb_array_length(st) = 7, 'stats returns 7 days');
+  perform pg_temp.check((y ->> 'feed_count')::int = 2 and (y ->> 'feed_ml')::int = 430, 'yesterday feeds');
+  perform pg_temp.check((y ->> 'diaper_both')::int = 1 and (y ->> 'diaper_total')::int = 1, 'yesterday diaper both');
+  perform pg_temp.check((y ->> 'nap_min')::int = 60, 'nap counted on its own day');
+  perform pg_temp.check((y ->> 'night_min')::int = 120, 'evening sleep without when = night of the next day (2 days ago 21-23 → yesterday)');
+  perform pg_temp.check((t ->> 'night_min')::int = 540, 'night sleep counted on the waking morning');
+  perform pg_temp.check(jsonb_array_length(public.care_stats(1000)) = 92, 'stats capped at 92 days');
+end $$;
+reset role;
+
 \echo 'ALL SQL TESTS PASSED'

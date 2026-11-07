@@ -3,6 +3,7 @@
 
     python3 tools/import_babytime.py activity_세훈_202610.zip activity_세훈_202611.txt > import.sql
     python3 tools/import_babytime.py --until 2026-11-10 activity_*.zip > import.sql
+    python3 tools/import_babytime.py activity_*.zip -o import.sql --stats stats.md   # 날짜별 통계도
 
 만든 import.sql 을 Supabase SQL Editor 에 붙여 실행한다. 표준 라이브러리만 쓴다(Python 3.9+).
 
@@ -14,10 +15,12 @@
   처럼 날짜 줄, "이름: 값" 줄들, 구분선으로 되어 있다.
 - 한국어로 내보낸 파일의 항목 이름은 아직 예시 파일을 못 봐서 짐작으로 넣어 두었다.
   처음 돌릴 때 끝에 나오는 "모르는 종류/항목" 보고를 보고 TYPE_MAP·KEY 목록을 맞춘다.
-- id 를 기록 내용으로 정해서(uuid5) 같은 파일을 두 번 넣어도 한 번만 들어간다.
+- 기록마다 한 줄('종류|시작|끝|양|세부')로 바꿔 보내고, id 는 그 줄의 md5 로 정한다.
+  그래서 SQL 이 작고(2천여 건에 100KB 안팎), 같은 파일을 두 번 넣어도 한 번만 들어간다.
 - 거실 화면을 쓰기 시작한 뒤의 기록은 --until 로 잘라서 겹치지 않게 한다.
 """
 import argparse
+import hashlib
 import io
 import json
 import re
@@ -28,7 +31,6 @@ from datetime import datetime, timedelta, date
 from zoneinfo import ZoneInfo
 
 TZ = ZoneInfo('Asia/Seoul')
-NS = uuid.UUID('6f1c2b1e-4a51-4d0a-9a37-5a1b0b7c2e11')
 SEP = re.compile(r'^\s*={5,}\s*$')
 FL_OZ_ML = 29.5735
 
@@ -62,13 +64,14 @@ TYPE_MAP = {
     '밤잠': ('sleep', {'when': 'night'}),
 }
 # 옮기지 않는 종류(엄마 유축, 투약 등). 보고에만 센다
-SKIP_TYPES = {'pumping', '유축', 'medicine', '투약', 'baby food', '이유식', 'bath', '목욕', 'temperature', '체온',
+SKIP_TYPES = {'pumping', '유축', 'medicine', '투약', 'baby food', '이유식', 'bath', '목욕', 'temperature', '체온', '열', '기타',
               'hospital', '병원', 'play', '놀이', 'tummy time', '터미타임', 'snack', '간식', 'growth', '성장'}
 
-TYPE_KEYS = {'type', '종류', '타입', '유형'}
-DIAPER_KEYS = {'diaper type', '기저귀 종류', '기저귀 상태', '배변'}
+TYPE_KEYS = {'type', '종류', '기록 종류', '타입', '유형'}
+DIAPER_KEYS = {'diaper type', '기저귀 종류', '기저귀 상태', '배변', '배변 형태'}
 DURATION_KEYS = {'duration', '시간', '소요 시간', '소요시간'}
 MEMO_KEYS = {'memo', '메모'}
+COLOR_KEYS = {'배변색', 'poop color'}
 DIAPER_VALUES = {'pee': 'pee', 'wet': 'pee', '소변': 'pee', 'poop': 'poo', 'poo': 'poo', 'dirty': 'poo', '대변': 'poo',
                  'both': 'both', 'mixed': 'both', 'pee and poop': 'both', '둘 다': 'both', '둘다': 'both', '소변+대변': 'both', '혼합': 'both'}
 
@@ -180,6 +183,8 @@ def apply_fields(ev, fields, report):
             continue
         if key == 'memo':
             detail['memo'] = value
+        elif k in COLOR_KEYS:
+            detail['color'] = value
         elif k in DIAPER_KEYS:
             if value.strip().lower() in DIAPER_VALUES:
                 detail['type'] = DIAPER_VALUES[value.strip().lower()]
@@ -236,8 +241,7 @@ def parse_block(lines, report):
         ev['amount_ml'] = None
 
     # 내용으로 id 를 정해 같은 파일을 다시 넣어도 한 번만 들어가게
-    key = '|'.join(['babytime', kind, start.isoformat(), str(ev['amount_ml']), ev['detail'].get('type', ''), type_value])
-    ev['id'] = str(uuid.uuid5(NS, key))
+    ev['id'] = line_id(compact_line(ev))
     return ev
 
 
@@ -278,28 +282,78 @@ def parse_files(paths, since=None, until=None, report=None):
     return events, report
 
 
-def sql_str(v):
-    if v is None:
-        return 'null'
-    return "'" + str(v).replace("'", "''") + "'"
+def compact_line(e):
+    """기록 → 한 줄. '종류|시작|끝|양|세부JSON'. 시각은 서울 'YYYY-MM-DD HH:MM'.
+    세부에서 베이비타임 원래 이름과 소요시간(끝-시작으로 다시 셀 수 있음)은 뺀다."""
+    fmt = lambda t: t.astimezone(TZ).strftime('%Y-%m-%d %H:%M') if t else ''
+    detail = {k: (str(v).replace('|', '/').replace('\n', ' ') if k == 'memo' else v)
+              for k, v in e['detail'].items() if k not in ('babytime_type', 'duration_min')}
+    ml = '' if e['amount_ml'] is None else str(int(e['amount_ml']))
+    return '|'.join([e['kind'], fmt(e['occurred_at']), fmt(e['ended_at']), ml,
+                     json.dumps(detail, ensure_ascii=False, separators=(',', ':'))])
+
+
+def line_id(line):
+    """한 줄의 id. SQL 의 md5('babytime|' || 줄)::uuid 와 같다"""
+    return str(uuid.UUID(hashlib.md5(('babytime|' + line).encode('utf-8')).hexdigest()))
+
+
+SQL_TEMPLATE = """-- 베이비타임에서 옮긴 기록 {count}건. Supabase SQL Editor 에서 실행(두 번 실행해도 한 번만 들어감)
+insert into public.care_events (id, kind, occurred_at, ended_at, amount_ml, detail, source, recorded_by)
+select md5('babytime|' || l)::uuid,
+       split_part(l, '|', 1),
+       split_part(l, '|', 2)::timestamp at time zone 'Asia/Seoul',
+       nullif(split_part(l, '|', 3), '')::timestamp at time zone 'Asia/Seoul',
+       nullif(split_part(l, '|', 4), '')::int,
+       split_part(l, '|', 5)::jsonb,
+       'import', null
+from unnest(string_to_array($babytime$
+{lines}
+$babytime$, E'\\n')) as l
+where l <> ''
+on conflict (id) do nothing;
+"""
 
 
 def to_sql(events):
-    out = ['-- 베이비타임에서 옮긴 기록. Supabase SQL Editor 에서 실행', 'begin;']
-    for i in range(0, len(events), 500):
-        chunk = events[i:i + 500]
-        out.append('insert into public.care_events (id, kind, occurred_at, ended_at, amount_ml, detail, source, recorded_by) values')
-        rows = []
-        for e in chunk:
-            rows.append('  ({}, {}, {}, {}, {}, {}::jsonb, \'import\', null)'.format(
-                sql_str(e['id']), sql_str(e['kind']), sql_str(e['occurred_at'].isoformat()),
-                sql_str(e['ended_at'].isoformat() if e['ended_at'] else None),
-                'null' if e['amount_ml'] is None else int(e['amount_ml']),
-                sql_str(json.dumps(e['detail'], ensure_ascii=False))))
-        out.append(',\n'.join(rows))
-        out.append('on conflict (id) do nothing;')
-    out.append('commit;')
-    return '\n'.join(out) + '\n'
+    lines = [compact_line(e) for e in events]
+    return SQL_TEMPLATE.format(count=len(lines), lines='\n'.join(lines))
+
+
+def stat_day(e, day_start_hour=0):
+    """통계에서 이 기록을 셀 날짜(supabase/003_stats.sql 의 규칙과 같다).
+    수유·기저귀·낮잠은 일어난 날, 밤잠은 깨는 아침의 날(시작 + 12시간)."""
+    start = e['occurred_at'].astimezone(TZ)
+    if e['kind'] == 'sleep':
+        when = e['detail'].get('when') or ('night' if start.hour >= 18 or start.hour < 6 else 'day')
+        if when == 'night':
+            return (start + timedelta(hours=12)).date()
+    return (start - timedelta(hours=day_start_hour)).date()
+
+
+def daily_stats(events, day_start_hour=0):
+    """날짜별 통계(서울 시각). 베이비타임 앱의 통계 화면과 맞춰 보려고 쓴다. 날짜 규칙은 stat_day()"""
+    days = {}
+    for e in events:
+        d = days.setdefault(stat_day(e, day_start_hour), {'feed_count': 0, 'feed_ml': 0, 'pee': 0, 'poo': 0, 'both': 0, 'sleep_min': 0})
+        if e['kind'] == 'feed':
+            d['feed_count'] += 1
+            d['feed_ml'] += e['amount_ml'] or 0
+        elif e['kind'] == 'diaper':
+            d[e['detail']['type']] += 1
+        elif e['kind'] == 'sleep':
+            d['sleep_min'] += int((e['ended_at'] - e['occurred_at']).total_seconds() // 60)
+    return dict(sorted(days.items()))
+
+
+def stats_table(days):
+    """날짜별 통계를 마크다운 표로"""
+    rows = ['| 날짜 | 수유 | 수유량 | 기저귀 소변 | 대변 | 둘 다 | 잠 |', '| --- | ---: | ---: | ---: | ---: | ---: | ---: |']
+    for d, v in days.items():
+        sleep = f"{v['sleep_min'] // 60}시간 {v['sleep_min'] % 60}분" if v['sleep_min'] else '-'
+        rows.append(f"| {d.isoformat()} ({'월화수목금토일'[d.weekday()]}) | {v['feed_count']}회 | {v['feed_ml']}ml | "
+                    f"{v['pee']} | {v['poo']} | {v['both']} | {sleep} |")
+    return '\n'.join(rows) + '\n'
 
 
 def main(argv=None):
@@ -308,8 +362,13 @@ def main(argv=None):
     ap.add_argument('--since', type=date.fromisoformat, help='이 날짜(포함)부터만')
     ap.add_argument('--until', type=date.fromisoformat, help='이 날짜(제외) 전까지만. 거실 화면을 쓰기 시작한 날')
     ap.add_argument('-o', '--output', help='SQL 파일 (없으면 화면에)')
+    ap.add_argument('--stats', help='날짜별 통계 표(마크다운)를 이 파일에. 베이비타임 앱 통계와 맞춰 볼 때')
+    ap.add_argument('--day-start-hour', type=int, default=0, help='하루를 끊는 시각(기본 0시). care_settings.day_start_hour 와 같게')
     args = ap.parse_args(argv)
     events, report = parse_files(args.files, args.since, args.until)
+    if args.stats:
+        with open(args.stats, 'w', encoding='utf-8') as fh:
+            fh.write(stats_table(daily_stats(events, args.day_start_hour)))
     sql = to_sql(events)
     if args.output:
         with open(args.output, 'w', encoding='utf-8') as fh:

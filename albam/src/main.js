@@ -17,6 +17,8 @@ import { setupFeedAmounts } from './ui/feed-amounts.js';
 import { setupLateEntry } from './ui/late-entry.js';
 import { setupVoiceInput } from './ui/voice-input.js';
 import { setupLogin } from './ui/login.js';
+import { setupStats } from './ui/stats.js';
+import { setupPages } from './ui/pages.js';
 
 const DEMO = new URLSearchParams(location.search).has('demo');
 /** 기기 시계가 서버와 이보다 덜 어긋나면 보정하지 않는다 */
@@ -108,6 +110,8 @@ function main() {
   setupFeedAmounts(ctx, { current: quick.quickAmounts, back: () => quick.openFeed({ keepAmount: true }) });
   setupLateEntry(ctx);
   setupCloseButtons(() => ctx.sfx.tap());
+  const stats = setupStats(ctx);
+  setupPages(ctx, { onShow: { stats: () => stats.load() } });
 
   // ── 요약 받기 ──
   let refreshing = false;

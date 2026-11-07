@@ -18,6 +18,8 @@
 <body>
 <div id="wrap"><div id="stage">
   <div id="shift">
+    <!-- 첫 쪽: 대시보드. 옆으로 밀면 통계(src/ui/pages.js) -->
+    <div class="page" id="pageMain">
     <!-- 왼쪽 위: 캐릭터 -->
     <div class="box" id="charPanel">
       <div id="bubble" class="empty"><span id="bubbleText"></span></div>   <!-- 말풍선(위) -->
@@ -33,6 +35,23 @@
       <div id="net" class="t9 faint"></div>     <!-- 대기 n건 / 연결 안 됨 -->
       <div id="lastDiaper"></div>               <!-- 마지막 기저귀 소변 · 1시간 10분 전 -->
     </div>
+    </div>
+
+    <!-- 둘째 쪽: 최근 7일 통계(src/ui/stats.js) -->
+    <div class="page hidden" id="pageStats">
+      <div class="box" id="statsHead">
+        <span class="dim">최근 7일</span><span id="statsNote" class="t9 warn"></span>
+        <div id="statsTabs">
+          <button class="px on" data-metric="feed">수유</button>
+          <button class="px" data-metric="diaper">기저귀</button>
+          <button class="px" data-metric="sleep">잠</button>
+        </div>
+      </div>
+      <div class="box" id="statsChart"></div>   <!-- 날짜별 막대 일곱 개 -->
+      <div class="box" id="statsFoot"></div>    <!-- 지난 6일 평균 -->
+    </div>
+    <!-- 쪽 표시(누르면 넘김) -->
+    <button class="box" id="pageDots" aria-label="통계 보기"><span class="dot on"></span><span class="dot"></span></button>
 
     <!-- 아래: [마이크] [수유] [기저귀] [지난 기록]. 마이크·지난 기록은 아이콘만(정사각형), 수유·기저귀는 크게 -->
     <div class="box" id="actions">

@@ -20,3 +20,8 @@ for round in 1 2; do
   for f in "$here"/../../supabase/[0-9]*.sql; do "${psql[@]}" -d t -f "$f" >/dev/null 2>&1 || { echo "FAIL: $f"; "${psql[@]}" -d t -f "$f"; exit 1; }; done
 done
 "${psql[@]}" -d t -f "$here/schema_test.sql"
+# 확인용 쿼리(supabase/queries)가 문법 오류 없이 도는지
+for q in "$here"/../../supabase/queries/*.sql; do
+  "${psql[@]}" -d t -f "$q" >/dev/null || { echo "FAIL: $q"; exit 1; }
+done
+echo 'QUERIES OK'

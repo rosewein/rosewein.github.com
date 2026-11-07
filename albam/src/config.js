@@ -22,6 +22,8 @@ const DEFAULTS = {
   formula: APTAMIL,
   machine: BREZZA,
   dailyReloadHour: 4,
+  statsDays: 7,
+  statsIdleSeconds: 60,
 };
 
 /** @typedef {typeof DEFAULTS} Config */

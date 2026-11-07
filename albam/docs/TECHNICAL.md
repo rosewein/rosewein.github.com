@@ -111,15 +111,20 @@ albam/
 │     ├─ feed-amounts.js   수유량 설정(빠른 선택 세 개)
 │     ├─ late-entry.js     지난 기록 넣기, 최근 기록
 │     ├─ voice-input.js    음성 입력
+│     ├─ pages.js          쪽 넘기기(대시보드 ↔ 통계): 옆으로 밀기, 점, 1분 뒤 돌아오기
+│     ├─ stats.js          통계 쪽: 최근 7일 막대(수유·기저귀·잠)
 │     └─ login.js          로그인 창
 ├─ supabase/
 │  ├─ 001_care_schema.sql   표·권한·함수 (여러 번 실행해도 안전)
-│  └─ 002_feed_amounts.sql  수유량 빠른 선택을 직접 정하기
+│  ├─ 002_feed_amounts.sql  수유량 빠른 선택을 직접 정하기
+│  ├─ 003_stats.sql         날짜별 통계 care_stats()(베이비타임 통계와 같은 날짜 규칙)
+│  └─ queries/              SQL Editor 에서 돌려 보는 확인용 질의
 ├─ sprites/                도트 그림 원본 PNG + sprites.json
 ├─ fonts/                  갈무리 글꼴 (SIL OFL 1.1)
 ├─ tools/
 │  ├─ make_sprites.py      도트 그림 만들기
-│  └─ import_babytime.py   베이비타임 내보내기 → SQL
+│  ├─ import_babytime.py   베이비타임 내보내기 → SQL
+│  └─ check_babytime_stats.py  옮긴 기록 ↔ 베이비타임 통계 날짜별 비교
 └─ tests/
    ├─ unit/                Node 시험 (순수 함수, 서비스 워커 목록)
    ├─ tools/               Python 시험 (베이비타임 가져오기)
@@ -231,6 +236,18 @@ flowchart TD
 **`care_set_feed_amounts(p_amounts int[]) → jsonb`** (002): 수유량 빠른 선택 저장. 1~6개, 각 10~500ml. 같은 양은 하나로 합치고 작은 것부터 둔다.
 결과 `{"status":"saved","feed_amounts":[…]}`, 범위를 벗어나면 오류 `22023 bad_feed_amounts`.
 
+**`care_stats(p_days int default 7) → jsonb`** (003): 오늘을 포함한 최근 n일(1~92) 날짜별 합계, 날짜 오름차순. 기록이 없는 날도 0으로 들어간다.
+
+```json
+[{ "day": "2026-11-06", "feed_count": 4, "feed_ml": 800,
+   "diaper_total": 7, "diaper_pee": 4, "diaper_poo": 1, "diaper_both": 2,
+   "nap_min": 89, "night_min": 595, "sleep_min": 684 }]
+```
+
+- 날짜는 베이비타임 통계와 같게 센다: 수유·기저귀·낮잠은 일어난(시작한) 날, 밤잠은 깨는 아침의 날(시작 + 12시간의 날짜).
+- 낮잠/밤잠은 `detail.when`(`day`/`night`). 없으면 18시~6시에 시작한 잠을 밤잠으로 본다(`care_sleep_day()`).
+- 끝 시각이 없는 잠은 세지 않는다. 취소한 기록도 빼고 센다.
+
 ### 4.4 시간대
 
 계산은 모두 `Asia/Seoul` 기준이다. 저장은 `timestamptz`(UTC)로 한다. 하루의 시작은 다음 식으로 구한다.
@@ -319,7 +336,25 @@ flowchart TD
 | 로그인 창 | 가족 명단에 없는 계정, 로그인이 풀림 |
 | 따로 알리지 않음 | 수유량 설정 저장(돌아간 수유 창에 새 양이 보임, 못 보냈으면 "대기 n건") |
 
-### 5.5 시각 표기 규칙
+### 5.5 통계 쪽 (`pages.js`, `stats.js`)
+
+대시보드를 **왼쪽으로 밀면** 통계 쪽, 오른쪽으로 밀면 다시 대시보드다. 아래 가운데 점 두 개를 눌러도 넘어간다.
+아래 큰 버튼 줄은 두 쪽에 다 있고, 누르면 대시보드로 돌아와 창을 연다. 통계 쪽에서 `statsIdleSeconds`(60초) 동안 안 만지면 대시보드로 돌아온다.
+창이 열려 있거나 밤 화면일 때는 밀어도 넘기지 않는다. 밀고 손을 뗀 곳의 클릭은 0.4초 동안 버리므로, 버튼 위에서 밀기 시작해도 버튼이 눌리지 않는다.
+
+| 자리(논리 y) | 무엇 |
+| --- | --- |
+| 10~28 | "최근 7일" + 탭 [수유] [기저귀] [잠] |
+| 30~102 | 막대 7개. 위에 값(850ml / 7회 / 12.5시간), 아래에 날짜(마지막은 "오늘") |
+| 105~117 | 오늘을 뺀 지난 6일 평균 |
+| 118~130 | 쪽 표시 점 |
+
+- 막대 높이는 7일 중 가장 큰 값을 46px로 맞춘다. 기저귀는 대변 있는 횟수(대변 + 둘 다), 잠은 낮잠을 막대 아래쪽에 주황으로 칠한다.
+- 오늘 막대는 아직 안 끝났으므로 테두리만 그린다. 오늘 잠에는 어젯밤 밤잠이 들어간다(깨는 아침의 날).
+- 쪽을 열 때마다 `getStats()`로 새로 받고 `localStorage`에 둔다. 연결이 안 되면 마지막으로 받은 것을 보여 주고 "연결 안 됨 · 지난번 통계"라고 쓴다.
+- 못 보낸(대기) 기록은 통계에 아직 안 들어간다. 보내지면 다음에 열 때 들어간다.
+
+### 5.6 시각 표기 규칙
 
 시각이 여럿 보이므로, 숫자만 두지 않고 **무엇의 시각인지 글로 붙인다**(흐린 이름표 + 값).
 
@@ -507,14 +542,15 @@ flowchart LR
   P --> R{옮길 것?}
   R -- 예 --> E["기록(dict)<br/>id = uuid5(내용)"]
   R -- 아니오 --> REP["보고서에 이유 세기"]
-  E --> SQL["insert … on conflict (id) do nothing"]
+  E --> SQL["한 건 한 줄 · id = md5(줄)<br/>insert … on conflict (id) do nothing"]
 ```
 
 - 시각은 `YYYY-MM-DD hh:mm AM/PM`, `오전/오후`, 24시간 표기를 모두 읽고 서울 시각으로 둔다.
 - 종류는 `TYPE_MAP`으로 바꾼다. 엄마 유축·투약·이유식 등(`SKIP_TYPES`)은 옮기지 않고 개수만 센다.
 - 양 칸 이름과 값의 단위가 다르면(`Amount(ml): 5 (fl_oz)`) 값 쪽 단위를 믿는다. 온스는 ml로 바꾼다.
 - 수면에 끝 시각이 없으면 `Duration`으로 끝을 계산한다.
-- id는 기록 내용으로 만든 uuid5다. 같은 파일을 다시 넣어도 한 번만 들어간다.
+- 기록은 `종류|시작|끝|ml|세부JSON` 한 줄로 쓰고, id는 `md5('babytime|' + 줄)`이다. 같은 파일을 다시 넣어도 한 번만 들어가고, 큰 파일은 줄을 나눠 여러 번 실행해도 된다.
+- 날짜별 합계 규칙은 베이비타임 통계와 같다: 수유·기저귀·낮잠은 그날, 밤잠은 깨는 아침의 날(시작 + 12시간). `stat_day()`와 SQL `care_sleep_day()`가 같은 규칙이고, `check_babytime_stats.py`가 베이비타임 통계 내보내기와 날짜별로 맞춰 본다.
 - `--until`로 거실 화면을 쓰기 시작한 날 전까지만 옮긴다.
 - 한국어로 내보낸 파일의 항목 이름은 아직 짐작이다. 실행이 끝나면 "모르는 종류/항목"을 보고하니, 그것을 보고 `TYPE_MAP`과 `*_KEYS`를 맞춘다.
 
@@ -524,7 +560,7 @@ flowchart LR
 | --- | --- | --- |
 | `npm test` | 음성 규칙, 시각 글자, 기록 이름, 캐릭터 기분, 수유량 선택, 못 보낸 기록 얹기, 서비스 워커 목록, 베이비타임 가져오기 | Node 22+, Python 3.9+ |
 | `npm run test:sql` | 임시 Postgres를 띄워 `supabase/*.sql`을 번호 순서로 두 번 실행하고 시험한다. 권한, 중복 확인, 다시 보내기, 취소, 순서, 하루 끊는 시각 | PostgreSQL 14+ |
-| `npm run test:e2e` | S10 크기 브라우저로 미리 보기, 밤 화면, 가짜 Supabase(로그인·오프라인·다시 보내기·토큰 갱신)를 눌러 본다 | Playwright + 크로미움 |
+| `npm run test:e2e` | S10 크기 브라우저로 미리 보기, 통계 쪽(밀기·점·돌아오기), 밤 화면, 가짜 Supabase(로그인·오프라인·다시 보내기·토큰 갱신)를 눌러 본다 | Playwright + 크로미움 |
 
 `SCREENSHOTS=/tmp/shots npm run test:e2e`로 돌리면 화면 사진도 남긴다.
 
@@ -544,8 +580,8 @@ flowchart LR
 - 이 저장소는 GitHub Pages로 나간다. main에 합치면 `https://rosewein.github.io/albam/`에 반영된다.
 - 서비스 워커는 네트워크를 먼저 쓴다. 그래서 고친 파일은 다음에 열 때 바로 보인다. 오프라인일 때만 캐시를 쓴다.
 - 파일을 더하거나 이름을 바꾸면 `sw.js`의 `FILES`에 반영하고 `VERSION`을 올린다.
-- SQL은 Supabase SQL Editor에서 번호 순서대로 직접 실행한다(지금 `001`, `002`). 바꿀 때는 `003_…sql`처럼 번호를 붙여 새 파일로 더하고, 이미 실행한 파일은 고치지 않는다. 함수를 바꿀 때는 새 파일에 `create or replace`로 함수 전체를 다시 쓴다(002의 `care_summary()`처럼).
-- `config.js`에는 anon key만 둔다. service_role 키는 절대 넣지 않는다.
+- SQL은 Supabase SQL Editor에서 번호 순서대로 직접 실행한다(지금 `001`~`003`). 바꿀 때는 `004_…sql`처럼 번호를 붙여 새 파일로 더하고, 이미 실행한 파일은 고치지 않는다. 함수를 바꿀 때는 새 파일에 `create or replace`로 함수 전체를 다시 쓴다(002의 `care_summary()`처럼).
+- `config.js`에는 publishable(anon) key만 둔다. 공개돼도 되는 값이고, 읽고 쓰기는 RLS와 가족 명단이 막는다. service_role 키는 절대 넣지 않는다.
 
 ## 12. 고치고 늘리는 법
 
@@ -583,7 +619,7 @@ flowchart LR
   - `care_chores`에 규칙을 넣는다.
   - `care_summary()`에서 `due_chores`를 계산한다(수유 n회마다, 요일, 매일).
   - 화면의 "지난 기록 넣기" 줄 자리(`#lateBtn`, 오른쪽 가운데)를 할 일 칸으로 바꾼다. 완료는 `addEvent({kind: 'chore_done', chore_id})`로 넣는다.
-- **개인 폰 통계(세로, 읽기 전용)**: 같은 `src/api/`를 쓰는 새 페이지를 만든다. 통계가 필요하면 `care_stats(from, to)` 같은 읽기 함수를 SQL에 더한다.
+- **개인 폰 통계(세로, 읽기 전용)**: 같은 `src/api/`를 쓰는 새 페이지를 만든다. 숫자는 거실 통계 쪽과 같은 `care_stats(p_days)`를 쓴다(92일까지).
 - **밤 요약**: Supabase Edge Function과 cron으로 만들고, 같은 요약 함수를 쓴다.
 - **자유 문장 음성 해석**: `voice-input.js`의 `understand()`에서 규칙이 실패했을 때만 서버 함수(Claude API)를 부르게 한다. 확인 화면은 그대로 둔다.
 
