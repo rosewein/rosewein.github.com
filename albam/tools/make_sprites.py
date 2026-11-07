@@ -248,7 +248,9 @@ ICONS = {
         '            ',
         '            ',
     ],
-    'moon': [
+    'moon': [   # 버튼 가운데에 오도록 두 줄 내려 그린다
+        '            ',
+        '            ',
         '   YYY      ',
         '  YYY       ',
         ' YYY        ',
@@ -258,8 +260,6 @@ ICONS = {
         '  YYYYY  Y  ',
         '   YYYYYYY  ',
         '    YYYYY   ',
-        '            ',
-        '            ',
         '            ',
     ],
     'check': [
