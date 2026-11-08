@@ -201,9 +201,9 @@ button.px.acc { color: var(--btn-on); }
 
 /* ── 쪽(시계 · 대시보드 · 타임라인 · 통계)과 쪽 표시 ── */
 .page { position: absolute; inset: 0; }
-/* 점: 다른 쪽에서는 내용과 버튼 줄 사이(129~141), 대시보드에서는 말풍선 위 왼쪽(8~20). 점 하나가 버튼 하나(12x12), 보이는 점은 4x4 */
+/* 점: 늘 화면 가운데. 다른 쪽에서는 내용과 버튼 줄 사이(129~141), 대시보드에서는 맨 위(8~20). 점 하나가 버튼 하나(12x12), 보이는 점은 4x4 */
 #pageDots { left: calc(var(--W, 380px) / 2 - 24px); top: 129px; width: 48px; height: 12px; display: flex; }
-#stage[data-page="main"] #pageDots { left: 112px; top: 8px; }
+#stage[data-page="main"] #pageDots { top: 8px; }   /* 가로는 다른 쪽처럼 화면 가운데 */
 #pageDots .dot { flex: 1; height: 12px; background: none; border: 0; padding: 0; position: relative; cursor: pointer; outline: none; }
 #pageDots .dot::after { content: ''; position: absolute; left: 4px; top: 4px; width: 4px; height: 4px; background: var(--faint); }
 #pageDots .dot.on::after { background: var(--dim); }
