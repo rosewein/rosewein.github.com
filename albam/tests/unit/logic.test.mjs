@@ -255,3 +255,11 @@ test('그 밖의 기록 종류(체온·목욕·투약)', async () => {
   assert.ok(moreTypes().some((t) => t.label === '예방접종'), '표에 한 줄 더하면 더보기 버튼도 늘어남');
   setRecordTypes(DEFAULT_RECORD_TYPES);
 });
+
+test('마지막 잠 줄', async () => {
+  const { describeLastSleep } = await import('../../src/ui/status.js');
+  assert.equal(describeLastSleep(null, NOW), '기록 없음');
+  assert.equal(describeLastSleep({ at: ago(130), ended_at: ago(40) }, NOW), '1시간 30분 · 40분 전 깸');
+  assert.equal(describeLastSleep({ at: ago(40), ended_at: null }, NOW), '자는 중 · 40분째');
+  assert.equal(describeLastSleep({ at: ago(13 * 60), ended_at: ago(11 * 60 + 20) }, NOW), '1시간 40분 · 11시간 전 깸', '10시간 넘으면 시간만');
+});

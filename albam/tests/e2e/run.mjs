@@ -83,6 +83,16 @@ async function demoFlow(browser, base) {
   check(await text(page, '#clock') === '지금14:00', '현재 시각에 "지금"');
   check(await text(page, '#today') === '오늘 수유3회 · 570ml', '오늘 수유 한 줄');
   check(await text(page, '#lastDiaper') === '마지막 기저귀소변 · 1시간 10분 전', '마지막 기저귀 "1시간 10분 전"');
+  check((await text(page, '#lastSleep')).startsWith('마지막 잠') && (await text(page, '#lastSleep')).endsWith('깸'), `마지막 잠 줄 (${await text(page, '#lastSleep')})`);
+  const statusOverlap = await page.$$eval('#status > div', (rows) => {
+    const boxes = rows.filter((r) => r.offsetParent && r.textContent).map((r) => [r.id, r.getBoundingClientRect()]);
+    const dots = document.querySelector('#pageDots').getBoundingClientRect();
+    const bad = [];
+    boxes.forEach(([id, a], i) => boxes.slice(i + 1).forEach(([id2, b]) => { if (a.bottom > b.top + 0.5 && b.bottom > a.top + 0.5 && a.right > b.left && b.right > a.left) bad.push(`${id}/${id2}`); }));
+    boxes.forEach(([id, a]) => { if (a.bottom > dots.top + 4 * (dots.height / 12) && a.right > dots.left && a.left < dots.right) bad.push(`${id}/점`); });
+    return bad;
+  });
+  check(statusOverlap.length === 0, `상태 줄끼리, 쪽 점과 안 겹침 ${statusOverlap.join()}`);
   const overflow = await page.$$eval('#status > div', (els) => els.filter((e) => e.getBoundingClientRect().right > document.querySelector('#status').getBoundingClientRect().right + 0.5).map((e) => e.id));
   check(overflow.length === 0, `상태 칸 글이 넘치지 않음 ${overflow.join()}`);
   const box = (sel) => page.$eval(sel, (b) => { const r = b.getBoundingClientRect(); const i = b.querySelector('.ico').getBoundingClientRect();
