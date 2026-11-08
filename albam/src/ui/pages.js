@@ -42,10 +42,12 @@ export function setupPages(ctx, { onShow = {}, onHide = {} }) {
   dots.forEach((d, i) => d.setAttribute('aria-label', PAGES[i].label));
   $('#pageDots').replaceChildren(...dots);
 
+  stage.dataset.page = current;   // 쪽마다 점 자리가 다르다(styles/app.css)
   function show(name) {
     if (name === current) return;
     onHide[current]?.();
     current = name;
+    stage.dataset.page = name;
     for (const p of PAGES) setHidden($(p.id), p.name !== name);
     dots.forEach((d, i) => d.classList.toggle('on', PAGES[i].name === name));
     onShow[name]?.();

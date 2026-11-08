@@ -78,7 +78,7 @@ img, .spr { image-rendering: pixelated; image-rendering: crisp-edges; }
 /* 논리 해상도 380x180. src/ui/stage.js 가 기기 화소의 정수배가 되도록 zoom 을 정한다 */
 #wrap { position: absolute; left: 0; top: 0; }
 #stage {
-  position: relative; width: 380px; height: 180px; touch-action: none;   /* 옆으로 밀기는 src/ui/pages.js 가 받는다 */
+  position: relative; width: var(--W, 380px); height: 180px; touch-action: none;   /* 옆으로 밀기는 src/ui/pages.js 가 받는다 */
   background: var(--bg); overflow: hidden;
 }
 #shift { position: absolute; inset: 0; transition: none; }
@@ -109,7 +109,7 @@ button.px.on { color: var(--btn-on); }
 button.px:disabled { opacity: .4; }
 button.px.big { font-size: 24px; }
 /* 큰 버튼 셋([말하기] [수유] [기저귀])은 모양을 똑같이: 높이 42, 글자 24, 아이콘 24, 사이 6 */
-button.px.action { height: 40px; font-size: 24px; gap: 6px; white-space: nowrap; }   /* 폭이 모자라도 "기저귀"가 두 줄로 꺾이지 않게 */
+button.px.action { height: 30px; font-size: 16px; gap: 4px; white-space: nowrap; }   /* 폭이 모자라도 "기저귀"가 두 줄로 꺾이지 않게 */
 button.px.ghost { background: transparent; border-color: var(--line); color: var(--dim); }
 button.px.acc { color: var(--btn-on); }
 
@@ -126,83 +126,83 @@ button.px.acc { color: var(--btn-on); }
 .ico-poo { background-position: -84px 0; }   .x2.ico-poo { background-position: -168px 0; }
 .ico-alarm { background-position: -96px 0; } .x2.ico-alarm { background-position: -192px 0; }
 
-/* ── 왼쪽: 말풍선(위) + 알밤(아래) ── */
-#charPanel { left: 16px; top: 8px; width: 112px; height: 120px; }
-/* 말풍선: 한 줄, 길면 … 로 자른다. 할 말이 없으면 숨김(.empty) */
-#bubble {
-  position: absolute; left: 0; top: 2px; width: 112px; height: 20px;
-  border: 2px solid var(--line-hi); background: var(--panel); color: var(--text);
-  display: flex; align-items: center; justify-content: center; padding: 0 4px;
-}
-#bubble.empty { visibility: hidden; }
-#bubbleText { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-/* 꼬리: 계단 모양 도트 삼각형 */
-#bubble::after {
-  content: ''; position: absolute; left: 50px; bottom: -8px; width: 8px; height: 6px; background: var(--line-hi);
-  clip-path: polygon(0 0, 8px 0, 8px 2px, 6px 2px, 6px 4px, 5px 4px, 5px 6px, 3px 6px, 3px 4px, 2px 4px, 2px 2px, 0 2px);
-}
+/* ── 대시보드 ──
+   위층(8~96): 왼쪽 알밤(3배. 그림의 보이는 칸 8~95) · 오른쪽 위 구석(8~32) · 말풍선(34~96, 꼬리는 알밤 쪽)
+   아래층(99~172): 칸 상태 99~139 → 바로 아래 기록 버튼 142~172
+   열은 [수유][기저귀][잠][좁은 칸] = 1fr 1fr 1fr 30px, 사이 4. 가로(--W: S10 380, P4 약 307)가 줄면 칸 폭만 줄고 세로 자리는 그대로 */
+.cols { left: 16px; width: calc(var(--W, 380px) - 32px); display: grid; grid-template-columns: 1fr 1fr 1fr 30px; column-gap: 4px; }
+
 #albam {
-  position: absolute; left: 8px; top: 24px; width: 96px; height: 96px;
+  left: 10px; top: 5px; width: 96px; height: 96px;
   background-image: url('../sprites/albam.png'); background-size: 192px 384px;
 }
+
+/* 오른쪽 위 구석: D+142 · 14:00(작게) / 교정 3개월 28일(더 작게). 못 보낸 기록·연결 끊김은 그 왼쪽에 문제 있을 때만 */
+#corner { right: 16px; top: 8px; text-align: right; white-space: nowrap; }
+#cornerTop { line-height: 12px; }
+#cornerSub { margin-top: 2px; line-height: 10px; display: flex; justify-content: flex-end; gap: 6px; }
+#net:empty { display: none; }
+#net.acc { color: var(--accent); }
+#net.warn { color: var(--warn); }
+
+/* 말풍선: 상태 문구 13 / 지난 시간 30(화면에서 가장 큰 글씨) / 이름표 13. 급하면(.urgent) 문구와 시간이 빨강 */
+#bubble {
+  left: 114px; right: 16px; top: 34px; height: 62px; padding: 1px 8px;
+  border: 2px solid var(--line-hi); background: var(--panel); color: var(--text);
+  display: flex; flex-direction: column; justify-content: center; white-space: nowrap;
+}
+/* 꼬리: 알밤 쪽(왼쪽)을 가리키는 계단 모양 도트 삼각형 */
+#bubble::before {
+  content: ''; position: absolute; left: -8px; top: 22px; width: 6px; height: 10px; background: var(--line-hi);
+  clip-path: polygon(6px 0, 6px 10px, 4px 10px, 4px 8px, 2px 8px, 2px 6px, 0 6px, 0 4px, 2px 4px, 2px 2px, 4px 2px, 4px 0);
+}
+#bubbleText { line-height: 13px; font-size: 12px; }
+#elapsed { line-height: 30px; height: 30px; display: flex; align-items: baseline; color: var(--strong); }
+#elapsed .num { font-size: 30px; font-weight: 600; }
+#elapsed .unit { font-size: 16px; font-weight: 600; margin-right: 5px; }
+#elapsed .unit:last-child { margin-right: 0; }
+#bubbleLabel { line-height: 13px; font-size: 12px; color: var(--dim); }
+#bubble.urgent #bubbleText, #bubble.urgent #elapsed, #bubble.urgent #elapsed .num { color: var(--warn); }
+
+/* 아래층 칸: 이름 10 / 지난 시간 16(단위 10) / 시각·세부 10. 버튼과 같은 열, 가운데 맞춤 */
+#cards { top: 99px; height: 40px; }
+.card { min-width: 0; text-align: center; white-space: nowrap; overflow: hidden; }
+.card .lbl { font-size: 10px; line-height: 11px; color: var(--dim); }
+.card .big { line-height: 18px; height: 18px; color: var(--strong); }
+.card .big .num { font-size: 16px; font-weight: 600; }
+.card .big .unit { font-size: 10px; font-weight: 600; margin-right: 2px; }
+.card .big .unit:last-child { margin-right: 0; }
+.card .big .none { font-size: 12px; color: var(--faint); }
+.card .sub { font-size: 10px; line-height: 11px; overflow: hidden; text-overflow: ellipsis; }
+.card.urgent .big { color: var(--warn); }
+.cardSide { display: flex; align-items: center; justify-content: center; }
+#micBtn { width: 30px; height: 30px; }
 #micBtn.listening { border-color: var(--accent); color: var(--accent); }
 
-/* ── 오른쪽 위: 상태 ── */
-#status { left: 134px; top: 8px; width: 230px; height: 116px; }
-/* 줄마다 무엇인지 앞에 흐린 글씨로 붙인다(.lbl) */
-#status .lbl { color: var(--dim); margin-right: 6px; }
-#elapsed .num { color: var(--strong); }
-/* 줄 간격(화면 기준): 나이·지금 8 → 큰 글씨 25~61 → 마지막 수유·오늘 62 → 마지막 기저귀 77 → 마지막 대변 92 → 마지막 잠 107~119 → 쪽 점 122 → 버튼 130~170
-   맨 위는 태어난 정보, 아래 세 줄은 "마지막 ○○" 끼리 묶는다 */
-/* 나이: D+143 · 4개월 21일 · 교정 3개월 29일 (값은 밝게, 사이 글은 흐리게) */
-#age { position: absolute; left: 0; top: 0; white-space: nowrap; color: var(--dim); }
-#clock { position: absolute; right: 0; top: 0; white-space: nowrap; }
-/* "2시간 35분 전": 숫자 36, 단위 24. 가장 긴 "12시간 35분 전"도 한 줄(약 216) */
-#elapsed { position: absolute; left: 0; top: 17px; height: 36px; display: flex; align-items: baseline; white-space: nowrap; }
-#elapsed .num { font-size: 36px; }
-#elapsed .unit { font-size: 24px; margin-right: 8px; }
-#elapsed .unit:last-child { margin-right: 0; }
-#elapsed .none { font-size: 24px; color: var(--dim); }
-#elapsed.warn, #elapsed.warn .num { color: var(--warn); }
-#lastFeed { position: absolute; left: 0; top: 54px; white-space: nowrap; }
-#today { position: absolute; right: 0; top: 54px; white-space: nowrap; }
-#lastDiaper { position: absolute; left: 0; top: 69px; white-space: nowrap; }
-/* 못 보낸 기록·연결 상태: 기저귀 줄 오른쪽 */
-#net { position: absolute; right: 0; top: 71px; text-align: right; white-space: nowrap; }
-#lastPoo { position: absolute; left: 0; top: 84px; white-space: nowrap; }
-#lastSleep { position: absolute; left: 0; top: 99px; white-space: nowrap; }
-#age .val { color: var(--strong); }
-
-/* ── 오른쪽 아래: 큰 버튼 ── */
-/* 아래 줄: [마이크][수유][기저귀][잠][지난 기록]. 정사각형 40 세 개, 수유·기저귀는 (348 - 40*3 - 4*4) / 2 = 106
-   (아이콘 24 + 사이 6 + "기저귀" 72 + 테두리 4 = 106 에 딱 맞음) */
-#actions { left: 16px; top: 130px; width: 348px; height: 40px; display: flex; gap: 4px; }
-#actions button { flex: 1 1 0; min-width: 0; }
-#actions .square { flex: 0 0 40px; }
-/* 자는 중: 달 버튼이 주황 테두리 + 아래 작은 "깼어요" */
-/* 먹이는 중: [수유]가 [다 먹음]. 잠 버튼처럼 테두리는 그대로, 글자만 밝은 주황 */
+/* 기록 버튼(모든 쪽 아래): 높이 30, 글자 16. 가로가 좁으면(.narrow, P4) 수유·기저귀·잠 아이콘을 빼 글이 들어가게 */
+#actions { top: 142px; height: 30px; }
+#actions button { min-width: 0; }
+#stage.narrow #actions .action:not(.square) .ico { display: none; }
+/* 먹이는 중: [수유]가 [다 먹음]. 테두리는 그대로, 글자만 밝은 주황 */
 #feedBtn.feeding { color: var(--btn-on); }
-#feedBtn.feeding .ico { display: none; }   /* "다 먹음"이 버튼 폭(106)에 들어가게 아이콘은 뺀다 */
-#sleepBtn { flex-direction: column; gap: 0; }
-/* 자는 중: 테두리·바탕은 다른 버튼과 같게(주황 테두리는 굵어 보여 튀었다). 아래 "깼어요"만 밝은 주황 */
+#feedBtn.feeding .ico { display: none; }   /* "다 먹음"이 버튼 폭에 들어가게 아이콘은 뺀다 */
+/* 자는 중: [잠]이 [깼어요]. 테두리·바탕은 다른 버튼과 같게, 글자만 밝은 주황 */
 #sleepBtn.on { background: var(--btn); border-color: var(--line-hi); color: var(--btn-on); }
 #sleepBtn.on:active { background: var(--btn-press); border-color: var(--accent); }
-#sleepBtnText:empty { display: none; }
-#sleepBtnText { line-height: 10px; }
 
-/* 저장·취소 결과 알림: 저장 알림과 같은 자리에 잠깐 */
-#notice { left: 60px; top: 130px; width: 260px; height: 40px; display: flex; align-items: center; justify-content: center;
+/* 저장·취소 결과 알림: [수유] [기저귀] [잠] 자리만 잠깐 덮는다([+]는 그대로) */
+#notice { left: 16px; top: 142px; width: calc(var(--W, 380px) - 66px); height: 30px; display: flex; align-items: center; justify-content: center;
   border: 2px solid var(--line-hi); background: var(--bg); color: var(--text); }
 #notice.warn { border-color: var(--warn); color: var(--warn); }
-/* 저장 직후 알림: [수유] [기저귀] [잠] 자리만 잠깐 덮는다(마이크·지난 기록은 그대로) */
-#undo { left: 60px; top: 130px; width: 260px; height: 40px; display: flex; gap: 6px; background: var(--bg); }
+#undo { left: 16px; top: 142px; width: calc(var(--W, 380px) - 66px); height: 30px; display: flex; gap: 4px; background: var(--bg); }
 #undoMsg { flex: 1; display: flex; align-items: center; gap: 4px; border: 2px solid var(--ok); color: var(--ok); padding: 0 6px; overflow: hidden; white-space: nowrap; }
 #undoBtn { width: 76px; }
 
 /* ── 쪽(시계 · 대시보드 · 타임라인 · 통계)과 쪽 표시 ── */
 .page { position: absolute; inset: 0; }
-/* 점: 상태 칸과 버튼 줄 사이(118~130). 점 하나가 버튼 하나(12x12), 보이는 점은 4x4 */
-#pageDots { left: 166px; top: 118px; width: 48px; height: 12px; display: flex; }
+/* 점: 다른 쪽에서는 내용과 버튼 줄 사이(129~141), 대시보드에서는 말풍선 위 왼쪽(8~20). 점 하나가 버튼 하나(12x12), 보이는 점은 4x4 */
+#pageDots { left: calc(var(--W, 380px) / 2 - 24px); top: 129px; width: 48px; height: 12px; display: flex; }
+#stage[data-page="main"] #pageDots { left: 112px; top: 8px; }
 #pageDots .dot { flex: 1; height: 12px; background: none; border: 0; padding: 0; position: relative; cursor: pointer; outline: none; }
 #pageDots .dot::after { content: ''; position: absolute; left: 4px; top: 4px; width: 4px; height: 4px; background: var(--faint); }
 #pageDots .dot.on::after { background: var(--dim); }
@@ -248,6 +248,9 @@ button.px.acc { color: var(--btn-on); }
   clip-path: polygon(3px 0, 5px 0, 5px 2px, 7px 2px, 7px 4px, 8px 4px, 8px 7px, 0 7px, 0 4px, 1px 4px, 1px 2px, 3px 2px);
 }
 #timelineHead .lg.pee, #timelineHead .lg.poo { margin-left: 5px; }
+/* 오늘 합계·미리 보기: 머리줄 오른쪽 끝(대시보드에서 옮겨 옴) */
+#todayBox { margin-left: auto; display: flex; gap: 6px; }
+#today { color: var(--strong); }
 .tlNow { position: absolute; top: 8px; width: 1px; height: 16px; background: var(--text); }
 
 /* ── 통계 쪽: 위 탭(10~28) → 날짜 카드(30~102) → 평균(105~117) ── */

@@ -2,8 +2,19 @@
 
 import { $ } from './dom.js';
 
-/** 논리 해상도. S10(2280x1080, 3040x1440) 모두 정확히 정수배(6배, 8배)가 된다 */
-export const LOGICAL = { width: 380, height: 180 };
+/**
+ * 논리 해상도. S10(2280x1080, 3040x1440) 모두 정확히 정수배(6배, 8배)가 된다.
+ * 가로는 ?w=307 처럼 바꿔 볼 수 있다(300~380). P4 7인치(1024x600)는 높이 180 기준 가로 약 307.
+ * 지금은 대시보드만 가로에 맞춰 줄어든다(타임라인·통계·입력 창은 380 기준).
+ */
+export const LOGICAL = { width: stageWidth(), height: 180 };
+/** 이보다 좁으면 기록 버튼의 아이콘을 뺀다(#stage.narrow) */
+const NARROW_BELOW = 340;
+
+function stageWidth() {
+  const w = Number(new URLSearchParams(globalThis.location?.search || '').get('w'));
+  return w >= 300 && w <= 380 ? Math.round(w) : 380;
+}
 
 /**
  * 논리 화면을 기기 화소의 정수배로 키우고 가운데 둔다. 남는 곳은 검은 여백.
@@ -14,6 +25,8 @@ export function fitStage() {
   const devW = window.innerWidth * dpr;
   const devH = window.innerHeight * dpr;
   const scale = Math.max(1, Math.floor(Math.min(devW / LOGICAL.width, devH / LOGICAL.height)));
+  $('#stage').style.setProperty('--W', `${LOGICAL.width}px`);
+  $('#stage').classList.toggle('narrow', LOGICAL.width < NARROW_BELOW);
   $('#stage').style.zoom = String(scale / dpr);
   // 왼쪽 위 모서리도 기기 화소에 맞춘다
   $('#wrap').style.left = `${Math.floor((devW - LOGICAL.width * scale) / 2) / dpr}px`;

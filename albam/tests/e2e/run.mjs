@@ -64,6 +64,35 @@ function curvedEdgeOffenders(page, selector) {
   }, { selector, safe: SAFE_Y });
 }
 
+/** 대시보드 칸 하나의 글: "이름|지난 시간|세부" */
+const card = (sel) => pageRef.$eval(sel, (c) => [...c.children].map((x) => x.getAttribute('aria-label') ?? x.textContent).join('|'));
+let pageRef;
+
+/** 대시보드 배치: 서로 안 겹침, 화면 안, 글 안 넘침, 칸과 버튼 열이 같음 */
+async function dashboardLayout(page, tag) {
+  const bad = await page.evaluate(() => {
+    const r = (sel) => document.querySelector(sel).getBoundingClientRect();
+    const stage = r('#stage');
+    const boxes = ['#corner', '#bubble', '#cardFeed', '#cardDiaper', '#cardSleep', '#micBtn', '#feedBtn', '#diaperBtn', '#sleepBtn', '#lateBtn', '#pageDots'].map((s) => [s, r(s)]);
+    const out = [];
+    boxes.forEach(([a, A], i) => boxes.slice(i + 1).forEach(([b, B]) => {
+      if (A.right > B.left + 0.5 && B.right > A.left + 0.5 && A.bottom > B.top + 0.5 && B.bottom > A.top + 0.5) out.push(`${a}/${b} 겹침`);
+    }));
+    boxes.forEach(([a, A]) => { if (A.left < stage.left - 0.5 || A.right > stage.right + 0.5) out.push(`${a} 화면 밖`); });
+    for (const x of document.querySelectorAll('#bubble > div, .card > div, #actions button')) {
+      if (x.scrollWidth > x.clientWidth + 1) out.push(`${x.parentElement.id}>${x.id || x.className} 넘침`);
+    }
+    for (const [c, b] of [['#cardFeed', '#feedBtn'], ['#cardDiaper', '#diaperBtn'], ['#cardSleep', '#sleepBtn']]) {
+      if (Math.abs(r(c).left - r(b).left) > 0.5 || Math.abs(r(c).right - r(b).right) > 0.5) out.push(`${c} 열이 버튼과 다름`);
+    }
+    // 알밤의 보이는 칸(그림 96 중 오른쪽 90까지)이 말풍선 꼬리(말풍선 왼쪽 8 바깥)에 닿지 않게
+    const a = r('#albam');
+    if (a.left + a.width * (90 / 96) > r('#bubble').left - a.width * (8 / 96)) out.push('알밤/말풍선 꼬리 겹침');
+    return out;
+  });
+  check(bad.length === 0, `대시보드 배치(${tag}): 겹침·넘침 없음 ${bad.join(', ')}`);
+}
+
 async function demoFlow(browser, base) {
   const page = await (await browser.newContext(DEVICE)).newPage();
   const errors = [];
@@ -74,41 +103,30 @@ async function demoFlow(browser, base) {
   await page.reload();
   await page.waitForTimeout(500);
   await shot(page, 'main');
+  pageRef = page;
 
   check((await page.evaluate(() => document.querySelector('#stage').style.zoom)) === '2', 'S10 에서 6배(기기 화소) = CSS zoom 2');
   const label = (sel) => page.getAttribute(sel, 'aria-label');
-  check(await label('#elapsed') === '2시간 35분 전', '큰 글씨: 마지막 수유 뒤 "2시간 35분 전"');
-  check(await text(page, '#age') === 'D+142 · 4개월 20일 · 교정 3개월 28일', `나이 줄(11/6 기준) ${await text(page, '#age')}`);
-  check(await text(page, '#lastFeed') === '마지막 수유11:25 · 200ml', '마지막 수유 시각에 이름표');
-  check(await text(page, '#clock') === '14:00', '맨 위 오른쪽 현재 시각');
-  check(await text(page, '#today') === '오늘3회 · 570ml', '오늘 수유는 마지막 수유 오른쪽');
-  check(await text(page, '#lastDiaper') === '마지막 기저귀소변 · 1시간 10분 전', '마지막 기저귀 "1시간 10분 전"');
-  check((await text(page, '#lastSleep')).startsWith('마지막 잠깬 지'), `마지막 잠 줄 (${await text(page, '#lastSleep')})`);
-  check((await text(page, '#lastPoo')).startsWith('마지막 대변'), `마지막 대변 줄 (${await text(page, '#lastPoo')})`);
-  const statusOverlap = await page.$$eval('#status > div', (rows) => {
-    const boxes = rows.filter((r) => r.offsetParent && r.textContent).map((r) => [r.id, r.getBoundingClientRect()]);
-    const dots = document.querySelector('#pageDots').getBoundingClientRect();
-    const bad = [];
-    boxes.forEach(([id, a], i) => boxes.slice(i + 1).forEach(([id2, b]) => { if (a.bottom > b.top + 0.5 && b.bottom > a.top + 0.5 && a.right > b.left && b.right > a.left) bad.push(`${id}/${id2}`); }));
-    boxes.forEach(([id, a]) => { if (a.bottom > dots.top + 4 * (dots.height / 12) && a.right > dots.left && a.left < dots.right) bad.push(`${id}/점`); });
-    return bad;
-  });
-  check(statusOverlap.length === 0, `상태 줄끼리, 쪽 점과 안 겹침 ${statusOverlap.join()}`);
-  const overflow = await page.$$eval('#status > div', (els) => els.filter((e) => e.getBoundingClientRect().right > document.querySelector('#status').getBoundingClientRect().right + 0.5).map((e) => e.id));
-  check(overflow.length === 0, `상태 칸 글이 넘치지 않음 ${overflow.join()}`);
-  const box = (sel) => page.$eval(sel, (b) => { const r = b.getBoundingClientRect(); const i = b.querySelector('.ico').getBoundingClientRect();
-    return { w: r.width, h: r.height, top: r.top, ico: `${i.width}x${i.height}`, font: getComputedStyle(b).fontSize }; });
-  const [mic, feed, diaper, late] = [await box('#micBtn'), await box('#feedBtn'), await box('#diaperBtn'), await box('#lateBtn')];
-  check(mic.w === mic.h && JSON.stringify(mic) === JSON.stringify({ ...late, top: mic.top }) && (await text(page, '#micBtn')) === '' && (await text(page, '#lateBtn')) === '',
-    `마이크·지난 기록은 아이콘만, 같은 정사각형 ${mic.w}x${mic.h}`);
-  check((await page.getAttribute('#micBtn', 'aria-label')) === '말하기' && (await page.getAttribute('#lateBtn', 'aria-label')).startsWith('더보기'), '아이콘 버튼에 이름(화면 낭독용)');
-  check(JSON.stringify(feed) === JSON.stringify(diaper), `수유·기저귀 크기·아이콘·글자 똑같음 ${JSON.stringify(feed)}`);
-  check(feed.w > mic.w * 2.5 && feed.h === mic.h && feed.top === mic.top && feed.ico === mic.ico, '수유·기저귀가 크게, 높이·줄·아이콘 크기는 마이크와 같음');
-  const sleepBox = await box('#sleepBtn');
-  check(sleepBox.w === mic.w && sleepBox.h === mic.h && sleepBox.top === mic.top && (await text(page, '#sleepBtn')) === '', '[잠]은 마이크와 같은 정사각형 달 아이콘');
-  const fits = await page.$$eval('#feedBtn, #diaperBtn', (bs) => bs.every((b) => b.scrollWidth <= b.clientWidth + 0.5));
-  check(fits, '수유·기저귀 버튼 글이 넘치지 않음');
-  const curved = await curvedEdgeOffenders(page, '#status > div, #actions button, #bubble, #albam');
+  // 미리 보기 기록: 수유 11:25(2시간 35분), 기저귀 12:50 소변, 잠 09:00~10:40(깬 지 3시간 20분 > 기준 2시간)
+  check(await text(page, '#bubbleText') === '졸려요…' && await label('#elapsed') === '3시간 20분' && await text(page, '#bubbleLabel') === '깬 시각 10:40',
+    `말풍선: 가장 급한 항목 하나(깬 지 200분/120분 > 수유 155분/180분) "${await text(page, '#bubble')}"`);
+  const isUrgent = (sel) => page.$eval(sel, (x) => x.classList.contains('urgent'));
+  check(await isUrgent('#bubble') && await isUrgent('#cardSleep') && !(await isUrgent('#cardFeed')) && !(await isUrgent('#cardDiaper')), '빨강은 말풍선과 그 항목 칸에만');
+  check(await text(page, '#age') === 'D+142' && await text(page, '#clock') === '14:00' && await text(page, '#ageSub') === '교정 3개월 28일', '구석: D+142 · 14:00 / 교정 3개월 28일');
+  check(await card('#cardFeed') === '수유|2시간 35분|11:25 · 200ml', `수유 칸 ${await card('#cardFeed')}`);
+  check(await card('#cardDiaper') === '기저귀|1시간 10분|12:50 · 소변', `기저귀 칸 ${await card('#cardDiaper')}`);
+  check(await card('#cardSleep') === '잠 · 깬 지|3시간 20분|09:00~10:40', `잠 칸 ${await card('#cardSleep')}`);
+  check(await text(page, '#today') === '오늘 3회 · 570ml' && await text(page, '#demoNote') === '미리 보기', '오늘 합계·미리 보기는 타임라인 머리줄로 옮김');
+  check(await text(page, '#net') === '', '구석 연결 표시는 문제 있을 때만');
+  await dashboardLayout(page, 'S10');
+  const box = (sel) => page.$eval(sel, (b) => { const r = b.getBoundingClientRect(); return { w: r.width, h: r.height, top: r.top }; });
+  const [feed, diaper, sleepB, late, mic] = [await box('#feedBtn'), await box('#diaperBtn'), await box('#sleepBtn'), await box('#lateBtn'), await box('#micBtn')];
+  check(feed.w === diaper.w && diaper.w === sleepB.w && feed.h === late.h && feed.top === late.top && feed.top === sleepB.top, `수유·기저귀·잠 세 버튼은 같은 크기, + 와 한 줄 ${JSON.stringify(feed)}`);
+  check(late.w < feed.w / 2 && mic.w === late.w && mic.top < late.top, '+ 는 좁게, 마이크는 + 위에 작게');
+  check((await text(page, '#micBtn')) === '' && (await text(page, '#lateBtn')) === '' && (await page.getAttribute('#micBtn', 'aria-label')) === '말하기'
+    && (await page.getAttribute('#lateBtn', 'aria-label')).startsWith('더보기'), '아이콘 버튼에 이름(화면 낭독용)');
+  check((await text(page, '#sleepBtn')) === '잠', '[잠] 버튼 글');
+  const curved = await curvedEdgeOffenders(page, '#corner, #bubble, .card, #actions button, #micBtn, #pageDots .dot');
   await sleepFlow(page);
   check(curved.length === 0, `위·아래 곡면(8px)에 글·버튼 없음 ${curved.join(' ')}`);
 
@@ -146,10 +164,10 @@ async function demoFlow(browser, base) {
   await shot(page, 'feed');
   await page.click('#feedSave');
   await page.waitForSelector('#undo:not(.hidden)');
-  check((await text(page, '#lastFeed')).includes('230ml'), '230ml(브레짜 210) 로 저장');
+  check((await card('#cardFeed')).includes('230ml'), '230ml(브레짜 210) 로 저장');
   check(await page.getAttribute('#elapsed', 'aria-label') === '방금', '저장하면 상태 칸이 바로 바뀜(방금)');
   check(await page.isVisible('#micBtn'), '저장 알림 동안에도 [말하기]는 보임');
-  check(await text(page, '#today') === '오늘4회 · 800ml', '오늘 횟수 증가(예시 3회 + 1)');
+  check(await text(page, '#today') === '오늘 4회 · 800ml', '오늘 횟수 증가(예시 3회 + 1)');
   await shot(page, 'saved');
 
   await page.click('#undoMsg');
@@ -160,16 +178,16 @@ async function demoFlow(browser, base) {
   await shot(page, 'confirm');
   await page.click('#confirmNo');
   check(await text(page, '#notice') === '안 넣었어요' && await page.isVisible('#notice'), '결과 알림은 아래 막대에("안 넣었어요")');
-  const bubbleNow = await page.$eval('#bubble', (b) => (b.classList.contains('empty') ? '' : b.textContent));
-  check(['', '고마워요!', '배고파요…', '쿨쿨'].includes(bubbleNow), `말풍선에는 알밤 말만 ("${bubbleNow}")`);
+  const bubbleNow = await text(page, '#bubbleText');
+  check(['고마워요!', '배고파요…', '졸려요…', '기분 좋아요', '쿨쿨'].includes(bubbleNow), `말풍선에는 알밤 말만 ("${bubbleNow}")`);
 
   await page.click('#diaperBtn');
   await page.click('#diaperSheet [data-type="poo"]');
   await page.waitForSelector('#undo:not(.hidden)');
-  check((await text(page, '#lastDiaper')).includes('대변'), '기저귀 저장');
+  check((await card('#cardDiaper')).includes('대변'), '기저귀 저장');
   await page.click('#undoBtn');
   await page.waitForTimeout(300);
-  check((await text(page, '#lastDiaper')).includes('소변'), '취소하면 이전 기록으로');
+  check((await card('#cardDiaper')).includes('소변'), '취소하면 이전 기록으로');
   check(await text(page, '#notice') === '취소했어요', '취소 결과는 아래 막대에("취소했어요")');
   check(!(await text(page, '#bubble')).includes('취소'), '말풍선에는 취소 알림이 안 뜸');
   const kept = await page.evaluate(() => JSON.parse(localStorage.getItem('albam.demo.events')).filter((e) => e.deleted_at).length);
@@ -240,7 +258,7 @@ async function demoFlow(browser, base) {
   await page.click('#lateSheet [data-kind="feed"]');
   await page.click('#lateSave');
   await page.waitForTimeout(300);
-  check((await text(page, '#lastFeed')).startsWith('마지막 수유14:00'), '3시간 전 기록은 마지막 수유를 바꾸지 않음');
+  check((await text(page, '#cardFeed .sub')).startsWith('14:00'), '3시간 전 기록은 마지막 수유를 바꾸지 않음');
   await page.click('#undoMsg');
   await page.click('#lateBtn');
   await page.click('#moreToday');
@@ -265,7 +283,8 @@ async function sleepFlow(page) {
   });
   await page.reload();
   await page.waitForTimeout(600);
-  check(await text(page, '#bubble') === '쿨쿨 1시간 20분', `말풍선에 잔 시간(${await text(page, '#bubble')})`);
+  check(await text(page, '#bubbleText') === '쿨쿨' && await page.getAttribute('#elapsed', 'aria-label') === '1시간 20분째' && await text(page, '#bubbleLabel') === '잠든 시각 12:40', `말풍선에 잔 시간(${await text(page, '#bubble')})`);
+  check(await card('#cardSleep') === '잠 · 자는 중|1시간 20분째|12:40~', `잠 칸: 자는 중 ${await card('#cardSleep')}`);
   await shot(page, 'sleeping');
   await page.click('#sleepBtn');
   await page.waitForSelector('#undo:not(.hidden)');
@@ -300,7 +319,7 @@ async function feedTimerFlow(browser, base) {
   check(await text(page, '#feedBtnText') === '다 먹음', `먹이는 중: [수유]가 [다 먹음] (${await text(page, '#feedBtnText')})`);
   await page.click('#undoMsg');
   await page.clock.runFor(12 * 60000);
-  check(await text(page, '#bubble') === '냠냠 12분', `말풍선에 먹은 시간 (${await text(page, '#bubble')})`);
+  check(await text(page, '#bubbleText') === '냠냠' && await page.getAttribute('#elapsed', 'aria-label') === '12분째', `말풍선에 먹은 시간 (${await text(page, '#bubble')})`);
   const feedFits = await page.$eval('#feedBtn', (b) => b.scrollWidth <= b.clientWidth + 0.5);
   check(feedFits, '"다 먹음"이 버튼 안에 들어감');
   await shot(page, 'feeding');
@@ -480,14 +499,17 @@ async function longTextFlow(browser, base) {
   });
   await page.reload();
   await page.waitForTimeout(500);
-  check(await page.getAttribute('#elapsed', 'aria-label') === '12시간 35분 전', '10시간 넘어도 분까지(큰 글씨)');
-  check((await text(page, '#lastDiaper')).endsWith('11시간 전'), '기저귀 줄은 10시간 넘으면 시간만');
-  const overflow = await page.$$eval('#status > div', (els) => {
-    const right = document.querySelector('#status').getBoundingClientRect().right;
-    return els.filter((e) => e.getBoundingClientRect().right > right + 0.5).map((e) => e.id);
-  });
-  check(overflow.length === 0, `긴 글도 상태 칸 안 ${overflow.join()}`);
+  pageRef = page;
+  check(await text(page, '#bubbleText') === '배고파요…' && await page.getAttribute('#elapsed', 'aria-label') === '12시간 35분', '10시간 넘어도 분까지(큰 글씨), 수유가 가장 급함');
+  check(await card('#cardDiaper') === '기저귀|11시간 59분|02:01 · 소+대', `기저귀 칸 소+대 ${await card('#cardDiaper')}`);
+  await dashboardLayout(page, '긴 글');
   await shot(page, 'long');
+  // P4 7인치(1024x600) 비율: 높이 180 기준 가로 307
+  await page.goto(`${base}?demo&w=307`);
+  await page.waitForTimeout(500);
+  check(await page.$eval('#stage', (s) => s.getBoundingClientRect().width / (parseFloat(s.style.zoom) || 1)) === 307 && await page.$eval('#stage', (s) => s.classList.contains('narrow')), 'P4 비율 미리 보기(?w=307): 가로 307, 좁은 화면');
+  await dashboardLayout(page, 'P4 긴 글');
+  await shot(page, 'long-p4');
 }
 
 // 미리 보기에서도 오프라인 저장·"대기 n건"이 실제와 똑같이 동작하고, 실제 큐와 섞이지 않는지
@@ -499,7 +521,7 @@ async function demoOfflineFlow(browser, base) {
   await page.evaluate(() => { localStorage.clear(); indexedDB.deleteDatabase('albam-demo'); indexedDB.deleteDatabase('albam'); });
   await page.reload();
   await page.waitForTimeout(400);
-  check(await text(page, '#net') === '미리 보기', '미리 보기 표시');
+  check(await text(page, '#demoNote') === '미리 보기' && await text(page, '#net') === '', '미리 보기 표시(타임라인 머리줄)');
 
   await context.setOffline(true);
   await page.click('#diaperBtn');
@@ -518,7 +540,7 @@ async function demoOfflineFlow(browser, base) {
   await context.setOffline(false);
   await page.evaluate(() => window.dispatchEvent(new Event('online')));
   await page.waitForTimeout(500);
-  check(await text(page, '#net') === '미리 보기', '다시 연결되면 "대기" 사라짐');
+  check(await text(page, '#net') === '', '다시 연결되면 "대기" 사라짐');
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('albam.demo.events')).filter((e) => e.kind === 'diaper' && e.detail.type === 'poo').length);
   check(saved === 1, '쌓였던 기록이 (가짜) 서버로 들어감');
 }
@@ -659,7 +681,7 @@ async function supabaseFlow(browser, base) {
   await page.waitForTimeout(400);
   check(fake.events.length === 1, '기록이 Supabase 로 감');
   check(fake.events[0].amount_ml === 200, '기록이 없으면 빠른 선택 첫 값(200, 브레짜 180)으로');
-  check((await text(page, '#today')).startsWith('오늘1회'), '요약 다시 받음');
+  check((await text(page, '#today')).startsWith('오늘 1회'), '요약 다시 받음');
   await page.click('#undoMsg');
 
   await fake.goOffline();
@@ -668,7 +690,7 @@ async function supabaseFlow(browser, base) {
   await page.waitForTimeout(400);
   check(fake.events.length === 1, '오프라인이면 보내지 않음');
   check((await text(page, '#net')) === '대기 1건', '"대기 1건" 표시');
-  check((await text(page, '#lastDiaper')).includes('대변'), '못 보낸 기록도 상태 칸에 보임');
+  check((await text(page, '#cardDiaper')).includes('대변'), '못 보낸 기록도 상태 칸에 보임');
   await page.click('#undoMsg');
 
   await page.click('#feedBtn');
@@ -712,7 +734,7 @@ async function supabaseFlow(browser, base) {
   await page.reload();
   await page.waitForTimeout(600);
   check(fake.calls.some((c) => c.includes('grant_type=refresh_token')), '토큰이 만료되면 갱신');
-  check((await text(page, '#today')).startsWith('오늘1회'), '갱신 뒤 요약');
+  check((await text(page, '#today')).startsWith('오늘 1회'), '갱신 뒤 요약');
   check(errors.length === 0, `페이지 오류 없음 ${errors.join(' ')}`);
 }
 
