@@ -73,7 +73,7 @@ async function dashboardLayout(page, tag) {
   const bad = await page.evaluate(() => {
     const r = (sel) => document.querySelector(sel).getBoundingClientRect();
     const stage = r('#stage');
-    const boxes = ['#corner', '#bubble', '#cardFeed', '#cardDiaper', '#cardSleep', '#micBtn', '#feedBtn', '#diaperBtn', '#sleepBtn', '#lateBtn', '#pageDots'].map((s) => [s, r(s)]);
+    const boxes = ['#corner', '#ageLine', '#bubble', '#cardFeed', '#cardDiaper', '#cardSleep', '#micBtn', '#feedBtn', '#diaperBtn', '#sleepBtn', '#lateBtn', '#pageDots'].map((s) => [s, r(s)]);
     const out = [];
     boxes.forEach(([a, A], i) => boxes.slice(i + 1).forEach(([b, B]) => {
       if (A.right > B.left + 0.5 && B.right > A.left + 0.5 && A.bottom > B.top + 0.5 && B.bottom > A.top + 0.5) out.push(`${a}/${b} 겹침`);
@@ -112,8 +112,9 @@ async function demoFlow(browser, base) {
     `말풍선: 가장 급한 항목 하나(깬 지 200분/120분 > 수유 155분/180분) "${await text(page, '#bubble')}"`);
   const isUrgent = (sel) => page.$eval(sel, (x) => x.classList.contains('urgent'));
   check(await isUrgent('#bubble') && await isUrgent('#cardSleep') && !(await isUrgent('#cardFeed')) && !(await isUrgent('#cardDiaper')), '빨강은 말풍선과 그 항목 칸에만');
-  check(await text(page, '#age') === 'D+142' && await text(page, '#clock') === '14:00' && await text(page, '#ageSub') === '교정 3개월 28일', '구석: 14:00 / D+142 · 교정 3개월 28일');
-  check(await page.$eval('#age', (a) => a.closest('#cornerSub') !== null), 'D+ 는 시각 아랫줄(헷갈리지 않게)');
+  check(await text(page, '#clock') === '14:00' && await text(page, '#ageLine') === 'D+142 · 4개월 20일 · 교정 3개월 28일', `구석: 14:00 / 나이 줄(시각과 따로) ${await text(page, '#ageLine')}`);
+  check(await page.$eval('#ageLine', (a) => a.getBoundingClientRect().top) > await page.$eval('#clock', (c) => c.getBoundingClientRect().bottom) - 0.5, 'D+ 는 시각 아랫줄');
+  
   check(await card('#cardFeed') === '수유|2시간 35분|11:25 · 200ml', `수유 칸 ${await card('#cardFeed')}`);
   check(await card('#cardDiaper') === '기저귀|1시간 10분|12:50 · 소변', `기저귀 칸 ${await card('#cardDiaper')}`);
   check(await card('#cardSleep') === '잠 · 깬 지|3시간 20분|09:00~10:40', `잠 칸 ${await card('#cardSleep')}`);
@@ -127,7 +128,7 @@ async function demoFlow(browser, base) {
   check((await text(page, '#micBtn')) === '' && (await text(page, '#lateBtn')) === '' && (await page.getAttribute('#micBtn', 'aria-label')) === '말하기'
     && (await page.getAttribute('#lateBtn', 'aria-label')).startsWith('더보기'), '아이콘 버튼에 이름(화면 낭독용)');
   check((await text(page, '#sleepBtn')) === '잠', '[잠] 버튼 글');
-  const curved = await curvedEdgeOffenders(page, '#corner, #bubble, .card, #actions button, #micBtn, #pageDots .dot');
+  const curved = await curvedEdgeOffenders(page, '#corner, #ageLine, #bubble, .card, #actions button, #micBtn, #pageDots .dot');
   await sleepFlow(page);
   check(curved.length === 0, `위·아래 곡면(8px)에 글·버튼 없음 ${curved.join(' ')}`);
 
