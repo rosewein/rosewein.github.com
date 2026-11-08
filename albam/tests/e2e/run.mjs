@@ -83,7 +83,8 @@ async function demoFlow(browser, base) {
   check(await text(page, '#clock') === '14:00', '맨 위 오른쪽 현재 시각');
   check(await text(page, '#today') === '오늘3회 · 570ml', '오늘 수유는 마지막 수유 오른쪽');
   check(await text(page, '#lastDiaper') === '마지막 기저귀소변 · 1시간 10분 전', '마지막 기저귀 "1시간 10분 전"');
-  check((await text(page, '#lastSleep')).startsWith('마지막 잠') && (await text(page, '#lastSleep')).endsWith('깸'), `마지막 잠 줄 (${await text(page, '#lastSleep')})`);
+  check((await text(page, '#lastSleep')).startsWith('마지막 잠깬 지'), `마지막 잠 줄 (${await text(page, '#lastSleep')})`);
+  check((await text(page, '#lastPoo')).startsWith('마지막 대변'), `마지막 대변 줄 (${await text(page, '#lastPoo')})`);
   const statusOverlap = await page.$$eval('#status > div', (rows) => {
     const boxes = rows.filter((r) => r.offsetParent && r.textContent).map((r) => [r.id, r.getBoundingClientRect()]);
     const dots = document.querySelector('#pageDots').getBoundingClientRect();

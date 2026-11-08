@@ -8,6 +8,12 @@
 
 const DAY = 86400000;
 const time = (v) => (v ? new Date(v).getTime() : 0);
+const isPoo = (type) => type === 'poo' || type === 'both';
+/** 최근 목록에서 가장 나중 대변(없으면 null) */
+function latestPoo(s) {
+  const r = s.recent.filter((x) => x.kind === 'diaper' && isPoo(x.detail?.type)).sort((a, b) => time(b.at) - time(a.at))[0];
+  return r ? { id: r.id, at: r.at, type: r.detail.type } : null;
+}
 
 /**
  * 요약 + 못 보낸 기록 → 화면에 보여 줄 요약
@@ -42,6 +48,7 @@ export function applyPending(summary, items) {
       }
     } else if (p.kind === 'diaper') {
       if (at > time(s.last_diaper?.at)) s.last_diaper = { id: p.id, at: p.occurred_at, type: p.detail?.type };
+      if (isPoo(p.detail?.type) && at > time(s.last_poo?.at)) s.last_poo = { id: p.id, at: p.occurred_at, type: p.detail.type };
     } else if (p.kind === 'sleep') {
       if (at > time(s.last_sleep?.at)) s.last_sleep = { id: p.id, at: p.occurred_at, ended_at: p.ended_at };
     }
@@ -65,6 +72,7 @@ export function applyPending(summary, items) {
       const r = latest('diaper');
       s.last_diaper = r ? { id: r.id, at: r.at, type: r.detail?.type } : null;
     }
+    if (cancelled.has(s.last_poo?.id)) s.last_poo = latestPoo(s);
   }
 
   // 3) 못 보낸 고치기: 최근 목록과 '마지막 ○○' 에 덮어쓴다(오늘 합계는 양 차이만)
@@ -83,6 +91,7 @@ export function applyPending(summary, items) {
         ...('ended_at' in p && { ended_at: p.ended_at }), ...(p.detail && 'feeding' in p.detail && { feeding: !!p.detail.feeding }) };
     }
     if (s.last_diaper?.id === item.id) s.last_diaper = { ...s.last_diaper, ...(p.occurred_at && { at: p.occurred_at }), ...(p.detail?.type && { type: p.detail.type }) };
+    if (s.last_poo?.id === item.id || (p.detail?.type && isPoo(p.detail.type))) s.last_poo = latestPoo(s) ?? s.last_poo;
     if (s.last_sleep?.id === item.id) s.last_sleep = { ...s.last_sleep, ...(p.occurred_at && { at: p.occurred_at }), ...('ended_at' in p && { ended_at: p.ended_at }) };
   }
 
