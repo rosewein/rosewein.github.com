@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 const { buildCards } = await import('../../src/ui/stats.js');
 const { layoutTimeline, mergePending } = await import('../../src/ui/timeline.js');
 const { formatLongDate } = await import('../../src/ui/clock-page.js');
+const { formatToday } = await import('../../src/time.js');
 
 const day = (d, o = {}) => ({
   day: `2026-11-0${d}`, feed_count: 5, feed_ml: 850, diaper_total: 7, diaper_pee: 5, diaper_poo: 1, diaper_both: 1,
@@ -83,4 +84,6 @@ test('타임라인: 아직 못 보낸 기록과 못 보낸 깼어요를 얹음',
 
 test('시계 쪽 날짜', () => {
   assert.deepEqual(formatLongDate(new Date(2026, 10, 7)), { date: '11월 7일', weekday: '토요일' });
+  assert.equal(formatToday(new Date(2026, 10, 7)), '2026년 11월 7일 토요일');
+  assert.equal(formatToday(new Date(2026, 10, 7), true), '11월 7일 토요일');
 });

@@ -6,14 +6,9 @@
 
 import { $, el } from './dom.js';
 import { ageParts } from './status.js';
-import { formatClock } from '../time.js';
+import { formatClock, formatLongDate } from '../time.js';
 
-const WEEKDAY = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
-
-/** "11월 7일" + "토요일" (순수 함수) */
-export function formatLongDate(d) {
-  return { date: `${d.getMonth() + 1}월 ${d.getDate()}일`, weekday: WEEKDAY[d.getDay()] };
-}
+export { formatLongDate };   // 예전 자리(시험이 여기서 가져온다)
 
 /** @param {import('../main.js').AppContext} ctx */
 export function setupClockPage(ctx) {

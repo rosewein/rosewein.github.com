@@ -77,3 +77,16 @@ export function clockOnDay(day, hour, minute, now) {
   if (d > now) d.setDate(d.getDate() - 1);
   return d;
 }
+
+const WEEKDAY = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
+
+/** "11월 7일" + "토요일" (순수 함수). 시계 쪽과 대시보드 구석이 같이 쓴다 */
+export function formatLongDate(d) {
+  return { date: `${d.getMonth() + 1}월 ${d.getDate()}일`, weekday: WEEKDAY[d.getDay()] };
+}
+
+/** 대시보드 구석의 오늘: "2026년 11월 7일 토요일". short 면 해를 뺀다(좁은 화면) */
+export function formatToday(d, short = false) {
+  const { date, weekday } = formatLongDate(d);
+  return `${short ? '' : `${d.getFullYear()}년 `}${date} ${weekday}`;
+}
