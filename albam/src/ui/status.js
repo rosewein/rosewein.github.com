@@ -71,13 +71,15 @@ export function chooseMood({ happy, sleeping = false, night, nightAwake, minutes
 const DIAPER_SHORT = { pee: '소변', poo: '대변', both: '소+대' };
 
 /**
- * 기저귀 칸 세부(순수 함수): "12:50 · 소변", 소변 뒤에 대변이 따로 있었으면 "12:50 소변 · 대 09:10"
+ * 기저귀 칸 세부(순수 함수): "12:50 · 소변", 소변 뒤에 대변이 따로 있었으면 "12:50 소변 · 대 09:10".
+ * 좁은 화면(compact, P4)에서는 칸에 들어가게 "12:50 · 대 09:10"(대 표시가 없는 앞 시각은 소변)
  * @param {{at: string, type: string} | null | undefined} diaper
  * @param {{at: string} | null | undefined} poo  마지막 대변(009)
+ * @param {boolean} [compact]
  */
-export function diaperDetail(diaper, poo) {
+export function diaperDetail(diaper, poo, compact = false) {
   if (!diaper) return '기록 없음';
-  if (diaper.type === 'pee' && poo) return `${formatClock(diaper.at)} 소변 · 대 ${formatClock(poo.at)}`;
+  if (diaper.type === 'pee' && poo) return `${formatClock(diaper.at)}${compact ? ' ·' : ' 소변 ·'} 대 ${formatClock(poo.at)}`;
   return `${formatClock(diaper.at)} · ${DIAPER_SHORT[diaper.type] || ''}`;
 }
 
@@ -110,7 +112,7 @@ export function createStatusView(ctx) {
       el('span', { className: 'unit' }, i === parts.length - 1 ? unit + suffix : unit)]));
   }
 
-  /** 오른쪽 위 구석: D+142 (지금 시각은 tick) / 교정 3개월 28일(예정일 전이면 실제 개월) */
+  /** 오른쪽 위 구석 아랫줄: D+142 · 교정 3개월 28일(예정일 전이면 실제 개월). 윗줄 지금 시각은 tick */
   function renderAge(age) {
     setText($('#age'), age ? `D+${age.day}` : '');
     setText($('#ageSub'), !age ? '' : age.corrected_months != null ? `교정 ${age.corrected_months}개월 ${age.corrected_days}일` : `${age.months}개월 ${age.days}일`);
@@ -160,7 +162,7 @@ export function createStatusView(ctx) {
     renderCard('#cardFeed', feeding
       ? { label: '수유 · 먹는 중', from: feeding.at, suffix: '째', detail: `${formatClock(feeding.at)}~${feed?.ml != null ? ` · ${feed.ml}ml` : ''}` }
       : { label: '수유', from: feed?.at, detail: feed ? `${formatClock(feed.at)}${feed.ml != null ? ` · ${feed.ml}ml` : ''}` : '기록 없음', urgent: urgent === 'feed' });
-    renderCard('#cardDiaper', { label: '기저귀', from: diaper?.at, detail: diaperDetail(diaper, s?.last_poo), urgent: urgent === 'diaper' });
+    renderCard('#cardDiaper', { label: '기저귀', from: diaper?.at, detail: diaperDetail(diaper, s?.last_poo, $('#stage').classList.contains('narrow')), urgent: urgent === 'diaper' });
     renderCard('#cardSleep', sleeping
       ? { label: '잠 · 자는 중', from: sleeping.at, suffix: '째', detail: `${formatClock(sleeping.at)}~` }
       : sleep?.ended_at
