@@ -112,10 +112,13 @@ export function createStatusView(ctx) {
       el('span', { className: 'unit' }, i === parts.length - 1 ? unit + suffix : unit)]));
   }
 
-  /** 오른쪽 위 구석 아랫줄: D+142 · 교정 3개월 28일(예정일 전이면 실제 개월). 윗줄 지금 시각은 tick */
+  /** 오른쪽 위 구석 아랫줄: D+142 · 4개월 20일 · 교정 3개월 28일(시계 쪽과 같은 ageParts). 윗줄 지금 시각은 tick */
   function renderAge(age) {
-    setText($('#age'), age ? `D+${age.day}` : '');
-    setText($('#ageSub'), !age ? '' : age.corrected_months != null ? `교정 ${age.corrected_months}개월 ${age.corrected_days}일` : `${age.months}개월 ${age.days}일`);
+    const box = $('#ageLine');
+    const key = JSON.stringify(age ?? null);
+    if (box.dataset.key === key) return;
+    box.dataset.key = key;
+    box.replaceChildren(...(age ? ageParts(age).map(([text, val]) => el('span', { className: val ? 'val' : '' }, text)) : []));
   }
 
   /** 구석의 못 보낸 기록 수, 연결 끊김. 문제 없으면 비운다 */
@@ -123,7 +126,7 @@ export function createStatusView(ctx) {
     const net = $('#net');
     const [text, cls] = state.pending ? [`대기 ${state.pending}건`, 'acc'] : state.stale ? ['연결 안 됨', 'warn'] : ['', ''];
     setText(net, text);
-    net.className = cls;
+    net.className = `t9 ${cls}`.trim();
   }
 
   /** 칸 하나: 이름 / 지난 시간 / 시각·세부 */
