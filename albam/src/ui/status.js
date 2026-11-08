@@ -75,7 +75,7 @@ export function createStatusView(ctx) {
     setRecordTypes(s?.record_types);
     const feed = s?.last_feed;
     setLine($('#lastFeed'), '마지막 수유', feed ? `${formatClock(feed.at)}${feed.ml != null ? ` · ${feed.ml}ml` : ''}` : '기록 없음');
-    setLine($('#today'), '오늘 수유', s ? `${s.today?.feed_count ?? 0}회 · ${s.today?.feed_ml ?? 0}ml` : '-');
+    setLine($('#today'), '오늘', s ? `${s.today?.feed_count ?? 0}회 · ${s.today?.feed_ml ?? 0}ml` : '-');
     renderAge(s?.age);
     renderConnection();
     tick();
@@ -130,7 +130,9 @@ export function createStatusView(ctx) {
       hungryMinutes: cfg.hungryMinutes,
     });
 
-    setLine($('#clock'), '지금', formatClock(now));
+    // 맨 위 오른쪽 현재 시각. 나이 줄과 한 줄이라 "지금" 이름표는 자리가 없어 뺀다(시계 시각은 이것 하나뿐)
+    const clock = $('#clock');
+    if (clock.textContent !== formatClock(now)) clock.textContent = formatClock(now);
     renderElapsed(lastFeedAt, now, mood === 'hungry');
     const diaper = state.summary?.last_diaper;
     setLine($('#lastDiaper'), '마지막 기저귀', diaper ? `${DIAPER_LABEL[diaper.type] || ''} · ${formatAgo(diaper.at, now, { hoursOnlyFrom: DIAPER_HOURS_ONLY })}` : '기록 없음');
