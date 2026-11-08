@@ -17,7 +17,7 @@ const DEFAULTS = {
   voiceConfirmSeconds: 4,
   pollSeconds: 20,
   shiftMinutes: 3,
-  hungryMinutes: 180,
+  hungryMinutes: 'auto',
   diaperMinutes: 180,
   awakeMinutes: 120,
   defaultAmounts: [200, 230, 270],

@@ -30,13 +30,28 @@ function setText(node, text) {
   if (node && node.textContent !== text) node.textContent = text;
 }
 
+/** 'auto' 인데 수유 간격 기록이 이보다 적으면 */
+const HUNGRY_FALLBACK = 180;
+const HUNGRY_MIN_SAMPLES = 10;
+
+/**
+ * "배고파요…" 기준(분, 순수 함수). 숫자면 그대로, 'auto' 면 최근 14일 수유 간격의 p25 를 10분 단위로(요약의 feed_gap, 010)
+ * @param {number|'auto'} setting  config.js hungryMinutes
+ * @param {{n: number, p25: number|null} | null | undefined} gap
+ */
+export function hungryLimit(setting, gap) {
+  if (typeof setting === 'number') return setting;
+  if (gap?.p25 && gap.n >= HUNGRY_MIN_SAMPLES) return Math.round(gap.p25 / 10) * 10;
+  return HUNGRY_FALLBACK;
+}
+
 /** 급한 항목의 말풍선 문구 */
 export const FOCUS_TEXT = Object.freeze({ feed: '배고파요…', diaper: '기저귀 봐 주세요…', sleep: '졸려요…' });
 
 /**
  * 말풍선과 표정이 따를 항목 고르기(순수 함수).
  * 기쁨(방금 저장) > 먹이는 중 > 자는 중(잠 기록이 열려 있음) > 잠(밤, 화면 꺼진 상태) > 급한 항목 > 밤 > 평온
- * 급한 항목: 지난 시간 ÷ 기준 시간(cfg.hungryMinutes·diaperMinutes·awakeMinutes)이 가장 크고 1 이상인 것 하나
+ * 급한 항목: 지난 시간 ÷ 기준 시간(cfg.hungryMinutes(hungryLimit)·diaperMinutes·awakeMinutes)이 가장 크고 1 이상인 것 하나
  * @param {{happy?: boolean, feeding?: boolean, sleeping?: boolean, night?: boolean, nightAwake?: boolean,
  *          minutes: {feed?: number|null, diaper?: number|null, awake?: number|null},
  *          limits: {feed: number, diaper: number, awake: number}}} p
@@ -156,7 +171,7 @@ export function createStatusView(ctx) {
       night: ctx.isNightTime(),
       nightAwake: ctx.isNightAwake(),
       minutes: { feed: mins(feed?.at), diaper: mins(diaper?.at), awake: sleep?.ended_at && !sleeping ? mins(sleep.ended_at) : null },
-      limits: { feed: cfg.hungryMinutes, diaper: cfg.diaperMinutes, awake: cfg.awakeMinutes },
+      limits: { feed: hungryLimit(cfg.hungryMinutes, s?.feed_gap), diaper: cfg.diaperMinutes, awake: cfg.awakeMinutes },
     });
 
     setText($('#clock'), formatClock(now));

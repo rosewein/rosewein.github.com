@@ -412,4 +412,20 @@ begin
 end $$;
 reset role;
 
+-- ── 010: 수유 간격 통계 ─────────────
+set role authenticated;
+set request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+do $$
+declare s jsonb;
+begin
+  -- 4시간 간격 수유 다섯 번(간격 네 개, 모두 240분)
+  for i in 0..4 loop
+    perform public.care_add_event(jsonb_build_object('kind', 'feed', 'amount_ml', 200, 'occurred_at', now() - interval '10 days' + make_interval(hours => 4 * i), 'force', true));
+  end loop;
+  s := public.care_summary();
+  perform pg_temp.check((s -> 'feed_gap' ->> 'n')::int >= 4, 'feed gap counted');
+  perform pg_temp.check((s -> 'feed_gap' ->> 'p25')::numeric > 0, 'feed gap p25');
+end $$;
+reset role;
+
 \echo 'ALL SQL TESTS PASSED'
