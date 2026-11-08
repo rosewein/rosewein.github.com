@@ -152,23 +152,24 @@ button.px.acc { color: var(--btn-on); }
 /* 줄마다 무엇인지 앞에 흐린 글씨로 붙인다(.lbl) */
 #status .lbl { color: var(--dim); margin-right: 6px; }
 #elapsed .num { color: var(--strong); }
-/* 줄 간격(화면 기준): 이름표 10 → 큰 글씨 27~65 → 오늘 수유 63 → 마지막 기저귀 78 → 마지막 잠 93 → 나이 108 → 쪽 점 122 → 버튼 130~170 */
-#lastFeed { position: absolute; left: 0; top: 2px; white-space: nowrap; }
+/* 줄 간격(화면 기준): 나이·지금 10 → 큰 글씨 28~64 → 마지막 수유·오늘 66 → 마지막 기저귀 83 → 마지막 잠 100 → 쪽 점 122 → 버튼 130~170
+   맨 위는 태어난 정보, 아래 세 줄은 "마지막 ○○" 끼리 묶는다 */
+/* 나이: D+143 · 4개월 21일 · 교정 3개월 29일 (값은 밝게, 사이 글은 흐리게) */
+#age { position: absolute; left: 0; top: 2px; white-space: nowrap; color: var(--dim); }
 #clock { position: absolute; right: 0; top: 2px; white-space: nowrap; }
 /* "2시간 35분 전": 숫자 36, 단위 24. 가장 긴 "12시간 35분 전"도 한 줄(약 216) */
-#elapsed { position: absolute; left: 0; top: 19px; height: 36px; display: flex; align-items: baseline; white-space: nowrap; }
+#elapsed { position: absolute; left: 0; top: 20px; height: 36px; display: flex; align-items: baseline; white-space: nowrap; }
 #elapsed .num { font-size: 36px; }
 #elapsed .unit { font-size: 24px; margin-right: 8px; }
 #elapsed .unit:last-child { margin-right: 0; }
 #elapsed .none { font-size: 24px; color: var(--dim); }
 #elapsed.warn, #elapsed.warn .num { color: var(--warn); }
-#today { position: absolute; left: 0; top: 55px; white-space: nowrap; }
-/* 못 보낸 기록·연결 상태: '오늘 수유' 줄 오른쪽 */
-#net { position: absolute; right: 0; top: 57px; text-align: right; white-space: nowrap; }
-#lastDiaper { position: absolute; left: 0; top: 70px; white-space: nowrap; }
-#lastSleep { position: absolute; left: 0; top: 85px; white-space: nowrap; }
-/* 나이: D+143 · 4개월 21일 · 교정 3개월 29일 (값은 밝게, 사이 글은 흐리게) */
-#age { position: absolute; left: 0; top: 100px; white-space: nowrap; color: var(--dim); }
+#lastFeed { position: absolute; left: 0; top: 58px; white-space: nowrap; }
+#today { position: absolute; right: 0; top: 58px; white-space: nowrap; }
+#lastDiaper { position: absolute; left: 0; top: 75px; white-space: nowrap; }
+/* 못 보낸 기록·연결 상태: 기저귀 줄 오른쪽 */
+#net { position: absolute; right: 0; top: 77px; text-align: right; white-space: nowrap; }
+#lastSleep { position: absolute; left: 0; top: 92px; white-space: nowrap; }
 #age .val { color: var(--strong); }
 
 /* ── 오른쪽 아래: 큰 버튼 ── */

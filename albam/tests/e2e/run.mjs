@@ -80,8 +80,8 @@ async function demoFlow(browser, base) {
   check(await label('#elapsed') === '2시간 35분 전', '큰 글씨: 마지막 수유 뒤 "2시간 35분 전"');
   check(await text(page, '#age') === 'D+142 · 4개월 20일 · 교정 3개월 28일', `나이 줄(11/6 기준) ${await text(page, '#age')}`);
   check(await text(page, '#lastFeed') === '마지막 수유11:25 · 200ml', '마지막 수유 시각에 이름표');
-  check(await text(page, '#clock') === '지금14:00', '현재 시각에 "지금"');
-  check(await text(page, '#today') === '오늘 수유3회 · 570ml', '오늘 수유 한 줄');
+  check(await text(page, '#clock') === '14:00', '맨 위 오른쪽 현재 시각');
+  check(await text(page, '#today') === '오늘3회 · 570ml', '오늘 수유는 마지막 수유 오른쪽');
   check(await text(page, '#lastDiaper') === '마지막 기저귀소변 · 1시간 10분 전', '마지막 기저귀 "1시간 10분 전"');
   check((await text(page, '#lastSleep')).startsWith('마지막 잠') && (await text(page, '#lastSleep')).endsWith('깸'), `마지막 잠 줄 (${await text(page, '#lastSleep')})`);
   const statusOverlap = await page.$$eval('#status > div', (rows) => {
@@ -148,7 +148,7 @@ async function demoFlow(browser, base) {
   check((await text(page, '#lastFeed')).includes('230ml'), '230ml(브레짜 210) 로 저장');
   check(await page.getAttribute('#elapsed', 'aria-label') === '방금', '저장하면 상태 칸이 바로 바뀜(방금)');
   check(await page.isVisible('#micBtn'), '저장 알림 동안에도 [말하기]는 보임');
-  check(await text(page, '#today') === '오늘 수유4회 · 800ml', '오늘 횟수 증가(예시 3회 + 1)');
+  check(await text(page, '#today') === '오늘4회 · 800ml', '오늘 횟수 증가(예시 3회 + 1)');
   await shot(page, 'saved');
 
   await page.click('#undoMsg');
@@ -658,7 +658,7 @@ async function supabaseFlow(browser, base) {
   await page.waitForTimeout(400);
   check(fake.events.length === 1, '기록이 Supabase 로 감');
   check(fake.events[0].amount_ml === 200, '기록이 없으면 빠른 선택 첫 값(200, 브레짜 180)으로');
-  check((await text(page, '#today')).startsWith('오늘 수유1회'), '요약 다시 받음');
+  check((await text(page, '#today')).startsWith('오늘1회'), '요약 다시 받음');
   await page.click('#undoMsg');
 
   await fake.goOffline();
@@ -711,7 +711,7 @@ async function supabaseFlow(browser, base) {
   await page.reload();
   await page.waitForTimeout(600);
   check(fake.calls.some((c) => c.includes('grant_type=refresh_token')), '토큰이 만료되면 갱신');
-  check((await text(page, '#today')).startsWith('오늘 수유1회'), '갱신 뒤 요약');
+  check((await text(page, '#today')).startsWith('오늘1회'), '갱신 뒤 요약');
   check(errors.length === 0, `페이지 오류 없음 ${errors.join(' ')}`);
 }
 
