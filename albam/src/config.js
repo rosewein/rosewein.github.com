@@ -18,6 +18,8 @@ const DEFAULTS = {
   pollSeconds: 20,
   shiftMinutes: 3,
   hungryMinutes: 180,
+  diaperMinutes: 180,
+  awakeMinutes: 120,
   defaultAmounts: [200, 230, 270],
   formula: APTAMIL,
   machine: BREZZA,

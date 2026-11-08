@@ -256,15 +256,6 @@ test('그 밖의 기록 종류(체온·목욕·투약)', async () => {
   setRecordTypes(DEFAULT_RECORD_TYPES);
 });
 
-test('마지막 잠 줄', async () => {
-  const { describeLastSleep } = await import('../../src/ui/status.js');
-  assert.equal(describeLastSleep(null, NOW), '기록 없음');
-  assert.equal(describeLastSleep({ at: ago(130), ended_at: ago(40) }, NOW), '깬 지 40분 · 1시간 30분 잠');
-  assert.equal(describeLastSleep({ at: ago(40), ended_at: null }, NOW), '자는 중 · 40분째');
-  assert.equal(describeLastSleep({ at: ago(13 * 60), ended_at: ago(11 * 60 + 20) }, NOW), '깬 지 11시간 · 1시간 40분 잠', '10시간 넘으면 시간만');
-  assert.equal(describeLastSleep({ at: ago(30), ended_at: NOW }, NOW), '방금 깸 · 30분 잠');
-});
-
 test('못 보낸 대변 기록이 마지막 대변에 얹히고, 취소하면 빠진다', () => {
   const withPoo = { ...base, last_poo: null };
   const s = applyPending(withPoo, [add('p1', 'diaper', 3, { detail: { type: 'both' } }), add('p2', 'diaper', 1, { detail: { type: 'pee' } })]);
@@ -273,4 +264,24 @@ test('못 보낸 대변 기록이 마지막 대변에 얹히고, 취소하면 �
   const c = applyPending({ ...base, last_poo: { id: 'd9', at: ago(30).toISOString(), type: 'poo' },
     recent: [{ id: 'd9', kind: 'diaper', at: ago(30).toISOString(), detail: { type: 'poo' } }, ...base.recent] }, [{ op: 'cancel', id: 'd9' }]);
   assert.equal(c.last_poo, null);
+});
+
+test('말풍선·표정: 가장 급한 항목 하나', async () => {
+  const { chooseFocus, diaperDetail } = await import('../../src/ui/status.js');
+  const limits = { feed: 180, diaper: 180, awake: 120 };
+  const calm = { minutes: { feed: 60, diaper: 30, awake: 40 }, limits };
+  assert.deepEqual(chooseFocus(calm), { mood: 'normal', focus: 'feed', urgent: false, words: '기분 좋아요' });
+  assert.deepEqual(chooseFocus({ ...calm, minutes: { feed: 200, diaper: 30, awake: 40 } }), { mood: 'hungry', focus: 'feed', urgent: true, words: '배고파요…' });
+  // 수유 200/180 = 1.11, 깬 지 150/120 = 1.25 → 졸림이 더 급함
+  assert.equal(chooseFocus({ ...calm, minutes: { feed: 200, diaper: 30, awake: 150 } }).focus, 'sleep');
+  assert.equal(chooseFocus({ ...calm, minutes: { feed: 60, diaper: 240, awake: null } }).words, '기저귀 봐 주세요…');
+  assert.equal(chooseFocus({ ...calm, minutes: { feed: 200, diaper: 240, awake: 150 }, sleeping: true }).words, '쿨쿨', '자는 중이면 급한 것보다 잠');
+  assert.equal(chooseFocus({ ...calm, minutes: { feed: 200, diaper: 30, awake: 40 }, feeding: true }).words, '냠냠');
+  assert.equal(chooseFocus({ ...calm, happy: true, feeding: true }).words, '고마워요!');
+  assert.equal(chooseFocus({ ...calm, minutes: { feed: null, diaper: null, awake: null } }).urgent, false, '기록이 없으면 급하지 않음');
+  assert.equal(chooseFocus({ ...calm, night: true }).mood, 'sleep');
+  assert.equal(chooseFocus({ ...calm, night: true, nightAwake: true, minutes: { feed: 200, diaper: 0, awake: 0 } }).mood, 'hungry');
+  assert.equal(diaperDetail({ at: new Date(2026, 10, 6, 12, 50), type: 'both' }, null), '12:50 · 소+대');
+  assert.equal(diaperDetail({ at: new Date(2026, 10, 6, 12, 50), type: 'pee' }, { at: new Date(2026, 10, 6, 9, 10) }), '12:50 소변 · 대 09:10');
+  assert.equal(diaperDetail(null, null), '기록 없음');
 });
