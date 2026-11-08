@@ -287,10 +287,19 @@ test('말풍선·표정: 가장 급한 항목 하나', async () => {
   assert.equal(diaperDetail(null, null), '기록 없음');
 });
 
-test('배고파요 기준: 숫자면 그대로, auto 면 수유 간격 p25', async () => {
+test('배고파요 기준: 숫자면 그대로, auto 면 마지막 수유 시간대의 수유 간격 25% 값', async () => {
   const { hungryLimit } = await import('../../src/ui/status.js');
-  assert.equal(hungryLimit(200, { n: 50, p25: 246 }), 200);
-  assert.equal(hungryLimit('auto', { n: 64, p25: 246, p50: 268 }), 250, '최근 2주 p25 246분 → 4시간 10분');
-  assert.equal(hungryLimit('auto', { n: 3, p25: 300 }), 180, '기록이 적으면 180');
-  assert.equal(hungryLimit('auto', null), 180);
+  // 낮(06~18시)에 시작한 간격은 4시간 안팎, 저녁(18~24시)에 시작한 간격은 8시간 안팎, 새벽은 4시간 반
+  const day = [220, 230, 240, 250, 260, 270, 280].map((g, i) => [8 + i, g]);
+  const evening = [450, 480, 500, 520, 560, 600].map((g, i) => [19 + (i % 3), g]);
+  const dawn = [250, 260, 270].map((g, i) => [2 + i, g]);
+  const s = { feed_gaps: [...day, ...evening, ...dawn] };
+  const at = (h) => new Date(2026, 10, 8, h, 30);
+  assert.deepEqual(hungryLimit(200, s, at(10)), { minutes: 200, period: null });
+  assert.deepEqual(hungryLimit('auto', s, at(10)), { minutes: 240, period: '낮' }, '낮 간격 25% = 235 → 240');
+  assert.deepEqual(hungryLimit('auto', s, at(20)), { minutes: 490, period: '저녁' }, '저녁 수유 뒤에는 길게');
+  assert.equal(hungryLimit('auto', s, at(3)).period, null, '새벽 간격이 6개 미만이면 전체 간격');
+  assert.equal(hungryLimit('auto', { feed_gaps: day.slice(0, 3) }, at(10)).minutes, 180, '전체가 10개 미만이면 180');
+  assert.equal(hungryLimit('auto', { feed_gap: { n: 64, p25: 246 } }, at(10)).minutes, 250, '010 만 있는 서버');
+  assert.equal(hungryLimit('auto', null, null).minutes, 180);
 });

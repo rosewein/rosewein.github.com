@@ -30,19 +30,44 @@ function setText(node, text) {
   if (node && node.textContent !== text) node.textContent = text;
 }
 
-/** 'auto' 인데 수유 간격 기록이 이보다 적으면 */
+/** 'auto' 인데 수유 간격 기록이 이보다 적으면 180분. 시간대 간격이 PERIOD_MIN 보다 적으면 전체 간격으로 */
 const HUNGRY_FALLBACK = 180;
 const HUNGRY_MIN_SAMPLES = 10;
+const PERIOD_MIN_SAMPLES = 6;
+/** 마지막 수유 시각으로 나누는 시간대(config.js feedPeriods 가 없을 때). 저녁 수유 뒤에는 길게 잔다 */
+export const DEFAULT_FEED_PERIODS = [{ from: 6, to: 18, label: '낮' }, { from: 18, to: 24, label: '저녁' }, { from: 0, to: 6, label: '새벽' }];
+
+const inPeriod = (h, p) => (p.from <= p.to ? h >= p.from && h < p.to : h >= p.from || h < p.to);
+/** 25% 값(Postgres percentile_cont 와 같은 선형 보간) */
+function p25(values) {
+  const v = [...values].sort((a, b) => a - b);
+  const i = (v.length - 1) * 0.25;
+  const lo = Math.floor(i);
+  return v[lo] + (v[Math.min(lo + 1, v.length - 1)] - v[lo]) * (i - lo);
+}
 
 /**
- * "배고파요…" 기준(분, 순수 함수). 숫자면 그대로, 'auto' 면 최근 14일 수유 간격의 p25 를 10분 단위로(요약의 feed_gap, 010)
+ * "배고파요…" 기준(분, 순수 함수). 숫자면 그대로.
+ * 'auto' 면 최근 14일 수유 간격(요약의 feed_gaps, 011) 중 마지막 수유와 같은 시간대(낮·저녁·새벽)에서 시작한 간격의
+ * 25% 값(4번 중 3번은 이보다 늦게 먹음)을 10분 단위로. 그 시간대 간격이 적으면 전체 간격, 전체도 적으면 180.
  * @param {number|'auto'} setting  config.js hungryMinutes
- * @param {{n: number, p25: number|null} | null | undefined} gap
+ * @param {{feed_gaps?: [number, number][], feed_gap?: {n: number, p25: number|null}} | null | undefined} summary
+ * @param {string|Date|null|undefined} lastFeedAt
+ * @param {{from: number, to: number}[]} [periods]
+ * @returns {{minutes: number, period: string|null}}
  */
-export function hungryLimit(setting, gap) {
-  if (typeof setting === 'number') return setting;
-  if (gap?.p25 && gap.n >= HUNGRY_MIN_SAMPLES) return Math.round(gap.p25 / 10) * 10;
-  return HUNGRY_FALLBACK;
+export function hungryLimit(setting, summary, lastFeedAt, periods = DEFAULT_FEED_PERIODS) {
+  if (typeof setting === 'number') return { minutes: setting, period: null };
+  const round10 = (m) => Math.round(m / 10) * 10;
+  const gaps = summary?.feed_gaps || [];
+  if (gaps.length < HUNGRY_MIN_SAMPLES) {
+    const old = summary?.feed_gap;   // 010 만 있는 서버
+    return { minutes: old?.p25 && old.n >= HUNGRY_MIN_SAMPLES ? round10(old.p25) : HUNGRY_FALLBACK, period: null };
+  }
+  const period = lastFeedAt ? periods.find((p) => inPeriod(new Date(lastFeedAt).getHours(), p)) : null;
+  const mine = period ? gaps.filter(([h]) => inPeriod(h, period)).map(([, g]) => g) : [];
+  if (mine.length >= PERIOD_MIN_SAMPLES) return { minutes: round10(p25(mine)), period: period.label || null };
+  return { minutes: round10(p25(gaps.map(([, g]) => g))), period: null };
 }
 
 /** 급한 항목의 말풍선 문구 */
@@ -171,7 +196,7 @@ export function createStatusView(ctx) {
       night: ctx.isNightTime(),
       nightAwake: ctx.isNightAwake(),
       minutes: { feed: mins(feed?.at), diaper: mins(diaper?.at), awake: sleep?.ended_at && !sleeping ? mins(sleep.ended_at) : null },
-      limits: { feed: hungryLimit(cfg.hungryMinutes, s?.feed_gap), diaper: cfg.diaperMinutes, awake: cfg.awakeMinutes },
+      limits: { feed: hungryLimit(cfg.hungryMinutes, s, feed?.at, cfg.feedPeriods).minutes, diaper: cfg.diaperMinutes, awake: cfg.awakeMinutes },
     });
 
     setText($('#clock'), formatClock(now));

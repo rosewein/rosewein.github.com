@@ -425,6 +425,7 @@ begin
   s := public.care_summary();
   perform pg_temp.check((s -> 'feed_gap' ->> 'n')::int >= 4, 'feed gap counted');
   perform pg_temp.check((s -> 'feed_gap' ->> 'p25')::numeric > 0, 'feed gap p25');
+  perform pg_temp.check(jsonb_array_length(s -> 'feed_gaps') >= 4 and (s -> 'feed_gaps' -> 0 ->> 1)::numeric = 240, 'feed gaps listed with hour and minutes');
 end $$;
 reset role;
 
