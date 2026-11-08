@@ -283,5 +283,6 @@ test('말풍선·표정: 가장 급한 항목 하나', async () => {
   assert.equal(chooseFocus({ ...calm, night: true, nightAwake: true, minutes: { feed: 200, diaper: 0, awake: 0 } }).mood, 'hungry');
   assert.equal(diaperDetail({ at: new Date(2026, 10, 6, 12, 50), type: 'both' }, null), '12:50 · 소+대');
   assert.equal(diaperDetail({ at: new Date(2026, 10, 6, 12, 50), type: 'pee' }, { at: new Date(2026, 10, 6, 9, 10) }), '12:50 소변 · 대 09:10');
+  assert.equal(diaperDetail({ at: new Date(2026, 10, 6, 12, 50), type: 'pee' }, { at: new Date(2026, 10, 6, 9, 10) }, true), '12:50 · 대 09:10', '좁은 화면');
   assert.equal(diaperDetail(null, null), '기록 없음');
 });

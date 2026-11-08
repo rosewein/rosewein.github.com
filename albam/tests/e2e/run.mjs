@@ -112,7 +112,8 @@ async function demoFlow(browser, base) {
     `말풍선: 가장 급한 항목 하나(깬 지 200분/120분 > 수유 155분/180분) "${await text(page, '#bubble')}"`);
   const isUrgent = (sel) => page.$eval(sel, (x) => x.classList.contains('urgent'));
   check(await isUrgent('#bubble') && await isUrgent('#cardSleep') && !(await isUrgent('#cardFeed')) && !(await isUrgent('#cardDiaper')), '빨강은 말풍선과 그 항목 칸에만');
-  check(await text(page, '#age') === 'D+142' && await text(page, '#clock') === '14:00' && await text(page, '#ageSub') === '교정 3개월 28일', '구석: D+142 · 14:00 / 교정 3개월 28일');
+  check(await text(page, '#age') === 'D+142' && await text(page, '#clock') === '14:00' && await text(page, '#ageSub') === '교정 3개월 28일', '구석: 14:00 / D+142 · 교정 3개월 28일');
+  check(await page.$eval('#age', (a) => a.closest('#cornerSub') !== null), 'D+ 는 시각 아랫줄(헷갈리지 않게)');
   check(await card('#cardFeed') === '수유|2시간 35분|11:25 · 200ml', `수유 칸 ${await card('#cardFeed')}`);
   check(await card('#cardDiaper') === '기저귀|1시간 10분|12:50 · 소변', `기저귀 칸 ${await card('#cardDiaper')}`);
   check(await card('#cardSleep') === '잠 · 깬 지|3시간 20분|09:00~10:40', `잠 칸 ${await card('#cardSleep')}`);
@@ -510,6 +511,20 @@ async function longTextFlow(browser, base) {
   check(await page.$eval('#stage', (s) => s.getBoundingClientRect().width / (parseFloat(s.style.zoom) || 1)) === 307 && await page.$eval('#stage', (s) => s.classList.contains('narrow')), 'P4 비율 미리 보기(?w=307): 가로 307, 좁은 화면');
   await dashboardLayout(page, 'P4 긴 글');
   await shot(page, 'long-p4');
+  // P4: 소변 뒤에 대변이 따로 있던 경우(기저귀 칸 세부가 가장 김)
+  await page.evaluate(() => {
+    const ago = (m) => new Date(Date.now() - m * 60000).toISOString();
+    localStorage.setItem('albam.demo.events', JSON.stringify([
+      { id: 'a', kind: 'feed', occurred_at: ago(12 * 60 + 35), amount_ml: 160, detail: {} },
+      { id: 'b', kind: 'diaper', occurred_at: ago(50), detail: { type: 'pee' } },
+      { id: 'c', kind: 'diaper', occurred_at: ago(300), detail: { type: 'poo' } },
+      { id: 'd', kind: 'sleep', occurred_at: ago(12 * 60), ended_at: ago(11 * 60 + 1), detail: {} },
+    ]));
+  });
+  await page.reload();
+  await page.waitForTimeout(500);
+  check(await text(page, '#cardDiaper .sub') === '13:10 · 대 09:00', `P4 기저귀 세부는 짧게 ${await text(page, '#cardDiaper .sub')}`);
+  await dashboardLayout(page, 'P4 대변 따로');
 }
 
 // 미리 보기에서도 오프라인 저장·"대기 n건"이 실제와 똑같이 동작하고, 실제 큐와 섞이지 않는지

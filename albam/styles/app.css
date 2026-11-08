@@ -137,7 +137,7 @@ button.px.acc { color: var(--btn-on); }
   background-image: url('../sprites/albam.png'); background-size: 192px 384px;
 }
 
-/* 오른쪽 위 구석: D+142 · 14:00(작게) / 교정 3개월 28일(더 작게). 못 보낸 기록·연결 끊김은 그 왼쪽에 문제 있을 때만 */
+/* 오른쪽 위 구석: 14:00(작게) / D+142 · 교정 3개월 28일(더 작게). 나이는 시각과 헷갈리지 않게 아랫줄. 못 보낸 기록·연결 끊김은 그 왼쪽에 문제 있을 때만 */
 #corner { right: 16px; top: 8px; text-align: right; white-space: nowrap; }
 #cornerTop { line-height: 12px; }
 #cornerSub { margin-top: 2px; line-height: 10px; display: flex; justify-content: flex-end; gap: 6px; }
