@@ -286,3 +286,11 @@ test('말풍선·표정: 가장 급한 항목 하나', async () => {
   assert.equal(diaperDetail({ at: new Date(2026, 10, 6, 12, 50), type: 'pee' }, { at: new Date(2026, 10, 6, 9, 10) }, true), '12:50 · 대 09:10', '좁은 화면');
   assert.equal(diaperDetail(null, null), '기록 없음');
 });
+
+test('배고파요 기준: 숫자면 그대로, auto 면 수유 간격 p25', async () => {
+  const { hungryLimit } = await import('../../src/ui/status.js');
+  assert.equal(hungryLimit(200, { n: 50, p25: 246 }), 200);
+  assert.equal(hungryLimit('auto', { n: 64, p25: 246, p50: 268 }), 250, '최근 2주 p25 246분 → 4시간 10분');
+  assert.equal(hungryLimit('auto', { n: 3, p25: 300 }), 180, '기록이 적으면 180');
+  assert.equal(hungryLimit('auto', null), 180);
+});

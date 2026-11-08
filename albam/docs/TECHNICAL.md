@@ -130,6 +130,7 @@ albam/
 │  ├─ 007_feed_duration.sql 수유 걸린 시간: 요약 last_feed 에 ended_at·feeding, 통계에 feed_min
 │  ├─ 008_record_types.sql  기록 종류 표(목욕·체온·투약…), care_events.value_num, 요약 record_types
 │  ├─ 009_last_poo.sql      요약에 last_poo(마지막 대변)
+│  ├─ 010_feed_gap.sql      요약에 feed_gap(최근 14일 수유 간격 p25·p50·p75)
 │  └─ queries/              SQL Editor 에서 돌려 보는 확인용 질의
 ├─ sprites/                도트 그림 원본 PNG + sprites.json
 ├─ fonts/                  프리텐다드 글꼴(한글 2,780자 판, 보통·굵게, SIL OFL 1.1)
@@ -369,7 +370,7 @@ flowchart TD
 
 | 항목 | 기준(설정) | 지난 시간 | 문구 |
 | --- | --- | --- | --- |
-| 수유 | `hungryMinutes` 180 | 마지막 수유 시작부터 | 배고파요… |
+| 수유 | `hungryMinutes` 'auto'(최근 14일 수유 간격 p25, 10분 단위. 기록 10개 미만이면 180. 숫자로 적으면 그 값) | 마지막 수유 시작부터 | 배고파요… |
 | 기저귀 | `diaperMinutes` 180 | 마지막 기저귀부터 | 기저귀 봐 주세요… |
 | 잠 | `awakeMinutes` 120 | 깬 시각부터(자는 중이면 셈하지 않음) | 졸려요… |
 
@@ -745,7 +746,7 @@ flowchart LR
 - 이 저장소는 GitHub Pages로 나간다. main에 합치면 `https://rosewein.github.io/albam/`에 반영된다.
 - 서비스 워커는 네트워크를 먼저 쓴다. 그래서 고친 파일은 다음에 열 때 바로 보인다. 오프라인일 때만 캐시를 쓴다.
 - 파일을 더하거나 이름을 바꾸면 `sw.js`의 `FILES`에 반영하고 `VERSION`을 올린다.
-- SQL은 Supabase SQL Editor에서 번호 순서대로 직접 실행한다(지금 `001`~`009`). 바꿀 때는 `008_…sql`처럼 번호를 붙여 새 파일로 더하고, 이미 실행한 파일은 고치지 않는다. 함수를 바꿀 때는 새 파일에 `create or replace`로 함수 전체를 다시 쓴다(002의 `care_summary()`처럼).
+- SQL은 Supabase SQL Editor에서 번호 순서대로 직접 실행한다(지금 `001`~`010`). 바꿀 때는 `008_…sql`처럼 번호를 붙여 새 파일로 더하고, 이미 실행한 파일은 고치지 않는다. 함수를 바꿀 때는 새 파일에 `create or replace`로 함수 전체를 다시 쓴다(002의 `care_summary()`처럼).
 - `config.js`에는 publishable(anon) key만 둔다. 공개돼도 되는 값이고, 읽고 쓰기는 RLS와 가족 명단이 막는다. service_role 키는 절대 넣지 않는다.
 
 ## 12. 고치고 늘리는 법
