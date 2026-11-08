@@ -27,6 +27,7 @@ export async function createFakeSupabase(context) {
       day_start: dayStart.toISOString(),
       last_feed: feed ? { id: feed.id, at: feed.occurred_at, ml: feed.amount_ml, ended_at: feed.ended_at ?? null, feeding: !feed.ended_at && !!feed.detail?.feeding } : null,
       last_diaper: diaper ? { id: diaper.id, at: diaper.occurred_at, type: diaper.detail.type } : null,
+      last_poo: (({ id, occurred_at: at, detail } = {}) => (id ? { id, at, type: detail.type } : null))(all.find((e) => e.kind === 'diaper' && ['poo', 'both'].includes(e.detail?.type))),
       last_sleep: sleep ? { id: sleep.id, at: sleep.occurred_at, ended_at: sleep.ended_at ?? null } : null,
       today: { feed_count: feeds.length, feed_ml: feeds.reduce((s, e) => s + (e.amount_ml || 0), 0) },
       feed_amounts: feedAmounts,

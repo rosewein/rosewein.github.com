@@ -259,7 +259,18 @@ test('그 밖의 기록 종류(체온·목욕·투약)', async () => {
 test('마지막 잠 줄', async () => {
   const { describeLastSleep } = await import('../../src/ui/status.js');
   assert.equal(describeLastSleep(null, NOW), '기록 없음');
-  assert.equal(describeLastSleep({ at: ago(130), ended_at: ago(40) }, NOW), '1시간 30분 · 40분 전 깸');
+  assert.equal(describeLastSleep({ at: ago(130), ended_at: ago(40) }, NOW), '깬 지 40분 · 1시간 30분 잠');
   assert.equal(describeLastSleep({ at: ago(40), ended_at: null }, NOW), '자는 중 · 40분째');
-  assert.equal(describeLastSleep({ at: ago(13 * 60), ended_at: ago(11 * 60 + 20) }, NOW), '1시간 40분 · 11시간 전 깸', '10시간 넘으면 시간만');
+  assert.equal(describeLastSleep({ at: ago(13 * 60), ended_at: ago(11 * 60 + 20) }, NOW), '깬 지 11시간 · 1시간 40분 잠', '10시간 넘으면 시간만');
+  assert.equal(describeLastSleep({ at: ago(30), ended_at: NOW }, NOW), '방금 깸 · 30분 잠');
+});
+
+test('못 보낸 대변 기록이 마지막 대변에 얹히고, 취소하면 빠진다', () => {
+  const withPoo = { ...base, last_poo: null };
+  const s = applyPending(withPoo, [add('p1', 'diaper', 3, { detail: { type: 'both' } }), add('p2', 'diaper', 1, { detail: { type: 'pee' } })]);
+  assert.equal(s.last_poo.id, 'p1', '소변만인 기록은 마지막 대변이 아님');
+  assert.equal(s.last_diaper.id, 'p2');
+  const c = applyPending({ ...base, last_poo: { id: 'd9', at: ago(30).toISOString(), type: 'poo' },
+    recent: [{ id: 'd9', kind: 'diaper', at: ago(30).toISOString(), detail: { type: 'poo' } }, ...base.recent] }, [{ op: 'cancel', id: 'd9' }]);
+  assert.equal(c.last_poo, null);
 });

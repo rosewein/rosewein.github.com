@@ -396,4 +396,20 @@ begin
 end $$;
 reset role;
 
+-- ── 009: 마지막 대변 ─────────────
+set role authenticated;
+set request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+do $$
+declare v_poo uuid := gen_random_uuid(); s jsonb;
+begin
+  perform public.care_add_event(jsonb_build_object('id', v_poo, 'kind', 'diaper', 'occurred_at', now() - interval '5 hours',
+    'detail', '{"type":"both"}'::jsonb, 'force', true));
+  perform public.care_add_event(jsonb_build_object('kind', 'diaper', 'occurred_at', now() - interval '1 minute',
+    'detail', '{"type":"pee"}'::jsonb, 'force', true));
+  s := public.care_summary();
+  perform pg_temp.check(s -> 'last_diaper' ->> 'type' = 'pee', 'last diaper is the pee');
+  perform pg_temp.check((s -> 'last_poo' ->> 'id')::uuid = v_poo and s -> 'last_poo' ->> 'type' = 'both', 'last poo skips pee-only diapers');
+end $$;
+reset role;
+
 \echo 'ALL SQL TESTS PASSED'

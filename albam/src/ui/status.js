@@ -39,7 +39,7 @@ function setLine(node, label, value) {
 }
 
 /**
- * '마지막 잠' 줄(순수 함수). 깨어 있으면 잔 길이와 깬 지 얼마나: "1시간 30분 · 40분 전 깸".
+ * '마지막 잠' 줄(순수 함수). 깨어 있으면 깬 지 얼마나와 잔 길이: "깬 지 40분 · 1시간 30분 잠".
  * 자는 중이면 "자는 중 · 40분째"
  * @param {{at: string, ended_at: string|null} | null | undefined} sleep
  * @param {Date} now
@@ -47,7 +47,8 @@ function setLine(node, label, value) {
 export function describeLastSleep(sleep, now) {
   if (!sleep) return '기록 없음';
   if (!sleep.ended_at) return `자는 중 · ${formatDuration(now - new Date(sleep.at))}째`;
-  return `${formatDuration(new Date(sleep.ended_at) - new Date(sleep.at))} · ${formatAgo(sleep.ended_at, now, { hoursOnlyFrom: DIAPER_HOURS_ONLY })} 깸`;
+  const awake = agoParts(sleep.ended_at, now, { hoursOnlyFrom: DIAPER_HOURS_ONLY }).map(([n, u]) => n + u).join(' ');
+  return `${awake ? `깬 지 ${awake}` : '방금 깸'} · ${formatDuration(new Date(sleep.ended_at) - new Date(sleep.at))} 잠`;
 }
 
 /**
@@ -136,6 +137,8 @@ export function createStatusView(ctx) {
     renderElapsed(lastFeedAt, now, mood === 'hungry');
     const diaper = state.summary?.last_diaper;
     setLine($('#lastDiaper'), '마지막 기저귀', diaper ? `${DIAPER_LABEL[diaper.type] || ''} · ${formatAgo(diaper.at, now, { hoursOnlyFrom: DIAPER_HOURS_ONLY })}` : '기록 없음');
+    const poo = state.summary?.last_poo;
+    setLine($('#lastPoo'), '마지막 대변', poo ? `${formatClock(poo.at)} · ${formatAgo(poo.at, now, { hoursOnlyFrom: DIAPER_HOURS_ONLY })}` : '기록 없음');
     setLine($('#lastSleep'), '마지막 잠', describeLastSleep(state.summary?.last_sleep, now));
     $('#albam').style.backgroundPosition = `${-frame * SPRITE_PX}px ${-MOOD_ROW[mood] * SPRITE_PX}px`;
 
