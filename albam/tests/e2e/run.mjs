@@ -131,6 +131,8 @@ async function demoFlow(browser, base) {
   const curved = await curvedEdgeOffenders(page, '#corner, #ageLine, #bubble, .card, #actions button, #micBtn, #pageDots .dot');
   await sleepFlow(page);
   check(curved.length === 0, `위·아래 곡면(8px)에 글·버튼 없음 ${curved.join(' ')}`);
+  const dotsMid = await page.$eval('#pageDots', (d) => { const s = document.querySelector('#stage').getBoundingClientRect(); const r = d.getBoundingClientRect(); return Math.abs((r.left + r.right) / 2 - (s.left + s.right) / 2); });
+  check(dotsMid < 1, `쪽 점은 화면 가운데 (어긋남 ${dotsMid.toFixed(1)})`);
 
   await page.click('#feedBtn');
   const quick = () => page.$$eval('#amountRow button', (b) => b.map((x) => `${x.querySelector('.t24').textContent}/${x.querySelector('.machine').textContent}`).join());
