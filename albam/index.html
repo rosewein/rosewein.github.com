@@ -27,8 +27,9 @@
       <div class="box" id="bigAge"></div>   <!-- D+143 · 4개월 21일 · 교정 3개월 29일 -->
     </div>
 
-    <!-- 대시보드(처음 쪽): 위층 = 알밤 + 말풍선(가장 급한 항목 하나), 아래층 = 수유·기저귀·잠 세 칸(상태 + 바로 아래 기록 버튼).
-         배치 규칙은 styles/app.css '대시보드', 말풍선·표정 규칙은 src/ui/status.js 의 chooseFocus -->
+    <!-- 대시보드(처음 쪽): 위층 = 알밤 + 말풍선(가장 급한 항목 하나), 아래층 = 수유·기저귀·잠 큰 버튼 셋(상태를 버튼 안에).
+         배치 규칙은 styles/app.css '대시보드', 말풍선·표정 규칙은 src/ui/status.js 의 chooseFocus.
+         아래층(수유·기저귀·잠 상태를 담은 큰 버튼)은 모든 쪽에 있는 #actions 가 대시보드에서 커진 것 -->
     <div class="page" id="pageMain">
       <div id="albam" class="spr box"></div>
       <!-- 오른쪽 위 구석: 2026년 11월 6일 금요일 14:00 / D+142 · 4개월 20일 · 교정 3개월 28일(시각과 헷갈리지 않게 나이는 아랫줄).
@@ -41,15 +42,8 @@
         <div id="elapsed"></div>
         <div id="bubbleLabel"></div>
       </div>
-      <!-- 아래층 위: 칸마다 이름 / 지난 시간 크게 / 시각·세부 작게. 열은 아래 #actions 와 같다 -->
-      <div class="box cols" id="cards">
-        <div class="card" id="cardFeed"><div class="lbl"></div><div class="big"></div><div class="sub"></div></div>
-        <div class="card" id="cardDiaper"><div class="lbl"></div><div class="big"></div><div class="sub"></div></div>
-        <div class="card" id="cardSleep"><div class="lbl"></div><div class="big"></div><div class="sub"></div></div>
-        <div class="cardSide">   <!-- 마이크: + 위에 작게(호출어가 생기면 뺄 예정) -->
-          <button class="px square" id="micBtn" aria-label="말하기" title="말하기"><span class="spr ico x2 ico-mic"></span></button>
-        </div>
-      </div>
+      <!-- 마이크: [+] 위에 작게(호출어가 생기면 뺄 예정) -->
+      <button class="px square box" id="micBtn" aria-label="말하기" title="말하기"><span class="spr ico x2 ico-mic"></span></button>
     </div>
 
     <!-- 타임라인: 최근 3일을 0~24시 줄로(src/ui/timeline.js) -->
@@ -83,12 +77,12 @@
     <!-- 쪽 표시: 점 하나 = 쪽 하나(누르면 그 쪽으로) -->
     <div class="box" id="pageDots"></div>
 
-    <!-- 기록 버튼: [수유] [기저귀] [잠] [+]. 모든 쪽 아래에 있고, 대시보드에서는 각 칸 바로 아래에 온다(#cards 와 같은 열).
-         [잠]은 누르면 잠 시작, 자는 중이면 "깼어요"로 바뀌어 누르면 끝 -->
+    <!-- 기록 버튼: [수유] [기저귀] [잠] [+]. 모든 쪽 아래(높이 30, 이름만)에 있고, 대시보드에서는 상태를 안에 담은 큰 버튼이 된다
+         (이름 / 지난 시간 크게 / 시각·세부 작게). [잠]은 누르면 잠 시작, 자는 중이면 "깼어요"로 바뀌어 누르면 끝 -->
     <div class="box cols" id="actions">
-      <button class="px action" id="feedBtn"><span class="spr ico x2 ico-bottle"></span><span id="feedBtnText">수유</span></button>
-      <button class="px action" id="diaperBtn"><span class="spr ico x2 ico-diaper"></span>기저귀</button>
-      <button class="px action" id="sleepBtn" aria-label="잠들었어요" title="잠"><span class="spr ico x2 ico-moon"></span><span id="sleepBtnText">잠</span></button>
+      <button class="px action rec" id="feedBtn"><span class="rLbl"><span class="spr ico x2 ico-bottle"></span><span id="feedBtnText">수유</span><span class="rMore"></span></span><span class="rBig"></span><span class="rSub"></span></button>
+      <button class="px action rec" id="diaperBtn"><span class="rLbl"><span class="spr ico x2 ico-diaper"></span><span>기저귀</span><span class="rMore"></span></span><span class="rBig"></span><span class="rSub"></span></button>
+      <button class="px action rec" id="sleepBtn" aria-label="잠들었어요" title="잠"><span class="rLbl"><span class="spr ico x2 ico-moon"></span><span id="sleepBtnText">잠</span><span class="rMore"></span></span><span class="rBig"></span><span class="rSub"></span></button>
       <button class="px action square" id="lateBtn" aria-label="더보기: 목욕·체온·투약… 지난 기록 넣기" title="더보기"><span class="spr ico x2 ico-plus"></span></button>
     </div>
     <div class="box hidden" id="notice"></div>   <!-- 저장·취소 결과 알림(잠깐) -->

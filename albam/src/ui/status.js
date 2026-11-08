@@ -131,13 +131,13 @@ export function createStatusView(ctx) {
     net.className = `t9 ${cls}`.trim();
   }
 
-  /** 칸 하나: 이름 / 지난 시간 / 시각·세부 */
-  function renderCard(id, { label, from, suffix = '', detail, urgent }) {
-    const card = $(id);
-    setText(card.querySelector('.lbl'), label);
-    renderAgo(card.querySelector('.big'), from, ctx.now(), { suffix });
-    setText(card.querySelector('.sub'), detail);
-    card.classList.toggle('urgent', !!urgent);
+  /** 큰 기록 버튼 하나(대시보드): 이름(버튼 글은 따로) + 덧말 / 지난 시간 / 시각·세부 */
+  function renderRec(id, { more = '', from, suffix = '', detail, urgent }) {
+    const btn = $(id);
+    setText(btn.querySelector('.rMore'), more);
+    renderAgo(btn.querySelector('.rBig'), from, ctx.now(), { suffix });
+    setText(btn.querySelector('.rSub'), detail);
+    btn.classList.toggle('urgent', !!urgent);
   }
 
   function tick() {
@@ -163,17 +163,17 @@ export function createStatusView(ctx) {
     setText($('#today2'), formatToday(now, $('#stage').classList.contains('narrow')));
     $('#albam').style.backgroundPosition = `${-frame * SPRITE_PX}px ${-MOOD_ROW[pick.mood] * SPRITE_PX}px`;
 
-    // 아래층 세 칸(같은 형식)
+    // 아래층 큰 버튼 셋(같은 형식). 버튼 글(수유/다 먹음, 잠/깼어요)은 아래에서 따로 바꾼다
     const urgent = pick.urgent ? pick.focus : null;
-    renderCard('#cardFeed', feeding
-      ? { label: '수유 · 먹는 중', from: feeding.at, suffix: '째', detail: `${formatClock(feeding.at)}~${feed?.ml != null ? ` · ${feed.ml}ml` : ''}` }
-      : { label: '수유', from: feed?.at, detail: feed ? `${formatClock(feed.at)}${feed.ml != null ? ` · ${feed.ml}ml` : ''}` : '기록 없음', urgent: urgent === 'feed' });
-    renderCard('#cardDiaper', { label: '기저귀', from: diaper?.at, detail: diaperDetail(diaper, s?.last_poo, $('#stage').classList.contains('narrow')), urgent: urgent === 'diaper' });
-    renderCard('#cardSleep', sleeping
-      ? { label: '잠 · 자는 중', from: sleeping.at, suffix: '째', detail: `${formatClock(sleeping.at)}~` }
+    renderRec('#feedBtn', feeding
+      ? { from: feeding.at, suffix: '째', detail: `${formatClock(feeding.at)}~${feed?.ml != null ? ` · ${feed.ml}ml` : ''}` }
+      : { from: feed?.at, detail: feed ? `${formatClock(feed.at)}${feed.ml != null ? ` · ${feed.ml}ml` : ''}` : '기록 없음', urgent: urgent === 'feed' });
+    renderRec('#diaperBtn', { from: diaper?.at, detail: diaperDetail(diaper, s?.last_poo, $('#stage').classList.contains('narrow')), urgent: urgent === 'diaper' });
+    renderRec('#sleepBtn', sleeping
+      ? { from: sleeping.at, suffix: '째', detail: `${formatClock(sleeping.at)}~` }
       : sleep?.ended_at
-        ? { label: '잠 · 깬 지', from: sleep.ended_at, detail: `${formatClock(sleep.at)}~${formatClock(sleep.ended_at)}`, urgent: urgent === 'sleep' }
-        : { label: '잠', from: null, detail: '기록 없음' });
+        ? { more: '· 깬 지', from: sleep.ended_at, detail: `${formatClock(sleep.at)}~${formatClock(sleep.ended_at)}`, urgent: urgent === 'sleep' }
+        : { from: null, detail: '기록 없음' });
 
     // 말풍선: 고른 항목 하나의 문구 / 지난 시간 / 이름표
     // [언제부터, 앞말, 이름표]. 앞말이 있어야 큰 숫자가 무엇의 시간인지 바로 읽힌다
