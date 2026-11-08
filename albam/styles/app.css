@@ -164,8 +164,14 @@ button.px.acc { color: var(--btn-on); }
 #elapsed .num { font-size: 30px; font-weight: 600; }
 #elapsed .unit { font-size: 16px; font-weight: 600; margin-right: 5px; }
 #elapsed .unit:last-child { margin-right: 0; }
+#elapsed .pre { font-size: 13px; font-weight: 400; color: var(--dim); margin-right: 6px; }   /* 앞말: 먹은 지 / 기저귀 간 지 / 깬 지 / 잠든 지 */
+/* 좁은 화면(P4): "기저귀 간 지 12시간 35분"도 말풍선 안에 들어가게 숫자를 조금 줄인다 */
+#stage.narrow #bubble { padding: 1px 6px; }
+#stage.narrow #elapsed .num { font-size: 24px; }
+#stage.narrow #elapsed .unit { font-size: 13px; margin-right: 4px; }
+#stage.narrow #elapsed .pre { font-size: 11px; margin-right: 4px; }
 #bubbleLabel { line-height: 13px; font-size: 12px; color: var(--dim); }
-#bubble.urgent #bubbleText, #bubble.urgent #elapsed, #bubble.urgent #elapsed .num { color: var(--warn); }
+#bubble.urgent #bubbleText, #bubble.urgent #elapsed .num, #bubble.urgent #elapsed .unit { color: var(--warn); }
 
 /* 아래층 칸: 이름 10 / 지난 시간 16(단위 10) / 시각·세부 10. 버튼과 같은 열, 가운데 맞춤 */
 #cards { top: 99px; height: 40px; }

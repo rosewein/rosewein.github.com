@@ -108,7 +108,7 @@ async function demoFlow(browser, base) {
   check((await page.evaluate(() => document.querySelector('#stage').style.zoom)) === '2', 'S10 에서 6배(기기 화소) = CSS zoom 2');
   const label = (sel) => page.getAttribute(sel, 'aria-label');
   // 미리 보기 기록: 수유 11:25(2시간 35분), 기저귀 12:50 소변, 잠 09:00~10:40(깬 지 3시간 20분 > 기준 2시간)
-  check(await text(page, '#bubbleText') === '졸려요…' && await label('#elapsed') === '3시간 20분' && await text(page, '#bubbleLabel') === '깬 시각 10:40',
+  check(await text(page, '#bubbleText') === '졸려요…' && await label('#elapsed') === '깬 지 3시간 20분' && await text(page, '#bubbleLabel') === '깬 시각 10:40',
     `말풍선: 가장 급한 항목 하나(깬 지 200분/120분 > 수유 155분/180분) "${await text(page, '#bubble')}"`);
   const isUrgent = (sel) => page.$eval(sel, (x) => x.classList.contains('urgent'));
   check(await isUrgent('#bubble') && await isUrgent('#cardSleep') && !(await isUrgent('#cardFeed')) && !(await isUrgent('#cardDiaper')), '빨강은 말풍선과 그 항목 칸에만');
@@ -287,7 +287,7 @@ async function sleepFlow(page) {
   });
   await page.reload();
   await page.waitForTimeout(600);
-  check(await text(page, '#bubbleText') === '쿨쿨' && await page.getAttribute('#elapsed', 'aria-label') === '1시간 20분째' && await text(page, '#bubbleLabel') === '잠든 시각 12:40', `말풍선에 잔 시간(${await text(page, '#bubble')})`);
+  check(await text(page, '#bubbleText') === '쿨쿨' && await page.getAttribute('#elapsed', 'aria-label') === '잠든 지 1시간 20분' && await text(page, '#bubbleLabel') === '잠든 시각 12:40', `말풍선에 잔 시간(${await text(page, '#bubble')})`);
   check(await card('#cardSleep') === '잠 · 자는 중|1시간 20분째|12:40~', `잠 칸: 자는 중 ${await card('#cardSleep')}`);
   await shot(page, 'sleeping');
   await page.click('#sleepBtn');
@@ -323,7 +323,7 @@ async function feedTimerFlow(browser, base) {
   check(await text(page, '#feedBtnText') === '다 먹음', `먹이는 중: [수유]가 [다 먹음] (${await text(page, '#feedBtnText')})`);
   await page.click('#undoMsg');
   await page.clock.runFor(12 * 60000);
-  check(await text(page, '#bubbleText') === '냠냠' && await page.getAttribute('#elapsed', 'aria-label') === '12분째', `말풍선에 먹은 시간 (${await text(page, '#bubble')})`);
+  check(await text(page, '#bubbleText') === '냠냠' && await page.getAttribute('#elapsed', 'aria-label') === '먹는 중 12분', `말풍선에 먹은 시간 (${await text(page, '#bubble')})`);
   const feedFits = await page.$eval('#feedBtn', (b) => b.scrollWidth <= b.clientWidth + 0.5);
   check(feedFits, '"다 먹음"이 버튼 안에 들어감');
   await shot(page, 'feeding');
@@ -504,7 +504,7 @@ async function longTextFlow(browser, base) {
   await page.reload();
   await page.waitForTimeout(500);
   pageRef = page;
-  check(await text(page, '#bubbleText') === '배고파요…' && await page.getAttribute('#elapsed', 'aria-label') === '12시간 35분', '10시간 넘어도 분까지(큰 글씨), 수유가 가장 급함');
+  check(await text(page, '#bubbleText') === '배고파요…' && await page.getAttribute('#elapsed', 'aria-label') === '먹은 지 12시간 35분', '10시간 넘어도 분까지(큰 글씨), 수유가 가장 급함');
   check(await card('#cardDiaper') === '기저귀|11시간 59분|02:01 · 소+대', `기저귀 칸 소+대 ${await card('#cardDiaper')}`);
   await dashboardLayout(page, '긴 글');
   await shot(page, 'long');
@@ -528,6 +528,19 @@ async function longTextFlow(browser, base) {
   await page.reload();
   await page.waitForTimeout(500);
   check(await text(page, '#cardDiaper .sub') === '13:10 · 대 09:00', `P4 기저귀 세부는 짧게 ${await text(page, '#cardDiaper .sub')}`);
+  // P4: 말풍선에서 가장 긴 앞말(기저귀 간 지 + 12시간 넘음)
+  await page.evaluate(() => {
+    const ago = (m) => new Date(Date.now() - m * 60000).toISOString();
+    localStorage.setItem('albam.demo.events', JSON.stringify([
+      { id: 'a', kind: 'feed', occurred_at: ago(60), amount_ml: 160, detail: {} },
+      { id: 'b', kind: 'diaper', occurred_at: ago(12 * 60 + 35), detail: { type: 'pee' } },
+    ]));
+  });
+  await page.reload();
+  await page.waitForTimeout(500);
+  check(await page.getAttribute('#elapsed', 'aria-label') === '기저귀 간 지 12시간 35분', `P4 말풍선 가장 긴 줄 ${await page.getAttribute('#elapsed', 'aria-label')}`);
+  await dashboardLayout(page, 'P4 기저귀 간 지 12시간');
+  await shot(page, 'longest-p4');
   await dashboardLayout(page, 'P4 대변 따로');
 }
 

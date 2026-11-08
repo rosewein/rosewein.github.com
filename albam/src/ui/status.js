@@ -100,16 +100,18 @@ export function createStatusView(ctx) {
   }
 
   /** 지난 시간 글 조각: 숫자는 크게, 단위는 작게. "방금", 기록 없으면 "—" */
-  function renderAgo(box, from, now, { suffix = '' } = {}) {
+  function renderAgo(box, from, now, { suffix = '', prefix = '' } = {}) {
     const parts = from ? agoParts(from, now) : [];
-    const text = !from ? '—' : parts.length ? `${parts.map(([n, u]) => n + u).join(' ')}${suffix}` : '방금';
+    const pre = parts.length ? prefix : '';   // "방금"·기록 없음에는 앞말을 안 붙인다
+    const text = `${pre ? `${pre} ` : ''}${!from ? '—' : parts.length ? `${parts.map(([n, u]) => n + u).join(' ')}${suffix}` : '방금'}`;
     if (box.dataset.key === text) return;
     box.dataset.key = text;
     box.setAttribute('aria-label', text);
     if (!from || !parts.length) { box.replaceChildren(el('span', { className: from ? 'num' : 'none' }, text)); return; }
-    // "째"는 마지막 단위에 붙인다("20분째")
-    box.replaceChildren(...parts.flatMap(([n, unit], i) => [el('span', { className: 'num' }, n),
-      el('span', { className: 'unit' }, i === parts.length - 1 ? unit + suffix : unit)]));
+    // 앞말("먹은 지")은 작고 흐리게, "째"는 마지막 단위에 붙인다("20분째")
+    box.replaceChildren(...(pre ? [el('span', { className: 'pre' }, pre)] : []),
+      ...parts.flatMap(([n, unit], i) => [el('span', { className: 'num' }, n),
+        el('span', { className: 'unit' }, i === parts.length - 1 ? unit + suffix : unit)]));
   }
 
   /** 오른쪽 위 구석 아랫줄: D+142 · 4개월 20일 · 교정 3개월 28일(시계 쪽과 같은 ageParts). 윗줄 지금 시각은 tick */
@@ -174,11 +176,12 @@ export function createStatusView(ctx) {
         : { label: '잠', from: null, detail: '기록 없음' });
 
     // 말풍선: 고른 항목 하나의 문구 / 지난 시간 / 이름표
-    const bubble = { feed: feeding ? [feeding.at, '째', `먹이기 시작 ${formatClock(feeding.at)}`] : [feed?.at, '', feed ? `마지막 수유 ${formatClock(feed.at)}` : '수유 기록 없음'],
-      diaper: [diaper?.at, '', diaper ? `마지막 기저귀 ${formatClock(diaper.at)}` : '기저귀 기록 없음'],
-      sleep: sleeping ? [sleeping.at, '째', `잠든 시각 ${formatClock(sleeping.at)}`] : [sleep?.ended_at, '', sleep?.ended_at ? `깬 시각 ${formatClock(sleep.ended_at)}` : '잠 기록 없음'] }[pick.focus];
+    // [언제부터, 앞말, 이름표]. 앞말이 있어야 큰 숫자가 무엇의 시간인지 바로 읽힌다
+    const bubble = { feed: feeding ? [feeding.at, '먹는 중', `먹이기 시작 ${formatClock(feeding.at)}`] : [feed?.at, '먹은 지', feed ? `마지막 수유 ${formatClock(feed.at)}` : '수유 기록 없음'],
+      diaper: [diaper?.at, '기저귀 간 지', diaper ? `마지막 기저귀 ${formatClock(diaper.at)}` : '기저귀 기록 없음'],
+      sleep: sleeping ? [sleeping.at, '잠든 지', `잠든 시각 ${formatClock(sleeping.at)}`] : [sleep?.ended_at, '깬 지', sleep?.ended_at ? `깬 시각 ${formatClock(sleep.ended_at)}` : '잠 기록 없음'] }[pick.focus];
     setText($('#bubbleText'), pick.words);
-    renderAgo($('#elapsed'), bubble[0], now, { suffix: bubble[1] });
+    renderAgo($('#elapsed'), bubble[0], now, { prefix: bubble[1] });
     setText($('#bubbleLabel'), bubble[2]);
     $('#bubble').classList.toggle('urgent', pick.urgent);
     $('#bubble').dataset.focus = pick.focus;
