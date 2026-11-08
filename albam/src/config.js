@@ -18,6 +18,7 @@ const DEFAULTS = {
   pollSeconds: 20,
   shiftMinutes: 3,
   hungryMinutes: 'auto',
+  feedPeriods: [{ from: 6, to: 18, label: '낮' }, { from: 18, to: 24, label: '저녁' }, { from: 0, to: 6, label: '새벽' }],
   diaperMinutes: 180,
   awakeMinutes: 120,
   defaultAmounts: [200, 230, 270],
