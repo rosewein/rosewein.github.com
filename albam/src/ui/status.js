@@ -8,7 +8,7 @@
 
 import { $, el } from './dom.js';
 import { feedingNow, setRecordTypes, sleepingNow } from '../domain.js';
-import { agoParts, formatClock } from '../time.js';
+import { agoParts, formatClock, formatToday } from '../time.js';
 
 /** 스프라이트 시트(sprites/albam.png)의 줄 순서. sprites.json 과 같다 */
 const MOOD_ROW = { normal: 0, hungry: 1, sleep: 2, happy: 3 };
@@ -158,6 +158,7 @@ export function createStatusView(ctx) {
     });
 
     setText($('#clock'), formatClock(now));
+    setText($('#today2'), formatToday(now, $('#stage').classList.contains('narrow')));
     $('#albam').style.backgroundPosition = `${-frame * SPRITE_PX}px ${-MOOD_ROW[pick.mood] * SPRITE_PX}px`;
 
     // 아래층 세 칸(같은 형식)

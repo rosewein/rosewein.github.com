@@ -137,9 +137,11 @@ button.px.acc { color: var(--btn-on); }
   background-image: url('../sprites/albam.png'); background-size: 192px 384px;
 }
 
-/* 오른쪽 위 구석: 14:00(작게) / D+142 · 4개월 20일 · 교정 3개월 28일(더 작게, 값은 밝게 사이 글은 흐리게).
+/* 오른쪽 위 구석: 2026년 11월 6일 금요일(흐리게) 14:00(진하게) / D+142 · 4개월 20일 · 교정 3개월 28일(더 작게, 값은 밝게 사이 글은 흐리게).
+   좁은 화면(P4)에서는 화면 가운데 쪽 점과 안 겹치게 해를 뺀다("11월 6일 금요일").
    나이는 시각과 헷갈리지 않게 아랫줄. 못 보낸 기록·연결 끊김은 시각 왼쪽에 문제 있을 때만 */
-#corner { right: 16px; top: 8px; height: 12px; line-height: 12px; display: flex; align-items: baseline; gap: 6px; white-space: nowrap; }
+#corner { right: 16px; top: 8px; height: 12px; line-height: 12px; display: flex; align-items: baseline; gap: 5px; white-space: nowrap; }
+#today2 { font-size: 10px; }   /* 날짜는 작게, 시각만 크게. 가운데 쪽 점과 사이를 띄운다 */
 #ageLine { right: 16px; top: 22px; line-height: 10px; white-space: nowrap; color: var(--dim); }
 #ageLine .val { color: var(--strong); }
 #net:empty { display: none; }

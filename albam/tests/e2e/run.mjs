@@ -112,7 +112,7 @@ async function demoFlow(browser, base) {
     `말풍선: 가장 급한 항목 하나(깬 지 200분/120분 > 수유 155분/180분) "${await text(page, '#bubble')}"`);
   const isUrgent = (sel) => page.$eval(sel, (x) => x.classList.contains('urgent'));
   check(await isUrgent('#bubble') && await isUrgent('#cardSleep') && !(await isUrgent('#cardFeed')) && !(await isUrgent('#cardDiaper')), '빨강은 말풍선과 그 항목 칸에만');
-  check(await text(page, '#clock') === '14:00' && await text(page, '#ageLine') === 'D+142 · 4개월 20일 · 교정 3개월 28일', `구석: 14:00 / 나이 줄(시각과 따로) ${await text(page, '#ageLine')}`);
+  check(await text(page, '#corner') === '2026년 11월 6일 금요일14:00' && await text(page, '#ageLine') === 'D+142 · 4개월 20일 · 교정 3개월 28일', `구석: 날짜·요일·시각 / 나이 줄 ${await text(page, '#corner')} / ${await text(page, '#ageLine')}`);
   check(await page.$eval('#ageLine', (a) => a.getBoundingClientRect().top) > await page.$eval('#clock', (c) => c.getBoundingClientRect().bottom) - 0.5, 'D+ 는 시각 아랫줄');
   
   check(await card('#cardFeed') === '수유|2시간 35분|11:25 · 200ml', `수유 칸 ${await card('#cardFeed')}`);
@@ -512,6 +512,7 @@ async function longTextFlow(browser, base) {
   await page.goto(`${base}?demo&w=307`);
   await page.waitForTimeout(500);
   check(await page.$eval('#stage', (s) => s.getBoundingClientRect().width / (parseFloat(s.style.zoom) || 1)) === 307 && await page.$eval('#stage', (s) => s.classList.contains('narrow')), 'P4 비율 미리 보기(?w=307): 가로 307, 좁은 화면');
+  check(await text(page, '#today2') === '11월 6일 금요일', `P4: 날짜는 해를 빼고 ${await text(page, '#today2')}`);
   await dashboardLayout(page, 'P4 긴 글');
   await shot(page, 'long-p4');
   // P4: 소변 뒤에 대변이 따로 있던 경우(기저귀 칸 세부가 가장 김)
