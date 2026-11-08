@@ -120,7 +120,7 @@ async function demoFlow(browser, base) {
   await dashboardLayout(page, 'S10');
   const box = (sel) => page.$eval(sel, (b) => { const r = b.getBoundingClientRect(); return { w: r.width, h: r.height, top: r.top }; });
   const [feed, diaper, sleepB, late, mic] = [await box('#feedBtn'), await box('#diaperBtn'), await box('#sleepBtn'), await box('#lateBtn'), await box('#micBtn')];
-  check(feed.w === diaper.w && diaper.w === sleepB.w && feed.h === diaper.h && feed.h === sleepB.h && feed.top === sleepB.top && feed.h > late.h * 2, `수유·기저귀·잠: 상태를 담은 같은 크기 큰 버튼 ${JSON.stringify(feed)}`);
+  check(feed.w === diaper.w && diaper.w === sleepB.w && feed.h === diaper.h && feed.h === sleepB.h && feed.top === sleepB.top && feed.h > late.h * 1.5, `수유·기저귀·잠: 상태를 담은 같은 크기 큰 버튼 ${JSON.stringify(feed)}`);
   check(late.w < feed.w / 2 && mic.w === late.w && mic.top < late.top && Math.abs(late.top + late.h - feed.top - feed.h) < 0.5, '+ 는 좁게 버튼 아래 끝에 맞춤, 마이크는 + 위에 작게');
   check((await text(page, '#micBtn')) === '' && (await text(page, '#lateBtn')) === '' && (await page.getAttribute('#micBtn', 'aria-label')) === '말하기'
     && (await page.getAttribute('#lateBtn', 'aria-label')).startsWith('더보기'), '아이콘 버튼에 이름(화면 낭독용)');

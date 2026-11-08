@@ -129,13 +129,13 @@ button.px.acc { color: var(--btn-on); }
 .ico-alarm { background-position: -96px 0; } .x2.ico-alarm { background-position: -192px 0; }
 
 /* ── 대시보드 ──
-   위층(8~96): 왼쪽 알밤(3배. 그림의 보이는 칸 8~95) · 오른쪽 위 구석(8~32) · 말풍선(34~96, 꼬리는 알밤 쪽)
-   아래층(99~172): 수유·기저귀·잠 상태를 담은 큰 버튼 셋 + 좁은 열(마이크 104~134, [+] 142~172)
+   위층(8~105): 왼쪽 알밤(3배. 그림의 보이는 칸 12~99) · 오른쪽 위 구석(8~32) · 말풍선(35~105, 꼬리는 알밤 쪽)
+   아래층(114~172): 수유·기저귀·잠 상태를 담은 버튼 셋 + 좁은 열(마이크 114~140, [+] 142~172)
    열은 [수유][기저귀][잠][좁은 칸] = 1fr 1fr 1fr 30px, 사이 4. 가로(--W: S10 380, P4 약 307)가 줄면 칸 폭만 줄고 세로 자리는 그대로 */
 .cols { left: 16px; width: calc(var(--W, 380px) - 32px); display: grid; grid-template-columns: 1fr 1fr 1fr 30px; column-gap: 4px; }
 
 #albam {
-  left: 10px; top: 5px; width: 96px; height: 96px;
+  left: 10px; top: 9px; width: 96px; height: 96px;
   background-image: url('../sprites/albam.png'); background-size: 192px 384px;
 }
 
@@ -150,15 +150,15 @@ button.px.acc { color: var(--btn-on); }
 #net.acc { color: var(--accent); }
 #net.warn { color: var(--warn); }
 
-/* 말풍선: 상태 문구 13 / 지난 시간 30(화면에서 가장 큰 글씨) / 이름표 13. 급하면(.urgent) 문구와 시간이 빨강 */
+/* 말풍선: 상태 문구 13 / 지난 시간 30(화면에서 가장 큰 글씨) / 이름표 13, 위아래 여유. 급하면(.urgent) 문구와 시간이 빨강 */
 #bubble {
-  left: 114px; right: 16px; top: 34px; height: 62px; padding: 1px 8px;
+  left: 114px; right: 16px; top: 35px; height: 70px; padding: 1px 8px;
   border: 2px solid var(--line-hi); background: var(--panel); color: var(--text);
   display: flex; flex-direction: column; justify-content: center; white-space: nowrap;
 }
 /* 꼬리: 알밤 쪽(왼쪽)을 가리키는 계단 모양 도트 삼각형 */
 #bubble::before {
-  content: ''; position: absolute; left: -8px; top: 22px; width: 6px; height: 10px; background: var(--line-hi);
+  content: ''; position: absolute; left: -8px; top: 26px; width: 6px; height: 10px; background: var(--line-hi);
   clip-path: polygon(6px 0, 6px 10px, 4px 10px, 4px 8px, 2px 8px, 2px 6px, 0 6px, 0 4px, 2px 4px, 2px 2px, 4px 2px, 4px 0);
 }
 #bubbleText { line-height: 13px; font-size: 12px; }
@@ -176,7 +176,7 @@ button.px.acc { color: var(--btn-on); }
 #bubble.urgent #bubbleText, #bubble.urgent #elapsed .num, #bubble.urgent #elapsed .unit { color: var(--warn); }
 
 /* 마이크: 오른쪽 좁은 열, [+] 위에 작게 */
-#micBtn { right: 16px; top: 104px; width: 30px; height: 30px; }
+#micBtn { right: 16px; top: 114px; width: 30px; height: 26px; }
 #micBtn.listening { border-color: var(--accent); color: var(--accent); }
 
 /* 기록 버튼(모든 쪽 아래): 높이 30, 글자 16, 이름만. 가로가 좁으면(.narrow, P4) 아이콘을 빼 글이 들어가게 */
@@ -185,22 +185,22 @@ button.px.acc { color: var(--btn-on); }
 #stage.narrow #actions .action:not(.square) .ico { display: none; }
 .rec .rLbl { display: flex; align-items: center; justify-content: center; gap: 4px; }
 .rec .rMore, .rec .rBig, .rec .rSub { display: none; }
-/* 대시보드에서는 상태를 담은 큰 버튼(99~172): 이름 13 / 지난 시간 18(단위 11) / 시각·세부 10. 아이콘은 뺀다(칸을 단순하게) */
-#stage[data-page="main"] #actions { top: 99px; height: 73px; }
+/* 대시보드에서는 상태를 담은 버튼(114~172): 이름 12 / 지난 시간 16(단위 10) / 시각·세부 10. 아이콘은 뺀다(칸을 단순하게) */
+#stage[data-page="main"] #actions { top: 114px; height: 58px; }
 #stage[data-page="main"] #lateBtn { align-self: end; height: 30px; }
 #stage[data-page="main"] .rec { flex-direction: column; gap: 1px; height: 100%; padding: 0 2px; white-space: nowrap; overflow: hidden; }
 /* 좁은 화면(P4): "12시간 35분"도 버튼 안에 들어가게 */
 #stage.narrow[data-page="main"] .rec { padding: 0 1px; }
-#stage.narrow .rec .rBig .num { font-size: 15px; }
+#stage.narrow .rec .rBig .num { font-size: 14px; }
 #stage.narrow .rec .rBig .unit { font-size: 10px; margin-right: 1px; }
 #stage[data-page="main"] .rec .ico { display: none; }
-#stage[data-page="main"] .rec .rLbl { font-size: 13px; line-height: 15px; gap: 0; }
+#stage[data-page="main"] .rec .rLbl { font-size: 12px; line-height: 13px; gap: 0; }
 #stage[data-page="main"] .rec .rMore { display: inline; color: var(--btn-text); opacity: 0.7; }
 #stage[data-page="main"] .rec .rMore:not(:empty) { margin-left: 4px; }
-#stage[data-page="main"] .rec .rBig { display: block; line-height: 22px; height: 22px; color: var(--btn-text); max-width: 100%; }
+#stage[data-page="main"] .rec .rBig { display: block; line-height: 19px; height: 19px; color: var(--btn-text); max-width: 100%; }
 #stage[data-page="main"] .rec .rSub { display: block; font-size: 10px; line-height: 12px; color: var(--btn-text); opacity: 0.75; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
-.rec .rBig .num { font-size: 18px; font-weight: 600; }
-.rec .rBig .unit { font-size: 11px; font-weight: 600; margin-right: 2px; }
+.rec .rBig .num { font-size: 16px; font-weight: 600; }
+.rec .rBig .unit { font-size: 10px; font-weight: 600; margin-right: 2px; }
 .rec .rBig .unit:last-child { margin-right: 0; }
 .rec .rBig .none { font-size: 13px; opacity: 0.6; }
 /* 급한 항목 버튼: 지난 시간과 테두리만 빨강(어두운 버튼 위라 밝은 빨강) */
@@ -217,7 +217,7 @@ button.px.acc { color: var(--btn-on); }
 #notice { left: 16px; top: 142px; width: calc(var(--W, 380px) - 66px); height: 30px; display: flex; align-items: center; justify-content: center;
   border: 2px solid var(--line-hi); background: var(--bg); color: var(--text); }
 #notice.warn { border-color: var(--warn); color: var(--warn); }
-#stage[data-page="main"] #notice, #stage[data-page="main"] #undo { top: 99px; height: 73px; }   /* 대시보드에서는 큰 버튼 셋 자리 */
+#stage[data-page="main"] #notice, #stage[data-page="main"] #undo { top: 114px; height: 58px; }   /* 대시보드에서는 큰 버튼 셋 자리 */
 #undo { left: 16px; top: 142px; width: calc(var(--W, 380px) - 66px); height: 30px; display: flex; gap: 4px; background: var(--bg); }
 #undoMsg { flex: 1; display: flex; align-items: center; gap: 4px; border: 2px solid var(--ok); color: var(--ok); padding: 0 6px; overflow: hidden; white-space: nowrap; }
 #undoBtn { width: 76px; }
