@@ -18,6 +18,9 @@ export const WAKE_PHRASES = [
 export const DISTRACTORS = [
   '네', '아니', '그래', '엄마', '아빠', '뭐', '이거', '저거', '왜', '어', '응', '아', '오늘', '날씨', '좋다', '아기', '자',
   '먹어', '밥', '물', '이', '그', '저', '좀', '여기', '거기', '지금', '빨리', '잠깐', '괜찮아', '잠', '깨',
+  // 아기 끙끙·옹알이 소리가 이쪽으로 빠지게(2026-11-10 S10 에서 끙끙 소리를 "알밤 날씨 물"로 들음).
+  // '음·으·흠·흐'는 "응아"를 빼앗아 넣지 않는다
+  '에', '애', '우', '오', '하', '히', '끙', '낑', '울',
 ];
 export const WAKE_GRAMMAR = JSON.stringify([...WAKE_PHRASES, ...DISTRACTORS]);
 
@@ -68,9 +71,10 @@ export function detectWake(res, min = {}) {
   const keyMin = min.key ?? MIN_KEY_CONF;
   const words = res?.result?.length ? res.result
     : (res?.text || '').split(/\s+/).filter(Boolean).map((word) => ({ word, conf: 1 }));
-  const at = words.findIndex((w) => w.word === '알밤' && w.conf >= anchorMin);
+  // "알밤" 바로 뒤에 "이"가 와야 부른 것으로 본다(끙끙 소리가 "알밤 날씨 물"처럼 들린 적이 있다)
+  const at = words.findIndex((w, i) => w.word === '알밤' && w.conf >= anchorMin && words[i + 1]?.word === '이');
   if (at < 0) return null;
-  const after = words.slice(at + 1, at + 6);   // 알밤 뒤 다섯 낱말 안에서
+  const after = words.slice(at + 2, at + 5);   // "알밤 이" 뒤 세 낱말 안에서
   for (const rule of RULES) {
     const hit = after.find((w) => rule.words.includes(w.word) && w.conf >= keyMin);
     if (hit) return { kind: rule.kind, label: rule.label, conf: Math.min(words[at].conf, hit.conf), text: res.text || words.map((w) => w.word).join(' ') };

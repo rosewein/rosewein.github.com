@@ -33,7 +33,7 @@
 </style>
 </head>
 <body>
-  <h1>알밤 호출어 시험 <span class="dim" style="font-size:13px;font-weight:400">v3 · 이어 말하기</span></h1>   <!-- 화면이 바뀌면 v 숫자를 올린다(새 화면이 떴는지 바로 보이게) -->
+  <h1>알밤 호출어 시험 <span class="dim" style="font-size:13px;font-weight:400">v4 · 끙끙 소리 거르기</span></h1>   <!-- 화면이 바뀌면 v 숫자를 올린다(새 화면이 떴는지 바로 보이게) -->
   <p class="dim">"알밤이 쉬야했어 · 밥먹었어 · 응아 / 똥쌌어 · 코자 · 깼다"라고 말해 보세요. 기록은 저장하지 않아요.</p>
   <div class="row">
     <button id="start">시작</button>
@@ -168,20 +168,21 @@ async function start() {
     const ctx = new AudioContext();
     const rec = new model.KaldiRecognizer(ctx.sampleRate, WAKE_GRAMMAR);
     rec.setWords(true);
-    rec.on('partialresult', (m) => { if (m.result.partial) $('#heard').textContent = `… ${m.result.partial}`; });
+    // 말하는 도중: '알밤'이 들릴 때만 보여 준다(아기 소리·TV 소리로 글자가 계속 바뀌면 산만해서)
+    rec.on('partialresult', (m) => { if (/알밤/.test(m.result.partial || '')) $('#heard').textContent = `… ${m.result.partial}`; });
     rec.on('result', (m) => {
       const res = m.result;
       if (!res.text) return;
-      $('#heard').textContent = res.text;
       const hits = detectWakeAll(res);   // 이어서 말하면 한 결과에 여러 문장
       const words = (res.result || []).map((w) => `${w.word}(${w.conf.toFixed(2)})`).join(' ');
+      if (/알밤/.test(res.text)) $('#heard').textContent = res.text;
       if (hits.length) {
         const rs = hits.map((hit) => entry({ event: 'hit', kind: hit.kind, conf: hit.conf.toFixed(2), text: words }));
         $('#hit').textContent = `${rs[0].time} · ${hits.map((h) => h.label).join(' + ')}`;
         $('#hit').className = 'on';
         setTimeout(() => { $('#hit').className = ''; }, 3000);
         data.log.push(...rs);
-      } else if (/알밤/.test(res.text)) {
+      } else if (/알밤 이/.test(res.text)) {
         data.log.push(entry({ event: 'unsure', kind: null, text: words }));   // 알밤은 들었는데 종류를 못 고름
       }
       data.log = data.log.slice(-500);

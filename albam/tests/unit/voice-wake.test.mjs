@@ -41,3 +41,11 @@ test('이어서 말한 여러 문장(S10 실제 기록 2026-11-10)', () => {
   assert.equal(kinds('야(0.35) 알밤(1.00) 이(1.00) 밥(1.00) 먹었어(1.00)'), 'feed');
   assert.equal(kinds('알밤(1.00) 이(1.00) 이(1.00)'), '');
 });
+
+test('아기 끙끙 소리: "알밤" 뒤에 "이"가 없으면 부른 게 아님', () => {
+  assert.equal(detectWake(res([['알밤', 1], ['날씨', 1], ['물', 1]])), null);
+  assert.equal(detectWake(res([['알밤', 1], ['응아', 1]])), null, '"알밤 응아"(이 없음)도 넘김');
+  assert.equal(detectWake(res([['알밤', 1], ['이', 1], ['끙', 1], ['에', 1], ['어', 1], ['응아', 1]])), null, '"알밤 이" 뒤 세 낱말 안에만');
+  assert.ok(!JSON.parse(WAKE_GRAMMAR).includes('으'), '"응아"와 비슷한 소리는 넣지 않음');
+  assert.ok(JSON.parse(WAKE_GRAMMAR).includes('끙'));
+});
