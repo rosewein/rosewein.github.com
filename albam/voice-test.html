@@ -47,14 +47,17 @@
   <div class="row">
     <button class="ghost" id="missed">말했는데 못 알아들음 +1</button>
     <button class="ghost" id="reset">기록 지우기</button>
-    <button class="ghost" id="copy">결과 복사</button>
   </div>
+  <p class="dim" id="sync"></p>
   <table><thead><tr><th>시각</th><th>알아들은 것</th><th>들은 말</th><th></th></tr></thead><tbody id="log"></tbody></table>
-  <p class="dim" style="margin-top:12px">잘못 알아들은 줄은 [잘못]을 눌러 주세요. 하루 써 본 뒤 [결과 복사]로 붙여 주시면 규칙을 다듬어요.</p>
+  <p class="dim" style="margin-top:12px">잘못 알아들은 줄은 [잘못]을 눌러 주세요. 결과는 Supabase(care_voice_log)에 저장돼서 따로 보내지 않아도 돼요.</p>
 
+<script src="config.js"></script>
 <script src="vendor/vosk-browser-0.0.8.js"></script>
 <script type="module">
 import { detectWake, WAKE_GRAMMAR } from './src/voice-wake.js';
+import { loadConfig } from './src/config.js';
+import { SupabaseRest } from './src/api/supabase-rest.js';
 
 const PARTS = ['voice/model-ko.tar.gz.0', 'voice/model-ko.tar.gz.1'];
 const PART_BYTES = [47185920, 39730838];
@@ -66,7 +69,36 @@ const $ = (s) => document.querySelector(s);
 
 let data = load();
 function load() { try { return JSON.parse(localStorage.getItem(STORE)) || { log: [], missed: 0 }; } catch (e) { return { log: [], missed: 0 }; } }
-function save() { try { localStorage.setItem(STORE, JSON.stringify(data)); } catch (e) { /* 저장 못 해도 화면은 그대로 */ } }
+function save() { try { localStorage.setItem(STORE, JSON.stringify(data)); } catch (e) { /* 저장 못 해도 화면은 그대로 */ } sync(); }
+
+// 서버 저장: 거실 앱에 로그인돼 있으면(같은 기기·같은 로그인) 결과를 care_voice_log 에 남긴다. 실패하면 다음에 다시
+const cfg = loadConfig();
+const rest = new SupabaseRest({ url: cfg.supabaseUrl, anonKey: cfg.supabaseAnonKey });
+const DEVICE = `${screen.width}x${screen.height} ${/Android/.test(navigator.userAgent) ? 'Android' : 'other'}`;
+let syncing = false;
+async function sync() {
+  const unsent = data.log.filter((r) => r.id && !r.sent);
+  const status = !rest.configured || !rest.loggedIn ? '서버 저장 꺼짐: 이 기기 거실 앱에 로그인해 주세요(결과는 이 기기에만 남아요)'
+    : unsent.length ? `서버에 보내는 중 ${unsent.length}건` : '서버에 저장됨 ✓';
+  $('#sync').textContent = status;
+  if (syncing || !rest.loggedIn || !unsent.length) return;
+  syncing = true;
+  try {
+    for (const r of unsent) {
+      await rest.rpc('care_voice_log', { p: { id: r.id, heard_at: r.at, event: r.event, kind: r.kind, conf: r.conf, heard: r.text, wrong: !!r.wrong, device: DEVICE } });
+      r.sent = true;
+    }
+    try { localStorage.setItem(STORE, JSON.stringify(data)); } catch (e) { /* 그대로 */ }
+  } catch (e) {
+    $('#sync').textContent = `서버 저장 실패(나중에 다시): ${e.message || e}`;
+    syncing = false;
+    return;
+  }
+  syncing = false;
+  $('#sync').textContent = '서버에 저장됨 ✓';
+}
+const entry = (fields) => ({ id: crypto.randomUUID(), at: new Date().toISOString(),
+  time: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }), ...fields });
 
 function render() {
   const n = (k) => data.log.filter((r) => r.kind === k && !r.wrong).length;
@@ -80,7 +112,7 @@ function render() {
     const td = document.createElement('td');
     if (r.kind) {
       const b = Object.assign(document.createElement('button'), { textContent: r.wrong ? '되돌리기' : '잘못' });
-      b.onclick = () => { r.wrong = !r.wrong; save(); render(); };
+      b.onclick = () => { r.wrong = !r.wrong; r.sent = false; save(); render(); };
       td.append(b);
     }
     tr.append(td);
@@ -142,15 +174,15 @@ async function start() {
       if (!res.text) return;
       $('#heard').textContent = res.text;
       const hit = detectWake(res);
-      const time = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
       const words = (res.result || []).map((w) => `${w.word}(${w.conf.toFixed(2)})`).join(' ');
       if (hit) {
-        $('#hit').textContent = `${time} · ${hit.label}`;
+        const r = entry({ event: 'hit', kind: hit.kind, conf: hit.conf.toFixed(2), text: words });
+        $('#hit').textContent = `${r.time} · ${hit.label}`;
         $('#hit').className = 'on';
         setTimeout(() => { $('#hit').className = ''; }, 3000);
-        data.log.push({ time, kind: hit.kind, conf: hit.conf.toFixed(2), text: words });
+        data.log.push(r);
       } else if (/알밤/.test(res.text)) {
-        data.log.push({ time, kind: null, text: words });   // 알밤은 들었는데 종류를 못 고름
+        data.log.push(entry({ event: 'unsure', kind: null, text: words }));   // 알밤은 들었는데 종류를 못 고름
       }
       data.log = data.log.slice(-500);
       save(); render();
@@ -169,13 +201,10 @@ async function start() {
 }
 
 $('#start').onclick = start;
-$('#missed').onclick = () => { data.missed += 1; save(); render(); };
+$('#missed').onclick = () => { data.missed += 1; data.log.push(entry({ event: 'missed', kind: null, text: '말했는데 못 알아들음' })); save(); render(); };
 $('#reset').onclick = () => { if (confirm('시험 기록을 지울까요?')) { data = { log: [], missed: 0 }; save(); render(); } };
-$('#copy').onclick = async () => {
-  const lines = [`못 알아들음 ${data.missed}`, ...data.log.map((r) => `${r.time}\t${r.kind || '-'}\t${r.wrong ? '잘못' : ''}\t${r.text}`)];
-  try { await navigator.clipboard.writeText(lines.join('\n')); $('#copy').textContent = '복사했어요'; } catch (e) { $('#copy').textContent = '복사 못 함'; }
-};
 render();
+sync();
 </script>
 </body>
 </html>
