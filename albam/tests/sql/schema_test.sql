@@ -370,8 +370,8 @@ do $$
 declare s jsonb; r jsonb; v_id uuid := gen_random_uuid(); tl jsonb;
 begin
   s := public.care_summary();
-  perform pg_temp.check(jsonb_array_length(s -> 'record_types') >= 13, 'summary lists record types');
-  perform pg_temp.check((select count(*) from jsonb_array_elements(s -> 'record_types') x where (x ->> 'in_more')::boolean) >= 10, 'more menu types');
+  perform pg_temp.check(jsonb_array_length(s -> 'record_types') >= 15, 'summary lists record types');
+  perform pg_temp.check((select count(*) from jsonb_array_elements(s -> 'record_types') x where (x ->> 'in_more')::boolean) >= 12, 'more menu types');
   perform pg_temp.check(s -> 'record_types' -> 0 ->> 'key' = 'feed', 'record types sorted');
   r := public.care_add_event(jsonb_build_object('id', v_id, 'kind', 'temperature', 'value_num', 37.4, 'force', true));
   perform pg_temp.check(r ->> 'status' = 'saved' and (select value_num = 37.4 from public.care_events where id = v_id), 'temperature saved with value');

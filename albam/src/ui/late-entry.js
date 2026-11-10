@@ -32,7 +32,7 @@ const labelOf = (kind) => recordType(kind)?.label || kind;
 /** 다른 종류를 처음 열 때 시작~끝(분) */
 const DEFAULT_RANGE_MIN = 10;
 /** 글 칸 안내 */
-const MEMO_HINT = { medication: '약 이름 · 메모', hospital: '병원 · 사유 · 메모', play: '놀이 · 메모', bath: '메모(예: 보습로션)', memo: '메모', other: '무엇 · 메모' };
+const MEMO_HINT = { medication: '약 이름 · 메모', hospital: '병원 · 사유 · 메모', play: '놀이 · 메모', bath: '메모(예: 보습로션)', memo: '메모', vaccine: '백신 이름 · 메모', walk: '메모', other: '무엇 · 메모' };
 /** [지우기]를 한 번 누르면 이 시간 동안 "한 번 더 누르면 지워요" */
 const DELETE_CONFIRM_MS = 3000;
 

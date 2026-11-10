@@ -90,6 +90,7 @@ export const DEFAULT_RECORD_TYPES = [
   { key: 'feed', label: '수유', shape: 'instant', unit: 'ml', in_more: false },
   { key: 'diaper', label: '기저귀', shape: 'instant', in_more: false },
   { key: 'sleep', label: '잠', shape: 'range', in_more: false },
+  { key: 'walk', label: '산책', shape: 'range', in_more: true },
   { key: 'bath', label: '목욕', shape: 'range', in_more: true },
   { key: 'temperature', label: '체온', shape: 'number', unit: '°C', step: 0.1, min: 34, max: 42, default: 36.8, in_more: true },
   { key: 'medication', label: '투약', shape: 'instant', in_more: true },
@@ -99,6 +100,7 @@ export const DEFAULT_RECORD_TYPES = [
   { key: 'tummy_time', label: '터미타임', shape: 'range', in_more: true },
   { key: 'play', label: '놀이', shape: 'range', in_more: true },
   { key: 'hospital', label: '병원', shape: 'instant', in_more: true },
+  { key: 'vaccine', label: '예방접종', shape: 'instant', in_more: true },
   { key: 'other', label: '기타', shape: 'range', in_more: true },
 ];
 let recordTypes = new Map(DEFAULT_RECORD_TYPES.map((t) => [t.key, t]));

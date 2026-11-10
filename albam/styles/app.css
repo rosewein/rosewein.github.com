@@ -443,8 +443,9 @@ button.machineBtn { width: 44px; flex-direction: column; gap: 1px; line-height: 
 body.nightWake #stage { filter: brightness(.55); }
 
 /* ── [+] 더보기: 종류 버튼 다섯 칸씩 ── */
-#moreGrid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
-#moreGrid button { height: 34px; }
+/* 종류가 12개(세 줄)여도 아래 버튼 줄과 안 겹치게: 줄 높이 30, 사이 4 → 98 */
+#moreGrid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px 6px; }
+#moreGrid button { height: 30px; }
 /* 지난 기록 넣기의 글 칸(메모·약 이름) */
 #lateMemo {
   flex: 1; min-width: 0; height: 28px; padding: 0 6px; border: 2px solid var(--line-hi); border-radius: 0; outline: none;

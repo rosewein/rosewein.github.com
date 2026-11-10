@@ -137,6 +137,7 @@ albam/
 │  ├─ 010_feed_gap.sql      요약에 feed_gap(최근 14일 수유 간격 p25·p50·p75)
 │  ├─ 011_feed_gaps.sql     요약에 feed_gaps(간격 하나하나 [앞 수유 시, 분]): 시간대별 배고파요 기준
 │  ├─ 012_voice_log.sql     호출어 시험 기록 care_voice_log(알아들음·잘못·못 알아들음)
+│  ├─ 013_walk_vaccine.sql  기록 종류에 산책(시작~끝)·예방접종(한 시각 + 백신 이름)
 │  └─ queries/              SQL Editor 에서 돌려 보는 확인용 질의
 ├─ sprites/                도트 그림 원본 PNG + sprites.json
 ├─ fonts/                  프리텐다드 글꼴(한글 2,780자 판, 보통·굵게, SIL OFL 1.1)
@@ -283,7 +284,7 @@ flowchart TD
 **수유 걸린 시간**(007): `care_summary()`의 `last_feed`에 `ended_at`(다 먹은 시각, 모르면 null)과 `feeding`(먹이는 중: 끝이 없고 `detail.feeding = true`)을 더했다. `care_stats()`의 하루에 `feed_min`(끝이 있는 수유의 평균 걸린 분, 없으면 null)을 더했다. 다 먹음·되돌리기는 새 함수 없이 `care_update_event`로 한다.
 
 **기록 종류 표**(008): `care_record_types(key, label, shape, unit, step, min_value, max_value, default_value, icon, voice_aliases, show_in_more, sort, active)`. `shape`은 `instant`(한 시각) / `range`(시작~끝) / `number`(한 시각 + 숫자) / `text`(한 시각 + 글).
-- 들어 있는 종류: 수유·기저귀·잠(큰 버튼, 더보기에는 없음), 목욕(range), 체온(number °C, 0.1, 34~42, 처음 36.8), 투약, 체중(kg, 0.01, 1~30), 키(cm, 0.1, 30~120), 메모(text), 터미타임·놀이·기타(range), 병원.
+- 들어 있는 종류: 수유·기저귀·잠(큰 버튼, 더보기에는 없음), 목욕(range), 체온(number °C, 0.1, 34~42, 처음 36.8), 투약, 체중(kg, 0.01, 1~30), 키(cm, 0.1, 30~120), 메모(text), 터미타임·놀이·기타(range), 병원. 013에서 산책(range, 더보기 맨 앞)과 예방접종(instant, 백신 이름은 `detail.memo`)을 더했다: 세거나 나중에 찾아볼 것은 메모가 아니라 종류로 둔다(2026-11-10).
 - 숫자는 `care_events.value_num`. `care_add_event`·`care_update_event`가 `value_num`을 받고, number 종류는 값이 없거나 범위 밖이면 `22023`(`bad_value`)로 거절한다.
 - 글은 `detail.memo`(투약은 약 이름, 병원은 병원·이유 등 베이비타임에서 온 항목도 `detail`에 있다: `medicine`, `what`, `hospital`, `reason`, `visit_type`, `doctor`).
 - `care_summary()`에 `record_types`(정렬된 목록, `in_more`), `recent`에 `value`. `care_timeline()`에 `value`, `memo`, `feeding`, `detail`.
@@ -779,7 +780,7 @@ flowchart LR
 - 이 저장소는 GitHub Pages로 나간다. main에 합치면 `https://rosewein.github.io/albam/`에 반영된다.
 - 서비스 워커는 네트워크를 먼저 쓴다. 그래서 고친 파일은 다음에 열 때 바로 보인다. 오프라인일 때만 캐시를 쓴다.
 - 파일을 더하거나 이름을 바꾸면 `sw.js`의 `FILES`에 반영하고 `VERSION`을 올린다.
-- SQL은 Supabase SQL Editor에서 번호 순서대로 직접 실행한다(지금 `001`~`012`). 바꿀 때는 `008_…sql`처럼 번호를 붙여 새 파일로 더하고, 이미 실행한 파일은 고치지 않는다. 함수를 바꿀 때는 새 파일에 `create or replace`로 함수 전체를 다시 쓴다(002의 `care_summary()`처럼).
+- SQL은 Supabase SQL Editor에서 번호 순서대로 직접 실행한다(지금 `001`~`013`). 바꿀 때는 `008_…sql`처럼 번호를 붙여 새 파일로 더하고, 이미 실행한 파일은 고치지 않는다. 함수를 바꿀 때는 새 파일에 `create or replace`로 함수 전체를 다시 쓴다(002의 `care_summary()`처럼).
 - `config.js`에는 publishable(anon) key만 둔다. 공개돼도 되는 값이고, 읽고 쓰기는 RLS와 가족 명단이 막는다. service_role 키는 절대 넣지 않는다.
 
 ## 12. 고치고 늘리는 법

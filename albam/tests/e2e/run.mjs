@@ -658,7 +658,7 @@ async function moreFlow(browser, base) {
   await page.clock.runFor(800);
   await page.click('#lateBtn');
   const labels = await page.$$eval('#moreGrid button', (b) => b.map((x) => x.textContent));
-  check(['목욕', '체온', '투약', '체중', '키', '메모', '터미타임', '놀이', '병원', '기타'].every((l) => labels.includes(l)) && !labels.includes('수유'),
+  check(['산책', '목욕', '체온', '투약', '체중', '키', '메모', '터미타임', '놀이', '병원', '예방접종', '기타'].every((l) => labels.includes(l)) && !labels.includes('수유'),
     `더보기 창에 종류 버튼 ${labels.join(' ')}`);
   check((await curvedEdgeOffenders(page, '#moreSheet h2, #moreSheet button')).length === 0, '더보기 창: 위·아래 곡면에 글·버튼 없음');
   await shot(page, 'more');
