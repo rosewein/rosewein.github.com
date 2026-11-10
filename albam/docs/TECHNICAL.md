@@ -135,6 +135,7 @@ albam/
 │  ├─ 009_last_poo.sql      요약에 last_poo(마지막 대변)
 │  ├─ 010_feed_gap.sql      요약에 feed_gap(최근 14일 수유 간격 p25·p50·p75)
 │  ├─ 011_feed_gaps.sql     요약에 feed_gaps(간격 하나하나 [앞 수유 시, 분]): 시간대별 배고파요 기준
+│  ├─ 012_voice_log.sql     호출어 시험 기록 care_voice_log(알아들음·잘못·못 알아들음)
 │  └─ queries/              SQL Editor 에서 돌려 보는 확인용 질의
 ├─ sprites/                도트 그림 원본 PNG + sprites.json
 ├─ fonts/                  프리텐다드 글꼴(한글 2,780자 판, 보통·굵게, SIL OFL 1.1)
@@ -625,6 +626,7 @@ flowchart TD
 - 문법: 문장 + 흔한 낱말(`DISTRACTORS`). 모델에 '못 알아들음' 낱말이 없어 평소 말이 흔한 낱말 쪽으로 빠지게 한다.
 - 규칙(`detectWake`): "알밤"을 0.8 이상으로 들은 뒤 다섯 낱말 안에 종류 낱말(0.6 이상)이 있으면 그 종류.
 - 첫 시작에 87MB 를 받아 Cache 에 두고, 켤 때마다 메모리에 푼다(이 컴퓨터 6초, S10 은 더 걸림). 메모리 약 600MB.
+- 결과(알아들음·종류 모름·잘못·못 알아들음)는 거실 앱에 로그인된 기기면 `care_voice_log`(012)에 저장한다. 규칙을 다듬을 때 이 표를 읽는다.
 - 합성 음성 시험: 다섯 가지 모두 알아들음, 평소 말 세 문장은 명령으로 안 바뀜. 실제 목소리·거실 소리로는 화면의 기록(잘못/못 알아들음)을 보고 다듬는다.
 
 `src/voice-parse.js`는 다음 순서로 문장을 기록으로 바꾼다.
@@ -763,7 +765,7 @@ flowchart LR
 - 이 저장소는 GitHub Pages로 나간다. main에 합치면 `https://rosewein.github.io/albam/`에 반영된다.
 - 서비스 워커는 네트워크를 먼저 쓴다. 그래서 고친 파일은 다음에 열 때 바로 보인다. 오프라인일 때만 캐시를 쓴다.
 - 파일을 더하거나 이름을 바꾸면 `sw.js`의 `FILES`에 반영하고 `VERSION`을 올린다.
-- SQL은 Supabase SQL Editor에서 번호 순서대로 직접 실행한다(지금 `001`~`011`). 바꿀 때는 `008_…sql`처럼 번호를 붙여 새 파일로 더하고, 이미 실행한 파일은 고치지 않는다. 함수를 바꿀 때는 새 파일에 `create or replace`로 함수 전체를 다시 쓴다(002의 `care_summary()`처럼).
+- SQL은 Supabase SQL Editor에서 번호 순서대로 직접 실행한다(지금 `001`~`012`). 바꿀 때는 `008_…sql`처럼 번호를 붙여 새 파일로 더하고, 이미 실행한 파일은 고치지 않는다. 함수를 바꿀 때는 새 파일에 `create or replace`로 함수 전체를 다시 쓴다(002의 `care_summary()`처럼).
 - `config.js`에는 publishable(anon) key만 둔다. 공개돼도 되는 값이고, 읽고 쓰기는 RLS와 가족 명단이 막는다. service_role 키는 절대 넣지 않는다.
 
 ## 12. 고치고 늘리는 법

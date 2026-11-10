@@ -429,4 +429,18 @@ begin
 end $$;
 reset role;
 
+-- ── 012: 호출어 시험 기록 ─────────────
+set role authenticated;
+set request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+do $$
+declare v uuid := gen_random_uuid();
+begin
+  perform public.care_voice_log(jsonb_build_object('id', v, 'event', 'hit', 'kind', 'feed', 'conf', 0.9, 'heard', '알밤(1.00) 이(1.00) 밥(0.90)'));
+  perform public.care_voice_log(jsonb_build_object('id', v, 'event', 'hit', 'kind', 'feed', 'wrong', true));
+  perform public.care_voice_log(jsonb_build_object('id', gen_random_uuid(), 'event', 'missed'));
+  perform pg_temp.check((select wrong and kind = 'feed' from public.care_voice_log where id = v), 'voice log hit then marked wrong');
+  perform pg_temp.check((select count(*) from public.care_voice_log) = 2, 'voice log rows');
+end $$;
+reset role;
+
 \echo 'ALL SQL TESTS PASSED'
