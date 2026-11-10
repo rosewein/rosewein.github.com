@@ -4,6 +4,7 @@
 //   알밤이 쉬야했어      → 기저귀 소변
 //   알밤이 밥먹었어      → 수유
 //   알밤이 응아 / 똥쌌어 → 기저귀 대변
+//   알밤이 기저귀        → 기저귀 소변+대변
 //   알밤이 코자          → 잠 시작
 //   알밤이 깼다          → 잠 끝
 //
@@ -13,7 +14,7 @@
 
 /** 모델이 듣는 말(문장 + 흔한 낱말). 모두 모델 단어장에 있는 낱말만 쓴다(없는 낱말은 Vosk 가 버린다) */
 export const WAKE_PHRASES = [
-  '알밤 이 쉬 야 했어', '알밤 이 밥 먹었어', '알밤 이 응아', '알밤 이 똥 쌌어', '알밤 이 코자', '알밤 이 깼다', '알밤 이 깼',
+  '알밤 이 쉬 야 했어', '알밤 이 밥 먹었어', '알밤 이 응아', '알밤 이 똥 쌌어', '알밤 이 기저귀', '알밤 이 코자', '알밤 이 깼다', '알밤 이 깼',
 ];
 export const DISTRACTORS = [
   '네', '아니', '그래', '엄마', '아빠', '뭐', '이거', '저거', '왜', '어', '응', '아', '오늘', '날씨', '좋다', '아기', '자',
@@ -26,6 +27,7 @@ export const WAKE_GRAMMAR = JSON.stringify([...WAKE_PHRASES, ...DISTRACTORS]);
 
 /** 종류를 고르는 낱말(알밤 뒤에 나와야 한다). 앞의 것부터 본다: "똥 쌌어"는 대변, "쉬"는 소변 */
 const RULES = [
+  { kind: 'both', words: ['기저귀'], label: '기저귀 소변+대변' },   // 소·대를 같이 갈았을 때는 "알밤이 기저귀"(응아·쉬를 섞어 말하면 헷갈려서)
   { kind: 'poo', words: ['응아', '똥', '쌌어'], label: '기저귀 대변' },
   { kind: 'pee', words: ['쉬'], label: '기저귀 소변' },
   { kind: 'feed', words: ['밥', '먹었어'], label: '수유' },
@@ -64,7 +66,7 @@ export function detectWakeAll(res, min = {}) {
  * Vosk 결과 하나 → 알아들은 명령(없으면 null). 결과에 문장이 여럿이면 detectWakeAll.
  * @param {{text?: string, result?: {word: string, conf: number}[]}} res  recognizer 의 "result" 메시지 result
  * @param {{anchor?: number, key?: number}} [min]
- * @returns {{kind: 'pee'|'poo'|'feed'|'sleep'|'wake', label: string, conf: number, text: string} | null}
+ * @returns {{kind: 'pee'|'poo'|'both'|'feed'|'sleep'|'wake', label: string, conf: number, text: string} | null}
  */
 export function detectWake(res, min = {}) {
   const anchorMin = min.anchor ?? MIN_ANCHOR_CONF;
