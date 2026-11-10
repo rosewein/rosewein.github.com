@@ -49,3 +49,8 @@ test('아기 끙끙 소리: "알밤" 뒤에 "이"가 없으면 부른 게 아님
   assert.ok(!JSON.parse(WAKE_GRAMMAR).includes('으'), '"응아"와 비슷한 소리는 넣지 않음');
   assert.ok(JSON.parse(WAKE_GRAMMAR).includes('끙'));
 });
+
+test('알밤이 기저귀 = 소변+대변', () => {
+  assert.equal(detectWake(res([['알밤', 1], ['이', 1], ['기저귀', 1]])).kind, 'both');
+  assert.equal(detectWake(res([['알밤', 1], ['이', 1], ['응아', 1], ['에', 1], ['쉬', 1]])).kind, 'poo', '응아·쉬를 섞어 말하면 앞의 것(대변)만');
+});
