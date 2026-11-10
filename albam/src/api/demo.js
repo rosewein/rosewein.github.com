@@ -70,6 +70,12 @@ class DemoServer {
       case 'care_update_event': return this.updateEvent(args.p);
       case 'care_timeline': return this.timeline(args.p_days);
       case 'care_set_sleep_end': return this.setSleepEnd(args.p_id, args.p_ended_at);
+      case 'care_voice_log': {   // 호출어 시험 기록: 미리 보기에서는 화면 시험용으로만 남긴다
+        const log = (window.__albamVoiceLog ??= []);
+        const i = log.findIndex((r) => r.id === args.p.id);
+        if (i >= 0) log[i] = { ...log[i], wrong: args.p.wrong }; else log.push(args.p);
+        return null;
+      }
       default: throw new Error(`unknown function ${name}`);
     }
   }

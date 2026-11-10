@@ -101,3 +101,28 @@ test('"운다"는 받아 줄 낱말에 있음("잔다"로 들리지 않게)', ()
   const g = JSON.parse(WAKE_GRAMMAR);
   assert.ok(['운다', '울어', '웃는다'].every((w) => g.includes(w)));
 });
+
+test('알아들은 말 → 할 일(wakeAction)', async () => {
+  const { wakeAction } = await import('../../src/voice-wake.js');
+  const now = new Date('2026-11-10T22:00:00+09:00');
+  const awake = { last_sleep: { id: 's1', at: '2026-11-10T19:00:00+09:00', ended_at: '2026-11-10T20:00:00+09:00' }, last_feed: { id: 'f1', at: '2026-11-10T19:00:00+09:00', ml: 230, ended_at: null }, feed_amounts: [200, 230, 270] };
+  const asleep = { ...awake, last_sleep: { id: 's2', at: '2026-11-10T21:00:00+09:00', ended_at: null } };
+  const hit = (kind) => ({ kind, text: '알밤(1.00) 이(1.00) …' });
+
+  const d = wakeAction(hit('both'), awake, now);
+  assert.deepEqual([d.do, d.label, d.event.kind, d.event.detail.type, d.event.source, d.event.voice_text], ['save', '기저귀 소변+대변', 'diaper', 'both', 'living_room_voice', '알밤(1.00) 이(1.00) …']);
+  assert.equal(wakeAction(hit('pee'), awake, now).label, '기저귀 소변');
+
+  const f = wakeAction(hit('feed'), awake, now);
+  assert.deepEqual([f.label, f.event.amount_ml], ['수유 230ml', 230], '마지막 수유량');
+  assert.equal(wakeAction(hit('feed'), null, now, { defaultAmounts: [200, 230, 270] }).event.amount_ml, 230, '요약이 없으면 설정 가운데 값');
+  assert.equal(wakeAction(hit('feed'), { ...awake, last_feed: { ...awake.last_feed, feeding: true } }, now).do, 'finishFeed', '먹이는 중이면 다 먹음');
+
+  const b = wakeAction(hit('bath'), awake, now);
+  assert.deepEqual([b.event.kind, (b.event.ended_at - b.event.occurred_at) / 60000], ['bath', 10]);
+
+  assert.equal(wakeAction(hit('sleep'), awake, now).event.kind, 'sleep');
+  assert.deepEqual(wakeAction(hit('sleep'), asleep, now), { do: 'notice', text: '이미 자는 중이에요' });
+  assert.deepEqual([wakeAction(hit('wake'), asleep, now).do, wakeAction(hit('wake'), asleep, now).sleep.id], ['wake', 's2']);
+  assert.equal(wakeAction(hit('wake'), awake, now).do, 'notice');
+});

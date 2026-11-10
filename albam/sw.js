@@ -3,7 +3,7 @@
 // (tests/unit/service-worker.test.mjs 가 src·styles 의 파일이 모두 들어 있는지 확인한다.)
 // Supabase 요청(다른 출처)은 건드리지 않는다. 기록 다시 보내기는 src/api/queue.js 가 맡는다.
 
-const VERSION = 'albam-v47';
+const VERSION = 'albam-v48';
 const FILES = [
   './',
   './index.html',
@@ -24,6 +24,7 @@ const FILES = [
   './src/formula.js',
   './src/voice-parse.js',
   './src/voice-wake.js',
+  './src/voice-model.js',
   './src/api/index.js',
   './src/api/supabase-rest.js',
   './src/api/queue.js',

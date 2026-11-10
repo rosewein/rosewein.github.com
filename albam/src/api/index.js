@@ -169,6 +169,8 @@ export function createApi(cfg, { transport, storage = STORAGE.real } = {}) {
     signOut: () => rest.signOut(),
     pendingCount: async () => (await queue.all()).length,
     flush,
+    /** 호출어 시험 기록(supabase/012). 못 보내면 버린다(기록이 아니라 인식 품질을 보려는 것) */
+    logVoice: (p) => (rest.loggedIn ? rest.rpc('care_voice_log', { p }).catch(() => null) : Promise.resolve(null)),
 
     async getSummary() {
       const pending = await flushThenList();

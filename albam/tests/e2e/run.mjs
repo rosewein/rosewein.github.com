@@ -122,7 +122,7 @@ async function demoFlow(browser, base) {
   const [feed, diaper, sleepB, late, mic] = [await box('#feedBtn'), await box('#diaperBtn'), await box('#sleepBtn'), await box('#lateBtn'), await box('#micBtn')];
   check(feed.w === diaper.w && diaper.w === sleepB.w && feed.h === diaper.h && feed.h === sleepB.h && feed.top === sleepB.top && feed.h > late.h * 1.5, `수유·기저귀·잠: 상태를 담은 같은 크기 큰 버튼 ${JSON.stringify(feed)}`);
   check(late.w < feed.w / 2 && mic.w === late.w && mic.top < late.top && Math.abs(late.top + late.h - feed.top - feed.h) < 0.5, '+ 는 좁게 버튼 아래 끝에 맞춤, 마이크는 + 위에 작게');
-  check((await text(page, '#micBtn')) === '' && (await text(page, '#lateBtn')) === '' && (await page.getAttribute('#micBtn', 'aria-label')) === '말하기'
+  check((await text(page, '#micBtn')) === '' && (await text(page, '#lateBtn')) === '' && (await page.getAttribute('#micBtn', 'aria-label')) === '호출어 꺼짐(누르면 켬)'
     && (await page.getAttribute('#lateBtn', 'aria-label')).startsWith('더보기'), '아이콘 버튼에 이름(화면 낭독용)');
   check((await text(page, '#sleepBtnText')) === '잠', '[잠] 버튼 글');
   const curved = await curvedEdgeOffenders(page, '#corner, #ageLine, #bubble, #actions button, #micBtn, #pageDots .dot');
@@ -167,7 +167,7 @@ async function demoFlow(browser, base) {
   await page.waitForSelector('#undo:not(.hidden)');
   check((await card('#feedBtn')).includes('230ml'), '230ml(브레짜 210) 로 저장');
   check(await page.getAttribute('#elapsed', 'aria-label') === '방금', '저장하면 상태 칸이 바로 바뀜(방금)');
-  check(await page.isVisible('#micBtn'), '저장 알림 동안에도 [말하기]는 보임');
+  check(await page.isVisible('#micBtn'), '저장 알림 동안에도 마이크(호출어)는 보임');
   check(await text(page, '#today') === '오늘 4회 · 800ml', '오늘 횟수 증가(예시 3회 + 1)');
   await shot(page, 'saved');
 
@@ -792,6 +792,51 @@ async function supabaseFlow(browser, base) {
   check(errors.length === 0, `페이지 오류 없음 ${errors.join(' ')}`);
 }
 
+/** 호출어: Vosk 결과(시험용 입구) → 확인 화면 → n초 뒤 저장 / 누르면 취소(시험 기록에 잘못으로) */
+async function wakeFlow(browser, base) {
+  const page = await (await browser.newContext(DEVICE)).newPage();
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await page.clock.install({ time: DAYTIME });
+  await page.goto(`${base}?demo`);
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.clock.runFor(800);
+  check(!(await page.getAttribute('#micBtn', 'class')).includes('listening'), '호출어는 처음에 꺼짐');
+  check(await page.$eval('#micBtn', (b) => { const r = b.getBoundingClientRect(); return document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)?.closest('#micBtn') === b; }), '마이크 버튼을 누를 수 있음(버튼 줄에 가리지 않음)');
+  const until = async (fn) => { for (let i = 0; i < 30 && !(await fn()); i += 1) { await page.clock.runFor(300); await page.waitForTimeout(50); } };
+  const say = (words) => page.evaluate((w) => window.__albamWakeResult({ text: w.join(' '), result: w.map((word) => ({ word, conf: 1 })) }), words);
+
+  await say(['알밤', '이', '기저귀']);
+  await page.waitForSelector('#voiceSheet:not(.hidden)');
+  check(await text(page, '#voiceLabel') === '기저귀 소변+대변' && (await text(page, '#voiceTitle')).includes('취소'), `확인 화면에 크게(${await text(page, '#voiceLabel')})`);
+  await shot(page, 'wake-confirm');
+  await say(['알밤', '이', '응아']);   // 확인 중에 들린 말은 넘김
+  check(await text(page, '#voiceLabel') === '기저귀 소변+대변', '확인 중 다른 말은 넘김');
+  await until(async () => page.isVisible('#undo'));
+  check((await text(page, '#undoText')).startsWith('기저귀 소변+대변'), `n초 뒤 저장(${await text(page, '#undoText')})`);
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('albam.demo.events')).find((e) => e.kind === 'diaper' && e.detail.type === 'both'));
+  check(saved?.source === 'living_room_voice' && saved.voice_text === '알밤 이 기저귀', '음성 기록으로 남김(source·voice_text)');
+  await page.click('#undoMsg').catch(() => {});
+  await until(async () => !(await page.isVisible('#undo')));
+
+  await say(['알밤', '이', '목욕', '했어']);
+  await page.waitForSelector('#voiceSheet:not(.hidden)');
+  check(await text(page, '#voiceLabel') === '목욕', '목욕');
+  await page.click('#voiceCancel');
+  check(await text(page, '#notice') === '안 넣었어요', '누르면 취소');
+  const log = await page.evaluate(() => window.__albamVoiceLog || []);
+  check(log.length === 3 && log.at(-1).kind === 'bath' && log.at(-1).wrong === true && log[0].wrong === false && log[0].device.endsWith('app'), `시험 기록: 취소는 잘못으로(${JSON.stringify(log.map((r) => [r.kind, r.wrong]))})`);
+  const baths = await page.evaluate(() => JSON.parse(localStorage.getItem('albam.demo.events')).filter((e) => e.kind === 'bath').length);
+  check(baths === 0, '취소하면 저장 안 함');
+
+  await say(['알밤', '이', '깼다']);
+  check(await text(page, '#notice') === '자는 중이 아니에요' && !(await page.isVisible('#voiceSheet')), '안 자는데 "깼다"는 알림만');
+  await say(['알밤', '이', '울고']);
+  check(!(await page.isVisible('#voiceSheet')), '명령이 아닌 말은 넘김');
+  check(errors.length === 0, `오류 없음 ${errors.join(' ')}`);
+}
+
 const server = await serve();
 const base = `http://localhost:${server.address().port}/albam/`;
 const browser = await chromium.launch();
@@ -803,6 +848,7 @@ try {
   console.log('# 미리 보기 오프라인'); await demoOfflineFlow(browser, base);
   console.log('# 밤 화면'); await nightFlow(browser, base);
   console.log('# 더보기'); await moreFlow(browser, base);
+  console.log('# 호출어'); await wakeFlow(browser, base);
   console.log('# Supabase(가짜)'); await supabaseFlow(browser, base);
 } finally {
   await browser.close();

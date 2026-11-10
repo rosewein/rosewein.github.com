@@ -33,7 +33,7 @@
 </style>
 </head>
 <body>
-  <h1>알밤 호출어 시험 <span class="dim" style="font-size:13px;font-weight:400">v10 · 운다≠잔다</span></h1>   <!-- 화면이 바뀌면 v 숫자를 올린다(새 화면이 떴는지 바로 보이게) -->
+  <h1>알밤 호출어 시험 <span class="dim" style="font-size:13px;font-weight:400">v11 · 앱과 같은 엔진</span></h1>   <!-- 화면이 바뀌면 v 숫자를 올린다(새 화면이 떴는지 바로 보이게) -->
   <p class="dim">"알밤이 쉬야했어 / 오줌쌌어 · 응아 / 똥쌌어 · 기저귀(소+대) · 밥먹었어 · 목욕했어 · 코자 / 잔다 · 깼다 / 깼네"라고 말해 보세요. 기록은 저장하지 않아요.</p>
   <div class="row">
     <button id="start">시작</button>
@@ -53,16 +53,12 @@
   <p class="dim" style="margin-top:12px">잘못 알아들은 줄은 [잘못]을 눌러 주세요. 결과는 Supabase(care_voice_log)에 저장돼서 따로 보내지 않아도 돼요.</p>
 
 <script src="config.js"></script>
-<script src="vendor/vosk-browser-0.0.8.js"></script>
 <script type="module">
 import { detectWakeAll, WAKE_GRAMMAR } from './src/voice-wake.js';
 import { loadConfig } from './src/config.js';
 import { SupabaseRest } from './src/api/supabase-rest.js';
+import { openWakeModel, listenMic } from './src/voice-model.js';
 
-const PARTS = ['voice/model-ko.tar.gz.0', 'voice/model-ko.tar.gz.1'];
-const PART_BYTES = [47185920, 39730838];
-const MODEL_NAME = 'ko-small-0.22';            // IndexedDB 에 이 이름으로 풀어 둔다(vendor 수정 참고)
-const CACHE = 'voice-model-ko-small-0.22';     // 'albam-' 로 시작하지 않아 앱 업데이트 때 지워지지 않는다
 const STORE = 'albam.voiceTest';
 const KINDS = { pee: '소변', poo: '대변', both: '소+대', feed: '수유', bath: '목욕', sleep: '코자', wake: '깼다' };
 const $ = (s) => document.querySelector(s);
@@ -123,56 +119,16 @@ function render() {
 const setStatus = (t) => { $('#status').textContent = t; };
 const setBar = (f) => { $('#bar div').style.width = `${Math.round(f * 100)}%`; };
 
-/** 모델 조각 두 개를 받아(한 번 받으면 기기에 보관) 하나의 blob 주소로 */
-async function modelUrl() {
-  const cache = await caches.open(CACHE);
-  const blobs = [];
-  let done = 0;
-  const total = PART_BYTES.reduce((a, b) => a + b, 0);
-  for (const [i, part] of PARTS.entries()) {
-    let res = await cache.match(part);
-    if (!res) {
-      const r = await fetch(part, { cache: 'no-store' });
-      if (!r.ok) throw new Error(`모델 조각을 못 받았어요(${r.status})`);
-      const reader = r.body.getReader();
-      const chunks = [];
-      for (;;) {
-        const { done: end, value } = await reader.read();
-        if (end) break;
-        chunks.push(value);
-        done += value.length;
-        setBar(done / total);
-        setStatus(`모델 받는 중 ${Math.round(done / 1048576)} / ${Math.round(total / 1048576)}MB`);
-      }
-      res = new Response(new Blob(chunks));
-      await cache.put(part, res.clone());
-    } else {
-      done += PART_BYTES[i];
-      setBar(done / total);
-    }
-    blobs.push(await res.blob());
-  }
-  return `${URL.createObjectURL(new Blob(blobs, { type: 'application/gzip' }))}#${MODEL_NAME}`;
-}
-
 async function start() {
   $('#start').disabled = true;
   $('#err').textContent = '';
   try {
     if ('wakeLock' in navigator) navigator.wakeLock.request('screen').catch(() => {});
     setStatus('모델 준비 중');
-    const url = await modelUrl();
-    setStatus('모델 여는 중(처음엔 1분쯤)');
-    const model = await Vosk.createModel(url);
-    const stream = await navigator.mediaDevices.getUserMedia({ video: false, audio: { echoCancellation: true, noiseSuppression: true, channelCount: 1 } });
-    const ctx = new AudioContext();
-    const rec = new model.KaldiRecognizer(ctx.sampleRate, WAKE_GRAMMAR);
-    rec.setWords(true);
+    const model = await openWakeModel((f, text) => { setBar(f); setStatus(text); });
     // 말하는 도중: '알밤'이 들릴 때만 보여 준다(아기 소리·TV 소리로 글자가 계속 바뀌면 산만해서)
-    rec.on('partialresult', (m) => { if (/알밤/.test(m.result.partial || '')) $('#heard').textContent = `… ${m.result.partial}`; });
-    rec.on('result', (m) => {
-      const res = m.result;
-      if (!res.text) return;
+    const partial = (t) => { if (/알밤/.test(t)) $('#heard').textContent = `… ${t}`; };
+    await listenMic(model, WAKE_GRAMMAR, { partial, result: (res) => {
       const hits = detectWakeAll(res);   // 이어서 말하면 한 결과에 여러 문장
       const words = (res.result || []).map((w) => `${w.word}(${w.conf.toFixed(2)})`).join(' ');
       if (/알밤/.test(res.text)) $('#heard').textContent = res.text;
@@ -187,11 +143,7 @@ async function start() {
       }
       data.log = data.log.slice(-500);
       save(); render();
-    });
-    const node = ctx.createScriptProcessor(4096, 1, 1);
-    node.onaudioprocess = (e) => { try { rec.acceptWaveform(e.inputBuffer); } catch (x) { /* 한 조각 실패는 넘긴다 */ } };
-    ctx.createMediaStreamSource(stream).connect(node);
-    node.connect(ctx.destination);   // 일부 브라우저는 출력에 이어야 돈다(소리는 나지 않는다: 출력 버퍼를 채우지 않음)
+    } });
     setBar(1);
     setStatus('듣는 중 🎤');
   } catch (e) {
