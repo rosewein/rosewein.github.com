@@ -26,16 +26,24 @@ export const DISTRACTORS = [
 ];
 export const WAKE_GRAMMAR = JSON.stringify([...WAKE_PHRASES, ...DISTRACTORS]);
 
-/** 종류를 고르는 낱말(알밤 뒤에 나와야 한다). 앞의 것부터 본다: "똥 쌌어"는 대변, "쉬"는 소변 */
+/**
+ * 종류마다 알아듣는 말(낱말 차례). "알밤 이" 바로 다음부터 맞춰 본다.
+ * 한 글자 말(똥·쉬·밥·자·깨)만으로는 기록하지 않는다. "또 울어"가 "똥"으로, 아무 말이 "자"로 들려서(2026-11-10):
+ * 똥 → "똥 쌌어", 쉬 → "쉬 야 / 쉬 했어", 밥 → "밥 먹었어". 낱말 하나로 되는 말은 두 글자 이상이고 더 또렷해야(SINGLE_MIN) 한다
+ */
 const RULES = [
-  { kind: 'both', words: ['기저귀'], label: '기저귀 소변+대변' },   // 소·대를 같이 갈았을 때는 "알밤이 기저귀"(응아·쉬를 섞어 말하면 헷갈려서)
-  { kind: 'poo', words: ['응아', '똥', '쌌어'], label: '기저귀 대변' },
-  { kind: 'pee', words: ['쉬'], label: '기저귀 소변' },
-  { kind: 'feed', words: ['밥', '먹었어'], label: '수유' },
-  { kind: 'bath', words: ['목욕'], label: '목욕' },
-  { kind: 'wake', words: ['깼다', '깼', '깨'], label: '잠 끝(깼어요)' },
-  { kind: 'sleep', words: ['코자', '잠', '자'], label: '잠 시작' },
+  { kind: 'both', label: '기저귀 소변+대변', says: [['기저귀']] },   // 소·대를 같이 갈았을 때는 "알밤이 기저귀"(응아·쉬를 섞어 말하면 헷갈려서)
+  { kind: 'poo', label: '기저귀 대변', says: [['똥', '쌌어'], ['응아'], ['쌌어']] },
+  { kind: 'pee', label: '기저귀 소변', says: [['쉬', '야'], ['쉬', '했어']] },
+  { kind: 'feed', label: '수유', says: [['밥', '먹었어'], ['먹었어']] },
+  { kind: 'bath', label: '목욕', says: [['목욕']] },
+  { kind: 'wake', label: '잠 끝(깼어요)', says: [['깼다'], ['깼']] },
+  { kind: 'sleep', label: '잠 시작', says: [['코자']] },
 ];
+/** 낱말 하나로 되는 말 중 헷갈리기 쉬운 것(응아는 끙끙 소리, 깼은 한 글자, 쌌어·먹었어는 앞말이 빠진 꼴)은 이만큼 또렷해야.
+ *  코자·기저귀·목욕은 길고 또렷해서 보통 기준(MIN_KEY_CONF) */
+export const SINGLE_MIN = 0.8;
+const STRICT_SINGLE = new Set(['응아', '쌌어', '먹었어', '깼', '깼다']);
 
 /** "알밤"이 이만큼 확실해야 호출로 본다 */
 export const MIN_ANCHOR_CONF = 0.8;
@@ -49,8 +57,6 @@ export const MIN_KEY_CONF = 0.6;
 export const LONG_RESULT_WORDS = 12;
 const LONG_MIN = { anchor: 0.9, glue: 0.8, key: 0.9 };
 
-/** 낱말 → 종류 */
-const KIND_OF = new Map(RULES.flatMap((r) => r.words.map((w) => [w, r])));
 
 /**
  * Vosk 결과 하나 → 알아들은 명령 모두. 이어서 말하면 결과 하나에 여러 문장이 붙어 온다
@@ -79,8 +85,8 @@ const toWords = (res) => (res?.result?.length ? res.result
 
 /**
  * Vosk 결과 하나 → 알아들은 명령(없으면 null). 결과에 문장이 여럿이면 detectWakeAll.
- * "알밤"(0.8) 바로 뒤에 "이"가 오고, 그 **바로 다음 낱말**이 종류 낱말이어야 한다(위치로 고른다: "알밤 이 깼 쉬 야 했어"는 깼다).
- * 그 낱말이 흐리면(0.6 미만, 예: 밥을 "울"로 들음) 한 칸 더 본다. 긴 말 속에서는 한 칸 더 보지 않는다.
+ * "알밤"(0.8) 바로 뒤에 "이"가 오고, 그 **바로 다음부터** RULES 의 말이 맞아야 한다(위치로 고른다: "알밤 이 깼 쉬 야 했어"는 깼다).
+ * 바로 다음 낱말이 흐리면(0.6 미만, 예: 밥을 "울"로 들음) 한 칸 더 본다. 긴 말 속에서는 한 칸 더 보지 않는다.
  * @param {{text?: string, result?: {word: string, conf: number}[]}} res  recognizer 의 "result" 메시지 result
  * @param {{anchor?: number, glue?: number, key?: number, long?: boolean}} [min]
  * @returns {{kind: 'pee'|'poo'|'both'|'feed'|'bath'|'sleep'|'wake', label: string, conf: number, text: string} | null}
@@ -93,10 +99,21 @@ export function detectWake(res, min = {}) {
   // "알밤" 바로 뒤에 "이"가 와야 부른 것으로 본다(끙끙 소리가 "알밤 날씨 물"처럼 들린 적이 있다)
   const at = words.findIndex((w, i) => w.word === '알밤' && w.conf >= anchorMin && words[i + 1]?.word === '이' && words[i + 1].conf >= glueMin);
   if (at < 0) return null;
-  const pick = (w) => (w && KIND_OF.has(w.word) && w.conf >= keyMin ? w : null);
-  let hit = pick(words[at + 2]);
-  if (!hit && !min.long && words[at + 2] && words[at + 2].conf < MIN_KEY_CONF) hit = pick(words[at + 3]);
-  if (!hit) return null;
-  const rule = KIND_OF.get(hit.word);
-  return { kind: rule.kind, label: rule.label, conf: Math.min(words[at].conf, hit.conf), text: res.text || words.map((w) => w.word).join(' ') };
+  // p 자리부터 말 하나(낱말 차례)가 맞는지. 맞으면 [규칙, 가장 흐린 낱말의 정도]
+  const match = (p) => {
+    for (const rule of RULES) {
+      for (const say of rule.says) {
+        const got = say.map((word, i) => words[p + i]).filter((w, i) => w && w.word === say[i]);
+        if (got.length !== say.length) continue;
+        const conf = Math.min(...got.map((w) => w.conf));
+        if (conf >= (say.length === 1 && STRICT_SINGLE.has(say[0]) ? Math.max(keyMin, SINGLE_MIN) : keyMin)) return [rule, conf];
+      }
+    }
+    return null;
+  };
+  let found = match(at + 2);
+  if (!found && !min.long && words[at + 2] && words[at + 2].conf < MIN_KEY_CONF) found = match(at + 3);
+  if (!found) return null;
+  const [rule, conf] = found;
+  return { kind: rule.kind, label: rule.label, conf: Math.min(words[at].conf, conf), text: res.text || words.map((w) => w.word).join(' ') };
 }

@@ -8,7 +8,8 @@ const res = (pairs) => ({ text: pairs.map(([w]) => w).join(' '), result: pairs.m
 test('알밤이 ○○ 다섯 가지', () => {
   assert.equal(detectWake(res([['알밤', 1], ['이', 1], ['쉬', 0.9], ['야', 1], ['했어', 1]])).kind, 'pee');
   assert.equal(detectWake(res([['알밤', 1], ['이', 1], ['밥', 1], ['먹었어', 1]])).kind, 'feed');
-  assert.equal(detectWake(res([['알밤', 1], ['이', 1], ['응아', 0.7]])).kind, 'poo');
+  assert.equal(detectWake(res([['알밤', 1], ['이', 1], ['응아', 0.85]])).kind, 'poo');
+  assert.equal(detectWake(res([['알밤', 1], ['이', 1], ['응아', 0.65], ['자', 0.67]])), null, '흐린 응아는 넘김(대변으로 잡아 [잘못]이 눌렸음)');
   assert.equal(detectWake(res([['알밤', 1], ['이', 1], ['똥', 1], ['쌌어', 1]])).kind, 'poo');
   assert.equal(detectWake(res([['알밤', 1], ['이', 1], ['코자', 1]])).kind, 'sleep');
   assert.equal(detectWake(res([['알밤', 1], ['이', 1], ['깼다', 0.9]])).kind, 'wake');
@@ -35,7 +36,7 @@ test('문법 목록', () => {
 test('이어서 말한 여러 문장(S10 실제 기록 2026-11-10)', () => {
   const parse = (s) => res(s.split(' ').map((x) => { const m = x.match(/^(.+)\((\d\.\d+)\)$/); return [m[1], Number(m[2])]; }));
   const kinds = (s) => detectWakeAll(parse(s)).map((h) => h.kind).join(',');
-  assert.equal(kinds('쉬(0.91) 야(0.68) 했어(0.68) 알밤(1.00) 이(1.00) 알밤(1.00) 이(1.00) 응아(1.00) 알밤(1.00) 이(1.00) 쉬(0.74) 자(0.81)'), 'poo,pee');
+  assert.equal(kinds('쉬(0.91) 야(0.68) 했어(0.68) 알밤(1.00) 이(1.00) 알밤(1.00) 이(1.00) 응아(1.00) 알밤(1.00) 이(1.00) 쉬(0.74) 자(0.81)'), 'poo', '"쉬 자"는 소변 문장(쉬 야 / 쉬 했어)이 아님');
   assert.equal(kinds('알밤(1.00) 알밤(1.00) 이(1.00) 아빠(0.91) 알밤(1.00) 이(0.82) 쌌어(0.81)'), 'poo', '알밤에서 멀리 떨어진 쌌어도 문장마다 끊으면 잡힘');
   assert.equal(kinds('알밤(1.00) 이(1.00) 쉬(1.00) 야(0.44) 알밤(1.00) 이(0.87) 쉬(1.00) 야(1.00) 알밤(1.00) 이(1.00) 이(1.00) 쉬(1.00) 자(0.63)'), 'pee', '같은 말 되풀이는 한 번');
   assert.equal(kinds('야(0.35) 알밤(1.00) 이(1.00) 밥(1.00) 먹었어(1.00)'), 'feed');
@@ -75,4 +76,15 @@ test('위치로 고름: "알밤 이" 바로 다음 낱말', () => {
   assert.equal(detectWake(res([['알밤', 1], ['이', 1], ['깼', 0.94], ['쉬', 0.74], ['야', 0.74], ['했어', 0.74]])).kind, 'wake');
   assert.equal(detectWake(res([['알밤', 1], ['이', 0.58], ['울', 0.39], ['먹었어', 1]])).kind, 'feed', '바로 다음이 흐리면 한 칸 더');
   assert.equal(detectWake(res([['알밤', 1], ['이', 1], ['아빠', 0.91], ['쌌어', 1]])), null, '바로 다음이 또렷한 다른 낱말이면 넘김');
+});
+
+test('한 글자 말만으로는 기록 안 함("또 울어"가 "똥"으로 들림, 2026-11-10 [잘못] 기록)', () => {
+  const parse = (s) => res(s.split(' ').map((x) => { const m = x.match(/^(.+)\((\d\.\d+)\)$/); return [m[1], Number(m[2])]; }));
+  const kinds = (s) => detectWakeAll(parse(s)).map((h) => h.kind).join(',');
+  assert.equal(kinds('알밤(1.00) 이(1.00) 똥(1.00) 알밤(1.00)'), '');
+  assert.equal(kinds('이(0.62) 쉬(1.00) 자(1.00) 알밤(1.00) 이(1.00) 똥(1.00)'), '');
+  assert.equal(kinds('알밤(1.00) 이(1.00) 자(1.00) 똥(1.00) 쌌어(1.00)'), '', '"자"는 잠이 아님(코자만)');
+  assert.equal(kinds('알밤(1.00) 이(0.75) 똥(1.00) 쌌어(1.00)'), 'poo', '"똥 쌌어"는 대변');
+  assert.equal(kinds('알밤(1.00) 이(1.00) 코자(0.69)'), 'sleep', '코자는 길고 또렷해서 보통 기준');
+  assert.equal(kinds('알밤(1.00) 이(1.00) 쉬(1.00) 야(0.79) 지금(1.00) 알밤(1.00) 어(0.82)'), 'pee');
 });
