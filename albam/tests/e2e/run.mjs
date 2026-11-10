@@ -505,6 +505,19 @@ async function longTextFlow(browser, base) {
   check(await card('#diaperBtn') === '기저귀|11시간 59분|02:01 · 소+대', `기저귀 버튼 소+대 ${await card('#diaperBtn')}`);
   await dashboardLayout(page, '긴 글');
   await shot(page, 'long');
+  // 대변이 어제(26시간 전): 시각만 두면 오늘 아침처럼 보이므로 날을 붙인다
+  await page.evaluate(() => {
+    const ago = (m) => new Date(Date.now() - m * 60000).toISOString();
+    localStorage.setItem('albam.demo.events', JSON.stringify([
+      { id: 'a', kind: 'feed', occurred_at: ago(60), amount_ml: 160, detail: {} },
+      { id: 'b', kind: 'diaper', occurred_at: ago(50), detail: { type: 'pee' } },
+      { id: 'c', kind: 'diaper', occurred_at: ago(26 * 60), detail: { type: 'poo' } },
+    ]));
+  });
+  await page.reload();
+  await page.waitForTimeout(500);
+  check(await text(page, '#diaperBtn .rSub') === '13:10 · 대 어제 12:00', `어제 대변은 '어제' 붙임 ${await text(page, '#diaperBtn .rSub')}`);
+  await dashboardLayout(page, '어제 대변');
   // P4 7인치(1024x600) 비율: 높이 180 기준 가로 307
   await page.goto(`${base}?demo&w=307`);
   await page.waitForTimeout(500);
@@ -539,6 +552,18 @@ async function longTextFlow(browser, base) {
   await dashboardLayout(page, 'P4 기저귀 간 지 12시간');
   await shot(page, 'longest-p4');
   await dashboardLayout(page, 'P4 대변 따로');
+  await page.evaluate(() => {
+    const ago = (m) => new Date(Date.now() - m * 60000).toISOString();
+    localStorage.setItem('albam.demo.events', JSON.stringify([
+      { id: 'a', kind: 'feed', occurred_at: ago(60), amount_ml: 160, detail: {} },
+      { id: 'b', kind: 'diaper', occurred_at: ago(50), detail: { type: 'pee' } },
+      { id: 'c', kind: 'diaper', occurred_at: ago(26 * 60), detail: { type: 'poo' } },
+    ]));
+  });
+  await page.reload();
+  await page.waitForTimeout(500);
+  check(await text(page, '#diaperBtn .rSub') === '13:10 · 대 어제', `P4: 어제 대변은 날만 ${await text(page, '#diaperBtn .rSub')}`);
+  await dashboardLayout(page, 'P4 어제 대변');
 }
 
 // 미리 보기에서도 오프라인 저장·"대기 n건"이 실제와 똑같이 동작하고, 실제 큐와 섞이지 않는지

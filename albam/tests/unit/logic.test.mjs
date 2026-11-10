@@ -281,9 +281,15 @@ test('말풍선·표정: 가장 급한 항목 하나', async () => {
   assert.equal(chooseFocus({ ...calm, minutes: { feed: null, diaper: null, awake: null } }).urgent, false, '기록이 없으면 급하지 않음');
   assert.equal(chooseFocus({ ...calm, night: true }).mood, 'sleep');
   assert.equal(chooseFocus({ ...calm, night: true, nightAwake: true, minutes: { feed: 200, diaper: 0, awake: 0 } }).mood, 'hungry');
-  assert.equal(diaperDetail({ at: new Date(2026, 10, 6, 12, 50), type: 'both' }, null), '12:50 · 소+대');
-  assert.equal(diaperDetail({ at: new Date(2026, 10, 6, 12, 50), type: 'pee' }, { at: new Date(2026, 10, 6, 9, 10) }), '12:50 소변 · 대 09:10');
-  assert.equal(diaperDetail({ at: new Date(2026, 10, 6, 12, 50), type: 'pee' }, { at: new Date(2026, 10, 6, 9, 10) }, true), '12:50 · 대 09:10', '좁은 화면');
+  const d = (day, h, m) => new Date(2026, 10, day, h, m);
+  assert.equal(diaperDetail({ at: d(6, 12, 50), type: 'both' }, null, false, NOW), '12:50 · 소+대');
+  assert.equal(diaperDetail({ at: d(6, 12, 50), type: 'pee' }, { at: d(6, 9, 10) }, false, NOW), '12:50 소변 · 대 09:10');
+  assert.equal(diaperDetail({ at: d(6, 12, 50), type: 'pee' }, { at: d(6, 9, 10) }, true, NOW), '12:50 · 대 09:10', '좁은 화면');
+  // 대변이 어제·그 전이면 날을 붙인다(24시간 넘었는데 아침 시각만 보이면 헷갈림)
+  assert.equal(diaperDetail({ at: d(6, 12, 50), type: 'pee' }, { at: d(5, 9, 10) }, false, NOW), '12:50 · 대 어제 09:10');
+  assert.equal(diaperDetail({ at: d(6, 12, 50), type: 'pee' }, { at: d(5, 9, 10) }, true, NOW), '12:50 · 대 어제');
+  assert.equal(diaperDetail({ at: d(6, 12, 50), type: 'pee' }, { at: d(3, 9, 10) }, false, NOW), '12:50 · 대 11/3 09:10');
+  assert.equal(diaperDetail({ at: d(5, 22, 10), type: 'both' }, null, false, NOW), '어제 22:10 · 소+대');
   assert.equal(diaperDetail(null, null), '기록 없음');
 });
 
@@ -302,4 +308,12 @@ test('배고파요 기준: 숫자면 그대로, auto 면 마지막 수유 시간
   assert.equal(hungryLimit('auto', { feed_gaps: day.slice(0, 3) }, at(10)).minutes, 180, '전체가 10개 미만이면 180');
   assert.equal(hungryLimit('auto', { feed_gap: { n: 64, p25: 246 } }, at(10)).minutes, 250, '010 만 있는 서버');
   assert.equal(hungryLimit('auto', null, null).minutes, 180);
+});
+
+test('날이 다르면 날을 붙인 시각', async () => {
+  const { formatClockOn } = await import('../../src/time.js');
+  assert.equal(formatClockOn(new Date(2026, 10, 6, 9, 0), NOW), '09:00');
+  assert.equal(formatClockOn(new Date(2026, 10, 5, 9, 0), NOW), '어제 09:00');
+  assert.equal(formatClockOn(new Date(2026, 10, 5, 9, 0), NOW, true), '어제');
+  assert.equal(formatClockOn(new Date(2026, 10, 1, 9, 0), NOW), '11/1 09:00');
 });

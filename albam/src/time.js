@@ -90,3 +90,13 @@ export function formatToday(d, short = false) {
   const { date, weekday } = formatLongDate(d);
   return `${short ? '' : `${d.getFullYear()}년 `}${date} ${weekday}`;
 }
+
+/**
+ * 날이 다르면 날을 붙인 시각(순수 함수): 오늘 "09:00", 어제 "어제 09:00", 그 전 "11/8 09:00".
+ * short 면(좁은 칸) 오늘이 아닐 때 시각을 빼고 날만: "어제", "11/8"
+ */
+export function formatClockOn(value, now, short = false) {
+  const day = formatDay(value, now);
+  if (day === '오늘') return formatClock(value);
+  return short ? day : `${day} ${formatClock(value)}`;
+}
