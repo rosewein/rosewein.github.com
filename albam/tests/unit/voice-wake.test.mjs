@@ -96,3 +96,8 @@ test('더한 말: 오줌쌌어 · 잔다 · 깼네', () => {
   assert.equal(detectWake(res([['알밤', 1], ['이', 1], ['쌌어', 1]])), null, '쌌어만 들리면 넘김');
   assert.ok(JSON.parse(WAKE_GRAMMAR).includes('알밤 이 오줌 쌌어'));
 });
+
+test('"운다"는 받아 줄 낱말에 있음("잔다"로 들리지 않게)', () => {
+  const g = JSON.parse(WAKE_GRAMMAR);
+  assert.ok(['운다', '울어', '웃는다'].every((w) => g.includes(w)));
+});
