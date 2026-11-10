@@ -121,3 +121,43 @@ export function detectWake(res, min = {}) {
   const [rule, conf] = found;
   return { kind: rule.kind, label: rule.label, conf: Math.min(words[at].conf, conf), text: res.text || words.map((w) => w.word).join(' ') };
 }
+
+/**
+ * 알아들은 명령 → 할 일(순수 함수). 화면은 이걸 크게 띄우고 n초 뒤 실행한다(그 전에 누르면 취소).
+ *   기저귀 소·대·소+대 / 목욕(10분 전~지금) / 잠 시작 → 기록 저장
+ *   수유 → 마지막 수유량으로 저장. 먹이는 중이면 [다 먹음]
+ *   깼다 → 자는 중인 잠 끝내기. 자는 중이 아니면 알림만(코자도 이미 자는 중이면 알림만)
+ * @param {{kind: string, text: string}} hit
+ * @param {import('./domain.js').Summary|null} summary
+ * @param {Date} now
+ * @param {{defaultAmounts?: number[]}} [cfg]
+ * @returns {{do: 'save', label: string, event: Object} | {do: 'wake', label: string, sleep: Object}
+ *          | {do: 'finishFeed', label: string, feed: Object} | {do: 'notice', text: string}}
+ */
+export function wakeAction(hit, summary, now, cfg = {}) {
+  const voice = { source: 'living_room_voice', voice_text: hit.text };
+  const sleeping = summary?.last_sleep && !summary.last_sleep.ended_at ? summary.last_sleep : null;
+  const feeding = summary?.last_feed?.feeding && !summary.last_feed.ended_at ? summary.last_feed : null;
+  const diaper = { pee: '소변', poo: '대변', both: '소변+대변' }[hit.kind];
+  if (diaper) return { do: 'save', label: `기저귀 ${diaper}`, event: { kind: 'diaper', occurred_at: now, detail: { type: hit.kind }, ...voice } };
+  if (hit.kind === 'bath') {
+    return { do: 'save', label: '목욕', event: { kind: 'bath', occurred_at: new Date(now - BATH_MINUTES * 60000), ended_at: now, detail: {}, ...voice } };
+  }
+  if (hit.kind === 'feed') {
+    if (feeding) return { do: 'finishFeed', label: '수유 다 먹음', feed: feeding };
+    const amounts = summary?.feed_amounts?.length ? summary.feed_amounts : cfg.defaultAmounts || [];
+    const ml = summary?.last_feed?.ml ?? amounts[Math.floor(amounts.length / 2)] ?? null;
+    return { do: 'save', label: ml ? `수유 ${ml}ml` : '수유', event: { kind: 'feed', amount_ml: ml, occurred_at: now, detail: {}, ...voice } };
+  }
+  if (hit.kind === 'sleep') {
+    if (sleeping) return { do: 'notice', text: '이미 자는 중이에요' };
+    return { do: 'save', label: '잠 시작', event: { kind: 'sleep', occurred_at: now, detail: {}, ...voice } };
+  }
+  if (hit.kind === 'wake') {
+    if (!sleeping) return { do: 'notice', text: '자는 중이 아니에요' };
+    return { do: 'wake', label: '잠 끝(깼어요)', sleep: sleeping };
+  }
+  return { do: 'notice', text: '못 알아들었어요' };
+}
+/** "목욕했어"는 끝난 뒤에 말하므로 10분 전~지금으로 넣는다([+] 목욕과 같은 길이). 고치려면 오늘 기록에서 */
+export const BATH_MINUTES = 10;
