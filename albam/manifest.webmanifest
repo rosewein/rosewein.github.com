@@ -1,7 +1,7 @@
 {
-  "name": "알밤케어",
-  "short_name": "알밤케어",
-  "description": "세훈이 수유·기저귀 기록 거실 화면",
+  "name": "알밤보드",
+  "short_name": "알밤보드",
+  "description": "세훈이 육아 기록부터 집안 관리까지, 거실 보드",
   "lang": "ko",
   "start_url": "./",
   "scope": "./",
