@@ -33,8 +33,8 @@
 </style>
 </head>
 <body>
-  <h1>알밤 호출어 시험 <span class="dim" style="font-size:13px;font-weight:400">v5 · 기저귀(소+대)</span></h1>   <!-- 화면이 바뀌면 v 숫자를 올린다(새 화면이 떴는지 바로 보이게) -->
-  <p class="dim">"알밤이 쉬야했어 · 응아 / 똥쌌어 · 기저귀(소+대) · 밥먹었어 · 코자 · 깼다"라고 말해 보세요. 기록은 저장하지 않아요.</p>
+  <h1>알밤 호출어 시험 <span class="dim" style="font-size:13px;font-weight:400">v6 · 목욕</span></h1>   <!-- 화면이 바뀌면 v 숫자를 올린다(새 화면이 떴는지 바로 보이게) -->
+  <p class="dim">"알밤이 쉬야했어 · 응아 / 똥쌌어 · 기저귀(소+대) · 밥먹었어 · 목욕했어 · 코자 · 깼다"라고 말해 보세요. 기록은 저장하지 않아요.</p>
   <div class="row">
     <button id="start">시작</button>
     <div id="bar"><div></div></div>
@@ -64,7 +64,7 @@ const PART_BYTES = [47185920, 39730838];
 const MODEL_NAME = 'ko-small-0.22';            // IndexedDB 에 이 이름으로 풀어 둔다(vendor 수정 참고)
 const CACHE = 'voice-model-ko-small-0.22';     // 'albam-' 로 시작하지 않아 앱 업데이트 때 지워지지 않는다
 const STORE = 'albam.voiceTest';
-const KINDS = { pee: '소변', poo: '대변', both: '소+대', feed: '수유', sleep: '코자', wake: '깼다' };
+const KINDS = { pee: '소변', poo: '대변', both: '소+대', feed: '수유', bath: '목욕', sleep: '코자', wake: '깼다' };
 const $ = (s) => document.querySelector(s);
 
 let data = load();

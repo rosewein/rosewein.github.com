@@ -5,6 +5,7 @@
 //   알밤이 밥먹었어      → 수유
 //   알밤이 응아 / 똥쌌어 → 기저귀 대변
 //   알밤이 기저귀        → 기저귀 소변+대변
+//   알밤이 목욕했어      → 목욕(기록 종류 표의 bath)
 //   알밤이 코자          → 잠 시작
 //   알밤이 깼다          → 잠 끝
 //
@@ -14,7 +15,7 @@
 
 /** 모델이 듣는 말(문장 + 흔한 낱말). 모두 모델 단어장에 있는 낱말만 쓴다(없는 낱말은 Vosk 가 버린다) */
 export const WAKE_PHRASES = [
-  '알밤 이 쉬 야 했어', '알밤 이 밥 먹었어', '알밤 이 응아', '알밤 이 똥 쌌어', '알밤 이 기저귀', '알밤 이 코자', '알밤 이 깼다', '알밤 이 깼',
+  '알밤 이 쉬 야 했어', '알밤 이 밥 먹었어', '알밤 이 응아', '알밤 이 똥 쌌어', '알밤 이 기저귀', '알밤 이 목욕 했어', '알밤 이 코자', '알밤 이 깼다', '알밤 이 깼',
 ];
 export const DISTRACTORS = [
   '네', '아니', '그래', '엄마', '아빠', '뭐', '이거', '저거', '왜', '어', '응', '아', '오늘', '날씨', '좋다', '아기', '자',
@@ -31,6 +32,7 @@ const RULES = [
   { kind: 'poo', words: ['응아', '똥', '쌌어'], label: '기저귀 대변' },
   { kind: 'pee', words: ['쉬'], label: '기저귀 소변' },
   { kind: 'feed', words: ['밥', '먹었어'], label: '수유' },
+  { kind: 'bath', words: ['목욕'], label: '목욕' },
   { kind: 'wake', words: ['깼다', '깼', '깨'], label: '잠 끝(깼어요)' },
   { kind: 'sleep', words: ['코자', '잠', '자'], label: '잠 시작' },
 ];
@@ -66,7 +68,7 @@ export function detectWakeAll(res, min = {}) {
  * Vosk 결과 하나 → 알아들은 명령(없으면 null). 결과에 문장이 여럿이면 detectWakeAll.
  * @param {{text?: string, result?: {word: string, conf: number}[]}} res  recognizer 의 "result" 메시지 result
  * @param {{anchor?: number, key?: number}} [min]
- * @returns {{kind: 'pee'|'poo'|'both'|'feed'|'sleep'|'wake', label: string, conf: number, text: string} | null}
+ * @returns {{kind: 'pee'|'poo'|'both'|'feed'|'bath'|'sleep'|'wake', label: string, conf: number, text: string} | null}
  */
 export function detectWake(res, min = {}) {
   const anchorMin = min.anchor ?? MIN_ANCHOR_CONF;

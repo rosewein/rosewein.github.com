@@ -54,3 +54,7 @@ test('알밤이 기저귀 = 소변+대변', () => {
   assert.equal(detectWake(res([['알밤', 1], ['이', 1], ['기저귀', 1]])).kind, 'both');
   assert.equal(detectWake(res([['알밤', 1], ['이', 1], ['응아', 1], ['에', 1], ['쉬', 1]])).kind, 'poo', '응아·쉬를 섞어 말하면 앞의 것(대변)만');
 });
+
+test('알밤이 목욕했어 = 목욕', () => {
+  assert.equal(detectWake(res([['알밤', 1], ['이', 1], ['목욕', 1], ['했어', 1]])).kind, 'bath');
+});
