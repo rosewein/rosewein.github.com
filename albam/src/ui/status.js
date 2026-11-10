@@ -8,7 +8,7 @@
 
 import { $, el } from './dom.js';
 import { feedingNow, setRecordTypes, sleepingNow } from '../domain.js';
-import { agoParts, formatClock, formatToday } from '../time.js';
+import { agoParts, formatClock, formatClockOn, formatToday } from '../time.js';
 
 /** 스프라이트 시트(sprites/albam.png)의 줄 순서. sprites.json 과 같다 */
 const MOOD_ROW = { normal: 0, hungry: 1, sleep: 2, happy: 3 };
@@ -112,15 +112,21 @@ const DIAPER_SHORT = { pee: '소변', poo: '대변', both: '소+대' };
 
 /**
  * 기저귀 칸 세부(순수 함수): "12:50 · 소변", 소변 뒤에 대변이 따로 있었으면 "12:50 소변 · 대 09:10".
- * 좁은 화면(compact, P4)에서는 칸에 들어가게 "12:50 · 대 09:10"(대 표시가 없는 앞 시각은 소변)
+ * 오늘이 아니면 날을 붙인다: "12:50 · 대 어제 09:10"(자리가 없어 '소변'을 뺀다), "어제 22:10 · 소+대".
+ * 좁은 화면(compact, P4)에서는 "12:50 · 대 09:10", 오늘이 아니면 시각 없이 날만 "12:50 · 대 어제"(대 표시가 없는 앞 시각은 소변)
  * @param {{at: string, type: string} | null | undefined} diaper
  * @param {{at: string} | null | undefined} poo  마지막 대변(009)
  * @param {boolean} [compact]
+ * @param {Date} [now]
  */
-export function diaperDetail(diaper, poo, compact = false) {
+export function diaperDetail(diaper, poo, compact = false, now = new Date()) {
   if (!diaper) return '기록 없음';
-  if (diaper.type === 'pee' && poo) return `${formatClock(diaper.at)}${compact ? ' ·' : ' 소변 ·'} 대 ${formatClock(poo.at)}`;
-  return `${formatClock(diaper.at)} · ${DIAPER_SHORT[diaper.type] || ''}`;
+  const at = formatClockOn(diaper.at, now, compact);
+  if (diaper.type === 'pee' && poo) {
+    const pooToday = formatClockOn(poo.at, now) === formatClock(poo.at);
+    return `${at}${compact || !pooToday ? ' ·' : ' 소변 ·'} 대 ${formatClockOn(poo.at, now, compact)}`;
+  }
+  return `${at} · ${DIAPER_SHORT[diaper.type] || ''}`;
 }
 
 /** @param {import('../main.js').AppContext} ctx */
@@ -205,10 +211,11 @@ export function createStatusView(ctx) {
 
     // 아래층 큰 버튼 셋(같은 형식). 버튼 글(수유/다 먹음, 잠/깼어요)은 아래에서 따로 바꾼다
     const urgent = pick.urgent ? pick.focus : null;
+    const narrow = $('#stage').classList.contains('narrow');   // 좁은 칸: 오늘이 아닌 시각은 날만("어제")
     renderRec('#feedBtn', feeding
       ? { from: feeding.at, suffix: '째', detail: `${formatClock(feeding.at)}~${feed?.ml != null ? ` · ${feed.ml}ml` : ''}` }
-      : { from: feed?.at, detail: feed ? `${formatClock(feed.at)}${feed.ml != null ? ` · ${feed.ml}ml` : ''}` : '기록 없음', urgent: urgent === 'feed' });
-    renderRec('#diaperBtn', { from: diaper?.at, detail: diaperDetail(diaper, s?.last_poo, $('#stage').classList.contains('narrow')), urgent: urgent === 'diaper' });
+      : { from: feed?.at, detail: feed ? `${formatClockOn(feed.at, now, narrow)}${feed.ml != null ? ` · ${feed.ml}ml` : ''}` : '기록 없음', urgent: urgent === 'feed' });
+    renderRec('#diaperBtn', { from: diaper?.at, detail: diaperDetail(diaper, s?.last_poo, narrow, now), urgent: urgent === 'diaper' });
     renderRec('#sleepBtn', sleeping
       ? { from: sleeping.at, suffix: '째', detail: `${formatClock(sleeping.at)}~` }
       : sleep?.ended_at
@@ -217,9 +224,9 @@ export function createStatusView(ctx) {
 
     // 말풍선: 고른 항목 하나의 문구 / 지난 시간 / 이름표
     // [언제부터, 앞말, 이름표]. 앞말이 있어야 큰 숫자가 무엇의 시간인지 바로 읽힌다
-    const bubble = { feed: feeding ? [feeding.at, '먹는 중', `먹이기 시작 ${formatClock(feeding.at)}`] : [feed?.at, '먹은 지', feed ? `마지막 수유 ${formatClock(feed.at)}` : '수유 기록 없음'],
-      diaper: [diaper?.at, '기저귀 간 지', diaper ? `마지막 기저귀 ${formatClock(diaper.at)}` : '기저귀 기록 없음'],
-      sleep: sleeping ? [sleeping.at, '잠든 지', `잠든 시각 ${formatClock(sleeping.at)}`] : [sleep?.ended_at, '깬 지', sleep?.ended_at ? `깬 시각 ${formatClock(sleep.ended_at)}` : '잠 기록 없음'] }[pick.focus];
+    const bubble = { feed: feeding ? [feeding.at, '먹는 중', `먹이기 시작 ${formatClock(feeding.at)}`] : [feed?.at, '먹은 지', feed ? `마지막 수유 ${formatClockOn(feed.at, now)}` : '수유 기록 없음'],
+      diaper: [diaper?.at, '기저귀 간 지', diaper ? `마지막 기저귀 ${formatClockOn(diaper.at, now)}` : '기저귀 기록 없음'],
+      sleep: sleeping ? [sleeping.at, '잠든 지', `잠든 시각 ${formatClockOn(sleeping.at, now)}`] : [sleep?.ended_at, '깬 지', sleep?.ended_at ? `깬 시각 ${formatClockOn(sleep.ended_at, now)}` : '잠 기록 없음'] }[pick.focus];
     setText($('#bubbleText'), pick.words);
     renderAgo($('#elapsed'), bubble[0], now, { prefix: bubble[1] });
     setText($('#bubbleLabel'), bubble[2]);
