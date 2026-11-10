@@ -36,7 +36,29 @@ export const MIN_ANCHOR_CONF = 0.8;
 export const MIN_KEY_CONF = 0.6;
 
 /**
- * Vosk 결과 하나 → 알아들은 명령(없으면 null).
+ * Vosk 결과 하나 → 알아들은 명령 모두. 이어서 말하면 결과 하나에 여러 문장이 붙어 온다
+ * ("알밤 이 쉬 야 했어 알밤 이 응아"). "알밤"마다 끊어 문장마다 판정한다. 바로 이어진 같은 종류는 하나로 친다(되풀이).
+ * @param {{text?: string, result?: {word: string, conf: number}[]}} res
+ * @param {{anchor?: number, key?: number}} [min]
+ * @returns {{kind: string, label: string, conf: number, text: string}[]}
+ */
+export function detectWakeAll(res, min = {}) {
+  const words = res?.result?.length ? res.result
+    : (res?.text || '').split(/\s+/).filter(Boolean).map((word) => ({ word, conf: 1 }));
+  const starts = words.map((w, i) => (w.word === '알밤' ? i : -1)).filter((i) => i >= 0);
+  const hits = [];
+  starts.forEach((s, n) => {
+    const seg = words.slice(s, starts[n + 1] ?? words.length);
+    // "알밤 알밤 이 …"처럼 알밤만 되풀이한 조각은 다음 조각과 합친다
+    if (seg.length === 1 && starts[n + 1] === s + 1) return;
+    const hit = detectWake({ text: seg.map((w) => w.word).join(' '), result: seg }, min);
+    if (hit && hits.at(-1)?.kind !== hit.kind) hits.push(hit);
+  });
+  return hits;
+}
+
+/**
+ * Vosk 결과 하나 → 알아들은 명령(없으면 null). 결과에 문장이 여럿이면 detectWakeAll.
  * @param {{text?: string, result?: {word: string, conf: number}[]}} res  recognizer 의 "result" 메시지 result
  * @param {{anchor?: number, key?: number}} [min]
  * @returns {{kind: 'pee'|'poo'|'feed'|'sleep'|'wake', label: string, conf: number, text: string} | null}
