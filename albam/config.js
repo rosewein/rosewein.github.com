@@ -1,4 +1,4 @@
-// 알밤케어 거실 화면 설정.
+// 알밤보드 거실 화면 설정.
 // supabaseUrl·supabaseAnonKey 는 Supabase 대시보드 > Project Settings > API 에 있다(프로젝트 baby_archive_AlbamWiki).
 // anon key 는 공개돼도 되는 값이다(가족만 읽고 쓰게 하는 건 RLS가 맡는다). service_role 키는 절대 넣지 않는다.
 window.ALBAM_CONFIG = {

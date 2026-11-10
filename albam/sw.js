@@ -1,9 +1,9 @@
-// 알밤케어 오프라인 캐시(서비스 워커).
+// 알밤보드 오프라인 캐시(서비스 워커).
 // 파일을 더하거나 이름을 바꾸면 FILES 에 반영하고 VERSION 을 올린다.
 // (tests/unit/service-worker.test.mjs 가 src·styles 의 파일이 모두 들어 있는지 확인한다.)
 // Supabase 요청(다른 출처)은 건드리지 않는다. 기록 다시 보내기는 src/api/queue.js 가 맡는다.
 
-const VERSION = 'albam-v46';
+const VERSION = 'albam-v47';
 const FILES = [
   './',
   './index.html',

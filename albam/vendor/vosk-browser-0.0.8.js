@@ -1,5 +1,5 @@
 // vosk-browser 0.0.8 (Apache-2.0, https://github.com/ccoreilly/vosk-browser)
-// 알밤케어 수정: (1) 모델 주소 뒤 #이름 을 저장 경로 이름으로 쓴다 (2) IndexedDB(IDBFS)에 두지 않고 메모리에서만 푼다.
+// 알밤보드 수정: (1) 모델 주소 뒤 #이름 을 저장 경로 이름으로 쓴다 (2) IndexedDB(IDBFS)에 두지 않고 메모리에서만 푼다.
 //   250MB 모델을 IndexedDB 에 넣다 실패해 모델이 열리지 않았다. 모델 묶음(tar.gz)은 voice-test.html 이 Cache 에 보관한다
 (function (global, factory) {
     typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
