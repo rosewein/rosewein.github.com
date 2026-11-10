@@ -19,8 +19,12 @@ create table if not exists public.care_voice_log (
 create index if not exists care_voice_log_heard_at_idx on public.care_voice_log (heard_at desc);
 
 alter table public.care_voice_log enable row level security;
-drop policy if exists care_voice_log_family_read on public.care_voice_log;
-create policy care_voice_log_family_read on public.care_voice_log for select to authenticated using (public.care_is_family());
+do $$
+begin
+  if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'care_voice_log' and policyname = 'care_voice_log_family_read') then
+    create policy care_voice_log_family_read on public.care_voice_log for select to authenticated using (public.care_is_family());
+  end if;
+end $$;
 
 create or replace function public.care_voice_log(p jsonb)
 returns uuid
