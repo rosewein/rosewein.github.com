@@ -3,7 +3,7 @@
 // (tests/unit/service-worker.test.mjs 가 src·styles 의 파일이 모두 들어 있는지 확인한다.)
 // Supabase 요청(다른 출처)은 건드리지 않는다. 기록 다시 보내기는 src/api/queue.js 가 맡는다.
 
-const VERSION = 'albam-v45';
+const VERSION = 'albam-v46';
 const FILES = [
   './',
   './index.html',
@@ -23,6 +23,7 @@ const FILES = [
   './src/time.js',
   './src/formula.js',
   './src/voice-parse.js',
+  './src/voice-wake.js',
   './src/api/index.js',
   './src/api/supabase-rest.js',
   './src/api/queue.js',
@@ -69,6 +70,8 @@ self.addEventListener('activate', (e) => {
 // 이게 없으면 배포 직후 새 index.html 에 옛 app.css 가 섞일 수 있다.
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET' || new URL(e.request.url).origin !== location.origin) return;
+  // 음성 모델·엔진(80MB 넘음)은 앱 캐시에 넣지 않는다. 호출어 화면이 따로 보관한다(voice-test.html)
+  if (/\/(voice|vendor)\//.test(new URL(e.request.url).pathname)) return;
   e.respondWith(
     fetch(e.request, { cache: 'no-cache' })
       .then((res) => {

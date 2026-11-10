@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>알밤 호출어 시험</title>
+<!-- 호출어("알밤이 ○○") 시험 화면. 기록은 저장하지 않고, 알아들은 것만 이 기기에 적어 둔다.
+     인식은 기기 안에서만 한다(Vosk 한국어 작은 모델, voice/README.md). 소리는 밖으로 나가지 않는다. -->
+<style>
+  @font-face { font-family: 'Pretendard'; font-weight: 400; src: url('fonts/Pretendard-Regular.subset.woff2') format('woff2'); }
+  @font-face { font-family: 'Pretendard'; font-weight: 600; src: url('fonts/Pretendard-SemiBold.subset.woff2') format('woff2'); }
+  :root { --bg: #f1e6d3; --panel: #fbf3e6; --text: #3a2a1c; --dim: #8a735c; --line: #c9b393; --strong: #1c120a; --ok: #3f7d20; --warn: #c0391b; --btn: #4a3626; --btn-text: #f4e8d2; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font: 400 16px/1.4 'Pretendard', sans-serif; background: var(--bg); color: var(--text); padding: 16px; letter-spacing: -0.02em; }
+  h1 { font-size: 20px; font-weight: 600; }
+  .dim { color: var(--dim); }
+  .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 12px; }
+  button { font: inherit; font-weight: 600; border: 2px solid var(--line); background: var(--btn); color: var(--btn-text); padding: 10px 16px; border-radius: 6px; }
+  button.ghost { background: transparent; color: var(--dim); }
+  #bar { height: 8px; background: var(--line); border-radius: 4px; overflow: hidden; flex: 1; min-width: 160px; }
+  #bar div { height: 100%; width: 0; background: var(--ok); }
+  #heard { margin-top: 16px; padding: 12px; background: var(--panel); border: 2px solid var(--line); border-radius: 6px; min-height: 56px; font-size: 18px; }
+  #hit { margin-top: 12px; padding: 16px; border-radius: 6px; font-size: 28px; font-weight: 600; background: var(--panel); border: 2px solid var(--line); min-height: 76px; }
+  #hit.on { border-color: var(--ok); color: var(--ok); }
+  #counts { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; margin-top: 12px; }
+  #counts div { background: var(--panel); border: 2px solid var(--line); border-radius: 6px; padding: 8px; }
+  #counts b { font-size: 22px; display: block; color: var(--strong); }
+  table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 14px; }
+  td, th { border-bottom: 1px solid var(--line); padding: 6px 4px; text-align: left; vertical-align: top; }
+  tr.wrong td { color: var(--warn); text-decoration: line-through; }
+  td button { padding: 2px 8px; font-size: 13px; }
+  #err { color: var(--warn); margin-top: 8px; }
+</style>
+</head>
+<body>
+  <h1>알밤 호출어 시험</h1>
+  <p class="dim">"알밤이 쉬야했어 · 밥먹었어 · 응아 / 똥쌌어 · 코자 · 깼다"라고 말해 보세요. 기록은 저장하지 않아요.</p>
+  <div class="row">
+    <button id="start">시작</button>
+    <div id="bar"><div></div></div>
+    <span id="status" class="dim">대기</span>
+  </div>
+  <div id="err"></div>
+  <div id="heard" class="dim">들은 말이 여기 나와요</div>
+  <div id="hit">—</div>
+  <div id="counts"></div>
+  <div class="row">
+    <button class="ghost" id="missed">말했는데 못 알아들음 +1</button>
+    <button class="ghost" id="reset">기록 지우기</button>
+    <button class="ghost" id="copy">결과 복사</button>
+  </div>
+  <table><thead><tr><th>시각</th><th>알아들은 것</th><th>들은 말</th><th></th></tr></thead><tbody id="log"></tbody></table>
+  <p class="dim" style="margin-top:12px">잘못 알아들은 줄은 [잘못]을 눌러 주세요. 하루 써 본 뒤 [결과 복사]로 붙여 주시면 규칙을 다듬어요.</p>
+
+<script src="vendor/vosk-browser-0.0.8.js"></script>
+<script type="module">
+import { detectWake, WAKE_GRAMMAR } from './src/voice-wake.js';
+
+const PARTS = ['voice/model-ko.tar.gz.0', 'voice/model-ko.tar.gz.1'];
+const PART_BYTES = [47185920, 39730838];
+const MODEL_NAME = 'ko-small-0.22';            // IndexedDB 에 이 이름으로 풀어 둔다(vendor 수정 참고)
+const CACHE = 'voice-model-ko-small-0.22';     // 'albam-' 로 시작하지 않아 앱 업데이트 때 지워지지 않는다
+const STORE = 'albam.voiceTest';
+const KINDS = { pee: '소변', poo: '대변', feed: '수유', sleep: '코자', wake: '깼다' };
+const $ = (s) => document.querySelector(s);
+
+let data = load();
+function load() { try { return JSON.parse(localStorage.getItem(STORE)) || { log: [], missed: 0 }; } catch (e) { return { log: [], missed: 0 }; } }
+function save() { try { localStorage.setItem(STORE, JSON.stringify(data)); } catch (e) { /* 저장 못 해도 화면은 그대로 */ } }
+
+function render() {
+  const n = (k) => data.log.filter((r) => r.kind === k && !r.wrong).length;
+  const wrong = data.log.filter((r) => r.wrong).length;
+  $('#counts').replaceChildren(...[...Object.entries(KINDS).map(([k, l]) => [l, n(k)]), ['잘못 알아들음', wrong], ['못 알아들음', data.missed]]
+    .map(([l, v]) => Object.assign(document.createElement('div'), { innerHTML: `<b>${v}</b>${l}` })));
+  $('#log').replaceChildren(...data.log.slice().reverse().slice(0, 100).map((r) => {
+    const tr = document.createElement('tr');
+    tr.className = r.wrong ? 'wrong' : '';
+    tr.innerHTML = `<td>${r.time}</td><td>${r.kind ? KINDS[r.kind] : '—'} <span class="dim">${r.conf ?? ''}</span></td><td>${r.text}</td>`;
+    const td = document.createElement('td');
+    if (r.kind) {
+      const b = Object.assign(document.createElement('button'), { textContent: r.wrong ? '되돌리기' : '잘못' });
+      b.onclick = () => { r.wrong = !r.wrong; save(); render(); };
+      td.append(b);
+    }
+    tr.append(td);
+    return tr;
+  }));
+}
+
+const setStatus = (t) => { $('#status').textContent = t; };
+const setBar = (f) => { $('#bar div').style.width = `${Math.round(f * 100)}%`; };
+
+/** 모델 조각 두 개를 받아(한 번 받으면 기기에 보관) 하나의 blob 주소로 */
+async function modelUrl() {
+  const cache = await caches.open(CACHE);
+  const blobs = [];
+  let done = 0;
+  const total = PART_BYTES.reduce((a, b) => a + b, 0);
+  for (const [i, part] of PARTS.entries()) {
+    let res = await cache.match(part);
+    if (!res) {
+      const r = await fetch(part, { cache: 'no-store' });
+      if (!r.ok) throw new Error(`모델 조각을 못 받았어요(${r.status})`);
+      const reader = r.body.getReader();
+      const chunks = [];
+      for (;;) {
+        const { done: end, value } = await reader.read();
+        if (end) break;
+        chunks.push(value);
+        done += value.length;
+        setBar(done / total);
+        setStatus(`모델 받는 중 ${Math.round(done / 1048576)} / ${Math.round(total / 1048576)}MB`);
+      }
+      res = new Response(new Blob(chunks));
+      await cache.put(part, res.clone());
+    } else {
+      done += PART_BYTES[i];
+      setBar(done / total);
+    }
+    blobs.push(await res.blob());
+  }
+  return `${URL.createObjectURL(new Blob(blobs, { type: 'application/gzip' }))}#${MODEL_NAME}`;
+}
+
+async function start() {
+  $('#start').disabled = true;
+  $('#err').textContent = '';
+  try {
+    if ('wakeLock' in navigator) navigator.wakeLock.request('screen').catch(() => {});
+    setStatus('모델 준비 중');
+    const url = await modelUrl();
+    setStatus('모델 여는 중(처음엔 1분쯤)');
+    const model = await Vosk.createModel(url);
+    const stream = await navigator.mediaDevices.getUserMedia({ video: false, audio: { echoCancellation: true, noiseSuppression: true, channelCount: 1 } });
+    const ctx = new AudioContext();
+    const rec = new model.KaldiRecognizer(ctx.sampleRate, WAKE_GRAMMAR);
+    rec.setWords(true);
+    rec.on('partialresult', (m) => { if (m.result.partial) $('#heard').textContent = `… ${m.result.partial}`; });
+    rec.on('result', (m) => {
+      const res = m.result;
+      if (!res.text) return;
+      $('#heard').textContent = res.text;
+      const hit = detectWake(res);
+      const time = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const words = (res.result || []).map((w) => `${w.word}(${w.conf.toFixed(2)})`).join(' ');
+      if (hit) {
+        $('#hit').textContent = `${time} · ${hit.label}`;
+        $('#hit').className = 'on';
+        setTimeout(() => { $('#hit').className = ''; }, 3000);
+        data.log.push({ time, kind: hit.kind, conf: hit.conf.toFixed(2), text: words });
+      } else if (/알밤/.test(res.text)) {
+        data.log.push({ time, kind: null, text: words });   // 알밤은 들었는데 종류를 못 고름
+      }
+      data.log = data.log.slice(-500);
+      save(); render();
+    });
+    const node = ctx.createScriptProcessor(4096, 1, 1);
+    node.onaudioprocess = (e) => { try { rec.acceptWaveform(e.inputBuffer); } catch (x) { /* 한 조각 실패는 넘긴다 */ } };
+    ctx.createMediaStreamSource(stream).connect(node);
+    node.connect(ctx.destination);   // 일부 브라우저는 출력에 이어야 돈다(소리는 나지 않는다: 출력 버퍼를 채우지 않음)
+    setBar(1);
+    setStatus('듣는 중 🎤');
+  } catch (e) {
+    $('#err').textContent = `${e.message || e}`;
+    setStatus('멈춤');
+    $('#start').disabled = false;
+  }
+}
+
+$('#start').onclick = start;
+$('#missed').onclick = () => { data.missed += 1; save(); render(); };
+$('#reset').onclick = () => { if (confirm('시험 기록을 지울까요?')) { data = { log: [], missed: 0 }; save(); render(); } };
+$('#copy').onclick = async () => {
+  const lines = [`못 알아들음 ${data.missed}`, ...data.log.map((r) => `${r.time}\t${r.kind || '-'}\t${r.wrong ? '잘못' : ''}\t${r.text}`)];
+  try { await navigator.clipboard.writeText(lines.join('\n')); $('#copy').textContent = '복사했어요'; } catch (e) { $('#copy').textContent = '복사 못 함'; }
+};
+render();
+</script>
+</body>
+</html>
