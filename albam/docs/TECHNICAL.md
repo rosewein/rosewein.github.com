@@ -93,6 +93,8 @@ albam/
 │  ├─ time.js              시각 → 글자 (순수 함수)
 │  ├─ sun.js               해 뜨고 지는 시각(밝은/어두운 화면 자동 전환)
 │  ├─ formula.js           브레짜 물 양 ↔ 완성량 (순수 함수)
+│  ├─ growth.js            성장 백분위: 체중·키를 WHO 기준으로, 기본 나이·교정 나이 (순수 함수)
+│  ├─ growth-data.js       WHO 성장 기준 0~24개월 월별 L·M·S (tools/make_growth_data.py 가 만듦)
 │  ├─ voice-parse.js       음성 문장 → 기록 (순수 함수)
 │  ├─ voice-wake.js        호출어 "알밤이 ○○" → 기록 종류·할 일 (순수 함수, Vosk 결과)
 │  ├─ voice-model.js       호출어 모델 열기·마이크 → 인식기 (앱·시험 화면 같이 씀)
@@ -123,6 +125,7 @@ albam/
 │     ├─ timeline.js       타임라인 쪽: 최근 3일을 0~24시 줄로(날짜 줄을 누르면 그날 기록 목록)
 │     ├─ day-list.js       그날 기록 목록: 큰 줄, 끌어서 넘김, 누르면 고치기
 │     ├─ stats.js          통계 쪽: 최근 7일 날짜 카드(수유·기저귀·잠)
+│     ├─ measures.js       측정 기록(체중·키): 지난번 값, 백분위 글
 │     └─ login.js          로그인 창
 ├─ supabase/
 │  ├─ 001_care_schema.sql   표·권한·함수 (여러 번 실행해도 안전)
@@ -138,11 +141,13 @@ albam/
 │  ├─ 011_feed_gaps.sql     요약에 feed_gaps(간격 하나하나 [앞 수유 시, 분]): 시간대별 배고파요 기준
 │  ├─ 012_voice_log.sql     호출어 시험 기록 care_voice_log(알아들음·잘못·못 알아들음)
 │  ├─ 013_walk_vaccine.sql  기록 종류에 산책(시작~끝)·예방접종(한 시각 + 백신 이름)
+│  ├─ 014_measures.sql      측정 기록 모아 읽기 care_measures()(지난번 값·성장 백분위), 아기 성별
 │  └─ queries/              SQL Editor 에서 돌려 보는 확인용 질의
 ├─ sprites/                도트 그림 원본 PNG + sprites.json
 ├─ fonts/                  프리텐다드 글꼴(한글 2,780자 판, 보통·굵게, SIL OFL 1.1)
 ├─ tools/
 │  ├─ make_sprites.py      도트 그림 만들기
+│  ├─ make_growth_data.py  WHO 성장 기준표 → src/growth-data.js
 │  ├─ import_babytime.py   베이비타임 내보내기 → SQL
 │  └─ check_babytime_stats.py  옮긴 기록 ↔ 베이비타임 통계 날짜별 비교
 └─ tests/
@@ -289,6 +294,12 @@ flowchart TD
 - 글은 `detail.memo`(투약은 약 이름, 병원은 병원·이유 등 베이비타임에서 온 항목도 `detail`에 있다: `medicine`, `what`, `hospital`, `reason`, `visit_type`, `doctor`).
 - `care_summary()`에 `record_types`(정렬된 목록, `in_more`), `recent`에 `value`. `care_timeline()`에 `value`, `memo`, `feeding`, `detail`.
 - 화면은 이 표를 그대로 따른다(`domain.js`의 `setRecordTypes`). 표에 한 줄 더하고 `show_in_more = true`면 [+] 창에 버튼이 생긴다. 연결 전·미리 보기에서는 `DEFAULT_RECORD_TYPES`를 쓴다.
+
+**`care_measures() → jsonb`** (014): 측정 기록(체중·키·머리둘레) 전체를 시각 순으로, 그리고 아기 생일·예정일·성별. `{"baby": {"birth_date", "due_date", "sex"}, "measures": [{id, kind, at, value}]}`.
+- 측정 창은 **지난번 값에서 시작**한다(`ui/measures.js`의 `last()`, 없으면 종류 표의 처음 값). 방금 넣은 값은 기기에 바로 얹는다(`note()`).
+- **성장 백분위**(`src/growth.js`): WHO 성장 기준(2006) 0~24개월의 월별 L·M·S로 z 점수와 백분위를 센다. 한국 2017 소아청소년 성장도표도 만 3세 미만은 이 기준이다. **기본 나이**(생일부터)와 **교정 나이**(예정일부터) 둘 다 센다. 달 사이는 곧게 잇는다. 체중·키 넣기 창 제목에 "체중 넣기 · 백분위 48 · 교정 66"으로 보인다.
+- 성별은 `care_baby_profile.sex`(`boy`/`girl`). 비어 있으면 백분위를 보이지 않는다. SQL Editor에서 한 번 넣는다: `update public.care_baby_profile set sex = 'boy';`
+- 표를 다시 만들 때: `pip download pygrowup --no-deps --no-binary :all:`로 받은 꾸러미의 `pygrowup/tables`를 `tools/make_growth_data.py`에 넘긴다.
 
 **`care_timeline(p_days int default 3) → jsonb`** (005): 오늘 포함 최근 n일(1~7) 기록을 실제 시각 순으로. `[{id, kind, at, ended_at, ml, type}]`(type은 기저귀 종류). 그날 시작 전에 잠들어 그날 깬 잠도 들어간다.
 
@@ -780,7 +791,7 @@ flowchart LR
 - 이 저장소는 GitHub Pages로 나간다. main에 합치면 `https://rosewein.github.io/albam/`에 반영된다.
 - 서비스 워커는 네트워크를 먼저 쓴다. 그래서 고친 파일은 다음에 열 때 바로 보인다. 오프라인일 때만 캐시를 쓴다.
 - 파일을 더하거나 이름을 바꾸면 `sw.js`의 `FILES`에 반영하고 `VERSION`을 올린다.
-- SQL은 Supabase SQL Editor에서 번호 순서대로 직접 실행한다(지금 `001`~`013`). 바꿀 때는 `008_…sql`처럼 번호를 붙여 새 파일로 더하고, 이미 실행한 파일은 고치지 않는다. 함수를 바꿀 때는 새 파일에 `create or replace`로 함수 전체를 다시 쓴다(002의 `care_summary()`처럼).
+- SQL은 Supabase SQL Editor에서 번호 순서대로 직접 실행한다(지금 `001`~`014`). 바꿀 때는 `008_…sql`처럼 번호를 붙여 새 파일로 더하고, 이미 실행한 파일은 고치지 않는다. 함수를 바꿀 때는 새 파일에 `create or replace`로 함수 전체를 다시 쓴다(002의 `care_summary()`처럼).
 - `config.js`에는 publishable(anon) key만 둔다. 공개돼도 되는 값이고, 읽고 쓰기는 RLS와 가족 명단이 막는다. service_role 키는 절대 넣지 않는다.
 
 ## 12. 고치고 늘리는 법

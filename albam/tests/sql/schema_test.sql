@@ -443,4 +443,35 @@ begin
 end $$;
 reset role;
 
+-- ── 014: 측정 기록 모아 읽기 ─────────────────────
+set role authenticated;
+set request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+do $$
+declare m jsonb; n int;
+begin
+  perform public.care_add_event(jsonb_build_object('kind', 'weight', 'value_num', 7.20, 'occurred_at', now() - interval '13 days', 'force', true));
+  perform public.care_add_event(jsonb_build_object('kind', 'weight', 'value_num', 7.35, 'force', true));
+  perform public.care_add_event(jsonb_build_object('kind', 'height', 'value_num', 65.5, 'force', true));
+  m := public.care_measures();
+  n := jsonb_array_length(m -> 'measures');
+  perform pg_temp.check(n = 3, 'measures lists weight and height');
+  perform pg_temp.check((m -> 'measures' -> 0 ->> 'value')::numeric = 7.20 and m -> 'measures' -> 0 ->> 'kind' = 'weight', 'measures in time order');
+  perform pg_temp.check(not exists (select 1 from jsonb_array_elements(m -> 'measures') x where x ->> 'kind' = 'temperature'), 'temperature is not a growth measure');
+  perform pg_temp.check(m -> 'baby' ->> 'birth_date' = '2026-06-18' and m -> 'baby' ->> 'due_date' = '2026-07-10', 'measures carries birth and due dates');
+  perform pg_temp.check(m -> 'baby' -> 'sex' = 'null'::jsonb, 'sex empty until set');
+end $$;
+set request.jwt.claim.sub = '22222222-2222-2222-2222-222222222222';
+do $$ begin
+  perform public.care_measures();
+  raise exception 'FAIL: stranger measures';
+exception when insufficient_privilege then raise notice 'ok - non-family cannot read measures';
+end $$;
+reset role;
+update public.care_baby_profile set sex = 'boy';
+do $$ begin
+  update public.care_baby_profile set sex = 'x';
+  raise exception 'FAIL: bad sex accepted';
+exception when check_violation then raise notice 'ok - sex must be boy or girl';
+end $$;
+
 \echo 'ALL SQL TESTS PASSED'

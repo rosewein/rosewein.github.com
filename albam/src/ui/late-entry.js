@@ -175,7 +175,8 @@ export function setupLateEntry(ctx, { openDayList }) {
       ongoing: false,
       feedEnd: t?.shape === 'range',
       feeding: false,
-      value: t?.default ?? null,
+      // 체중·키는 지난번 값에서 시작한다(없으면 표의 처음 값)
+      value: ctx.measures.last(kind) ?? t?.default ?? null,
       memo: '',
     });
     render();
@@ -213,7 +214,9 @@ export function setupLateEntry(ctx, { openDayList }) {
     }
     setHidden($('#lateKindOther'), !other);
     $('#lateKindOther').textContent = other ? labelOf(draft.kind) : '';
-    $('#lateTitle').textContent = editing ? `기록 고치기 · ${labelOf(draft.kind)}` : other ? `${labelOf(draft.kind)} 넣기` : '지난 기록 넣기';
+    // 체중·키는 제목 옆에 성장 백분위(기본 나이 · 교정 나이)
+    const pct = shape() === 'number' ? ctx.measures.percentileText(draft.kind, draft.value, draft.start) : '';
+    $('#lateTitle').textContent = (editing ? `기록 고치기 · ${labelOf(draft.kind)}` : other ? `${labelOf(draft.kind)} 넣기` : '지난 기록 넣기') + (pct ? ` · ${pct}` : '');
     setHidden($('#recentBtn'), !!editing);
     setHidden($('#lateDelete'), !editing);
     const armed = Date.now() < deleteArmedUntil;
@@ -331,7 +334,12 @@ export function setupLateEntry(ctx, { openDayList }) {
     render();
   });
   $('#lateSave').addEventListener('click', () => {
-    if (!editing) { ctx.save(toEvent()); return; }
+    if (!editing) {
+      const fresh = toEvent();
+      if (fresh.value_num != null) ctx.measures.note(fresh.kind, fresh.value_num, fresh.occurred_at);
+      ctx.save(fresh);
+      return;
+    }
     const ev = toEvent();
     const patch = { occurred_at: ev.occurred_at };
     if (draft.kind === KIND.FEED) {

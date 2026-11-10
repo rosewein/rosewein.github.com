@@ -670,6 +670,19 @@ async function moreFlow(browser, base) {
   const fits = await page.$eval('#lateDetail', (r) => r.scrollWidth <= r.clientWidth + 0.5);
   check(fits, '체온 줄이 창 안에 들어감');
   await shot(page, 'more-temperature');
+  // 체중: 지난번 값(미리 보기 7.20kg)에서 시작하고 제목에 성장 백분위(기본 · 교정)
+  await page.click('#lateSheet [data-close]');
+  await page.click('#lateBtn');
+  await page.click('#moreGrid button:text-is("체중")');
+  check(await text(page, '#lateDetail .valueView') === '7.20kg', `체중 넣기: 지난번 값에서 시작 (${await text(page, '#lateDetail .valueView')})`);
+  check(/^체중 넣기 · 백분위 \d+ · 교정 \d+$/.test(await text(page, '#lateTitle')), `체중 제목에 백분위 (${await text(page, '#lateTitle')})`);
+  check(await page.$eval('#lateTitle', (h) => { const r = document.createRange(); r.selectNodeContents(h); return r.getBoundingClientRect().right; }) <= await page.$eval('#lateKindOther', (b) => b.getBoundingClientRect().left), '백분위 제목이 종류 버튼과 안 겹침');
+  await shot(page, 'more-weight');
+  await page.click('#lateSheet [data-close]');
+  await page.click('#lateBtn');
+  await page.click('#moreGrid button:text-is("체온")');
+  await page.click('#lateDetail .stepBtn:text-is("+1.0")');
+  await page.click('#lateDetail .stepBtn:text-is("+0.1")');
   await page.click('#lateSave');
   await page.waitForTimeout(400);
   check((await text(page, '#undoText')).startsWith('체온 37.9°C'), `저장: ${await text(page, '#undoText')}`);

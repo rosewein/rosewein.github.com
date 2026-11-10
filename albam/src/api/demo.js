@@ -69,6 +69,7 @@ class DemoServer {
       case 'care_stats': return this.stats(args.p_days);
       case 'care_update_event': return this.updateEvent(args.p);
       case 'care_timeline': return this.timeline(args.p_days);
+      case 'care_measures': return this.measures();
       case 'care_set_sleep_end': return this.setSleepEnd(args.p_id, args.p_ended_at);
       case 'care_voice_log': {   // 호출어 시험 기록: 미리 보기에서는 화면 시험용으로만 남긴다
         const log = (window.__albamVoiceLog ??= []);
@@ -130,6 +131,14 @@ class DemoServer {
     e.deleted_at = new Date().toISOString();
     this.save();
     return { status: 'cancelled', id };
+  }
+
+  /** 측정 기록: 미리 보기라 지난번 값 두 개를 넣어 둔다(성별도 예시) */
+  measures() {
+    const sample = [{ kind: 'weight', at: minutesAgo(60 * 24 * 13), value: 7.2 }, { kind: 'height', at: minutesAgo(60 * 24 * 13), value: 65 }];
+    const mine = this.live().filter((e) => (e.kind === 'weight' || e.kind === 'height') && e.value_num != null)
+      .map((e) => ({ id: e.id, kind: e.kind, at: e.occurred_at, value: e.value_num }));
+    return { baby: { birth_date: DEMO_BABY.birth_date, due_date: DEMO_BABY.due_date, sex: 'boy' }, measures: [...sample, ...mine] };
   }
 
   /** 최근 n일 날짜별 통계. 미리 보기라 지난날은 그럴듯한 가짜 숫자로 채운다 */

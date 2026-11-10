@@ -12,6 +12,7 @@ import { moreTypes } from '../domain.js';
  */
 export function setupMore(ctx, { openNew, openLate, openDayList }) {
   function open() {
+    ctx.measures.load();   // 측정 창이 지난번 값에서 시작하게 미리 받아 둔다
     $('#moreGrid').replaceChildren(...moreTypes().map((t) => el('button', {
       className: 'px', onClick: () => { ctx.sfx.tap(); openNew(t.key); },
     }, t.label)));
