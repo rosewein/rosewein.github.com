@@ -41,6 +41,16 @@ const RULES = [
 export const MIN_ANCHOR_CONF = 0.8;
 /** 종류 낱말은 이만큼 */
 export const MIN_KEY_CONF = 0.6;
+/**
+ * 결과 낱말이 이보다 많으면 '긴 말'(대화·TV·울음이 이어져 모델이 끊지 못함)로 본다.
+ * 모델은 모르는 말도 아는 낱말로 끼워 맞춰서, 긴 말 속에 "알밤 이 … 목욕" 같은 조각이 우연히 생긴다(2026-11-10).
+ * 긴 말에서는 "알밤 이" 바로 다음 낱말만, 더 확실할 때만 받는다
+ */
+export const LONG_RESULT_WORDS = 12;
+const LONG_MIN = { anchor: 0.9, glue: 0.8, key: 0.9 };
+
+/** 낱말 → 종류 */
+const KIND_OF = new Map(RULES.flatMap((r) => r.words.map((w) => [w, r])));
 
 /**
  * Vosk 결과 하나 → 알아들은 명령 모두. 이어서 말하면 결과 하나에 여러 문장이 붙어 온다
@@ -50,38 +60,43 @@ export const MIN_KEY_CONF = 0.6;
  * @returns {{kind: string, label: string, conf: number, text: string}[]}
  */
 export function detectWakeAll(res, min = {}) {
-  const words = res?.result?.length ? res.result
-    : (res?.text || '').split(/\s+/).filter(Boolean).map((word) => ({ word, conf: 1 }));
+  const words = toWords(res);
+  const long = words.length > LONG_RESULT_WORDS;
   const starts = words.map((w, i) => (w.word === '알밤' ? i : -1)).filter((i) => i >= 0);
   const hits = [];
   starts.forEach((s, n) => {
     const seg = words.slice(s, starts[n + 1] ?? words.length);
     // "알밤 알밤 이 …"처럼 알밤만 되풀이한 조각은 다음 조각과 합친다
     if (seg.length === 1 && starts[n + 1] === s + 1) return;
-    const hit = detectWake({ text: seg.map((w) => w.word).join(' '), result: seg }, min);
+    const hit = detectWake({ text: seg.map((w) => w.word).join(' '), result: seg }, long ? { ...LONG_MIN, long } : min);
     if (hit && hits.at(-1)?.kind !== hit.kind) hits.push(hit);
   });
   return hits;
 }
 
+const toWords = (res) => (res?.result?.length ? res.result
+  : (res?.text || '').split(/\s+/).filter(Boolean).map((word) => ({ word, conf: 1 })));
+
 /**
  * Vosk 결과 하나 → 알아들은 명령(없으면 null). 결과에 문장이 여럿이면 detectWakeAll.
+ * "알밤"(0.8) 바로 뒤에 "이"가 오고, 그 **바로 다음 낱말**이 종류 낱말이어야 한다(위치로 고른다: "알밤 이 깼 쉬 야 했어"는 깼다).
+ * 그 낱말이 흐리면(0.6 미만, 예: 밥을 "울"로 들음) 한 칸 더 본다. 긴 말 속에서는 한 칸 더 보지 않는다.
  * @param {{text?: string, result?: {word: string, conf: number}[]}} res  recognizer 의 "result" 메시지 result
- * @param {{anchor?: number, key?: number}} [min]
+ * @param {{anchor?: number, glue?: number, key?: number, long?: boolean}} [min]
  * @returns {{kind: 'pee'|'poo'|'both'|'feed'|'bath'|'sleep'|'wake', label: string, conf: number, text: string} | null}
  */
 export function detectWake(res, min = {}) {
   const anchorMin = min.anchor ?? MIN_ANCHOR_CONF;
+  const glueMin = min.glue ?? 0;
   const keyMin = min.key ?? MIN_KEY_CONF;
-  const words = res?.result?.length ? res.result
-    : (res?.text || '').split(/\s+/).filter(Boolean).map((word) => ({ word, conf: 1 }));
+  const words = toWords(res);
   // "알밤" 바로 뒤에 "이"가 와야 부른 것으로 본다(끙끙 소리가 "알밤 날씨 물"처럼 들린 적이 있다)
-  const at = words.findIndex((w, i) => w.word === '알밤' && w.conf >= anchorMin && words[i + 1]?.word === '이');
+  const at = words.findIndex((w, i) => w.word === '알밤' && w.conf >= anchorMin && words[i + 1]?.word === '이' && words[i + 1].conf >= glueMin);
   if (at < 0) return null;
-  const after = words.slice(at + 2, at + 5);   // "알밤 이" 뒤 세 낱말 안에서
-  for (const rule of RULES) {
-    const hit = after.find((w) => rule.words.includes(w.word) && w.conf >= keyMin);
-    if (hit) return { kind: rule.kind, label: rule.label, conf: Math.min(words[at].conf, hit.conf), text: res.text || words.map((w) => w.word).join(' ') };
-  }
-  return null;
+  const pick = (w) => (w && KIND_OF.has(w.word) && w.conf >= keyMin ? w : null);
+  let hit = pick(words[at + 2]);
+  if (!hit && !min.long && words[at + 2] && words[at + 2].conf < MIN_KEY_CONF) hit = pick(words[at + 3]);
+  if (!hit) return null;
+  const rule = KIND_OF.get(hit.word);
+  return { kind: rule.kind, label: rule.label, conf: Math.min(words[at].conf, hit.conf), text: res.text || words.map((w) => w.word).join(' ') };
 }
