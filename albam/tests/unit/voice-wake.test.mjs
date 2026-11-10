@@ -1,7 +1,7 @@
 // 호출어 음성 규칙: Vosk 가 낸 결과(띄어 쓴 낱말 + 확실한 정도) → 기록 종류
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { detectWake, WAKE_GRAMMAR, WAKE_PHRASES } from '../../src/voice-wake.js';
+import { detectWake, detectWakeAll, WAKE_GRAMMAR, WAKE_PHRASES } from '../../src/voice-wake.js';
 
 const res = (pairs) => ({ text: pairs.map(([w]) => w).join(' '), result: pairs.map(([word, conf]) => ({ word, conf })) });
 
@@ -30,4 +30,14 @@ test('문법 목록', () => {
   const g = JSON.parse(WAKE_GRAMMAR);
   assert.ok(WAKE_PHRASES.every((p) => g.includes(p)) && g.includes('아니'));
   assert.ok(!g.some((w) => /알밤이|쉬야|깼어/.test(w)), '모델 단어장에 없는 낱말은 쓰지 않음');
+});
+
+test('이어서 말한 여러 문장(S10 실제 기록 2026-11-10)', () => {
+  const parse = (s) => res(s.split(' ').map((x) => { const m = x.match(/^(.+)\((\d\.\d+)\)$/); return [m[1], Number(m[2])]; }));
+  const kinds = (s) => detectWakeAll(parse(s)).map((h) => h.kind).join(',');
+  assert.equal(kinds('쉬(0.91) 야(0.68) 했어(0.68) 알밤(1.00) 이(1.00) 알밤(1.00) 이(1.00) 응아(1.00) 알밤(1.00) 이(1.00) 쉬(0.74) 자(0.81)'), 'poo,pee');
+  assert.equal(kinds('알밤(1.00) 알밤(1.00) 이(1.00) 아빠(0.91) 알밤(1.00) 이(0.82) 쌌어(0.81)'), 'poo', '알밤에서 멀리 떨어진 쌌어도 문장마다 끊으면 잡힘');
+  assert.equal(kinds('알밤(1.00) 이(1.00) 쉬(1.00) 야(0.44) 알밤(1.00) 이(0.87) 쉬(1.00) 야(1.00) 알밤(1.00) 이(1.00) 이(1.00) 쉬(1.00) 자(0.63)'), 'pee', '같은 말 되풀이는 한 번');
+  assert.equal(kinds('야(0.35) 알밤(1.00) 이(1.00) 밥(1.00) 먹었어(1.00)'), 'feed');
+  assert.equal(kinds('알밤(1.00) 이(1.00) 이(1.00)'), '');
 });

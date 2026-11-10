@@ -33,7 +33,7 @@
 </style>
 </head>
 <body>
-  <h1>알밤 호출어 시험 <span class="dim" style="font-size:13px;font-weight:400">v2 · 서버 저장</span></h1>   <!-- 화면이 바뀌면 v 숫자를 올린다(새 화면이 떴는지 바로 보이게) -->
+  <h1>알밤 호출어 시험 <span class="dim" style="font-size:13px;font-weight:400">v3 · 이어 말하기</span></h1>   <!-- 화면이 바뀌면 v 숫자를 올린다(새 화면이 떴는지 바로 보이게) -->
   <p class="dim">"알밤이 쉬야했어 · 밥먹었어 · 응아 / 똥쌌어 · 코자 · 깼다"라고 말해 보세요. 기록은 저장하지 않아요.</p>
   <div class="row">
     <button id="start">시작</button>
@@ -55,7 +55,7 @@
 <script src="config.js"></script>
 <script src="vendor/vosk-browser-0.0.8.js"></script>
 <script type="module">
-import { detectWake, WAKE_GRAMMAR } from './src/voice-wake.js';
+import { detectWakeAll, WAKE_GRAMMAR } from './src/voice-wake.js';
 import { loadConfig } from './src/config.js';
 import { SupabaseRest } from './src/api/supabase-rest.js';
 
@@ -79,7 +79,7 @@ let syncing = false;
 async function sync() {
   const unsent = data.log.filter((r) => r.id && !r.sent);
   const status = !rest.configured || !rest.loggedIn ? '서버 저장 꺼짐: 이 기기 거실 앱에 로그인해 주세요(결과는 이 기기에만 남아요)'
-    : unsent.length ? `서버에 보내는 중 ${unsent.length}건` : '서버에 저장됨 ✓';
+    : unsent.length ? `서버에 보내는 중 ${unsent.length}건` : `서버 저장 켜짐 ✓ · 보낸 기록 ${data.log.filter((r) => r.sent).length}건`;
   $('#sync').textContent = status;
   if (syncing || !rest.loggedIn || !unsent.length) return;
   syncing = true;
@@ -95,7 +95,7 @@ async function sync() {
     return;
   }
   syncing = false;
-  $('#sync').textContent = '서버에 저장됨 ✓';
+  $('#sync').textContent = `서버 저장 켜짐 ✓ · 보낸 기록 ${data.log.filter((r) => r.sent).length}건`;
 }
 const entry = (fields) => ({ id: crypto.randomUUID(), at: new Date().toISOString(),
   time: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }), ...fields });
@@ -173,14 +173,14 @@ async function start() {
       const res = m.result;
       if (!res.text) return;
       $('#heard').textContent = res.text;
-      const hit = detectWake(res);
+      const hits = detectWakeAll(res);   // 이어서 말하면 한 결과에 여러 문장
       const words = (res.result || []).map((w) => `${w.word}(${w.conf.toFixed(2)})`).join(' ');
-      if (hit) {
-        const r = entry({ event: 'hit', kind: hit.kind, conf: hit.conf.toFixed(2), text: words });
-        $('#hit').textContent = `${r.time} · ${hit.label}`;
+      if (hits.length) {
+        const rs = hits.map((hit) => entry({ event: 'hit', kind: hit.kind, conf: hit.conf.toFixed(2), text: words }));
+        $('#hit').textContent = `${rs[0].time} · ${hits.map((h) => h.label).join(' + ')}`;
         $('#hit').className = 'on';
         setTimeout(() => { $('#hit').className = ''; }, 3000);
-        data.log.push(r);
+        data.log.push(...rs);
       } else if (/알밤/.test(res.text)) {
         data.log.push(entry({ event: 'unsure', kind: null, text: words }));   // 알밤은 들었는데 종류를 못 고름
       }
