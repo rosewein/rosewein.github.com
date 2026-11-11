@@ -832,6 +832,16 @@ async function wakeFlow(browser, base) {
 
   await say(['알밤', '이', '깼다']);
   check(await text(page, '#notice') === '자는 중이 아니에요' && !(await page.isVisible('#voiceSheet')), '안 자는데 "깼다"는 알림만');
+  await page.click('#sleepBtn');
+  await until(async () => (await text(page, '#sleepBtnText')) === '깼어요');
+  await page.click('#undoMsg').catch(() => {});
+  await until(async () => !(await page.isVisible('#undo')));
+  await page.clock.runFor(60000);
+  await say(['알밤', '이', '깼다']);
+  await page.waitForSelector('#voiceSheet:not(.hidden)');
+  check(await text(page, '#voiceLabel') === '잠 끝(깼어요)', '자는 중이면 "깼다"는 잠 끝');
+  await until(async () => (await text(page, '#sleepBtnText')) === '잠');
+  check(!(await page.isVisible('#voiceSheet')) && (await text(page, '#sleepBtnText')) === '잠', '잠 끝 저장 뒤 확인 창이 닫힘(2026-11-11 S10: 저장됐는데 창이 남음)');
   await say(['알밤', '이', '울고']);
   check(!(await page.isVisible('#voiceSheet')), '명령이 아닌 말은 넘김');
   check(errors.length === 0, `오류 없음 ${errors.join(' ')}`);
