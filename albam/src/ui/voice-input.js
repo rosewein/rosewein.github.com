@@ -126,6 +126,7 @@ export function setupVoiceInput(ctx) {
       const go = pendingEvent;
       pendingWake = null;
       stop();
+      closeSheets();   // 깼다·다 먹음은 창을 닫지 않는 길로 저장된다(버튼에서 부르는 함수라서)
       go();
     }, 50);
   }
