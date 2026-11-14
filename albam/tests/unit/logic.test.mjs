@@ -251,8 +251,8 @@ test('그 밖의 기록 종류(체온·목욕·투약)', async () => {
   assert.deepEqual(describeRow({ kind: 'bath', at: new Date(2026, 10, 6, 19, 0), ended_at: new Date(2026, 10, 6, 19, 15), memo: '보습' }, NOW), ['19:00~19:15', '목욕 · 15분 · 보습']);
   assert.equal(describeRecent({ kind: 'temperature', value: 37.2 }), '체온 37.2°C');
   assert.equal(describeEvent({ kind: 'temperature', value_num: 38, occurred_at: NOW }, NOW), '체온 38.0°C');
-  setRecordTypes([...DEFAULT_RECORD_TYPES, { key: 'vaccine', label: '예방접종', shape: 'instant', in_more: true }]);
-  assert.ok(moreTypes().some((t) => t.label === '예방접종'), '표에 한 줄 더하면 더보기 버튼도 늘어남');
+  setRecordTypes([...DEFAULT_RECORD_TYPES, { key: 'baby_food', label: '이유식', shape: 'instant', in_more: true }]);
+  assert.ok(moreTypes().some((t) => t.label === '이유식'), '표에 한 줄 더하면 더보기 버튼도 늘어남');
   setRecordTypes(DEFAULT_RECORD_TYPES);
 });
 

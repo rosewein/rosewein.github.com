@@ -7,6 +7,8 @@
 //   endSleep()    자는 중인 잠에 끝 시각 넣기(깼어요), null 이면 되돌리기
 //   getStats()    날짜별 통계(통계 화면)
 //   getTimeline() 최근 며칠 기록(타임라인 쪽)
+//   getMeasures() 측정 기록(체중·키): 지난번 값, 성장 백분위
+//   getUpcoming() 다가오는 일정(예방접종 예약 등)
 // 기기를 바꿀 때(개인 폰, ESP32) 다시 짜야 하는 범위를 이 폴더로 줄이려는 것이다.
 // 미리 보기(?demo)도 이 함수를 그대로 쓰고, Supabase 대신 demo.js 의 가짜 서버만 끼운다.
 // 그래서 미리 보기에서도 오프라인 저장·"대기 n건"·다시 보내기가 실제와 똑같이 동작한다.
@@ -70,6 +72,8 @@ const DEFAULT_DUP_WINDOW_MIN = 10;
  * @property {(amounts: number[]) => Promise<{status: 'saved'|'queued', feed_amounts: number[]}>} updateFeedAmounts
  * @property {(days?: number) => Promise<DayStat[]>} getStats   최근 n일 날짜별 통계. 연결이 안 되면 NetworkError
  * @property {(days?: number) => Promise<import('../ui/timeline.js').TimelineEvent[]>} getTimeline  최근 n일 기록(시각 순)
+ * @property {(limit?: number) => Promise<{on_date: string, title: string, items: string[], at_time: string|null, days_left: number}[]>} getUpcoming  다가오는 일정, 가까운 순
+ * @property {() => Promise<{baby: object|null, measures: {kind: string, at: string, value: number}[]}>} getMeasures  측정 기록(체중·키)과 아기 생일·예정일·성별
  * @property {(id: string, endedAt: Date|null) => Promise<{status: 'saved'|'queued'|'not_found', id: string}>} endSleep
  */
 
@@ -220,6 +224,8 @@ export function createApi(cfg, { transport, storage = STORAGE.real } = {}) {
 
     getStats: (days = 7) => rest.rpc('care_stats', { p_days: days }),
     getTimeline: (days = 3) => rest.rpc('care_timeline', { p_days: days }),
+    getMeasures: () => rest.rpc('care_measures', {}),
+    getUpcoming: (limit = 5) => rest.rpc('care_upcoming', { p_limit: limit }),
 
     async updateEvent(id, patch) {
       const iso = (d) => (d instanceof Date ? d.toISOString() : d);

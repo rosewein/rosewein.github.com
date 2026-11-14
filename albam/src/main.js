@@ -20,6 +20,8 @@ import { setupMore } from './ui/more.js';
 import { setupVoiceInput } from './ui/voice-input.js';
 import { setupLogin } from './ui/login.js';
 import { setupStats } from './ui/stats.js';
+import { createMeasures } from './ui/measures.js';
+import { createUpcoming } from './ui/upcoming.js';
 import { setupPages } from './ui/pages.js';
 import { setupTimeline } from './ui/timeline.js';
 import { setupClockPage } from './ui/clock-page.js';
@@ -40,6 +42,8 @@ const RELOAD_MIN_UPTIME_MS = 3 * 3600000;
  * @property {import('./api/index.js').CareApi & {demo?: boolean}} api  로그인 화면에서 바뀔 수 있어 늘 ctx.api 로 부른다
  * @property {AppState} state
  * @property {ReturnType<typeof createSound>} sfx
+ * @property {ReturnType<typeof createUpcoming>} upcoming  다가오는 일정(예방접종 예약 등)
+ * @property {ReturnType<typeof createMeasures>} measures  측정 기록: 지난번 값, 성장 백분위
  * @property {() => Date} now                 서버 시각에 맞춘 지금
  * @property {() => boolean} isNightTime      밤 시간대인가
  * @property {() => boolean} isNightAwake     밤에 터치해서 밝혀 둔 동안인가
@@ -114,6 +118,10 @@ function main() {
     },
   };
   ctx.sfx = createSound(ctx.isNightTime);
+  ctx.measures = createMeasures(ctx, DEMO ? 'albam.demo.measures' : 'albam.measures');
+  ctx.measures.load();
+  ctx.upcoming = createUpcoming(ctx, DEMO ? 'albam.demo.upcoming' : 'albam.upcoming');
+  ctx.upcoming.load().then(() => { clockPage.update(); ctx.render(); });
 
   // ── 화면 모듈 ──
   const status = createStatusView(ctx);
@@ -131,7 +139,7 @@ function main() {
   const timeline = setupTimeline(ctx);
   const clockPage = setupClockPage(ctx);
   setupPages(ctx, {
-    onShow: { stats: () => stats.load(), timeline: () => timeline.show(), clock: () => clockPage.update() },
+    onShow: { stats: () => stats.load(), timeline: () => timeline.show(), clock: () => { clockPage.update(); ctx.upcoming.load().then(() => clockPage.update()); } },
     onHide: { timeline: () => timeline.hide() },
   });
 

@@ -370,8 +370,8 @@ do $$
 declare s jsonb; r jsonb; v_id uuid := gen_random_uuid(); tl jsonb;
 begin
   s := public.care_summary();
-  perform pg_temp.check(jsonb_array_length(s -> 'record_types') >= 13, 'summary lists record types');
-  perform pg_temp.check((select count(*) from jsonb_array_elements(s -> 'record_types') x where (x ->> 'in_more')::boolean) >= 10, 'more menu types');
+  perform pg_temp.check(jsonb_array_length(s -> 'record_types') >= 15, 'summary lists record types');
+  perform pg_temp.check((select count(*) from jsonb_array_elements(s -> 'record_types') x where (x ->> 'in_more')::boolean) >= 12, 'more menu types');
   perform pg_temp.check(s -> 'record_types' -> 0 ->> 'key' = 'feed', 'record types sorted');
   r := public.care_add_event(jsonb_build_object('id', v_id, 'kind', 'temperature', 'value_num', 37.4, 'force', true));
   perform pg_temp.check(r ->> 'status' = 'saved' and (select value_num = 37.4 from public.care_events where id = v_id), 'temperature saved with value');
@@ -440,6 +440,68 @@ begin
   perform public.care_voice_log(jsonb_build_object('id', gen_random_uuid(), 'event', 'missed'));
   perform pg_temp.check((select wrong and kind = 'feed' from public.care_voice_log where id = v), 'voice log hit then marked wrong');
   perform pg_temp.check((select count(*) from public.care_voice_log) = 2, 'voice log rows');
+end $$;
+reset role;
+
+-- ── 014: 측정 기록 모아 읽기 ─────────────────────
+set role authenticated;
+set request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+do $$
+declare m jsonb; n int;
+begin
+  perform public.care_add_event(jsonb_build_object('kind', 'weight', 'value_num', 7.20, 'occurred_at', now() - interval '13 days', 'force', true));
+  perform public.care_add_event(jsonb_build_object('kind', 'weight', 'value_num', 7.35, 'force', true));
+  perform public.care_add_event(jsonb_build_object('kind', 'height', 'value_num', 65.5, 'force', true));
+  m := public.care_measures();
+  n := jsonb_array_length(m -> 'measures');
+  perform pg_temp.check(n = 3, 'measures lists weight and height');
+  perform pg_temp.check((m -> 'measures' -> 0 ->> 'value')::numeric = 7.20 and m -> 'measures' -> 0 ->> 'kind' = 'weight', 'measures in time order');
+  perform pg_temp.check(not exists (select 1 from jsonb_array_elements(m -> 'measures') x where x ->> 'kind' = 'temperature'), 'temperature is not a growth measure');
+  perform pg_temp.check(m -> 'baby' ->> 'birth_date' = '2026-06-18' and m -> 'baby' ->> 'due_date' = '2026-07-10', 'measures carries birth and due dates');
+  perform pg_temp.check(m -> 'baby' -> 'sex' = 'null'::jsonb, 'sex empty until set');
+end $$;
+set request.jwt.claim.sub = '22222222-2222-2222-2222-222222222222';
+do $$ begin
+  perform public.care_measures();
+  raise exception 'FAIL: stranger measures';
+exception when insufficient_privilege then raise notice 'ok - non-family cannot read measures';
+end $$;
+reset role;
+update public.care_baby_profile set sex = 'boy';
+do $$ begin
+  update public.care_baby_profile set sex = 'x';
+  raise exception 'FAIL: bad sex accepted';
+exception when check_violation then raise notice 'ok - sex must be boy or girl';
+end $$;
+
+-- ── 015: 다가오는 일정 ─────────────────────
+set role authenticated;
+set request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+do $$
+declare r jsonb; u jsonb; v_today date := (now() at time zone 'Asia/Seoul')::date;
+begin
+  r := public.care_set_appointment(jsonb_build_object('on_date', v_today + 38, 'title', '예방접종', 'items', '["헥사심 3차","독감 1차"]'::jsonb));
+  perform public.care_set_appointment(jsonb_build_object('on_date', v_today, 'at_time', '10:30', 'title', '영유아검진', 'kind', 'checkup'));
+  perform public.care_set_appointment(jsonb_build_object('on_date', v_today - 1, 'title', '지난 일정'));
+  u := public.care_upcoming();
+  perform pg_temp.check(jsonb_array_length(u) = 2, 'upcoming skips past appointments');
+  perform pg_temp.check(u -> 0 ->> 'title' = '영유아검진' and (u -> 0 ->> 'days_left')::int = 0 and u -> 0 ->> 'at_time' = '10:30', 'upcoming nearest first, today is 0');
+  perform pg_temp.check((u -> 1 ->> 'days_left')::int = 38 and u -> 1 -> 'items' ->> 1 = '독감 1차' and u -> 1 ->> 'kind' = 'vaccine', 'upcoming carries items and days left');
+  perform public.care_set_appointment(jsonb_build_object('id', r ->> 'id', 'on_date', v_today + 40, 'title', '예방접종'));
+  perform pg_temp.check((public.care_upcoming() -> 1 ->> 'days_left')::int = 40, 'same id updates the appointment');
+  perform pg_temp.check(public.care_cancel_appointment((r ->> 'id')::uuid) ->> 'status' = 'cancelled', 'appointment cancelled');
+  perform pg_temp.check(jsonb_array_length(public.care_upcoming()) = 1, 'cancel hides appointment');
+  begin
+    perform public.care_set_appointment('{"title":"날짜 없음"}');
+    raise exception 'FAIL: appointment without date accepted';
+  exception when sqlstate '22023' then raise notice 'ok - appointment needs a date';
+  end;
+end $$;
+set request.jwt.claim.sub = '22222222-2222-2222-2222-222222222222';
+do $$ begin
+  perform public.care_upcoming();
+  raise exception 'FAIL: stranger upcoming';
+exception when insufficient_privilege then raise notice 'ok - non-family cannot read upcoming';
 end $$;
 reset role;
 

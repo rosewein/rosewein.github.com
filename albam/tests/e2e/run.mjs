@@ -381,6 +381,26 @@ async function statsFlow(browser, base) {
   check((await curvedEdgeOffenders(page, '#bigClock, #bigDate, #bigAge, #pageDots')).length === 0, '시계 쪽: 위·아래 곡면에 글 없음');
   const clockOverlap = await page.evaluate(() => { const a = document.querySelector('#bigAge span:last-child').getBoundingClientRect(); const d = document.querySelector('#pageDots').getBoundingClientRect(); const t = document.querySelector('#bigDate').getBoundingClientRect(); return a.bottom > d.top + 4 || t.bottom > a.top + 1; });
   check(!clockOverlap, '시계 쪽: 날짜·나이·점이 안 겹침');
+  const nextLine = await text(page, '#bigNext');
+  check(nextLine === '', `시계 쪽: 20일 남은 일정은 아직 안 띄움 (${nextLine})`);
+  {
+    // 이틀 전부터: 시계 쪽 맨 아랫줄과 대시보드 나이 줄 자리
+    const p2 = await (await browser.newContext(DEVICE)).newPage();
+    await p2.clock.install({ time: DAYTIME });
+    await p2.goto(`${base}?demo&appt=2`);
+    await p2.clock.runFor(800);
+    await p2.waitForTimeout(100);
+    await p2.clock.runFor(800);
+    check(await text(p2, '#ageLine') === '예방접종 D-2 · 헥사심 3차 외 3', `대시보드: 이틀 전부터 나이 줄 자리에 일정 (${await text(p2, '#ageLine')})`);
+    check(await p2.$eval('#ageLine', (a) => a.getBoundingClientRect().top) > await p2.$eval('#clock', (c) => c.getBoundingClientRect().bottom) - 0.5, '대시보드 일정 줄은 시각 아랫줄');
+    await shot(p2, 'dashboard-appointment');
+    await p2.evaluate(() => document.querySelector('#pageDots .dot').click());
+    await p2.clock.runFor(800);
+    const line2 = await text(p2, '#bigNext');
+    check(/예방접종 D-2 · 헥사심 3차 외 3$/.test(line2), `시계 쪽: 이틀 전부터 가까운 일정 (${line2})`);
+    await shot(p2, 'clock-appointment');
+    await p2.close();
+  }
   await shot(page, 'clock');
   await page.clock.runFor(65000);
   check(await pageNow() === 'Clock', '시계 쪽은 안 만져도 그대로(탁상시계)');
@@ -658,7 +678,7 @@ async function moreFlow(browser, base) {
   await page.clock.runFor(800);
   await page.click('#lateBtn');
   const labels = await page.$$eval('#moreGrid button', (b) => b.map((x) => x.textContent));
-  check(['목욕', '체온', '투약', '체중', '키', '메모', '터미타임', '놀이', '병원', '기타'].every((l) => labels.includes(l)) && !labels.includes('수유'),
+  check(['산책', '목욕', '체온', '투약', '체중', '키', '메모', '터미타임', '놀이', '병원', '예방접종', '기타'].every((l) => labels.includes(l)) && !labels.includes('수유'),
     `더보기 창에 종류 버튼 ${labels.join(' ')}`);
   check((await curvedEdgeOffenders(page, '#moreSheet h2, #moreSheet button')).length === 0, '더보기 창: 위·아래 곡면에 글·버튼 없음');
   await shot(page, 'more');
@@ -670,6 +690,19 @@ async function moreFlow(browser, base) {
   const fits = await page.$eval('#lateDetail', (r) => r.scrollWidth <= r.clientWidth + 0.5);
   check(fits, '체온 줄이 창 안에 들어감');
   await shot(page, 'more-temperature');
+  // 체중: 지난번 값(미리 보기 7.20kg)에서 시작하고 제목에 성장 백분위(기본 · 교정)
+  await page.click('#lateSheet [data-close]');
+  await page.click('#lateBtn');
+  await page.click('#moreGrid button:text-is("체중")');
+  check(await text(page, '#lateDetail .valueView') === '7.20kg', `체중 넣기: 지난번 값에서 시작 (${await text(page, '#lateDetail .valueView')})`);
+  check(/^체중 넣기 · 백분위 \d+ · 교정 \d+$/.test(await text(page, '#lateTitle')), `체중 제목에 백분위 (${await text(page, '#lateTitle')})`);
+  check(await page.$eval('#lateTitle', (h) => { const r = document.createRange(); r.selectNodeContents(h); return r.getBoundingClientRect().right; }) <= await page.$eval('#lateKindOther', (b) => b.getBoundingClientRect().left), '백분위 제목이 종류 버튼과 안 겹침');
+  await shot(page, 'more-weight');
+  await page.click('#lateSheet [data-close]');
+  await page.click('#lateBtn');
+  await page.click('#moreGrid button:text-is("체온")');
+  await page.click('#lateDetail .stepBtn:text-is("+1.0")');
+  await page.click('#lateDetail .stepBtn:text-is("+0.1")');
   await page.click('#lateSave');
   await page.waitForTimeout(400);
   check((await text(page, '#undoText')).startsWith('체온 37.9°C'), `저장: ${await text(page, '#undoText')}`);

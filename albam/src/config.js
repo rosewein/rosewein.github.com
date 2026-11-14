@@ -26,6 +26,7 @@ const DEFAULTS = {
   machine: BREZZA,
   dailyReloadHour: 4,
   statsDays: 7,
+  upcomingNoticeDays: 2,
   statsIdleSeconds: 60,
   theme: 'auto',
   location: { lat: 37.5665, lon: 126.978 },
