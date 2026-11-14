@@ -14,7 +14,7 @@
 
 ## 처음 한 번: 선으로 굽기
 
-ESP-IDF v5.5 이상이 필요하다.
+ESP-IDF v5.5.6 으로 빌드를 확인했다. v5.5.2 는 부품을 고르는 단계에서 멈춘다("Missing required kconfig option").
 
 ```sh
 cd albam/firmware
