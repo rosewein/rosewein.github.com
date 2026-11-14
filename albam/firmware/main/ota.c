@@ -76,7 +76,7 @@ void ota_info_json(char *json, size_t len)
              "\"ui\":{\"ticks\":%u,\"rotate_started\":%u,\"rotate_finished\":%u,\"stalls\":%s,\"last_stall\":\"%s\"}}",
              app->project_name, app->version, app->date, app->time, running ? running->label : "?",
              (int)(esp_timer_get_time() / 1000000),
-             (int)esp_reset_reason(),   /* 왜 다시 켜졌나: 1 전원, 3 스스로(업데이트 등), 4 죽음(panic), 5·6·7 멈춰서 감시가 끔, 9 전압 */
+             (int)esp_reset_reason(),   /* 왜 다시 켜졌나: 1 전원, 3 스스로(업데이트 등), 4 죽음(panic), 5·6·7 감시 타이머(화면이 멈춰 깊이 다시 켬 포함), 9 전압 */
              (unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL), (unsigned)heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL),
              (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL),
              (unsigned)heap_caps_get_free_size(MALLOC_CAP_SPIRAM), (unsigned)heap_caps_get_minimum_free_size(MALLOC_CAP_SPIRAM),
