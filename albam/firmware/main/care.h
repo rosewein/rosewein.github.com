@@ -59,6 +59,11 @@ void care_want_timeline(bool want);
 /* *seen 뒤로 바뀌었으면 복사하고 개수를, 그대로면 -1 을 준다. 아직 못 읽었으면 *seen 은 0 그대로 */
 int care_copy_timeline(care_event_t *out, int max, uint32_t *seen);
 
+/* ---- 보드 상태 남기기 ----
+ * 보드의 /info 내용을 서버(care_device_log, supabase/013)에 남긴다: 켜진 뒤 처음 연결됐을 때, 10분마다,
+ * 그리고 화면이 멈춰 다시 켜기 직전(care_report_stall). 보드가 이상할 때 사람이 /info 를 옮겨 적지 않아도 되게 */
+void care_report_stall(void);
+
 /* 화면에서 부른다. 결과는 care_state() 로 본다. 비밀번호는 저장하지 않고 갱신 토큰만 저장한다 */
 void care_login(const char *email, const char *password);
 void care_logout(void);

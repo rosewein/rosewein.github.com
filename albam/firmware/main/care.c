@@ -6,6 +6,7 @@
  * 머리말은 apikey 와 Authorization: Bearer. 비밀번호는 저장하지 않고 갱신 토큰만 보드에 남긴다. */
 #include "care.h"
 #include "net.h"
+#include "ota.h"
 #include "store.h"
 
 #include <stdlib.h>
@@ -25,6 +26,7 @@
 #define REFRESH_MARGIN 120       /* 만료 2분 전이면 미리 갱신 */
 #define RETRY_SECONDS 5          /* 못 읽었으면 조금 뒤 다시 */
 #define OFFLINE_AFTER 3          /* 이만큼 잇달아 못 읽어야 "연결 안 됨"(한 번 끊긴 것으로는 안 띄운다) */
+#define REPORT_SECONDS 600       /* 보드 상태를 서버에 남기는 주기 */
 #define TIMEOUT_MS 10000
 #define MAX_RESPONSE (512 * 1024)
 
@@ -53,6 +55,10 @@ static char s_message[160];      /* 마지막 오류 글 */
 static int s_fails, s_total_fails, s_total_ok;
 static char s_last_error[200];
 static int64_t s_last_error_at, s_last_ok_at;
+
+/* 보드 상태 남기기: 다음에 남길 까닭("boot" → 그 뒤 "periodic", 멈추면 "stall")과 마지막으로 남긴 때 */
+static const char *volatile s_report_reason = "boot";
+static int64_t s_reported_at;
 
 /* 오늘 기록 목록(목록 화면이 떠 있을 때만 읽는다) */
 static volatile bool s_want_timeline;
@@ -433,6 +439,36 @@ static int fetch_timeline(void)
     return RESULT_OK;
 }
 
+/* 보드 상태(/info 와 같은 내용)를 서버에 남긴다. 못 남기면 다음 차례에 다시 */
+static void report_device(void)
+{
+    static char info[1300], body[1400];
+    static int64_t tried_at = -60;
+    const char *reason = s_report_reason;
+    if (uptime() - tried_at < 60 && (!reason || strcmp(reason, "stall") != 0)) {
+        return;                 /* 못 남겼어도 1분에 한 번만 다시 해 본다(멈춤은 바로) */
+    }
+    tried_at = uptime();
+    if (!reason) {
+        if (uptime() - s_reported_at < REPORT_SECONDS) {
+            return;
+        }
+        reason = "periodic";
+    }
+    ota_info_json(info, sizeof(info));
+    snprintf(body, sizeof(body), "{\"p\":{\"device\":\"albam_board\",\"reason\":\"%s\",\"info\":%s}}", reason, info);
+    char *response;
+    if (post("/rest/v1/rpc/care_device_log", body, true, &response) == RESULT_OK) {
+        if (s_report_reason == reason) {
+            s_report_reason = NULL;
+        }
+        s_reported_at = uptime();
+    } else if (!s_report_reason) {
+        s_reported_at = uptime();   /* 10분마다 남기는 것은 못 남겨도 다음 차례까지 기다린다 */
+    }
+    free(response);
+}
+
 /* ---- 기록하기 ---- */
 
 static void iso_time(time_t at, char *out, size_t len)
@@ -666,6 +702,9 @@ static void care_task(void *arg)
             }
         }
 
+        if (result == RESULT_OK) {
+            report_device();    /* 요약의 성공·실패 셈에는 넣지 않는다 */
+        }
         if (result == RESULT_OK && s_want_timeline) {
             fetch_timeline();   /* 못 읽으면 앞의 목록을 그대로 둔다 */
         }
@@ -757,6 +796,12 @@ bool care_copy_summary(care_summary_t *out, uint32_t *seen)
     }
     xSemaphoreGive(s_lock);
     return changed;
+}
+
+void care_report_stall(void)
+{
+    s_report_reason = "stall";
+    xTaskNotifyGive(s_task);
 }
 
 void care_want_timeline(bool want)

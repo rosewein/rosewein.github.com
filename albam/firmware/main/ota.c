@@ -46,7 +46,8 @@ static esp_err_t page_get(httpd_req_t *req)
     return httpd_resp_send(req, PAGE, HTTPD_RESP_USE_STRLEN);
 }
 
-static esp_err_t info_get(httpd_req_t *req)
+/* 보드 상태를 JSON 한 줄로. /info 가 보여 주고, care.c 가 서버에도 남긴다 */
+void ota_info_json(char *json, size_t len)
 {
     const esp_app_desc_t *app = esp_app_get_description();
     const esp_partition_t *running = esp_ota_get_running_partition();
@@ -66,8 +67,7 @@ static esp_err_t info_get(httpd_req_t *req)
     store_get("stalls", stalls, sizeof(stalls));
     store_get("stall_info", stall_info, sizeof(stall_info));
     board_rotate_counts(&rotate_started, &rotate_finished);
-    static char json[1300];
-    snprintf(json, sizeof(json),
+    snprintf(json, len,
              "{\"name\":\"%s\",\"version\":\"%s\",\"built\":\"%s %s\",\"slot\":\"%s\",\"uptime_s\":%d,\"reset_reason\":%d,"
              "\"heap\":{\"internal_free\":%u,\"internal_min\":%u,\"internal_largest\":%u,\"psram_free\":%u,\"psram_min\":%u},"
              "\"care\":{\"state\":%d,\"ok\":%d,\"fails\":%d,\"fails_in_a_row\":%d,\"seconds_since_ok\":%d,"
@@ -83,6 +83,12 @@ static esp_err_t info_get(httpd_req_t *req)
              (int)care_state(), care.ok, care.fails, care.fails_in_a_row, care.seconds_since_ok, care.seconds_since_error, care.last_error,
              presses, touch_x, touch_y,
              (unsigned)ui_ticks(), (unsigned)rotate_started, (unsigned)rotate_finished, stalls[0] ? stalls : "0", stall_info);
+}
+
+static esp_err_t info_get(httpd_req_t *req)
+{
+    static char json[1300];
+    ota_info_json(json, sizeof(json));
     httpd_resp_set_type(req, "application/json");
     return httpd_resp_send(req, json, HTTPD_RESP_USE_STRLEN);
 }

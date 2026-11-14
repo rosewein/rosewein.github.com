@@ -443,4 +443,54 @@ begin
 end $$;
 reset role;
 
+-- ── 013: 보드 상태 기록 ─────────────
+set role authenticated;
+set request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+do $$
+declare r jsonb; failed boolean := false;
+begin
+  r := public.care_device_log('{"reason": "boot", "info": {"version": "0.4.2+abc1234", "uptime_s": 12, "ui": {"stalls": 0}}}'::jsonb);
+  perform public.care_device_log('{"reason": "stall", "device": "albam_board", "info": {"version": "0.4.2+abc1234", "uptime_s": 900}}'::jsonb);
+  perform pg_temp.check(r ->> 'status' = 'saved', 'device log saved');
+  perform pg_temp.check((select count(*) from public.care_device_log) = 2, 'device log rows');
+  perform pg_temp.check((select version = '0.4.2+abc1234' and device = 'albam_board' and (info ->> 'uptime_s')::int = 900
+                         from public.care_device_log where reason = 'stall'), 'device log keeps version and info');
+  begin
+    perform public.care_device_log('{"reason": "hello", "info": {}}'::jsonb);
+  exception when others then failed := true;
+  end;
+  perform pg_temp.check(failed, 'device log rejects unknown reason');
+  failed := false;
+  begin
+    perform public.care_device_log('{"reason": "boot", "info": "text"}'::jsonb);
+  exception when others then failed := true;
+  end;
+  perform pg_temp.check(failed, 'device log rejects info that is not an object');
+end $$;
+reset role;
+-- 14일 지난 줄은 다음에 넣을 때 지워진다
+update public.care_device_log set logged_at = now() - interval '15 days' where reason = 'boot';
+set role authenticated;
+set request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+do $$
+begin
+  perform public.care_device_log('{"reason": "periodic", "info": {"version": "0.4.2"}}'::jsonb);
+  perform pg_temp.check((select count(*) from public.care_device_log) = 2 and not exists (select 1 from public.care_device_log where reason = 'boot'),
+                        'device log drops rows older than 14 days');
+end $$;
+reset role;
+-- 가족이 아니면 못 넣는다
+set role authenticated;
+set request.jwt.claim.sub = '99999999-9999-9999-9999-999999999999';
+do $$
+declare failed boolean := false;
+begin
+  begin
+    perform public.care_device_log('{"reason": "boot", "info": {}}'::jsonb);
+  exception when others then failed := true;
+  end;
+  perform pg_temp.check(failed, 'device log refuses a non-family account');
+end $$;
+reset role;
+
 \echo 'ALL SQL TESTS PASSED'

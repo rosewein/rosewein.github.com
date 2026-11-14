@@ -47,6 +47,9 @@ static void restart_if_ui_stalled(int uptime)
     store_set("stalls", count);
     store_set("stall_info", info);
     ESP_LOGE(TAG, "화면이 %d초 멈춤(%s). 다시 켠다.", UI_STALL_SECONDS, info);
+    /* 멈춘 순간의 상태를 서버에도 남기고(통신은 화면과 따로 돈다) 다시 켠다 */
+    care_report_stall();
+    vTaskDelay(pdMS_TO_TICKS(12000));
     esp_restart();
 }
 
