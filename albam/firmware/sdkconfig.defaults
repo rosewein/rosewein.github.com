@@ -30,6 +30,12 @@ CONFIG_SPIRAM_SPEED_200M=y
 #  켜진 지 1분도 안 돼 죽고 다시 켜지기를 되풀이했다. 넣지 않는다)
 CONFIG_MBEDTLS_EXTERNAL_MEM_ALLOC=y
 
+# 새 펌웨어를 받아 플래시에 쓰는 동안 화면이 번쩍인다. 플래시에 쓸 때는 보통 인터럽트가 잠깐씩 미뤄지는데,
+# 화면에 다음 장면을 보내는 인터럽트도 같이 미뤄지기 때문으로 본다. 그 인터럽트는 미뤄지지 않게 한다.
+# (IDF 판에 따라 이름이 달라 둘 다 적는다. 없는 이름은 무시된다)
+CONFIG_LCD_DSI_ISR_IRAM_SAFE=y
+CONFIG_LCD_DSI_ISR_CACHE_SAFE=y
+
 CONFIG_FREERTOS_HZ=1000
 CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192
 CONFIG_LWIP_SNTP_MAX_SERVERS=2
