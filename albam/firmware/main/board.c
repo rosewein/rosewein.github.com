@@ -7,6 +7,7 @@
 #include <stdlib.h>
 
 #include <string.h>
+#include <time.h>
 #include "bsp/esp-bsp.h"
 #include "driver/ppa.h"
 #include "esp_cache.h"
@@ -124,21 +125,65 @@ static const lv_font_t *font(bool semibold, int size, const lv_font_t *symbols)
     return f;
 }
 
-static int s_brightness;
+/* ---- 밝기: 낮과 밤을 따로 둔다 ----
+ * 밤(오후 8시 ~ 오전 6시)에는 거실 불이 꺼지므로 어둡게(처음 값 20%). 설정 화면에서 둘 다 바꿀 수 있다.
+ * 백라이트는 GPIO 26 의 PWM 이다. */
+#define NIGHT_START_HOUR 20
+#define NIGHT_END_HOUR 6
+#define NIGHT_DEFAULT 20
+#define PREVIEW_SECONDS 3     /* 설정에서 막대를 움직이면 그 밝기를 잠깐 보여 준다 */
 
-int ui_brightness_get(void)
+static int s_day, s_night, s_shown = -1;
+static time_t s_preview_until;
+
+static int clamp_percent(int percent)
 {
-    return s_brightness;
+    return percent < 5 ? 5 : percent > 100 ? 100 : percent;
 }
 
-/* 백라이트는 GPIO 26 의 PWM 이다 */
-void ui_brightness_set(int percent)
+static void show_brightness(int percent)
 {
-    char text[8];
-    s_brightness = percent < 5 ? 5 : percent > 100 ? 100 : percent;
-    bsp_display_brightness_set(s_brightness);
-    snprintf(text, sizeof(text), "%d", s_brightness);
-    store_set("brightness", text);
+    if (percent != s_shown) {
+        s_shown = percent;
+        bsp_display_brightness_set(percent);
+    }
+}
+
+static bool is_night(time_t now)
+{
+    if (now < 1700000000) {
+        return false;   /* 아직 시각을 못 받았으면 낮으로 */
+    }
+    struct tm t;
+    localtime_r(&now, &t);
+    return t.tm_hour >= NIGHT_START_HOUR || t.tm_hour < NIGHT_END_HOUR;
+}
+
+int ui_brightness_get(bool night)
+{
+    return night ? s_night : s_day;
+}
+
+void ui_brightness_set(bool night, int percent, bool save)
+{
+    percent = clamp_percent(percent);
+    *(night ? &s_night : &s_day) = percent;
+    show_brightness(percent);
+    s_preview_until = time(NULL) + PREVIEW_SECONDS;
+    if (save) {
+        char text[8];
+        snprintf(text, sizeof(text), "%d", percent);
+        store_set(night ? "night_bri" : "brightness", text);
+    }
+}
+
+/* 1초마다: 지금이 낮인지 밤인지에 맞춘다 */
+void ui_brightness_refresh(void)
+{
+    time_t now = time(NULL);
+    if (now >= s_preview_until) {
+        show_brightness(is_night(now) ? s_night : s_day);
+    }
 }
 
 void board_start_ui(void)
@@ -147,7 +192,8 @@ void board_start_ui(void)
     assert(display);
 
     char saved[8];
-    s_brightness = store_get("brightness", saved, sizeof(saved)) ? atoi(saved) : CONFIG_ALBAM_BRIGHTNESS;
+    s_day = clamp_percent(store_get("brightness", saved, sizeof(saved)) ? atoi(saved) : CONFIG_ALBAM_BRIGHTNESS);
+    s_night = clamp_percent(store_get("night_bri", saved, sizeof(saved)) ? atoi(saved) : NIGHT_DEFAULT);
 
     bsp_display_lock(-1);
     const ui_fonts_t fonts = {
@@ -161,5 +207,5 @@ void board_start_ui(void)
     bsp_display_unlock();
 
     /* 백라이트는 따로 켜 줘야 한다. 안 켜면 화면이 까맣다 */
-    bsp_display_brightness_set(s_brightness < 5 ? 5 : s_brightness > 100 ? 100 : s_brightness);
+    ui_brightness_refresh();
 }

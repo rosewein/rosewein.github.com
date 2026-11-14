@@ -870,9 +870,23 @@ static void open_settings(lv_event_t *e)
     lv_screen_load(s_settings);
 }
 
+/* 막대를 움직이는 동안은 밝기만 바꿔 보여 주고, 손을 떼면 저장한다. user_data: 밤 밝기인가 */
 static void brightness_changed(lv_event_t *e)
 {
-    ui_brightness_set(lv_slider_get_value(lv_event_get_target(e)));
+    bool night = (bool)(intptr_t)lv_event_get_user_data(e);
+    ui_brightness_set(night, lv_slider_get_value(lv_event_get_target(e)), lv_event_get_code(e) == LV_EVENT_RELEASED);
+}
+
+static void brightness_slider(const char *name, bool night, int y)
+{
+    lv_obj_set_pos(label(s_settings, F.text, C_TEXT, name), 28, y);
+    lv_obj_t *slider = lv_slider_create(s_settings);
+    lv_obj_set_pos(slider, 450, y + 10);
+    lv_obj_set_size(slider, 390, 24);
+    lv_slider_set_range(slider, 5, 100);
+    lv_slider_set_value(slider, ui_brightness_get(night), LV_ANIM_OFF);
+    lv_obj_add_event_cb(slider, brightness_changed, LV_EVENT_VALUE_CHANGED, (void *)(intptr_t)night);
+    lv_obj_add_event_cb(slider, brightness_changed, LV_EVENT_RELEASED, (void *)(intptr_t)night);
 }
 
 static void dev_changed(lv_event_t *e)
@@ -893,31 +907,26 @@ static void build_settings(void)
     lv_obj_set_pos(s_info, 28, 96);
     lv_obj_set_width(s_info, W - 56);
     lv_label_set_long_mode(s_info, LV_LABEL_LONG_MODE_DOTS);
-    lv_obj_set_style_text_line_space(s_info, 16, 0);
+    lv_obj_set_style_text_line_space(s_info, 8, 0);
 
-    /* 밝기: 손을 떼면 저장된다 */
-    lv_obj_set_pos(label(s_settings, F.text, C_TEXT, "밝기"), 28, 492);
-    lv_obj_t *slider = lv_slider_create(s_settings);
-    lv_obj_set_pos(slider, 130, 500);
-    lv_obj_set_size(slider, 640, 24);
-    lv_slider_set_range(slider, 5, 100);
-    lv_slider_set_value(slider, ui_brightness_get(), LV_ANIM_OFF);
-    lv_obj_add_event_cb(slider, brightness_changed, LV_EVENT_VALUE_CHANGED, NULL);
+    /* 밝기: 낮과 밤을 따로. 밤에는 거실 불이 꺼져 있어 어둡게 */
+    brightness_slider("낮 밝기", false, 476);
+    brightness_slider("밤 밝기 (오후 8시~오전 6시)", true, 538);
 
     /* 시험판: master 에 합치기 전 브랜치에서 빌드한 펌웨어도 받는다 */
-    lv_obj_set_pos(label(s_settings, F.text, C_TEXT, "시험판 받기"), 900, 492);
+    lv_obj_set_pos(label(s_settings, F.text, C_TEXT, "시험판 받기"), 900, 476);
     lv_obj_t *dev = lv_switch_create(s_settings);
-    lv_obj_set_pos(dev, 1090, 490);
+    lv_obj_set_pos(dev, 1090, 474);
     lv_obj_set_size(dev, 90, 46);
     if (update_dev_get()) {
         lv_obj_add_state(dev, LV_STATE_CHECKED);
     }
     lv_obj_add_event_cb(dev, dev_changed, LV_EVENT_VALUE_CHANGED, NULL);
 
-    lv_obj_set_pos(button(s_settings, "와이파이 바꾸기", open_wifi, 320, 84), 28, 600);
-    lv_obj_set_pos(button(s_settings, "로그아웃", logout_clicked, 200, 84), 368, 600);
-    lv_obj_set_pos(button(s_settings, "업데이트 확인", check_update_clicked, 280, 84), 588, 600);
-    lv_obj_set_pos(button(s_settings, "닫기", back_home, 200, 84), 1052, 600);
+    lv_obj_set_pos(button(s_settings, "와이파이 바꾸기", open_wifi, 320, 84), 28, 616);
+    lv_obj_set_pos(button(s_settings, "로그아웃", logout_clicked, 200, 84), 368, 616);
+    lv_obj_set_pos(button(s_settings, "업데이트 확인", check_update_clicked, 280, 84), 588, 616);
+    lv_obj_set_pos(button(s_settings, "닫기", back_home, 200, 84), 1052, 616);
 }
 
 /* ---- 터치가 들어오는지 보기(/info 에 나온다) ---- */
@@ -946,6 +955,7 @@ static void tick(lv_timer_t *timer)
     net_get_status(&net);
     care_state_t care = care_state();
     lv_obj_t *now = lv_screen_active();
+    ui_brightness_refresh();
 
     update_home(&net, care);
     if (now == s_settings) {

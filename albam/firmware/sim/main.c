@@ -76,9 +76,9 @@ void update_check_now(void) {}
 void update_status(char *out, size_t len) { snprintf(out, len, "최신 판이에요"); }
 bool update_dev_get(void) { return true; }
 void update_dev_set(bool dev) { (void)dev; }
-static int s_brightness = 70;
-int ui_brightness_get(void) { return s_brightness; }
-void ui_brightness_set(int percent) { s_brightness = percent; }
+int ui_brightness_get(bool night) { return night ? 20 : 70; }
+void ui_brightness_set(bool night, int percent, bool save) { (void)night; (void)percent; (void)save; }
+void ui_brightness_refresh(void) {}
 
 /* ---- 그리기 ---- */
 static uint32_t tick_now(void) { return s_ms; }

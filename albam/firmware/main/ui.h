@@ -10,9 +10,11 @@ typedef struct {
     const lv_font_t *small;   /* 맨 위 줄 */
 } ui_fonts_t;
 
-/* 화면 밝기(5~100%). 보드 쪽(board.c)이 맡고, 바꾸면 저장한다 */
-int ui_brightness_get(void);
-void ui_brightness_set(int percent);
+/* 화면 밝기(5~100%). 낮과 밤(오후 8시~오전 6시)을 따로 둔다. 보드 쪽(board.c)이 맡는다 */
+#include <stdbool.h>
+int ui_brightness_get(bool night);
+void ui_brightness_set(bool night, int percent, bool save);   /* 막대를 움직이는 동안은 save 없이, 손을 떼면 저장 */
+void ui_brightness_refresh(void);                              /* 1초마다: 지금 시각에 맞는 밝기로 */
 
 /* 문제를 찾을 때: 지금까지 들어온 터치 수와 마지막으로 누른 자리 */
 void ui_touch_diag(int *presses, int *x, int *y);
