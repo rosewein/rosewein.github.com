@@ -15,6 +15,7 @@
 
 #define RATE 22050
 #define DEFAULT_VOLUME 50
+#define AMPLITUDE 28000          /* 파형 크기(최대 32767). 9000 일 때는 소리 크기 100% 에서도 작았다 */
 #define NIGHT_START_HOUR 20      /* 밤에는 작게(board.c 의 밤 밝기와 같은 시간) */
 #define NIGHT_END_HOUR 6
 
@@ -53,7 +54,7 @@ static void play(const note_t *notes)
         for (int i = 0; i < count; i++) {
             /* 사각파가 점점 작아진다(8비트 게임 소리) */
             float fade = expf(-5.0f * i / count);
-            samples[i] = (int16_t)(((i / (half ? half : 1)) % 2 ? -1 : 1) * 9000 * fade);
+            samples[i] = (int16_t)(((i / (half ? half : 1)) % 2 ? -1 : 1) * AMPLITUDE * fade);
         }
         esp_codec_dev_write(s_speaker, samples, count * sizeof(samples[0]));
     }
