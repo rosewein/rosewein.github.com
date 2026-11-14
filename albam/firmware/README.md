@@ -72,5 +72,5 @@ CONFIG_ALBAM_WIFI_PASSWORD="비밀번호"
 - 누른 자리가 맞는지. 대각선 반대쪽이 눌리면 `CONFIG_ALBAM_TOUCH_FLIP=y` 를 넣는다.
 - 화면이 멈추지 않는지. 돌린 화면은 `DOUBLE_PARTIAL` 방식으로 그린다(`ui.c` 의 `start_landscape()`).
 - 와이파이가 붙는지. 시작 로그에 `Version mismatch: Host [2.13.0] > Co-proc [0.0.0]` 경고가 나온다(보드의 C6 칩 펌웨어가 오래됨). 와이파이 찾기나 연결이 안 되면 C6 펌웨어를 올려야 한다.
-- 밝기가 바뀌는지(`CONFIG_ALBAM_BRIGHTNESS`). 이 보드는 밝기를 I2C 칩(0x45)으로 조절한다.
+- 밝기가 바뀌는지(`CONFIG_ALBAM_BRIGHTNESS`). 백라이트는 GPIO 26 의 PWM 이고 `bsp_display_brightness_set()` 으로 켠다. 시작 로그에 `ledc: GPIO 26 is not usable` 경고가 나온다.
 - 무선으로 보낸 판이 켜지고, 일부러 잘못된 판을 보냈을 때 되돌아가는지.
