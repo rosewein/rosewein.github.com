@@ -1056,6 +1056,13 @@ async function phoneFlow(browser, base) {
   check(await page.isEnabled('#dayNext'), '어제로 넘김');
   await page.click('#dayNext');
   await page.waitForFunction(() => document.querySelector('#daySub').textContent === '오늘');
+  // 날짜를 누르면 달력: 날짜 글 한가운데를 누르면 투명한 날짜 칸이 받는다
+  const hit = await page.evaluate(() => { const r = document.querySelector('#dayTitle').getBoundingClientRect(); return document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2).id; });
+  check(hit === 'dayPick', `날짜 글을 누르면 날짜 칸이 받음 (${hit})`);
+  const weekAgo = await page.evaluate(() => { const d = new Date(); d.setDate(d.getDate() - 7); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; });
+  await page.fill('#dayPick', weekAgo);
+  await page.waitForFunction(() => document.querySelector('#daySub').textContent === '7일 전');
+  check(await text(page, '#dayMsg') === '이 날은 기록이 없어요', '달력으로 고른 날로 감');
   await page.click('#tabs [data-view="home"]');
   check(await page.isVisible('#feedCard') && !(await page.isVisible('#dayList')), '입력 쪽으로 돌아옴');
 

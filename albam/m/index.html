@@ -74,9 +74,9 @@
 <main id="viewRecords" hidden>
   <div id="dayHead">
     <button class="btn" id="dayPrev" aria-label="전날">◀</button>
-    <button id="dayTitleBtn" aria-label="날짜 고르기"><span id="dayTitle"></span><span class="hint" id="daySub"></span></button>
+    <!-- 날짜 글 위에 투명한 날짜 칸을 겹쳐 둔다: 누르면 폰의 달력이 바로 뜬다(아이폰은 숨긴 칸을 코드로 열 수 없다) -->
+    <label id="dayTitleBtn"><span id="dayTitle"></span><span class="hint" id="daySub"></span><input type="date" id="dayPick" aria-label="날짜 고르기"></label>
     <button class="btn" id="dayNext" aria-label="다음날">▶</button>
-    <input type="date" id="dayPick" tabindex="-1" aria-hidden="true">
   </div>
   <div class="hint" id="daySummary"></div>
   <div id="dayList"></div>
