@@ -13,7 +13,7 @@ const dayOf = (s) => { const [y, m, d] = s.split('-').map(Number); return new Da
  * 일정 한 줄 글. 지난 일정이면 ''.  (순수 함수)
  * @param {{on_date: string, title: string, items?: string[], at_time?: string|null}} a
  * @param {Date} now
- * @returns {{date: string, title: string, left: string, items: string, days: number}|null}
+ * @returns {{date: string, title: string, left: string, items: string, all: string[], days: number}|null}
  */
 export function describeAppointment(a, now) {
   const day = dayOf(a.on_date);
@@ -26,6 +26,7 @@ export function describeAppointment(a, now) {
     title: a.title,
     left: left === 0 ? '오늘' : left === 1 ? '내일' : `D-${left}`,
     items: items.length > 1 ? `${items[0]} 외 ${items.length - 1}` : items[0] || '',
+    all: items,
     days: left,
   };
 }
@@ -58,5 +59,8 @@ export function createUpcoming(ctx, cacheKey) {
     return null;
   }
 
-  return { load, next };
+  /** 앞으로 있을 일정 전부, 가까운 순(개인 폰 화면은 미리부터 다 보여 준다) */
+  const all = (now) => list.map((a) => describeAppointment(a, now)).filter(Boolean);
+
+  return { load, next, all };
 }
