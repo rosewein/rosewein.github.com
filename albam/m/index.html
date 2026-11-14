@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>알밤보드 폰</title>
+<meta name="description" content="알밤보드 개인 폰 화면(세로): 빠른 입력">
+<meta name="theme-color" content="#0b0908">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="../icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="../icon-180.png">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<!-- 알밤보드 개인 폰 화면(세로). 거실 화면과 같은 Supabase·같은 통신 창구(../src/api)를 쓴다. 화면만 따로 짰다.
+     1단계: 입력(수유·기저귀·잠 카드, 더 넣기). 기록·통계·설정 쪽은 다음 단계 -->
+<header id="top">
+  <div id="today"></div>
+  <div id="age"></div>
+</header>
+<div id="net" hidden></div>
+
+<main>
+  <!-- 카드 하나 = 상태(지난 시간·마지막 기록) + 바로 저장 버튼(m/home.js) -->
+  <section class="card" id="feedCard">
+    <div class="head"><span class="label" id="feedLabel">수유</span><span class="detail" id="feedDetail"></span></div>
+    <div class="big" id="feedAgo"></div>
+    <div class="row" id="feedActions">
+      <button class="btn main grow" id="feedBtn"></button>
+      <button class="btn" id="feedAmountBtn">양 바꾸기</button>
+    </div>
+    <!-- 양 바꾸기: 이번 한 번만 다른 양으로. [-30 브레짜] [-10] 200ml [+10] [+30 브레짜] -->
+    <div class="row" id="feedSteps" hidden>
+      <button class="btn step" data-step="-machine">-30</button>
+      <button class="btn step" data-step="-10">-10</button>
+      <div class="grow center"><span class="val" id="feedAmount"></span><span class="hint" id="feedMachine"></span></div>
+      <button class="btn step" data-step="10">+10</button>
+      <button class="btn step" data-step="machine">+30</button>
+    </div>
+    <!-- 수유에 붙이는 문구(m/phrases.js): 먹이기 전에는 다음 수유에, 먹이는 중에는 그 수유에 바로 -->
+    <div class="chips" id="feedChips"></div>
+  </section>
+
+  <section class="card" id="diaperCard">
+    <div class="head"><span class="label">기저귀 · 간 지</span><span class="detail" id="diaperDetail"></span></div>
+    <div class="big" id="diaperAgo"></div>
+    <div class="row three">
+      <button class="btn" data-diaper="pee">소변</button>
+      <button class="btn" data-diaper="poo">대변</button>
+      <button class="btn" data-diaper="both">소+대</button>
+    </div>
+  </section>
+
+  <section class="card" id="sleepCard">
+    <div class="head"><span class="label" id="sleepLabel">잠</span><span class="detail" id="sleepDetail"></span></div>
+    <div class="big" id="sleepAgo"></div>
+    <div class="row"><button class="btn grow" id="sleepBtn"></button></div>
+  </section>
+
+  <section>
+    <h2>더 넣기</h2>
+    <div id="moreGrid"></div>
+  </section>
+
+  <section id="upcomingSec" hidden>
+    <h2>다가오는 일정</h2>
+    <div id="upcomingList"></div>
+  </section>
+</main>
+
+<!-- 저장·취소 결과와 [취소 n](m/notice.js) -->
+<div id="notice" hidden><span id="noticeText"></span><button class="btn" id="undoBtn" hidden></button></div>
+
+<!-- 다른 종류 넣기(m/entry.js): 시각, 끝 시각, 숫자 ±, 글 -->
+<dialog id="entry">
+  <form method="dialog" id="entryForm">
+    <h2 id="entryTitle"></h2>
+    <label class="field"><span id="entryStartLabel">시각</span><input type="datetime-local" id="entryStart" required></label>
+    <label class="check" id="entryEndToggle"><input type="checkbox" id="entryHasEnd"> 끝 시각도 넣기</label>
+    <label class="field" id="entryEndField"><span>끝</span><input type="datetime-local" id="entryEnd"></label>
+    <div id="entryNumber">
+      <div class="row">
+        <button type="button" class="btn step" data-n="-10"></button>
+        <button type="button" class="btn step" data-n="-1"></button>
+        <input class="grow center val" id="entryValue" type="number" inputmode="decimal">
+        <button type="button" class="btn step" data-n="1"></button>
+        <button type="button" class="btn step" data-n="10"></button>
+      </div>
+      <div class="hint" id="entryPercentile"></div>
+    </div>
+    <div class="chips" id="entryChips"></div>
+    <label class="field" id="entryMemoField"><span>메모</span><input type="text" id="entryMemo" autocomplete="off"></label>
+    <div class="hint warn" id="entryMsg"></div>
+    <div class="row">
+      <button type="button" class="btn" id="entryClose">닫기</button>
+      <button type="submit" class="btn main grow" id="entrySave">저장</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- 비슷한 기록이 이미 있을 때 -->
+<dialog id="confirm">
+  <h2>비슷한 기록이 있어요</h2>
+  <p id="confirmText"></p>
+  <div class="row">
+    <button class="btn grow" id="confirmNo">안 넣기</button>
+    <button class="btn main grow" id="confirmYes">그래도 저장</button>
+  </div>
+</dialog>
+
+<!-- 문구 더하기·지우기(m/phrases.js) -->
+<dialog id="phrases">
+  <form id="phrasesForm">
+    <h2 id="phrasesTitle"></h2>
+    <div id="phrasesList"></div>
+    <div class="hint" id="phrasesEmpty">아직 문구가 없어요. 아래에 써서 더해 주세요.</div>
+    <label class="field"><span>새 문구</span><input type="text" id="phraseText" maxlength="30" autocomplete="off" placeholder="예: 유산균"></label>
+    <div class="hint warn" id="phrasesMsg"></div>
+    <div class="row">
+      <button type="button" class="btn" id="phrasesClose">닫기</button>
+      <button type="submit" class="btn main grow">더하기</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="login">
+  <form id="loginForm">
+    <h2>알밤보드 로그인</h2>
+    <label class="field"><span>이메일</span><input type="email" id="email" autocomplete="username" required></label>
+    <label class="field"><span>비밀번호</span><input type="password" id="password" autocomplete="current-password" required></label>
+    <div class="hint warn" id="loginMsg"></div>
+    <div class="row"><button type="submit" class="btn main grow" id="loginBtn">로그인</button></div>
+  </form>
+</dialog>
+
+<script src="../config.js"></script>
+<script type="module" src="main.js"></script>
+</body>
+</html>

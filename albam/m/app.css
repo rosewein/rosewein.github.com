@@ -1,0 +1,117 @@
+/* 알밤보드 개인 폰 화면(세로).
+ * 거실 화면(../styles/app.css)과 달리 좌표로 놓지 않는다: 위에서 아래로 흐르고 길면 스크롤된다.
+ * 색 이름은 거실 화면과 같다(어두운 화면 / 해 뜬 동안 밝은 종이색). 누르는 것은 높이 44px 이상.
+ * 순서: 글꼴 → 색 → 바탕 → 머리 → 카드 → 버튼 → 더 넣기 → 알림 → 창
+ */
+@font-face { font-family: 'Pretendard'; font-weight: 400; src: url('../fonts/Pretendard-Regular.subset.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'Pretendard'; font-weight: 600; src: url('../fonts/Pretendard-SemiBold.subset.woff2') format('woff2'); font-display: swap; }
+
+:root {
+  --bg: #0b0908; --panel: #15100d; --line: #3b2c21; --line-hi: #6a4e36;
+  --text: #e6d8c0; --strong: #f6ead3; --dim: #a39478;
+  --accent: #e9a253; --warn: #ff8a65; --ok: #92c26f;
+  --btn: #1e1610; --btn-press: #3a2a1c; --on-accent: #2a1608;
+}
+body.light {
+  --bg: #efe5d3; --panel: #f8f0e2; --line: #cdbb9e; --line-hi: #8e7050;
+  --text: #3b2b1d; --strong: #1c120a; --dim: #6f5b47;
+  --accent: #a8520a; --warn: #b8351a; --ok: #3f7422;
+  --btn: #fbf5ea; --btn-press: #e6d7bd; --on-accent: #fff6e8;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  background: var(--bg); color: var(--text); min-height: 100dvh;
+  font-family: 'Pretendard', system-ui, sans-serif; font-size: 15px; line-height: 1.4; letter-spacing: -0.02em;
+  padding: calc(16px + env(safe-area-inset-top)) 16px calc(88px + env(safe-area-inset-bottom));
+  max-width: 480px; margin: 0 auto;
+  -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+}
+[hidden] { display: none !important; }
+h2 { font-size: 13px; font-weight: 400; color: var(--dim); margin: 0 0 8px; }
+.val { font-weight: 600; color: var(--strong); font-variant-numeric: tabular-nums; }
+.hint { font-size: 12px; color: var(--dim); }
+.warn { color: var(--warn); }
+.center { text-align: center; }
+.grow { flex: 1; min-width: 0; }
+
+/* 머리: 오늘 날짜 / 나이 */
+#top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+#today { font-size: 20px; font-weight: 600; color: var(--strong); }
+#age { font-size: 13px; color: var(--dim); }
+#net { font-size: 13px; color: var(--accent); margin: -6px 0 10px; }
+#net.warn { color: var(--warn); }
+
+main { display: flex; flex-direction: column; gap: 12px; }
+
+/* 카드: 이름·마지막 기록 / 지난 시간(가장 큰 글씨) / 버튼 */
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.card.urgent { border-color: var(--warn); }
+.card.urgent .big { color: var(--warn); }
+.head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.head .label { font-size: 14px; color: var(--dim); white-space: nowrap; }
+.head .detail { font-size: 13px; color: var(--dim); text-align: right; }
+.big { font-size: 30px; font-weight: 600; color: var(--strong); line-height: 1.1; font-variant-numeric: tabular-nums; }
+.row { display: flex; gap: 8px; align-items: center; }
+.row.three > * { flex: 1; }
+
+.btn {
+  height: 48px; padding: 0 14px; border-radius: 8px; border: 1px solid var(--line-hi);
+  background: var(--btn); color: var(--text); font: inherit; font-size: 16px; font-weight: 600; white-space: nowrap;
+}
+.btn:active { background: var(--btn-press); }
+.btn.main { border-color: var(--accent); color: var(--accent); }
+.btn.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn.step { padding: 0; width: 52px; font-size: 14px; font-weight: 400; }
+.btn:disabled { opacity: 0.45; }
+#feedAmount { font-size: 22px; }
+#feedMachine { display: block; }
+
+/* 문구 버튼 줄: 누르면 켜짐/꺼짐, 맨 끝 [+]는 더하기·지우기 */
+.chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.chip {
+  height: 44px; padding: 0 14px; border-radius: 22px; border: 1px solid var(--line);
+  background: var(--bg); color: var(--text); font: inherit; font-size: 14px; white-space: nowrap;
+}
+.chip.on { border-color: var(--accent); background: var(--accent); color: var(--on-accent); font-weight: 600; }
+.chip.add { color: var(--dim); border-style: dashed; }
+.phraseRow { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid var(--line); }
+.phraseRow .btn { height: 44px; font-size: 14px; font-weight: 400; }
+
+/* 더 넣기: 기록 종류 표에서 온 버튼들 */
+#moreGrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+#moreGrid .btn { height: 46px; padding: 0 4px; font-size: 14px; font-weight: 400; border-color: var(--line); background: var(--panel); }
+
+#upcomingList { display: flex; flex-direction: column; }
+.appt { display: flex; justify-content: space-between; gap: 8px; padding: 10px 0; border-top: 1px solid var(--line); }
+.appt .left { color: var(--accent); font-weight: 600; white-space: nowrap; }
+
+/* 아래 알림: 저장됨 + [취소 n] */
+#notice {
+  position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom));
+  width: min(448px, calc(100vw - 32px)); min-height: 56px; padding: 8px 8px 8px 14px;
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  background: var(--panel); border: 1px solid var(--accent); border-radius: 12px; color: var(--strong);
+}
+#notice.warn { border-color: var(--warn); color: var(--warn); }
+#undoBtn { height: 44px; }
+
+/* 창 */
+dialog {
+  width: min(448px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); margin: auto; padding: 16px;
+  background: var(--bg); color: var(--text); border: 1px solid var(--line-hi); border-radius: 14px;
+}
+dialog::backdrop { background: rgba(0, 0, 0, 0.6); }
+dialog form, dialog { overflow-y: auto; }
+dialog form { display: flex; flex-direction: column; gap: 12px; }
+dialog h2 { font-size: 18px; font-weight: 600; color: var(--strong); margin: 0; }
+dialog p { margin: 12px 0; }
+.field { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--dim); }
+.field input, #entryValue {
+  height: 48px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--line-hi);
+  background: var(--panel); color: var(--strong); font: inherit; font-size: 16px; min-width: 0; width: 100%;
+}
+#entryValue { font-size: 22px; padding: 0 4px; }
+.check { display: flex; align-items: center; gap: 8px; min-height: 44px; }
+.check input { width: 20px; height: 20px; accent-color: var(--accent); }
+#entryNumber { display: flex; flex-direction: column; gap: 6px; }

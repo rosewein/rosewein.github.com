@@ -50,6 +50,8 @@ class DemoServer {
   loggedIn = true;
   session = { email: 'demo' };
   onSessionChange = () => {};
+  /** 자주 쓰는 문구: 미리 보기라 새로 고치면 처음으로 */
+  phrases = [{ id: 'p1', kind: 'feed', text: '유산균' }, { id: 'p2', kind: 'feed', text: '비타민D' }, { id: 'p3', kind: 'bath', text: '보습로션' }];
 
   constructor() {
     this.events = this.load() ?? sampleEvents();
@@ -71,6 +73,18 @@ class DemoServer {
       case 'care_timeline': return this.timeline(args.p_days);
       case 'care_measures': return this.measures();
       case 'care_upcoming': return this.upcoming();
+      case 'care_phrases': return this.phrases;
+      case 'care_add_phrase': {
+        const text = String(args.p_text || '').trim();
+        const had = this.phrases.find((p) => p.kind === args.p_kind && p.text === text);
+        if (had) return { status: 'exists', id: had.id };
+        const id = crypto.randomUUID();
+        this.phrases = [...this.phrases, { id, kind: args.p_kind, text }];
+        return { status: 'saved', id };
+      }
+      case 'care_remove_phrase':
+        this.phrases = this.phrases.filter((p) => p.id !== args.p_id);
+        return { status: 'removed', id: args.p_id };
       case 'care_set_sleep_end': return this.setSleepEnd(args.p_id, args.p_ended_at);
       case 'care_voice_log': {   // 호출어 시험 기록: 미리 보기에서는 화면 시험용으로만 남긴다
         const log = (window.__albamVoiceLog ??= []);

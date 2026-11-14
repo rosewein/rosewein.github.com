@@ -880,6 +880,148 @@ async function wakeFlow(browser, base) {
   check(errors.length === 0, `오류 없음 ${errors.join(' ')}`);
 }
 
+// ── 개인 폰 화면(m/): 세로 390x844 ──
+const PHONE = { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true, timezoneId: 'Asia/Seoul' };
+async function phoneFlow(browser, base) {
+  const page = await (await browser.newContext(PHONE)).newPage();
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await page.goto(`${base}m/?demo`);
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.waitForFunction(() => document.querySelector('#feedBtn')?.textContent.startsWith('수유'));
+  const noOverflow = () => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth);
+  const small = () => page.evaluate(() => [...document.querySelectorAll('button')].filter((b) => b.offsetParent && b.getBoundingClientRect().height < 44).map((b) => b.textContent));
+  check(await text(page, '#feedBtn') === '수유 200ml' && await text(page, '#feedLabel') === '수유 · 먹은 지', `수유 카드: ${await text(page, '#feedLabel')} / ${await text(page, '#feedBtn')}`);
+  check(/^\d+시간 \d+분$/.test(await text(page, '#feedAgo')) && /· 200ml$/.test(await text(page, '#feedDetail')), `수유 지난 시간·마지막 기록 (${await text(page, '#feedAgo')} / ${await text(page, '#feedDetail')})`);
+  check(await text(page, '#sleepBtn') === '잠들었어요' && /~/.test(await text(page, '#sleepDetail')), '잠 카드: 깬 지 + 잠들었어요');
+  check(/D\+\d+ · \d+개월/.test(await text(page, '#age')), `나이 줄 (${await text(page, '#age')})`);
+  const more = await page.$$eval('#moreGrid button', (b) => b.map((x) => x.textContent));
+  check(more[0] === '산책' && more.includes('예방접종') && !more.includes('수유'), `더 넣기 버튼 ${more.join(' ')}`);
+  await page.waitForFunction(() => !document.querySelector('#upcomingSec').hidden);
+  check(/예방접종 · 헥사심 3차, 폐렴구균 3차, 로타텍 3차, 독감 1차D-20$/.test(await text(page, '#upcomingList')), `다가오는 일정은 미리부터 다 보임 (${await text(page, '#upcomingList')})`);
+  check(await noOverflow(), '옆으로 넘치지 않음');
+  check((await small()).length === 0, `누르는 것은 모두 44px 이상 ${(await small()).join(' ')}`);
+  await shot(page, 'phone-home');
+
+  // 수유에 붙이는 문구: 먹이기 전에 켜 두면 다음 수유에 붙는다
+  const chips = () => page.$$eval('#feedChips .chip', (b) => b.map((x) => `${x.textContent}${x.classList.contains('on') ? '*' : ''}`).join(' '));
+  await page.waitForFunction(() => document.querySelectorAll('#feedChips .chip').length === 3);
+  check(await chips() === '유산균 비타민D +', `수유 문구 줄 (${await chips()})`);
+  await page.click('#feedChips .chip:text-is("유산균")');
+  check(await chips() === '유산균* 비타민D +', '먹이기 전에 눌러 켜 둠');
+
+  // 수유: 한 번 눌러 먹이기 시작 → 다 먹음
+  await page.click('#feedBtn');
+  await page.waitForFunction(() => document.querySelector('#feedBtn').textContent === '다 먹음');
+  await page.waitForFunction(() => document.querySelector('#feedChips .chip.on')?.textContent === '유산균');
+  check(true, '켜 둔 문구가 그 수유에 붙음');
+  // 먹이는 중에는 누르는 대로 그 수유에 붙고 떨어진다
+  await page.click('#feedChips .chip:text-is("비타민D")');
+  await page.waitForFunction(() => document.querySelectorAll('#feedChips .chip.on').length === 2);
+  await page.click('#feedChips .chip:text-is("유산균")');
+  await page.waitForFunction(() => document.querySelectorAll('#feedChips .chip.on').length === 1);
+  check(await chips() === '유산균 비타민D* +', `먹이는 중에 붙이고 떼기 (${await chips()})`);
+  const savedMemo = await page.evaluate(() => JSON.parse(localStorage.getItem('albam.demo.summary')).recent[0].detail.memo);
+  check(savedMemo === '비타민D', `기록의 메모에 들어감 (${savedMemo})`);
+  check(await text(page, '#noticeText') === '수유 200ml 저장됨' && /^취소 \d$/.test(await text(page, '#undoBtn')), `저장 알림과 취소 (${await text(page, '#noticeText')} / ${await text(page, '#undoBtn')})`);
+  check(await text(page, '#feedLabel') === '수유 · 먹는 중' && !(await page.isVisible('#feedAmountBtn')), '먹이는 중: 버튼이 [다 먹음], 양 바꾸기는 숨김');
+  await shot(page, 'phone-feeding');
+  await page.click('#feedBtn');
+  await page.waitForFunction(() => document.querySelector('#feedBtn').textContent === '수유 200ml');
+  check(/^수유 200ml · \d+분 저장됨$/.test(await text(page, '#noticeText')), `다 먹음 (${await text(page, '#noticeText')})`);
+
+  // 양 바꾸기: 이번 한 번만
+  await page.click('#feedAmountBtn');
+  await page.click('#feedSteps [data-step="machine"]');
+  check(await text(page, '#feedBtn') === '수유 230ml' && await text(page, '#feedMachine') === '브레짜 210', `양 바꾸기 +30 (${await text(page, '#feedBtn')} / ${await text(page, '#feedMachine')})`);
+  await page.click('#feedSteps [data-step="-10"]');
+  check(await text(page, '#feedBtn') === '수유 220ml' && await text(page, '#feedMachine') === '브레짜 칸 아님', '±10 은 브레짜 칸 아님');
+  check(await noOverflow(), '양 바꾸기 줄도 옆으로 안 넘침');
+  await page.click('#feedAmountBtn');
+  check(await text(page, '#feedBtn') === '수유 200ml', '양 바꾸기를 닫으면 원래 양');
+
+  // 방금 넣은 수유와 비슷한 기록: 확인 창
+  await page.click('#feedBtn');
+  await page.waitForSelector('#confirm[open]');
+  check(/비슷한 기록이 이미 있어요/.test(await text(page, '#confirmText')), '10분 안 같은 종류는 확인 창');
+  await page.click('#confirmNo');
+  check(await text(page, '#noticeText') === '안 넣었어요', '안 넣기');
+
+  // 기저귀: 저장 → 취소
+  await page.click('[data-diaper="poo"]');
+  await page.waitForFunction(() => document.querySelector('#noticeText').textContent === '기저귀 대변 저장됨');
+  check(await text(page, '#diaperAgo') === '방금' && /대변$/.test(await text(page, '#diaperDetail')), `기저귀 카드가 바로 바뀜 (${await text(page, '#diaperAgo')} / ${await text(page, '#diaperDetail')})`);
+  await page.click('#undoBtn');
+  await page.waitForFunction(() => document.querySelector('#noticeText').textContent === '취소했어요');
+  await page.waitForFunction(() => document.querySelector('#diaperAgo').textContent !== '방금');
+  check(/소변$/.test(await text(page, '#diaperDetail')), '취소하면 앞 기록으로 돌아옴');
+
+  // 잠: 잠들었어요 → 깼어요
+  await page.click('#sleepBtn');
+  await page.waitForFunction(() => document.querySelector('#sleepBtn').textContent === '깼어요');
+  check(await text(page, '#sleepLabel') === '잠 · 자는 중', '자는 중');
+  await page.click('#sleepBtn');
+  await page.waitForFunction(() => document.querySelector('#sleepBtn').textContent === '잠들었어요');
+  check(/^잠 \d+분 저장됨$/.test(await text(page, '#noticeText')), `깼어요 (${await text(page, '#noticeText')})`);
+
+  // 더 넣기: 체중은 지난번 값에서 + 백분위, 산책은 시작~끝, 메모는 글이 꼭
+  await page.click('#moreGrid button:text-is("체중")');
+  check(await page.inputValue('#entryValue') === '7.20' && /^백분위 \d+ · 교정 \d+$/.test(await text(page, '#entryPercentile')), `체중: 지난번 값 + 백분위 (${await page.inputValue('#entryValue')} / ${await text(page, '#entryPercentile')})`);
+  await page.click('#entry [data-n="10"]');
+  await page.click('#entry [data-n="1"]');
+  check(await page.inputValue('#entryValue') === '7.31', `± 버튼 (${await page.inputValue('#entryValue')})`);
+  check(await noOverflow(), '체중 창이 옆으로 안 넘침');
+  await shot(page, 'phone-weight');
+  await page.click('#entrySave');
+  await page.waitForFunction(() => document.querySelector('#noticeText').textContent.startsWith('체중 7.31kg'));
+  await page.click('#moreGrid button:text-is("체중")');
+  check(await page.inputValue('#entryValue') === '7.31', '다음에 열면 방금 넣은 값에서 시작');
+  await page.click('#entryClose');
+  await page.click('#moreGrid button:text-is("산책")');
+  check(await page.isVisible('#entryEnd') && await text(page, '#entryStartLabel') === '시작' && !(await page.isVisible('#entryValue')), '산책: 시작·끝, 숫자 칸 없음');
+  await page.click('#entrySave');
+  await page.waitForFunction(() => document.querySelector('#noticeText').textContent.startsWith('산책 · 10분'));
+  // 목욕: 문구를 눌러 메모에 넣기, 폰에서 문구 더하기·지우기
+  await page.click('#moreGrid button:text-is("목욕")');
+  await page.click('#entryChips .chip:text-is("보습로션")');
+  check(await page.inputValue('#entryMemo') === '보습로션', '문구를 누르면 메모 칸에 들어감');
+  await page.click('#entryChips .chip.add');
+  check(await text(page, '#phrasesTitle') === '목욕 문구' && /보습로션/.test(await text(page, '#phrasesList')), '문구 창: 목욕 문구 목록');
+  await page.fill('#phraseText', '머리 감김');
+  await page.click('#phrasesForm button[type=submit]');
+  await page.waitForFunction(() => /머리 감김/.test(document.querySelector('#phrasesList').textContent));
+  check(await noOverflow(), '문구 창이 옆으로 안 넘침');
+  await shot(page, 'phone-phrases');
+  await page.click('#phrasesList .phraseRow:first-child button');
+  await page.waitForFunction(() => !/보습로션/.test(document.querySelector('#phrasesList').textContent));
+  await page.click('#phrasesClose');
+  const bathChips = await page.$$eval('#entryChips .chip', (b) => b.map((x) => x.textContent).join(' '));
+  check(bathChips === '머리 감김 +', `더한 문구가 버튼으로, 지운 문구는 사라짐 (${bathChips})`);
+  check(await page.inputValue('#entryMemo') === '보습로션', '문구를 지워도 이미 넣은 메모는 그대로');
+  await page.click('#entryChips .chip:text-is("머리 감김")');
+  await shot(page, 'phone-bath');
+  await page.click('#entrySave');
+  await page.waitForFunction(() => document.querySelector('#noticeText').textContent.startsWith('목욕 · 10분 · 보습로션 · 머리 감김'));
+  check(true, '목욕에 문구가 붙어 저장됨');
+  await page.click('#moreGrid button:text-is("메모")');
+  await page.click('#entrySave');
+  check(await text(page, '#entryMsg') === '메모를 써 주세요' && await page.isVisible('#entry'), '메모는 글이 비면 저장 안 함');
+  await page.fill('#entryMemo', '손톱 깎음');
+  await page.click('#entrySave');
+  await page.waitForFunction(() => document.querySelector('#noticeText').textContent.startsWith('메모 · 손톱 깎음'));
+
+  // 연결이 끊기면 쌓았다가 보낸다
+  await page.context().setOffline(true);
+  await page.click('[data-diaper="pee"]');
+  await page.waitForFunction(() => /대기 1건/.test(document.querySelector('#net').textContent));
+  check(await text(page, '#noticeText') === '기저귀 소변 (대기) 저장됨', `오프라인 저장 (${await text(page, '#noticeText')})`);
+  await page.context().setOffline(false);
+  await page.waitForFunction(() => document.querySelector('#net').hidden, null, { timeout: 30000 });
+  check(true, '다시 연결되면 대기가 사라짐');
+  check(errors.length === 0, `페이지 오류 없음 ${errors.join(' ')}`);
+}
+
 const server = await serve();
 const base = `http://localhost:${server.address().port}/albam/`;
 const browser = await chromium.launch();
@@ -893,6 +1035,7 @@ try {
   console.log('# 더보기'); await moreFlow(browser, base);
   console.log('# 호출어'); await wakeFlow(browser, base);
   console.log('# Supabase(가짜)'); await supabaseFlow(browser, base);
+  console.log('# 개인 폰 화면'); await phoneFlow(browser, base);
 } finally {
   await browser.close();
   server.close();
