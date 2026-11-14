@@ -20,6 +20,7 @@ import { setupHome } from './home.js';
 import { setupEntry } from './entry.js';
 import { setupRecords } from './records.js';
 import { setupStats } from './stats.js';
+import { setupSettings } from './settings.js';
 
 const DEMO = new URLSearchParams(location.search).has('demo');
 const IGNORE_SKEW_MS = 5000;
@@ -47,7 +48,7 @@ function main() {
   const notice = createNotice({ undoSeconds: cfg.undoSeconds, onUndone: async () => { await refresh(); if (view === 'records') records.reload(); } });
   ctx.phrases = createPhrases(ctx, DEMO ? 'albam.demo.phrases' : 'albam.phrases', {
     labelOf: (kind) => recordType(kind)?.label || kind,
-    onChange: () => { render(); entry.refreshChips(); },
+    onChange: () => { render(); entry.refreshChips(); if (view === 'settings') settings.render(); },
     notify: (text, tone) => notice.show(text, tone),
   });
   const home = setupHome(ctx);
@@ -55,6 +56,9 @@ function main() {
   const records = setupRecords(ctx);
   ctx.openDay = (day) => { showView('records'); records.showDay(day); };
   const stats = setupStats(ctx);
+  ctx.refresh = () => refresh();
+  ctx.notify = (text, tone) => notice.show(text, tone);
+  const settings = setupSettings(ctx);
 
   // ── 쪽 바꾸기(아래 탭) ──
   let view = 'home';
@@ -64,6 +68,7 @@ function main() {
     $('#viewHome').hidden = view !== 'home';
     $('#viewRecords').hidden = view !== 'records';
     $('#viewStats').hidden = view !== 'stats';
+    $('#viewSettings').hidden = view !== 'settings';
     $('#top').hidden = view !== 'home';   // 다른 쪽은 머리가 따로 있다
     window.scrollTo(0, 0);
   }
@@ -72,6 +77,7 @@ function main() {
       showView(b.dataset.view);
       if (view === 'records') records.show();
       if (view === 'stats') stats.show();
+      if (view === 'settings') settings.show();
     });
   }
 

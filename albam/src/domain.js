@@ -103,15 +103,17 @@ export const DEFAULT_RECORD_TYPES = [
   { key: 'vaccine', label: '예방접종', shape: 'instant', in_more: true },
   { key: 'other', label: '기타', shape: 'range', in_more: true },
 ];
-let recordTypes = new Map(DEFAULT_RECORD_TYPES.map((t) => [t.key, t]));
+let recordTypes_ = new Map(DEFAULT_RECORD_TYPES.map((t) => [t.key, t]));
 /** 요약에서 받은 기록 종류로 바꾼다(비어 있으면 그대로) */
 export function setRecordTypes(list) {
-  if (Array.isArray(list) && list.length) recordTypes = new Map(list.map((t) => [t.key, t]));
+  if (Array.isArray(list) && list.length) recordTypes_ = new Map(list.map((t) => [t.key, t]));
 }
 /** @returns {RecordType|undefined} */
-export const recordType = (kind) => recordTypes.get(kind);
+export const recordType = (kind) => recordTypes_.get(kind);
+/** 모든 종류(표의 순서대로). 설정에서 보임/숨김·순서를 고칠 때 쓴다 */
+export const recordTypes = () => [...recordTypes_.values()];
 /** [+] 더보기에 보일 종류(표의 순서대로) */
-export const moreTypes = () => [...recordTypes.values()].filter((t) => t.in_more);
+export const moreTypes = () => [...recordTypes_.values()].filter((t) => t.in_more);
 /** 수유·기저귀·잠은 큰 버튼과 따로 만든 창이 있다. 나머지는 기록 종류 표로 움직인다 */
 export const isBuiltinKind = (kind) => kind === KIND.FEED || kind === KIND.DIAPER || kind === KIND.SLEEP;
 /** 소수 자리는 한 번에 움직이는 양(step)을 따른다: 0.1 → 37.4, 0.01 → 7.35 */

@@ -77,6 +77,13 @@ export async function createFakeSupabase(context) {
         }
         return reply(200, days);
       }
+      case '/rest/v1/rpc/care_appointments':
+        return reply(200, []);
+      case '/rest/v1/rpc/care_set_appointment':
+      case '/rest/v1/rpc/care_cancel_appointment':
+      case '/rest/v1/rpc/care_show_record_type':
+      case '/rest/v1/rpc/care_order_record_types':
+        return reply(200, { status: 'saved' });
       case '/rest/v1/rpc/care_day':
         return reply(200, { day: body.p_day, from: `${body.p_day}T00:00:00+09:00`, to: `${body.p_day}T24:00:00+09:00`, events: [] });
       case '/rest/v1/rpc/care_phrases':

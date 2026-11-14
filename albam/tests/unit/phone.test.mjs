@@ -140,3 +140,26 @@ test('나이 글은 화면의 나이 줄과 같은 방식(2026-11-07 = 4개월 2
   assert.equal(ageText('2026-07-10', new Date(2026, 6, 1)), '');
   assert.equal(ageText('2026-01-31', new Date(2026, 2, 1)), '1개월 2일');
 });
+
+test('설정: 일정 칸 → 저장 내용, 맞은 접종 → 기록', async () => {
+  const { parseItems, buildAppointment, vaccineEvents } = await import('../../m/settings.js');
+  const { describeAppointment } = await import('../../src/ui/upcoming.js');
+  assert.deepEqual(parseItems(' 헥사심 3차, 독감 1차 ,,\n로타텍 3차'), ['헥사심 3차', '독감 1차', '로타텍 3차']);
+  assert.equal(buildAppointment({ on_date: '', title: '예방접종' }).error, '날짜를 넣어 주세요');
+  assert.equal(buildAppointment({ on_date: '2026-12-22', title: ' ' }).error, '무슨 일정인지 써 주세요');
+  assert.deepEqual(buildAppointment({ id: 'x', on_date: '2026-12-22', at_time: '', title: '예방접종', place: ' 구로병원 ', items: '헥사심 3차, 독감 1차', note: '' }).p,
+    { id: 'x', on_date: '2026-12-22', at_time: '', title: '예방접종', place: '구로병원', items: ['헥사심 3차', '독감 1차'], note: '', kind: 'vaccine' });
+  assert.equal(buildAppointment({ on_date: '2026-12-01', title: '영유아검진', items: '' }).p.kind, 'appointment');
+  // 오늘 맞음: 지금 시각으로, 항목마다 한 줄
+  const today = vaccineEvents({ on_date: '2026-11-14', at_time: null, title: '예방접종', place: '구로병원', items: ['헥사심 3차', '독감 1차'] }, now);
+  assert.deepEqual(today.map((e) => [e.kind, e.detail.vaccine, e.detail.dose, e.detail.memo, e.detail.hospital]), [['vaccine', '헥사심', 3, '헥사심 3차', '구로병원'], ['vaccine', '독감', 1, '독감 1차', '구로병원']]);
+  assert.equal(today[0].occurred_at.getTime(), now.getTime());
+  // 지난 날: 오전 9시(시각을 넣어 뒀으면 그 시각). 항목이 없으면 일정 이름으로 한 줄
+  const past = vaccineEvents({ on_date: '2026-11-11', at_time: null, title: '예방접종', items: [] }, now);
+  assert.deepEqual([past.length, past[0].detail.memo, past[0].detail.dose, past[0].occurred_at.getTime()], [1, '예방접종', undefined, new Date(2026, 10, 11, 9, 0).getTime()]);
+  assert.equal(vaccineEvents({ on_date: '2026-11-11', at_time: '10:30', title: '예방접종', items: ['BCG'] }, now)[0].occurred_at.getHours(), 10);
+  // 오늘인데 넣어 둔 시각이 아직 안 왔으면 지금으로(미래 시각은 서버가 받지 않는다)
+  assert.equal(vaccineEvents({ on_date: '2026-11-14', at_time: '18:00', title: '예방접종', items: ['BCG'] }, now)[0].occurred_at.getTime(), now.getTime());
+  assert.equal(describeAppointment({ on_date: '2026-11-11', title: '예방접종' }, now), null);
+  assert.equal(describeAppointment({ on_date: '2026-11-11', title: '예방접종' }, now, { past: true }).left, '3일 지남');
+});

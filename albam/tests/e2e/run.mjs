@@ -1094,7 +1094,71 @@ async function phoneFlow(browser, base) {
   await page.click('#statBars .bar:nth-child(7)');
   await page.waitForFunction(() => document.querySelector('#daySub').textContent === '어제' && !document.querySelector('#viewRecords').hidden);
   check(await page.$eval('#tabs [data-view="records"]', (b) => b.classList.contains('on')), '막대를 누르면 그날 기록 쪽으로');
+  // 설정 쪽: 일정 넣기·고치기, 문구 모아 보기, 더 넣기 버튼 숨기기·순서
+  await page.click('#tabs [data-view="settings"]');
+  await page.waitForFunction(() => document.querySelectorAll('#apptList .rec').length === 1);
+  check(/예방접종 · 헥사심 3차, 폐렴구균 3차, 로타텍 3차, 독감 1차D-20›$/.test(await text(page, '#apptList')), `일정 목록 (${await text(page, '#apptList')})`);
+  check(/수유 유산균, 비타민D/.test(await text(page, '#phraseKinds')) && /목욕 머리 감김/.test(await text(page, '#phraseKinds')), '문구가 종류마다 한 줄로');
+  check(await noOverflow() && (await small()).length === 0, `설정 쪽: 안 넘치고 누르는 것은 44px 이상 ${(await small()).join(' ')}`);
+  const rowWidths = await page.$$eval('#phraseKinds .rec', (r) => [...new Set(r.map((x) => Math.round(x.getBoundingClientRect().width)))]);
+  check(rowWidths.length === 1 && rowWidths[0] > 300, `문구 줄이 모두 화면 폭 (${rowWidths.join(' ')})`);
+  await shot(page, 'phone-settings');
+  // 새 일정
+  await page.click('#apptAdd');
+  check(await page.evaluate(() => document.activeElement?.id) === 'apptTitle' && await page.inputValue('#apptName') === '예방접종', '일정 창: 날짜 칸에 초점이 가지 않고, 이름은 예방접종부터');
+  await page.click('#apptForm button[type=submit]');
+  const tomorrow = await page.evaluate(() => { const d = new Date(); d.setDate(d.getDate() + 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; });
+  await page.fill('#apptDate', tomorrow);
+  await page.fill('#apptName', '영유아검진');
+  await page.fill('#apptItems', '');
+  await page.fill('#apptPlace', '소아과');
+  await shot(page, 'phone-appointment');
+  await page.click('#apptForm button[type=submit]');
+  await page.waitForFunction(() => document.querySelectorAll('#apptList .rec').length === 2);
+  check(/영유아검진 · 소아과내일›/.test(await text(page, '#apptList .rec:first-child')), `넣은 일정이 가까운 순으로 (${await text(page, '#apptList .rec:first-child')})`);
+  // 고치기 → 오늘로 당기면 [맞았어요]가 생긴다(접종 일정만)
+  await page.locator('#apptList .rec', { hasText: '헥사심 3차' }).click();
+  check(await text(page, '#apptTitle') === '일정 고치기' && !(await page.isVisible('#apptDone')), '아직 안 온 접종 일정에는 [맞았어요]가 없음');
+  const todayKey = await page.evaluate(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; });
+  await page.fill('#apptDate', todayKey);
+  await page.fill('#apptItems', '헥사심 3차, 독감 1차');
+  await page.click('#apptForm button[type=submit]');
+  await page.waitForFunction(() => /오늘›/.test(document.querySelector('#apptList').textContent));
+  await page.locator('#apptList .rec', { hasText: '헥사심 3차' }).click();
+  check(await page.isVisible('#apptDone'), '오늘인 접종 일정에는 [맞았어요 · 기록으로 옮기기]');
+  await page.click('#apptDone');
+  await page.waitForFunction(() => document.querySelector('#noticeText').textContent === '예방접종 2건을 기록에 넣었어요');
+  await page.waitForFunction(() => document.querySelectorAll('#apptList .rec').length === 1);
+  check(true, '맞은 접종은 기록으로 가고 일정은 닫힘');
+  // 일정 지우기는 두 번
+  await page.click('#apptList .rec');
+  await page.click('#apptDelete');
+  check(await text(page, '#apptDelete') === '한 번 더 누르면 지워요', '일정 지우기 한 번: 다시 묻기');
+  await page.click('#apptDelete');
+  await page.waitForFunction(() => document.querySelectorAll('#apptList .rec').length === 0);
+  check(await text(page, '#apptEmpty') === '넣어 둔 일정이 없어요', '일정이 없을 때 안내');
+  // 더 넣기 버튼: 터미타임 숨기기, 예방접종을 맨 위로
+  await page.click('#typeList [aria-label="터미타임 더 넣기에 보임"]');
+  await page.waitForSelector('#typeList [aria-label="터미타임 더 넣기에 숨김"]');
+  for (let i = 0; i < 12 && (await text(page, '#typeList .typeRow:first-child .grow')) !== '예방접종'; i += 1) {
+    await page.click('#typeList [aria-label="예방접종 위로"]');
+    await page.waitForTimeout(150);
+  }
+  check(await text(page, '#typeList .typeRow:first-child .grow') === '예방접종' && !(await page.isEnabled('#typeList [aria-label="예방접종 위로"]')), '예방접종을 맨 위로 올림');
+  // 설정에서 문구 창 열기
+  await page.locator('#phraseKinds .rec', { hasText: '놀이' }).click();
+  await page.fill('#phraseText', '터미타임');
+  await page.click('#phrasesForm button[type=submit]');
+  await page.waitForFunction(() => /터미타임/.test(document.querySelector('#phrasesList').textContent));
+  await page.click('#phrasesClose');
+  await page.waitForFunction(() => /놀이 터미타임/.test(document.querySelector('#phraseKinds').textContent));
+  check(true, '설정에서 놀이 문구에 터미타임을 더함');
+  await page.click('#tabs [data-view="records"]');
+  await page.waitForFunction(() => [...document.querySelectorAll('#dayList .rec .body')].filter((b) => /^예방접종/.test(b.textContent)).length === 2);
+  check((await rows()).includes('예방접종 헥사심 3차') && (await rows()).includes('예방접종 독감 1차'), '맞은 접종이 오늘 기록에 백신마다 한 줄');
   await page.click('#tabs [data-view="home"]');
+  const more2 = await page.$$eval('#moreGrid button', (b) => b.map((x) => x.textContent));
+  check(more2[0] === '예방접종' && !more2.includes('터미타임'), `입력 쪽 더 넣기에 바로 반영 (${more2.join(' ')})`);
   check(await page.isVisible('#feedCard') && !(await page.isVisible('#dayList')), '입력 쪽으로 돌아옴');
 
   // 연결이 끊기면 쌓았다가 보낸다

@@ -565,4 +565,44 @@ exception when insufficient_privilege then raise notice 'ok - non-family cannot 
 end $$;
 reset role;
 
+-- ── 018: 더 넣기 버튼 고르기·순서, 일정 목록 ─────────────────────
+set role authenticated;
+set request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+do $$
+declare s jsonb; keys text[]; v_today date := (now() at time zone 'Asia/Seoul')::date; a jsonb;
+begin
+  perform pg_temp.check(public.care_show_record_type('tummy_time', false) ->> 'status' = 'saved', 'record type hidden');
+  s := public.care_summary();
+  perform pg_temp.check((select not (x ->> 'in_more')::boolean from jsonb_array_elements(s -> 'record_types') x where x ->> 'key' = 'tummy_time'), 'hidden type is not in more');
+  perform public.care_order_record_types(array['vaccine', 'walk', 'bath']);
+  s := public.care_summary();
+  select array_agg(x ->> 'key' order by ord) into keys from jsonb_array_elements(s -> 'record_types') with ordinality as t(x, ord) where x ->> 'key' in ('vaccine', 'walk', 'bath');
+  perform pg_temp.check(keys = array['vaccine', 'walk', 'bath'], 'record types reordered');
+  perform pg_temp.check(s -> 'record_types' -> 0 ->> 'key' = 'feed', 'feed stays first');
+  begin
+    perform public.care_show_record_type('feed', false);
+    raise exception 'FAIL: feed hidden';
+  exception when sqlstate '22023' then raise notice 'ok - built-in types cannot be hidden';
+  end;
+  begin
+    perform public.care_order_record_types(array['sleep', 'walk']);
+    raise exception 'FAIL: built-in reordered';
+  exception when sqlstate '22023' then raise notice 'ok - built-in types cannot be reordered';
+  end;
+  perform public.care_show_record_type('tummy_time', true);
+  perform public.care_set_appointment(jsonb_build_object('on_date', v_today - 3, 'title', '예방접종', 'items', '["헥사심 3차"]'::jsonb));
+  perform public.care_set_appointment(jsonb_build_object('on_date', v_today - 30, 'title', '오래된 일정'));
+  a := public.care_appointments();
+  perform pg_temp.check(exists (select 1 from jsonb_array_elements(a) x where (x ->> 'days_left')::int = -3), 'appointments keep recent past ones');
+  perform pg_temp.check(not exists (select 1 from jsonb_array_elements(a) x where x ->> 'title' = '오래된 일정'), 'appointments drop old ones');
+  perform pg_temp.check(not exists (select 1 from jsonb_array_elements(public.care_upcoming()) x where (x ->> 'days_left')::int < 0), 'upcoming still future only');
+end $$;
+set request.jwt.claim.sub = '22222222-2222-2222-2222-222222222222';
+do $$ begin
+  perform public.care_show_record_type('bath', false);
+  raise exception 'FAIL: stranger changed record type';
+exception when insufficient_privilege then raise notice 'ok - non-family cannot change record types';
+end $$;
+reset role;
+
 \echo 'ALL SQL TESTS PASSED'
