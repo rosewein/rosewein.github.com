@@ -474,4 +474,35 @@ do $$ begin
 exception when check_violation then raise notice 'ok - sex must be boy or girl';
 end $$;
 
+-- ── 015: 다가오는 일정 ─────────────────────
+set role authenticated;
+set request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+do $$
+declare r jsonb; u jsonb; v_today date := (now() at time zone 'Asia/Seoul')::date;
+begin
+  r := public.care_set_appointment(jsonb_build_object('on_date', v_today + 38, 'title', '예방접종', 'items', '["헥사심 3차","독감 1차"]'::jsonb));
+  perform public.care_set_appointment(jsonb_build_object('on_date', v_today, 'at_time', '10:30', 'title', '영유아검진', 'kind', 'checkup'));
+  perform public.care_set_appointment(jsonb_build_object('on_date', v_today - 1, 'title', '지난 일정'));
+  u := public.care_upcoming();
+  perform pg_temp.check(jsonb_array_length(u) = 2, 'upcoming skips past appointments');
+  perform pg_temp.check(u -> 0 ->> 'title' = '영유아검진' and (u -> 0 ->> 'days_left')::int = 0 and u -> 0 ->> 'at_time' = '10:30', 'upcoming nearest first, today is 0');
+  perform pg_temp.check((u -> 1 ->> 'days_left')::int = 38 and u -> 1 -> 'items' ->> 1 = '독감 1차' and u -> 1 ->> 'kind' = 'vaccine', 'upcoming carries items and days left');
+  perform public.care_set_appointment(jsonb_build_object('id', r ->> 'id', 'on_date', v_today + 40, 'title', '예방접종'));
+  perform pg_temp.check((public.care_upcoming() -> 1 ->> 'days_left')::int = 40, 'same id updates the appointment');
+  perform pg_temp.check(public.care_cancel_appointment((r ->> 'id')::uuid) ->> 'status' = 'cancelled', 'appointment cancelled');
+  perform pg_temp.check(jsonb_array_length(public.care_upcoming()) = 1, 'cancel hides appointment');
+  begin
+    perform public.care_set_appointment('{"title":"날짜 없음"}');
+    raise exception 'FAIL: appointment without date accepted';
+  exception when sqlstate '22023' then raise notice 'ok - appointment needs a date';
+  end;
+end $$;
+set request.jwt.claim.sub = '22222222-2222-2222-2222-222222222222';
+do $$ begin
+  perform public.care_upcoming();
+  raise exception 'FAIL: stranger upcoming';
+exception when insufficient_privilege then raise notice 'ok - non-family cannot read upcoming';
+end $$;
+reset role;
+
 \echo 'ALL SQL TESTS PASSED'

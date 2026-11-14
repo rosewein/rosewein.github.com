@@ -70,6 +70,7 @@ class DemoServer {
       case 'care_update_event': return this.updateEvent(args.p);
       case 'care_timeline': return this.timeline(args.p_days);
       case 'care_measures': return this.measures();
+      case 'care_upcoming': return this.upcoming();
       case 'care_set_sleep_end': return this.setSleepEnd(args.p_id, args.p_ended_at);
       case 'care_voice_log': {   // 호출어 시험 기록: 미리 보기에서는 화면 시험용으로만 남긴다
         const log = (window.__albamVoiceLog ??= []);
@@ -131,6 +132,13 @@ class DemoServer {
     e.deleted_at = new Date().toISOString();
     this.save();
     return { status: 'cancelled', id };
+  }
+
+  /** 다가오는 일정: 미리 보기라 20일 뒤 예방접종 하나 */
+  upcoming() {
+    const d = new Date(); d.setDate(d.getDate() + 20);
+    const on = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    return [{ id: 'demo-appointment', on_date: on, at_time: null, kind: 'vaccine', title: '예방접종', place: null, items: ['헥사심 3차', '폐렴구균 3차', '로타텍 3차', '독감 1차'], days_left: 20 }];
   }
 
   /** 측정 기록: 미리 보기라 지난번 값 두 개를 넣어 둔다(성별도 예시) */

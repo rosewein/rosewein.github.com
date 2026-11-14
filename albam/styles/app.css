@@ -239,9 +239,11 @@ button.px.acc { color: var(--btn-on); }
 
 /* ── 시계 쪽: 시각, 날짜·요일, 나이 ── */
 /* 시각 60(글꼴 5배) 14~74 → 날짜·요일 24 80~104 → 나이 12 106~118 → 쪽 점 122 */
-#bigClock { left: 16px; top: 14px; width: 348px; text-align: center; font-size: 60px; line-height: 60px; color: var(--strong); }
-#bigDate { left: 16px; top: 80px; width: 348px; text-align: center; line-height: 24px; color: var(--text); }
-#bigAge { left: 16px; top: 106px; width: 348px; text-align: center; line-height: 12px; color: var(--dim); white-space: pre; }
+/* 시계 쪽 세로 자리: 시각 10~70, 날짜 74~98, 나이 100~112, 가까운 일정 115~127, 쪽 점 129~ */
+#bigClock { left: 16px; top: 10px; width: 348px; text-align: center; font-size: 60px; line-height: 60px; color: var(--strong); }
+#bigDate { left: 16px; top: 74px; width: 348px; text-align: center; line-height: 24px; color: var(--text); }
+#bigAge { left: 16px; top: 100px; width: 348px; text-align: center; line-height: 12px; color: var(--dim); white-space: pre; }
+#bigNext { left: 16px; top: 115px; width: 348px; text-align: center; line-height: 12px; color: var(--text); white-space: pre; overflow: hidden; }
 #bigAge .val { color: var(--strong); }
 
 /* ── 타임라인 쪽: 머리(10~22) → 시각 눈금(24~34) → 3일 줄(36~114, 줄마다 26) ── */

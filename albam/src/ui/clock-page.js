@@ -3,6 +3,7 @@
 //            21:07
 //      11월 7일 토요일
 //   D+143 · 4개월 21일 · 교정 3개월 29일
+//   12월 22일 화 예방접종 D-38 · 헥사심 3차 외 3      ← 가장 가까운 일정(ui/upcoming.js), 없으면 비움
 
 import { $, el } from './dom.js';
 import { ageParts } from './status.js';
@@ -19,12 +20,14 @@ export function setupClockPage(ctx) {
     const time = formatClock(now);
     const { date, weekday } = formatLongDate(now);
     const age = ctx.state.summary?.age;
-    const next = `${time}|${date}|${weekday}|${JSON.stringify(age ?? null)}`;
+    const appt = ctx.upcoming?.next(now) ?? null;
+    const next = `${time}|${date}|${weekday}|${JSON.stringify(age ?? null)}|${JSON.stringify(appt)}`;
     if (next === key) return;
     key = next;
     $('#bigClock').textContent = time;
     $('#bigDate').replaceChildren(date, ' ', el('span', { className: 'acc' }, weekday));
     $('#bigAge').replaceChildren(...(age ? ageParts(age).map(([text, val]) => el('span', { className: val ? 'val' : '' }, text)) : []));
+    $('#bigNext').replaceChildren(...(appt ? [`${appt.date} ${appt.title} `, el('span', { className: 'acc' }, appt.left), appt.items ? ` · ${appt.items}` : ''] : []));
   }
   return { update };
 }

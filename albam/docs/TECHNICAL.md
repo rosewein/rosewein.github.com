@@ -126,6 +126,7 @@ albam/
 │     ├─ day-list.js       그날 기록 목록: 큰 줄, 끌어서 넘김, 누르면 고치기
 │     ├─ stats.js          통계 쪽: 최근 7일 날짜 카드(수유·기저귀·잠)
 │     ├─ measures.js       측정 기록(체중·키): 지난번 값, 백분위 글
+│     ├─ upcoming.js       다가오는 일정: 시계 쪽 맨 아랫줄에 가장 가까운 것 하나
 │     └─ login.js          로그인 창
 ├─ supabase/
 │  ├─ 001_care_schema.sql   표·권한·함수 (여러 번 실행해도 안전)
@@ -142,6 +143,7 @@ albam/
 │  ├─ 012_voice_log.sql     호출어 시험 기록 care_voice_log(알아들음·잘못·못 알아들음)
 │  ├─ 013_walk_vaccine.sql  기록 종류에 산책(시작~끝)·예방접종(한 시각 + 백신 이름)
 │  ├─ 014_measures.sql      측정 기록 모아 읽기 care_measures()(지난번 값·성장 백분위), 아기 성별
+│  ├─ 015_appointments.sql  다가오는 일정 care_appointments · care_upcoming()(예방접종 예약 등)
 │  └─ queries/              SQL Editor 에서 돌려 보는 확인용 질의
 ├─ sprites/                도트 그림 원본 PNG + sprites.json
 ├─ fonts/                  프리텐다드 글꼴(한글 2,780자 판, 보통·굵게, SIL OFL 1.1)
@@ -301,6 +303,12 @@ flowchart TD
 - 성별은 `care_baby_profile.sex`(`boy`/`girl`). 비어 있으면 백분위를 보이지 않는다. SQL Editor에서 한 번 넣는다: `update public.care_baby_profile set sex = 'boy';`
 - 표를 다시 만들 때: `pip download pygrowup --no-deps --no-binary :all:`로 받은 꾸러미의 `pygrowup/tables`를 `tools/make_growth_data.py`에 넘긴다.
 
+**다가오는 일정**(015): `care_events`는 이미 일어난 일만 받아서(5분 넘는 미래는 거절), 예약은 `care_appointments(on_date, at_time, kind, title, place, items[], note)`에 따로 둔다. 시각·장소는 모르면 비운다.
+- `care_upcoming(p_limit default 5)`: 오늘(서울)부터의 일정을 가까운 순으로, `days_left`(오늘 0)와 함께. `care_set_appointment(p)`는 넣기·고치기(같은 id면 고치기), `care_cancel_appointment(id)`는 취소 표시.
+- 화면: 시계 쪽 나이 아랫줄에 가장 가까운 일정 하나, "12월 22일 화 예방접종 D-38 · 헥사심 3차 외 3"(`ui/upcoming.js`). 그날이면 "오늘", 하루 전 "내일". 넣는 화면은 아직 없어 SQL Editor 에서 넣는다:
+  `select public.care_set_appointment('{"on_date":"2026-12-22","title":"예방접종","items":["헥사심 3차","독감 1차"]}');`(로그인한 가족으로) 또는 표에 바로 `insert`.
+- 예방접종은 교정 나이가 아니라 태어난 날 기준으로 맞는다. 맞은 접종은 `care_events`의 `vaccine` 기록(백신 하나에 한 줄, `detail.vaccine`·`dose`·`hospital`).
+
 **`care_timeline(p_days int default 3) → jsonb`** (005): 오늘 포함 최근 n일(1~7) 기록을 실제 시각 순으로. `[{id, kind, at, ended_at, ml, type}]`(type은 기저귀 종류). 그날 시작 전에 잠들어 그날 깬 잠도 들어간다.
 
 **`care_stats(p_days int default 7) → jsonb`** (003): 오늘을 포함한 최근 n일(1~92) 날짜별 합계, 날짜 오름차순. 기록이 없는 날도 0으로 들어간다.
@@ -454,7 +462,7 @@ flowchart TD
 - 창이 열려 있거나 밤 화면이면 밀어도 넘기지 않는다. 저장 직후 [취소]가 떠 있을 때는 넘길 수 있다(방금 넣은 걸 타임라인에서 보려고).
 - 밀고 손을 뗀 곳의 클릭은 0.4초 동안 버린다. 버튼 위에서 밀기 시작해도 버튼이 눌리지 않는다.
 
-**시계 쪽**(`clock-page.js`): 시각은 60px(글꼴 5배), 날짜·요일은 24px(요일은 주황), 그 아래 나이(대시보드와 같은 줄).
+**시계 쪽**(`clock-page.js`): 시각은 60px(글꼴 5배), 날짜·요일은 24px(요일은 주황), 그 아래 나이(대시보드와 같은 줄), 맨 아래 가장 가까운 일정 한 줄(015).
 
 **타임라인 쪽**(`timeline.js`): 오늘·어제·그저께를 한 줄씩, 0~24시를 300px에 그린다.
 
@@ -791,7 +799,7 @@ flowchart LR
 - 이 저장소는 GitHub Pages로 나간다. main에 합치면 `https://rosewein.github.io/albam/`에 반영된다.
 - 서비스 워커는 네트워크를 먼저 쓴다. 그래서 고친 파일은 다음에 열 때 바로 보인다. 오프라인일 때만 캐시를 쓴다.
 - 파일을 더하거나 이름을 바꾸면 `sw.js`의 `FILES`에 반영하고 `VERSION`을 올린다.
-- SQL은 Supabase SQL Editor에서 번호 순서대로 직접 실행한다(지금 `001`~`014`). 바꿀 때는 `008_…sql`처럼 번호를 붙여 새 파일로 더하고, 이미 실행한 파일은 고치지 않는다. 함수를 바꿀 때는 새 파일에 `create or replace`로 함수 전체를 다시 쓴다(002의 `care_summary()`처럼).
+- SQL은 Supabase SQL Editor에서 번호 순서대로 직접 실행한다(지금 `001`~`015`). 바꿀 때는 `008_…sql`처럼 번호를 붙여 새 파일로 더하고, 이미 실행한 파일은 고치지 않는다. 함수를 바꿀 때는 새 파일에 `create or replace`로 함수 전체를 다시 쓴다(002의 `care_summary()`처럼).
 - `config.js`에는 publishable(anon) key만 둔다. 공개돼도 되는 값이고, 읽고 쓰기는 RLS와 가족 명단이 막는다. service_role 키는 절대 넣지 않는다.
 
 ## 12. 고치고 늘리는 법
