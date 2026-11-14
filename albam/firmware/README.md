@@ -81,6 +81,7 @@ CONFIG_ALBAM_WIFI_PASSWORD="비밀번호"
 | `main/care.c` | 서버(Supabase) 로그인·토큰 갱신, 20초마다 요약 읽기. 웹앱 `src/api/supabase-rest.js` 와 같은 HTTP 호출 |
 | `main/care_text.c` | 요약을 화면에 보일 글로 바꾸는 규칙(지난 시간, 급한 항목, 기저귀 세부). 웹앱 `src/time.js`·`src/ui/status.js` 와 같다 |
 | `main/ui.c` | 화면 네 개: 대시보드, 설정, 와이파이 고르기, 로그인(LVGL 9) |
+| `main/lv_mem_psram.c` | LVGL 메모리를 PSRAM 에서 받는다(안쪽 메모리는 와이파이·드라이버 몫) |
 | `main/board.c` | 보드에 붙은 일: 화면·터치 켜기, 가로 회전, 글꼴 읽기 |
 | `main/update.c` | 자동 업데이트: 깃허브 릴리스의 새 판을 받아 바꾼다 |
 | `main/ota.c` | 손으로 보내는 업데이트 서버(`/`, `/update`)와 상태 보기(`/info`) |
