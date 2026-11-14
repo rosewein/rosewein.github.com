@@ -5,6 +5,7 @@
 //                      지난 2주 안의 일정도 남아 있다("3일 지남"): 접종한 날 [맞았어요]를 잊어도 나중에 옮길 수 있게
 //   예방접종 일정표    맞음 14 · 예약 5 · 지금 맞을 때 0 · 시기 지남 0
 //                      6개월(12/18~)  DTaP 3차 …… 예약 12/22         ← 표준예방접종일정표에 맞은 기록·예약을 맞춰 본다
+//   영유아 건강검진    건강검진 2차 4~6개월 …… 지금 받을 때(1/17까지) [받았어요]
 //   자주 쓰는 문구     수유 · 유산균, 비타민D ›   목욕 · 보습로션 ›  …
 //   더 넣기 버튼       [▲][▼] 산책 [보임]   …                        ← 모든 화면에 같이 적용
 //
@@ -13,6 +14,7 @@
 import { SOURCE, isBuiltinKind, recordTypes } from '../src/domain.js';
 import { describeAppointment } from '../src/ui/upcoming.js';
 import { vaccineStatus, statusText } from '../src/vaccines.js';
+import { checkupStatus } from '../src/checkups.js';
 import { dayKey } from './records.js';
 
 const $ = (s) => document.querySelector(s);
@@ -58,7 +60,8 @@ export function vaccineEvents(a, now) {
 
 /**
  * @param {{api: object, now: () => Date, refresh: () => Promise<void>, notify: (text: string, tone?: string) => void,
- *          phrases: {of: Function, manage: Function, labelOf: Function}, upcoming: {load: Function}}} ctx
+ *          phrases: {of: Function, manage: Function, labelOf: Function}, upcoming: {load: Function},
+ *          openEntry: (kind: string, opts?: {memo?: string}) => void}} ctx
  */
 export function setupSettings(ctx) {
   const dialog = $('#appt');
@@ -80,7 +83,7 @@ export function setupSettings(ctx) {
     $('#apptEmpty').hidden = list.length > 0;
   }
   async function loadAppointments() {
-    try { list = await ctx.api.getAppointments(); renderAppointments(); renderVaccines(); } catch (e) { $('#apptEmpty').hidden = false; $('#apptEmpty').textContent = '일정을 못 받았어요. 연결을 확인해 주세요'; }
+    try { list = await ctx.api.getAppointments(); renderAppointments(); renderVaccines(); renderCheckups(); } catch (e) { $('#apptEmpty').hidden = false; $('#apptEmpty').textContent = '일정을 못 받았어요. 연결을 확인해 주세요'; }
   }
   function renderApptButtons() {
     const armed = Date.now() < deleteArmedUntil;
@@ -184,8 +187,38 @@ export function setupSettings(ctx) {
     $('#vaxMore').hidden = !coming.length;
     $('#vaxMore').textContent = vaxAll ? '곧 올 것까지만 보기' : '전체 일정 보기(12세까지)';
   }
+  // ── 영유아 건강검진 ──
+  let checkAll = false;
+  function renderCheckups() {
+    if (!vax?.baby?.birth_date) return;
+    const s = checkupStatus({ birth: vax.baby.birth_date, records: vax.checkups || [], appointments: list, now: ctx.now() });
+    const c = s.counts;
+    $('#checkSummary').textContent = `받음 ${c.done} · 예약 ${c.booked} · 지금 받을 때 ${c.due} · 시기 지남 ${c.overdue}`;
+    // 처음엔 지난 것과 곧 올 것 하나씩(건강·구강)까지만
+    const later = s.rows.filter((r) => r.status === 'later');
+    const firstLater = new Set(['health', 'dental'].map((k) => later.find((r) => r.key === k)).filter(Boolean));
+    const shown = checkAll ? s.rows : s.rows.filter((r) => r.status !== 'later' || firstLater.has(r));
+    $('#checkList').replaceChildren(...shown.map((r) => {
+      const open = r.status === 'due' || r.status === 'overdue' || r.status === 'booked';
+      const row = el('div', `vaxRow ${r.status}${open ? ' act' : ''}`);
+      const text = statusText(r).replace('맞음', '받음').replace('맞을 때', '받을 때');
+      row.append(el('span', 'grow', `${r.name} ${r.n}차 · ${r.period}`), el('span', 'st', text));
+      if (open) {
+        // 받았어요: 영유아검진 기록 창을 "2차"가 채워진 채로 연다(날짜는 창에서 고친다)
+        const b = el('button', 'btn', '받았어요');
+        b.setAttribute('aria-label', `${r.name} ${r.n}차 받았어요`);
+        b.addEventListener('click', () => ctx.openEntry('checkup', { memo: `${r.key === 'dental' ? '구강검진 ' : ''}${r.n}차` }));
+        row.append(b);
+      }
+      return row;
+    }));
+    $('#checkMore').hidden = later.length <= firstLater.size;
+    $('#checkMore').textContent = checkAll ? '곧 올 것까지만 보기' : '전체 검진 보기(71개월까지)';
+  }
+  $('#checkMore').addEventListener('click', () => { checkAll = !checkAll; renderCheckups(); });
+
   async function loadVaccines() {
-    try { vax = await ctx.api.getVaccines(); renderVaccines(); } catch (e) { $('#vaxSummary').textContent = '접종 기록을 못 받았어요. 연결을 확인해 주세요'; }
+    try { vax = await ctx.api.getVaccines(); renderVaccines(); renderCheckups(); } catch (e) { $('#vaxSummary').textContent = '접종 기록을 못 받았어요. 연결을 확인해 주세요'; }
   }
   $('#vaxMore').addEventListener('click', () => { vaxAll = !vaxAll; renderVaccines(); });
 

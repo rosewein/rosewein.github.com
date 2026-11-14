@@ -101,6 +101,7 @@ export const DEFAULT_RECORD_TYPES = [
   { key: 'play', label: '놀이', shape: 'range', in_more: true },
   { key: 'hospital', label: '병원', shape: 'instant', in_more: true },
   { key: 'vaccine', label: '예방접종', shape: 'instant', in_more: true },
+  { key: 'checkup', label: '영유아검진', shape: 'instant', in_more: true },
   { key: 'other', label: '기타', shape: 'range', in_more: true },
 ];
 let recordTypes_ = new Map(DEFAULT_RECORD_TYPES.map((t) => [t.key, t]));

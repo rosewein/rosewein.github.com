@@ -625,4 +625,19 @@ exception when insufficient_privilege then raise notice 'ok - non-family cannot 
 end $$;
 reset role;
 
+-- ── 020: 영유아 건강검진 ─────────────────────
+set role authenticated;
+set request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+do $$
+declare v jsonb; s jsonb;
+begin
+  perform public.care_add_event(jsonb_build_object('kind', 'checkup', 'occurred_at', now() - interval '5 days', 'detail', '{"memo":"2차"}'::jsonb, 'force', true));
+  v := public.care_vaccines();
+  perform pg_temp.check(jsonb_array_length(v -> 'checkups') = 1 and v -> 'checkups' -> 0 ->> 'text' = '2차', 'checkups listed with round text');
+  perform pg_temp.check(jsonb_array_length(v -> 'records') = 2, 'checkups are not counted as vaccines');
+  s := public.care_summary();
+  perform pg_temp.check(exists (select 1 from jsonb_array_elements(s -> 'record_types') x where x ->> 'key' = 'checkup' and x ->> 'label' = '영유아검진'), 'checkup record type exists');
+end $$;
+reset role;
+
 \echo 'ALL SQL TESTS PASSED'

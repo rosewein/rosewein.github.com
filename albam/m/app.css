@@ -167,6 +167,9 @@ body.light { --corrected: #3f5fae; }
 .vaxRow.booked .st { color: var(--accent); font-weight: 600; }
 .vaxRow.due .st, .vaxRow.overdue .st { color: var(--warn); font-weight: 600; }
 .vaxRow.later { color: var(--dim); }
+.vaxRow .btn { height: 44px; font-size: 13px; font-weight: 400; padding: 0 10px; }
+.vaxRow.act { align-items: center; }
+#checkMore { align-self: flex-start; margin: 6px 0; }
 #vaxMore { align-self: flex-start; margin: 6px 0; }
 
 /* 아래 탭 */

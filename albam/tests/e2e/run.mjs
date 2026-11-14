@@ -678,7 +678,7 @@ async function moreFlow(browser, base) {
   await page.clock.runFor(800);
   await page.click('#lateBtn');
   const labels = await page.$$eval('#moreGrid button', (b) => b.map((x) => x.textContent));
-  check(['산책', '목욕', '체온', '투약', '체중', '키', '메모', '터미타임', '놀이', '병원', '예방접종', '기타'].every((l) => labels.includes(l)) && !labels.includes('수유'),
+  check(['산책', '목욕', '체온', '투약', '체중', '키', '메모', '터미타임', '놀이', '병원', '예방접종', '영유아검진', '기타'].every((l) => labels.includes(l)) && !labels.includes('수유'),
     `더보기 창에 종류 버튼 ${labels.join(' ')}`);
   check((await curvedEdgeOffenders(page, '#moreSheet h2, #moreSheet button')).length === 0, '더보기 창: 위·아래 곡면에 글·버튼 없음');
   await shot(page, 'more');
@@ -897,7 +897,7 @@ async function phoneFlow(browser, base) {
   check(await text(page, '#sleepBtn') === '잠들었어요' && /~/.test(await text(page, '#sleepDetail')), '잠 카드: 깬 지 + 잠들었어요');
   check(/D\+\d+ · \d+개월/.test(await text(page, '#age')), `나이 줄 (${await text(page, '#age')})`);
   const more = await page.$$eval('#moreGrid button', (b) => b.map((x) => x.textContent));
-  check(more[0] === '산책' && more.includes('예방접종') && !more.includes('수유'), `더 넣기 버튼 ${more.join(' ')}`);
+  check(more[0] === '산책' && more.includes('예방접종') && more.includes('영유아검진') && !more.includes('수유'), `더 넣기 버튼 ${more.join(' ')}`);
   await page.waitForFunction(() => !document.querySelector('#upcomingSec').hidden);
   check(/예방접종 · 헥사심 3차, 폐렴구균 3차, 로타텍 3차, 독감 1차D-20$/.test(await text(page, '#upcomingList')), `다가오는 일정은 미리부터 다 보임 (${await text(page, '#upcomingList')})`);
   check(await noOverflow(), '옆으로 넘치지 않음');
@@ -1110,6 +1110,17 @@ async function phoneFlow(browser, base) {
   await page.click('#vaxMore');
   check(await page.$$eval('#vaxList .vaxRow', (r) => r.length) > before2 && /곧 올 것까지만/.test(await text(page, '#vaxMore')), '[전체 일정 보기]로 12세까지');
   await page.click('#vaxMore');
+  // 영유아 건강검진: 1차는 받음(미리 보기), 2차는 지금 받을 때 → [받았어요]
+  await page.waitForFunction(() => document.querySelectorAll('#checkList .vaxRow').length >= 3);
+  const checks = await page.$$eval('#checkList .vaxRow', (r) => r.map((x) => x.textContent));
+  check(/^건강검진 1차 · 생후 14~35일받음 \d+\/\d+$/.test(checks[0]) && /^건강검진 2차 · 4~6개월지금 받을 때\(\d+\/\d+까지\)받았어요$/.test(checks[1]), `검진 시기 (${checks.slice(0, 2).join(' | ')})`);
+  check(/^받음 1 · 예약 0 · 지금 받을 때 1 · 시기 지남 0$/.test(await text(page, '#checkSummary')), `검진 합계 (${await text(page, '#checkSummary')})`);
+  await page.click('#checkList [aria-label="건강검진 2차 받았어요"]');
+  check(await text(page, '#entryTitle') === '영유아검진 넣기' && await page.inputValue('#entryMemo') === '2차', '[받았어요]: 영유아검진 창이 "2차"가 채워진 채로 열림');
+  await page.click('#entrySave');
+  await page.waitForFunction(() => /^건강검진 2차 · 4~6개월받음/.test(document.querySelectorAll('#checkList .vaxRow')[1]?.textContent || ''));
+  check(/^받음 2 · 예약 0 · 지금 받을 때 0 · 시기 지남 0$/.test(await text(page, '#checkSummary')), '받은 검진이 바로 받음으로');
+  await page.waitForFunction(() => document.querySelector('#notice').hidden, null, { timeout: 10000 });
   const rowWidths = await page.$$eval('#phraseKinds .rec', (r) => [...new Set(r.map((x) => Math.round(x.getBoundingClientRect().width)))]);
   check(rowWidths.length === 1 && rowWidths[0] > 300, `문구 줄이 모두 화면 폭 (${rowWidths.join(' ')})`);
   await page.evaluate(() => window.scrollTo(0, 0));
