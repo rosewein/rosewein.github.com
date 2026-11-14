@@ -102,6 +102,50 @@ main { display: flex; flex-direction: column; gap: 12px; }
 .rec .go { color: var(--dim); }
 .warnBtn { border-color: var(--warn); color: var(--warn); font-size: 13px; }
 
+/* 통계 쪽: 고르는 줄, 막대, 칸 */
+#statGrowth, #statDays { display: flex; flex-direction: column; gap: 12px; }
+#statGrowth > .row { align-items: stretch; }
+.seg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.seg.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+#growthKinds { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.seg button { height: 44px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--text); font: inherit; font-size: 15px; }
+.seg button.on { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+.bars { height: 150px; display: flex; align-items: flex-end; gap: 6px; }
+.bars.n30 { gap: 2px; } .bars.n90 { gap: 1px; }
+.bar { flex: 1; min-width: 0; height: 100%; display: flex; align-items: flex-end; background: none; border: 0; padding: 0; }
+.bar .fill { display: block; width: 100%; min-height: 2px; background: var(--line-hi); border-radius: 3px 3px 0 0; }
+.bar.today .fill { background: var(--accent); }
+.axis { display: flex; justify-content: space-between; }
+.cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.stat { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+.stat .val { font-size: 20px; }
+.stat.wide { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 8px; }
+.gap { display: grid; grid-template-columns: 44px 1fr auto; align-items: center; gap: 8px; }
+.gap .val { font-size: 14px; }
+.gap .track { display: block; height: 10px; border-radius: 5px; background: var(--bg); overflow: hidden; }
+.gap .track .fill { display: block; height: 100%; border-radius: 5px; background: var(--line-hi); }
+
+/* 성장곡선: 또래 줄은 회색, 기본 나이는 주황 점, 교정 나이는 파란 빈 점(색만이 아니라 모양도 다르게) */
+:root { --corrected: #8fa6e0; }
+body.light { --corrected: #3f5fae; }
+#growthSvg { width: 100%; height: auto; display: block; }
+#growthSvg .grid { stroke: var(--line); stroke-width: 1; }
+#growthSvg .tick { font-size: 10px; fill: var(--dim); }
+#growthSvg .pct { fill: none; stroke: var(--line-hi); stroke-width: 1; }
+#growthSvg .pct.mid { stroke: var(--dim); stroke-width: 1.5; }
+#growthSvg .line { fill: none; stroke-width: 2; }
+#growthSvg .line.actual { stroke: var(--accent); }
+#growthSvg .line.corrected { stroke: var(--corrected); stroke-dasharray: 4 3; }
+#growthSvg .dot.actual { fill: var(--accent); }
+#growthSvg .dot.corrected { fill: var(--panel); stroke: var(--corrected); stroke-width: 2; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.legend i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; }
+.legend .dotA { background: var(--accent); }
+.legend .dotC { border: 2px solid var(--corrected); }
+.two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.stat.actual .hint:first-child { color: var(--accent); }
+.stat.corrected .hint:first-child { color: var(--corrected); }
+
 /* 아래 탭 */
 #tabs {
   position: fixed; left: 0; right: 0; bottom: 0; height: calc(56px + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom);
