@@ -62,13 +62,14 @@ static esp_err_t info_get(httpd_req_t *req)
     ui_touch_diag(&presses, &touch_x, &touch_y);
     static char json[1000];
     snprintf(json, sizeof(json),
-             "{\"name\":\"%s\",\"version\":\"%s\",\"built\":\"%s %s\",\"slot\":\"%s\",\"uptime_s\":%d,"
+             "{\"name\":\"%s\",\"version\":\"%s\",\"built\":\"%s %s\",\"slot\":\"%s\",\"uptime_s\":%d,\"reset_reason\":%d,"
              "\"heap\":{\"internal_free\":%u,\"internal_min\":%u,\"internal_largest\":%u,\"psram_free\":%u,\"psram_min\":%u},"
              "\"care\":{\"state\":%d,\"ok\":%d,\"fails\":%d,\"fails_in_a_row\":%d,\"seconds_since_ok\":%d,"
              "\"seconds_since_error\":%d,\"last_error\":\"%s\"},"
              "\"touch\":{\"presses\":%d,\"x\":%d,\"y\":%d}}",
              app->project_name, app->version, app->date, app->time, running ? running->label : "?",
              (int)(esp_timer_get_time() / 1000000),
+             (int)esp_reset_reason(),   /* 왜 다시 켜졌나: 1 전원, 3 스스로(업데이트 등), 4 죽음(panic), 5·6·7 멈춰서 감시가 끔, 9 전압 */
              (unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL), (unsigned)heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL),
              (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL),
              (unsigned)heap_caps_get_free_size(MALLOC_CAP_SPIRAM), (unsigned)heap_caps_get_minimum_free_size(MALLOC_CAP_SPIRAM),

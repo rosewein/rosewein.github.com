@@ -24,10 +24,10 @@ CONFIG_SPIRAM=y
 CONFIG_IDF_EXPERIMENTAL_FEATURES=y
 CONFIG_SPIRAM_SPEED_200M=y
 
-# 안쪽 메모리(약 0.7MB)는 와이파이·화면 드라이버가 써야 한다. 여기가 모자라면 서버 연결(TLS)이 실패할 수 있어
-# TLS 는 PSRAM 으로 보내고, 안쪽은 256KB 를 남겨 둔다. 남은 양은 /info 의 heap 에서 본다.
-# (작은 조각까지 PSRAM 으로 보내는 SPIRAM_MALLOC_ALWAYSINTERNAL=1024 는 0.2.2 에서 터치가 안 먹어 뺐다)
-CONFIG_SPIRAM_MALLOC_RESERVE_INTERNAL=262144
+# 안쪽 메모리(약 0.7MB)는 와이파이·화면 드라이버가 써야 한다. 서버 연결(TLS)은 PSRAM 을 쓰게 하고,
+# LVGL 도 PSRAM 을 쓴다(main/lv_mem_psram.c). 남은 양은 /info 의 heap 에서 본다.
+# (안쪽 256KB 를 따로 떼어 두는 SPIRAM_MALLOC_RESERVE_INTERNAL 은 오히려 보통 쓸 몫을 줄여 0.2.4 가
+#  켜진 지 1분도 안 돼 죽고 다시 켜지기를 되풀이했다. 넣지 않는다)
 CONFIG_MBEDTLS_EXTERNAL_MEM_ALLOC=y
 
 CONFIG_FREERTOS_HZ=1000
