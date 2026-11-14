@@ -126,14 +126,20 @@ dialog {
 }
 dialog::backdrop { background: rgba(0, 0, 0, 0.6); }
 dialog form, dialog { overflow-y: auto; }
-dialog form { display: flex; flex-direction: column; gap: 12px; }
+dialog form { display: flex; flex-direction: column; gap: 12px; overflow-x: hidden; }
+dialog form > * { min-width: 0; }
+dialog h2:focus { outline: none; }
 dialog h2 { font-size: 18px; font-weight: 600; color: var(--strong); margin: 0; }
 dialog p { margin: 12px 0; }
-.field { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--dim); }
+.field { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--dim); min-width: 0; }
 .field input, #entryValue {
   height: 48px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--line-hi);
-  background: var(--panel); color: var(--strong); font: inherit; font-size: 16px; min-width: 0; width: 100%;
+  background: var(--panel); color: var(--strong); font: inherit; font-size: 16px; min-width: 0; width: 100%; max-width: 100%;
+  /* 아이폰 사파리의 날짜·시간 칸은 제 모양(폭이 내용만큼, 글이 가운데)을 고집해 창 밖으로 넘친다 → 기본 모양을 끄고 다른 칸과 맞춘다 */
+  display: block; -webkit-appearance: none; appearance: none; margin: 0; line-height: 46px;
 }
+.field input::-webkit-date-and-time-value { text-align: left; margin: 0; min-height: 0; }
+.field input[type="number"], #entryValue { line-height: normal; }
 #entryValue { font-size: 22px; padding: 0 4px; }
 .check { display: flex; align-items: center; gap: 8px; min-height: 44px; }
 .check input { width: 20px; height: 20px; accent-color: var(--accent); }

@@ -1026,6 +1026,9 @@ async function phoneFlow(browser, base) {
   await page.locator('#dayList .rec', { hasText: /수유 200ml · \d+분 · 비타민D›/ }).click();
   check(await text(page, '#entryTitle') === '기록 고치기 · 수유' && await page.inputValue('#entryAmount') === '200' && await page.inputValue('#entryMemo') === '비타민D', '수유 고치기 창: 양·메모가 채워짐');
   check(await page.isChecked('#entryHasEnd') && await page.isVisible('#entryDelete'), '끝 시각이 켜져 있고 [지우기]가 있음');
+  check(await page.evaluate(() => document.activeElement?.id) === 'entryTitle', '창이 열릴 때 시각 칸에 초점이 가지 않음(아이폰에서 달력이 바로 뜨던 것)');
+  const widths = await page.$$eval('#entryStart, #entryEnd, #entryAmount, #entryMemo', (els) => els.map((e) => Math.round(e.getBoundingClientRect().width)));
+  check(new Set(widths).size === 1 && await page.$eval('#entryForm', (f) => f.scrollWidth <= f.clientWidth), `시각·양·메모 칸 폭이 같고 창 안에 들어감 (${widths.join(' ')})`);
   await page.fill('#entryAmount', '230');
   await page.click('#entryChips .chip:text-is("유산균")');
   await shot(page, 'phone-edit-feed');
