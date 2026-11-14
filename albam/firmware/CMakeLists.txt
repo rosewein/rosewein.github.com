@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 # 화면 아래와 /info 에 나오는 판 번호. 무선으로 새 판을 보낼 때마다 올린다.
-set(PROJECT_VER "0.3.1")
+set(PROJECT_VER "0.3.2")
 # 깃허브 빌드는 커밋 번호를 붙인다("0.2.2+1a2b3c4"). 자동 업데이트가 이 글이 다르면 새 판으로 본다
 if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/build_id.txt")
     file(STRINGS "${CMAKE_CURRENT_LIST_DIR}/build_id.txt" ALBAM_BUILD_ID LIMIT_COUNT 1)

@@ -70,6 +70,7 @@ static care_action_t s_undo, s_confirming;
 static uint32_t s_undo_until, s_notice_until, s_happy_until;
 
 static lv_obj_t *s_settings, *s_info;
+static lv_obj_t *s_updating, *s_updating_text, *s_updating_bar;
 static lv_obj_t *s_wifi, *s_list, *s_ssid, *s_pass, *s_wifi_msg;
 static lv_obj_t *s_login, *s_email, *s_login_pass, *s_login_msg, *s_login_keyboard;
 static net_ap_t s_aps[MAX_APS];
@@ -929,6 +930,21 @@ static void build_settings(void)
     lv_obj_set_pos(button(s_settings, "닫기", back_home, 200, 84), 1052, 616);
 }
 
+/* ---- 새 펌웨어 받는 중 ---- */
+
+static void build_updating(void)
+{
+    s_updating = lv_obj_create(NULL);
+    lv_obj_set_style_bg_color(s_updating, lv_color_hex(0x000000), 0);
+    lv_obj_remove_flag(s_updating, LV_OBJ_FLAG_SCROLLABLE);
+    s_updating_text = label(s_updating, F.text, C_DIM, "");
+    lv_obj_align(s_updating_text, LV_ALIGN_CENTER, 0, -30);
+    s_updating_bar = lv_bar_create(s_updating);
+    lv_obj_set_size(s_updating_bar, 600, 12);
+    lv_obj_align(s_updating_bar, LV_ALIGN_CENTER, 0, 20);
+    lv_bar_set_range(s_updating_bar, 0, 100);
+}
+
 /* ---- 터치가 들어오는지 보기(/info 에 나온다) ---- */
 
 static int s_presses;
@@ -962,8 +978,22 @@ static void tick(lv_timer_t *timer)
         update_info(&net);
     }
 
-    /* 새 펌웨어를 받는 동안에는 대시보드에서 진행을 보여 준다 */
-    if (ota_progress() >= 0 && now != s_home) {
+    /* 새 펌웨어를 받는 동안에는 까만 화면에 진행 막대만 보여 준다.
+     * 받는 동안 화면 신호가 끊겨 번쩍이는데, 그릴 것이 거의 없으면 덜 보이기를 기대한 것이다 */
+    int progress = ota_progress();
+    if (progress >= 0) {
+        char text[48];
+        snprintf(text, sizeof(text), "새 펌웨어 받는 중 %d%%", progress);
+        set_text(s_updating_text, text);
+        if (lv_bar_get_value(s_updating_bar) != progress) {
+            lv_bar_set_value(s_updating_bar, progress, LV_ANIM_OFF);
+        }
+        if (now != s_updating) {
+            lv_screen_load(s_updating);
+        }
+        return;
+    }
+    if (now == s_updating) {   /* 받다가 끊겼다 */
         lv_screen_load(s_home);
         return;
     }
@@ -1019,6 +1049,7 @@ void ui_build(const ui_fonts_t *fonts, const char *version)
     build_settings();
     build_wifi();
     build_login();
+    build_updating();
     lv_screen_load(s_home);
 
     net_status_t net;

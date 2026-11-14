@@ -275,6 +275,13 @@ int main(int argc, char **argv)
     snprintf(name, sizeof(name), "%s/13-woke", out); save(name);
     run(7000);
 
+    /* 새 펌웨어 받는 중: 까만 화면에 막대만 */
+    s_ota = 42;
+    run(1200);
+    snprintf(name, sizeof(name), "%s/14-updating", out); save(name);
+    s_ota = -1;
+    run(1200);
+
     /* 6. 설정 */
     s_care = CARE_OK;
     tap(1200, 48);
