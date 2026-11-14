@@ -263,7 +263,7 @@ void care_build_view(const care_summary_t *s, time_t now, care_view_t *v)
     if (!s->feed.at) {
         snprintf(v->feed.detail, sizeof(v->feed.detail), "기록 없음");
     } else {
-        char ml[16] = "";
+        char ml[24] = "";
         if (s->feed.ml >= 0) {
             snprintf(ml, sizeof(ml), " · %dml", s->feed.ml);
         }

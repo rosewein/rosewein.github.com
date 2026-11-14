@@ -7,7 +7,7 @@
 #include "lvgl.h"
 #include "sdkconfig.h"
 
-/* main/assets/*.ttf 를 펌웨어에 그대로 넣은 것(CMakeLists.txt EMBED_FILES) */
+/* main/assets 의 TTF 두 개를 펌웨어에 그대로 넣은 것(CMakeLists.txt EMBED_FILES) */
 extern const uint8_t regular_start[] asm("_binary_pretendard_regular_ttf_start");
 extern const uint8_t regular_end[] asm("_binary_pretendard_regular_ttf_end");
 extern const uint8_t semibold_start[] asm("_binary_pretendard_semibold_ttf_start");
