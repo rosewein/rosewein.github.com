@@ -309,6 +309,7 @@ static void poll_record(lv_timer_t *timer)
         s_busy = false;
         bool undo = r.action.kind == ACT_UNDO;
         char what[80], text[120];
+        ui_sound(r.status != ACTION_SAVED ? UI_SOUND_ERROR : undo ? UI_SOUND_CANCEL : UI_SOUND_SAVE);
         if (r.status == ACTION_SAVED && undo) {
             s_happy_until = 0;
             notice("취소했어요", false, false, NOTICE_MS);
@@ -359,8 +360,12 @@ static void notice_clicked(lv_event_t *e)
 static bool can_record(void)
 {
     if (!s_summary.valid || !net_time_synced()) {
+        ui_sound(UI_SOUND_ERROR);
         notice("아직 기록할 수 없어요(서버에 연결되지 않음)", true, false, NOTICE_MS);
         return false;
+    }
+    if (!s_busy) {
+        ui_sound(UI_SOUND_TAP);
     }
     return !s_busy;
 }
@@ -388,6 +393,7 @@ static void show_amount(void)
 static void quick_amount_clicked(lv_event_t *e)
 {
     s_amount = (int)(intptr_t)lv_obj_get_user_data(lv_event_get_target(e));
+    ui_sound(UI_SOUND_TAP);
     show_amount();
 }
 
@@ -395,6 +401,7 @@ static void step_clicked(lv_event_t *e)
 {
     int step = (int)(intptr_t)lv_event_get_user_data(e);   /* ±10, 또는 ±30(브레짜 한 칸) */
     s_amount = care_clamp_amount(step == 30 || step == -30 ? care_step_machine(s_amount, step) : s_amount + step);
+    ui_sound(UI_SOUND_TAP);
     show_amount();
 }
 
@@ -487,6 +494,7 @@ static void confirm_yes(lv_event_t *e)
 
 static void confirm_no(lv_event_t *e)
 {
+    ui_sound(UI_SOUND_CANCEL);
     close_sheets();
     notice("안 넣었어요", false, false, NOTICE_MS);
 }
@@ -878,6 +886,11 @@ static void brightness_changed(lv_event_t *e)
     ui_brightness_set(night, lv_slider_get_value(lv_event_get_target(e)), lv_event_get_code(e) == LV_EVENT_RELEASED);
 }
 
+static void volume_changed(lv_event_t *e)
+{
+    ui_volume_set(lv_slider_get_value(lv_event_get_target(e)), lv_event_get_code(e) == LV_EVENT_RELEASED);
+}
+
 static void brightness_slider(const char *name, bool night, int y)
 {
     lv_obj_set_pos(label(s_settings, F.text, C_TEXT, name), 28, y);
@@ -913,6 +926,16 @@ static void build_settings(void)
     /* 밝기: 낮과 밤을 따로. 밤에는 거실 불이 꺼져 있어 어둡게 */
     brightness_slider("낮 밝기", false, 476);
     brightness_slider("밤 밝기 (오후 8시~오전 6시)", true, 538);
+
+    /* 소리 크기: 맨 왼쪽이면 끔. 손을 떼면 그 크기로 한 번 들려준다 */
+    lv_obj_set_pos(label(s_settings, F.text, C_TEXT, "소리"), 900, 538);
+    lv_obj_t *volume = lv_slider_create(s_settings);
+    lv_obj_set_pos(volume, 990, 548);
+    lv_obj_set_size(volume, 240, 24);
+    lv_slider_set_range(volume, 0, 100);
+    lv_slider_set_value(volume, ui_volume_get(), LV_ANIM_OFF);
+    lv_obj_add_event_cb(volume, volume_changed, LV_EVENT_VALUE_CHANGED, NULL);
+    lv_obj_add_event_cb(volume, volume_changed, LV_EVENT_RELEASED, NULL);
 
     /* 시험판: master 에 합치기 전 브랜치에서 빌드한 펌웨어도 받는다 */
     lv_obj_set_pos(label(s_settings, F.text, C_TEXT, "시험판 받기"), 900, 476);

@@ -16,6 +16,12 @@ int ui_brightness_get(bool night);
 void ui_brightness_set(bool night, int percent, bool save);   /* 막대를 움직이는 동안은 save 없이, 손을 떼면 저장 */
 void ui_brightness_refresh(void);                              /* 1초마다: 지금 시각에 맞는 밝기로 */
 
+/* 효과음(sound.c). 소리 크기는 0~100, 0 이면 끔. 밤에는 절반으로 낸다 */
+typedef enum { UI_SOUND_TAP, UI_SOUND_SAVE, UI_SOUND_CANCEL, UI_SOUND_ERROR } ui_sound_t;
+void ui_sound(ui_sound_t sound);
+int ui_volume_get(void);
+void ui_volume_set(int percent, bool save);
+
 /* 문제를 찾을 때: 지금까지 들어온 터치 수와 마지막으로 누른 자리 */
 void ui_touch_diag(int *presses, int *x, int *y);
 

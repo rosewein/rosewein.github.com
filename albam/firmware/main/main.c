@@ -33,6 +33,7 @@ void app_main(void)
     care_start();
     update_start();
     board_start_ui();
+    sound_start();
 
     bool trial = on_trial();
     bool server = false;

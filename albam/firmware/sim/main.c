@@ -79,6 +79,9 @@ void update_dev_set(bool dev) { (void)dev; }
 int ui_brightness_get(bool night) { return night ? 20 : 70; }
 void ui_brightness_set(bool night, int percent, bool save) { (void)night; (void)percent; (void)save; }
 void ui_brightness_refresh(void) {}
+void ui_sound(ui_sound_t sound) { (void)sound; }
+int ui_volume_get(void) { return 50; }
+void ui_volume_set(int percent, bool save) { (void)percent; (void)save; }
 
 /* ---- 그리기 ---- */
 static uint32_t tick_now(void) { return s_ms; }
