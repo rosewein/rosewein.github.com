@@ -234,6 +234,7 @@ export function createApi(cfg, { transport, storage = STORAGE.real } = {}) {
     addPhrase: (kind, text) => rest.rpc('care_add_phrase', { p_kind: kind, p_text: text }),
     removePhrase: (id) => rest.rpc('care_remove_phrase', { p_id: id }),
     // 설정(개인 폰 화면): 일정 넣기·고치기·지우기(015), 더 넣기 버튼 보임·순서(018). 연결돼 있을 때만
+    getVaccines: () => rest.rpc('care_vaccines', {}),
     getAppointments: (pastDays = 14) => rest.rpc('care_appointments', { p_past_days: pastDays }),
     setAppointment: (p) => rest.rpc('care_set_appointment', { p }),
     cancelAppointment: (id) => rest.rpc('care_cancel_appointment', { p_id: id }),
