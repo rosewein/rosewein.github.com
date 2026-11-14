@@ -8,7 +8,7 @@
 - 미리 보기(가짜 데이터, 이 기기에만 저장): `https://rosewein.github.io/albam/?demo`
 - **설계·코드 안내: [docs/TECHNICAL.md](docs/TECHNICAL.md)** — 구조도, 데이터·함수 계약, 모듈 관계, 흐름, 고치고 늘리는 법
 
-- **개인 폰 화면(세로)**: `https://rosewein.github.io/albam/m/` (미리 보기 `…/albam/m/?demo`). 같은 계정으로 로그인하고, 폰 브라우저 메뉴의 '홈 화면에 추가'로 아이콘을 만든다. 지금은 입력 쪽만 있다(수유·기저귀·잠, 더 넣기, 자주 쓰는 문구, 다가오는 일정)
+- **개인 폰 화면(세로)**: `https://rosewein.github.io/albam/m/` (미리 보기 `…/albam/m/?demo`). 같은 계정으로 로그인하고, 폰 브라우저 메뉴의 '홈 화면에 추가'로 아이콘을 만든다. 입력 쪽(수유·기저귀·잠, 더 넣기, 자주 쓰는 문구, 다가오는 일정)과 기록 쪽(날짜별 목록, 고치기·지우기)이 있다
 
 빌드도 의존성도 없다. 파일을 고쳐 올리면 그대로 반영된다.
 
@@ -33,7 +33,7 @@
 
 1. 대시보드에서 프로젝트가 **일시정지(Paused)** 상태면 Restore 한다.
 2. Table Editor에서 기존 표를 확인한다. 새 표는 모두 `care_` 로 시작해 겹치지 않는다.
-3. SQL Editor에 [`supabase/001_care_schema.sql`](supabase/001_care_schema.sql), [`002_feed_amounts.sql`](supabase/002_feed_amounts.sql), [`003_stats.sql`](supabase/003_stats.sql), [`004_sleep_end.sql`](supabase/004_sleep_end.sql), [`005_timeline.sql`](supabase/005_timeline.sql), [`006_edit_and_age.sql`](supabase/006_edit_and_age.sql), [`007_feed_duration.sql`](supabase/007_feed_duration.sql), [`008_record_types.sql`](supabase/008_record_types.sql), [`009_last_poo.sql`](supabase/009_last_poo.sql), [`010_feed_gap.sql`](supabase/010_feed_gap.sql), [`011_feed_gaps.sql`](supabase/011_feed_gaps.sql), [`012_voice_log.sql`](supabase/012_voice_log.sql), [`013_walk_vaccine.sql`](supabase/013_walk_vaccine.sql), [`014_measures.sql`](supabase/014_measures.sql), [`015_appointments.sql`](supabase/015_appointments.sql), [`016_phrases.sql`](supabase/016_phrases.sql)을 **차례로** 붙여 실행한다(여러 번 실행해도 안전).
+3. SQL Editor에 [`supabase/001_care_schema.sql`](supabase/001_care_schema.sql), [`002_feed_amounts.sql`](supabase/002_feed_amounts.sql), [`003_stats.sql`](supabase/003_stats.sql), [`004_sleep_end.sql`](supabase/004_sleep_end.sql), [`005_timeline.sql`](supabase/005_timeline.sql), [`006_edit_and_age.sql`](supabase/006_edit_and_age.sql), [`007_feed_duration.sql`](supabase/007_feed_duration.sql), [`008_record_types.sql`](supabase/008_record_types.sql), [`009_last_poo.sql`](supabase/009_last_poo.sql), [`010_feed_gap.sql`](supabase/010_feed_gap.sql), [`011_feed_gaps.sql`](supabase/011_feed_gaps.sql), [`012_voice_log.sql`](supabase/012_voice_log.sql), [`013_walk_vaccine.sql`](supabase/013_walk_vaccine.sql), [`014_measures.sql`](supabase/014_measures.sql), [`015_appointments.sql`](supabase/015_appointments.sql), [`016_phrases.sql`](supabase/016_phrases.sql), [`017_day.sql`](supabase/017_day.sql)을 **차례로** 붙여 실행한다(여러 번 실행해도 안전).
 4. Authentication → Users → Add user 로 가족 계정을 만든다(이메일+비밀번호, Auto confirm). 거실 기기용 계정을 따로 두면 기기만 로그아웃시키기 쉽다.
 5. 가족으로 등록한다. 여기 없는 계정은 로그인해도 아무것도 못 읽고 못 쓴다.
    ```sql

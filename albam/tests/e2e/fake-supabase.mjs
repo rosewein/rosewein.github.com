@@ -77,6 +77,8 @@ export async function createFakeSupabase(context) {
         }
         return reply(200, days);
       }
+      case '/rest/v1/rpc/care_day':
+        return reply(200, { day: body.p_day, from: `${body.p_day}T00:00:00+09:00`, to: `${body.p_day}T24:00:00+09:00`, events: [] });
       case '/rest/v1/rpc/care_phrases':
         return reply(200, []);
       case '/rest/v1/rpc/care_upcoming':

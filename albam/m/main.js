@@ -18,6 +18,7 @@ import { createNotice } from './notice.js';
 import { createPhrases } from './phrases.js';
 import { setupHome } from './home.js';
 import { setupEntry } from './entry.js';
+import { setupRecords } from './records.js';
 
 const DEMO = new URLSearchParams(location.search).has('demo');
 const IGNORE_SKEW_MS = 5000;
@@ -36,12 +37,13 @@ function main() {
     state,
     api: DEMO ? createDemoApi() : createApi(cfg),
     now: () => new Date(Date.now() + state.clockSkewMs),
-    save, finishFeed, wake, attachMemo,
+    save, finishFeed, wake, attachMemo, update, remove,
     openEntry: (kind) => entry.open(kind),
+    openEdit: (e) => entry.openEdit(e),
   };
   ctx.measures = createMeasures(ctx, DEMO ? 'albam.demo.measures' : 'albam.measures');
   ctx.upcoming = createUpcoming(ctx, DEMO ? 'albam.demo.upcoming' : 'albam.upcoming');
-  const notice = createNotice({ undoSeconds: cfg.undoSeconds, onUndone: () => refresh() });
+  const notice = createNotice({ undoSeconds: cfg.undoSeconds, onUndone: async () => { await refresh(); if (view === 'records') records.reload(); } });
   ctx.phrases = createPhrases(ctx, DEMO ? 'albam.demo.phrases' : 'albam.phrases', {
     labelOf: (kind) => recordType(kind)?.label || kind,
     onChange: () => { render(); entry.refreshChips(); },
@@ -49,6 +51,21 @@ function main() {
   });
   const home = setupHome(ctx);
   const entry = setupEntry(ctx);
+  const records = setupRecords(ctx);
+
+  // ── 쪽 바꾸기(아래 탭) ──
+  let view = 'home';
+  for (const b of document.querySelectorAll('#tabs [data-view]')) {
+    b.addEventListener('click', () => {
+      view = b.dataset.view;
+      for (const t of document.querySelectorAll('#tabs [data-view]')) t.classList.toggle('on', t === b);
+      $('#viewHome').hidden = view !== 'home';
+      $('#viewRecords').hidden = view !== 'records';
+      $('#top').hidden = view !== 'home';   // 기록 쪽은 날짜 머리가 따로 있다
+      if (view === 'records') records.show();
+      window.scrollTo(0, 0);
+    });
+  }
 
   function render() {
     home.render();
@@ -109,6 +126,25 @@ function main() {
     }
     notice.showUndo(describeEvent(ev, ctx.now()) + queued(r), () => ctx.api.cancelEvent(r.id));
     await refresh();
+    if (view === 'records') records.reload();
+  }
+
+  /** 기록 고치기(기록 쪽) */
+  async function update(id, patch, label) {
+    let r;
+    try { r = await ctx.api.updateEvent(id, patch); } catch (e) { failed(e); return; }
+    notice.show(r.status === 'not_found' ? '그 기록을 못 찾았어요' : `고쳤어요 · ${label}${queued(r)}`, r.status === 'not_found' ? 'warn' : '');
+    await refresh();
+    records.reload();
+  }
+
+  /** 기록 지우기(지우지 않고 취소 표시. 서버가 내역에 남긴다) */
+  async function remove(id, label) {
+    let r;
+    try { r = await ctx.api.cancelEvent(id); } catch (e) { failed(e); return; }
+    notice.show(`지웠어요 · ${label}${queued(r)}`);
+    await refresh();
+    records.reload();
   }
   $('#confirmYes').addEventListener('click', () => { const ev = waiting; waiting = null; $('#confirm').close(); if (ev) save(ev, { force: true }); });
   $('#confirmNo').addEventListener('click', () => { waiting = null; $('#confirm').close(); notice.show('안 넣었어요'); });

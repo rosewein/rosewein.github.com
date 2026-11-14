@@ -50,3 +50,39 @@ test('문구 켜고 끄기: 메모에 " · " 로 붙이고, 다른 글은 그대
   assert.ok(memoHas('유산균 · 비타민D', '비타민D') && !memoHas('유산균균', '유산균'));
   assert.deepEqual(memoParts(' 유산균 ·  · 비타민D '), ['유산균', '비타민D']);
 });
+
+test('고치기: 바꿀 내용만, 메모는 비워도 보낸다', async () => {
+  const { buildPatch, shapeOf } = await import('../../m/entry.js');
+  assert.equal(shapeOf('feed'), 'feed');
+  assert.equal(shapeOf('diaper'), 'diaper');
+  assert.equal(shapeOf('sleep'), 'range');
+  assert.equal(shapeOf('weight'), 'number');
+  const feed = { kind: 'feed', shape: 'feed', start: at(11, 25), hasEnd: true, end: at(11, 37), value: null, amount: 230, memo: '유산균' };
+  assert.deepEqual(buildPatch(feed, now).patch, { occurred_at: at(11, 25), ended_at: at(11, 37), amount_ml: 230, detail: { memo: '유산균', feeding: false } });
+  assert.deepEqual(buildPatch({ ...feed, hasEnd: false, memo: '' }, now).patch, { occurred_at: at(11, 25), ended_at: null, amount_ml: 230, detail: { memo: '' } });
+  assert.equal(buildPatch({ ...feed, amount: 2000 }, now).error, '양을 0~1000 사이로 넣어 주세요');
+  const diaper = { kind: 'diaper', shape: 'diaper', start: at(9, 10), hasEnd: false, end: null, value: null, diaperType: 'both', memo: '' };
+  assert.deepEqual(buildPatch(diaper, now).patch, { occurred_at: at(9, 10), detail: { memo: '', type: 'both' } });
+  const sleep = { kind: 'sleep', shape: 'range', start: at(9, 0), hasEnd: false, end: at(10, 0), value: null, memo: '' };
+  assert.equal(buildPatch(sleep, now).patch.ended_at, null, '끝을 끄면 자는 중');
+});
+
+test('기록 쪽: 한 줄 글과 그날 합계', async () => {
+  const { describeRow, daySummary, addDays, dayKey } = await import('../../m/records.js');
+  const from = new Date(2026, 10, 14, 0, 0);
+  const to = new Date(2026, 10, 15, 0, 0);
+  const iso = (d) => d.toISOString();
+  const feed = { kind: 'feed', at: iso(at(11, 25)), ended_at: iso(at(11, 37)), ml: 200, detail: { memo: '유산균' } };
+  assert.deepEqual(describeRow(feed, from), { time: '11:25~11:37', kind: '수유', text: '200ml · 12분 · 유산균' });
+  assert.deepEqual(describeRow({ kind: 'feed', at: iso(at(13, 48)), ended_at: null, ml: 200, feeding: true, detail: {} }, from), { time: '13:48~', kind: '수유', text: '200ml · 먹는 중' });
+  assert.deepEqual(describeRow({ kind: 'diaper', at: iso(at(9, 10)), type: 'both', detail: { type: 'both' } }, from), { time: '09:10', kind: '기저귀', text: '소변+대변' });
+  const night = { kind: 'sleep', at: iso(new Date(2026, 10, 13, 22, 10)), ended_at: iso(at(6, 30)), detail: {} };
+  assert.deepEqual(describeRow(night, from), { time: '전날 22:10~06:30', kind: '잠', text: '8시간 20분' });
+  assert.deepEqual(describeRow({ kind: 'temperature', at: iso(at(8, 20)), value: 36.8, detail: {} }, from), { time: '08:20', kind: '체온', text: '36.8°C' });
+  assert.deepEqual(describeRow({ kind: 'bath', at: iso(at(19, 0)), ended_at: iso(at(19, 10)), detail: { memo: '보습로션' } }, new Date(2026, 10, 14)), { time: '19:00~19:10', kind: '목욕', text: '10분 · 보습로션' });
+  const nap = { kind: 'sleep', at: iso(at(9, 0)), ended_at: iso(at(10, 40)), detail: {} };
+  assert.equal(daySummary([night, feed, nap, { kind: 'diaper', type: 'poo' }, { kind: 'diaper', type: 'pee' }], from, to, now), '수유 1회 200ml · 기저귀 2회(대변 1) · 잠 8시간 10분');
+  assert.equal(daySummary([], from, to, now), '');
+  assert.equal(addDays('2026-11-01', -1), '2026-10-31');
+  assert.equal(dayKey(at(9, 0)), '2026-11-14');
+});

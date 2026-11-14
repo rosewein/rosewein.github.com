@@ -8,6 +8,7 @@
 //   getStats()    날짜별 통계(통계 화면)
 //   getTimeline() 최근 며칠 기록(타임라인 쪽)
 //   getMeasures() 측정 기록(체중·키): 지난번 값, 성장 백분위
+//   getDay()      하루 기록(개인 폰 화면의 기록 쪽)
 //   getUpcoming() 다가오는 일정(예방접종 예약 등)
 //   getPhrases() · addPhrase() · removePhrase()  자주 쓰는 문구(기록에 눌러서 붙이는 메모)
 // 기기를 바꿀 때(개인 폰, ESP32) 다시 짜야 하는 범위를 이 폴더로 줄이려는 것이다.
@@ -226,6 +227,7 @@ export function createApi(cfg, { transport, storage = STORAGE.real } = {}) {
     getStats: (days = 7) => rest.rpc('care_stats', { p_days: days }),
     getTimeline: (days = 3) => rest.rpc('care_timeline', { p_days: days }),
     getMeasures: () => rest.rpc('care_measures', {}),
+    getDay: (day) => rest.rpc('care_day', { p_day: day }),
     getUpcoming: (limit = 5) => rest.rpc('care_upcoming', { p_limit: limit }),
     // 자주 쓰는 문구(supabase/016). 더하기·지우기는 연결돼 있을 때만(쌓아 두지 않는다)
     getPhrases: () => rest.rpc('care_phrases', {}),

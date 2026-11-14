@@ -15,14 +15,14 @@
 </head>
 <body>
 <!-- 알밤보드 개인 폰 화면(세로). 거실 화면과 같은 Supabase·같은 통신 창구(../src/api)를 쓴다. 화면만 따로 짰다.
-     1단계: 입력(수유·기저귀·잠 카드, 더 넣기). 기록·통계·설정 쪽은 다음 단계 -->
+     쪽: 입력(수유·기저귀·잠 카드, 더 넣기) / 기록(날짜별 목록, 고치기). 통계·설정 쪽은 다음 단계 -->
 <header id="top">
   <div id="today"></div>
   <div id="age"></div>
 </header>
 <div id="net" hidden></div>
 
-<main>
+<main id="viewHome">
   <!-- 카드 하나 = 상태(지난 시간·마지막 기록) + 바로 저장 버튼(m/home.js) -->
   <section class="card" id="feedCard">
     <div class="head"><span class="label" id="feedLabel">수유</span><span class="detail" id="feedDetail"></span></div>
@@ -70,6 +70,25 @@
   </section>
 </main>
 
+<!-- 기록 쪽(m/records.js): 날짜를 넘기며 그날 기록. 줄을 누르면 고치기 -->
+<main id="viewRecords" hidden>
+  <div id="dayHead">
+    <button class="btn" id="dayPrev" aria-label="전날">◀</button>
+    <button id="dayTitleBtn" aria-label="날짜 고르기"><span id="dayTitle"></span><span class="hint" id="daySub"></span></button>
+    <button class="btn" id="dayNext" aria-label="다음날">▶</button>
+    <input type="date" id="dayPick" tabindex="-1" aria-hidden="true">
+  </div>
+  <div class="hint" id="daySummary"></div>
+  <div id="dayList"></div>
+  <div class="hint" id="dayMsg"></div>
+</main>
+
+<!-- 아래 탭: 쪽 바꾸기 -->
+<nav id="tabs">
+  <button data-view="home" class="on">입력</button>
+  <button data-view="records">기록</button>
+</nav>
+
 <!-- 저장·취소 결과와 [취소 n](m/notice.js) -->
 <div id="notice" hidden><span id="noticeText"></span><button class="btn" id="undoBtn" hidden></button></div>
 
@@ -78,7 +97,7 @@
   <form method="dialog" id="entryForm">
     <h2 id="entryTitle"></h2>
     <label class="field"><span id="entryStartLabel">시각</span><input type="datetime-local" id="entryStart" required></label>
-    <label class="check" id="entryEndToggle"><input type="checkbox" id="entryHasEnd"> 끝 시각도 넣기</label>
+    <label class="check" id="entryEndToggle"><input type="checkbox" id="entryHasEnd"> <span id="entryEndToggleText">끝 시각도 넣기</span></label>
     <label class="field" id="entryEndField"><span>끝</span><input type="datetime-local" id="entryEnd"></label>
     <div id="entryNumber">
       <div class="row">
@@ -90,11 +109,18 @@
       </div>
       <div class="hint" id="entryPercentile"></div>
     </div>
+    <label class="field" id="entryAmountField"><span>양(ml)</span><input type="number" id="entryAmount" inputmode="numeric" min="0" max="1000" step="10"></label>
+    <div class="row three" id="entryDiaper">
+      <button type="button" class="btn" data-type="pee">소변</button>
+      <button type="button" class="btn" data-type="poo">대변</button>
+      <button type="button" class="btn" data-type="both">소+대</button>
+    </div>
     <div class="chips" id="entryChips"></div>
     <label class="field" id="entryMemoField"><span>메모</span><input type="text" id="entryMemo" autocomplete="off"></label>
     <div class="hint warn" id="entryMsg"></div>
     <div class="row">
       <button type="button" class="btn" id="entryClose">닫기</button>
+      <button type="button" class="btn" id="entryDelete" hidden>지우기</button>
       <button type="submit" class="btn main grow" id="entrySave">저장</button>
     </div>
   </form>
