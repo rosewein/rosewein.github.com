@@ -7,6 +7,7 @@
 
 import { SOURCE, recordType, formatValue } from '../src/domain.js';
 import { pad2 } from '../src/time.js';
+import { memoHas, toggleMemo } from './phrases.js';
 
 const $ = (s) => document.querySelector(s);
 const DEFAULT_RANGE_MIN = 10;
@@ -43,7 +44,7 @@ export function buildEvent(f, now) {
   return { ev };
 }
 
-/** @param {{now: () => Date, save: Function, measures: {last: Function, note: Function, percentileText: Function}}} ctx */
+/** @param {{now: () => Date, save: Function, measures: {last: Function, note: Function, percentileText: Function}, phrases: {renderChips: Function}}} ctx */
 export function setupEntry(ctx) {
   const dialog = $('#entry');
   let type = null;
@@ -54,6 +55,14 @@ export function setupEntry(ctx) {
 
   function renderPercentile() {
     $('#entryPercentile').textContent = type?.shape === 'number' ? ctx.measures.percentileText(type.key, value(), read('#entryStart') ?? ctx.now()) : '';
+  }
+  /** 그 종류의 자주 쓰는 문구: 누르면 메모 칸에 들어가고 빠진다 */
+  function renderChips() {
+    if (!type) return;
+    ctx.phrases.renderChips($('#entryChips'), type.key, {
+      isOn: (text) => memoHas($('#entryMemo').value, text),
+      onToggle: (text) => { $('#entryMemo').value = toggleMemo($('#entryMemo').value, text); renderChips(); },
+    });
   }
   function renderEnd() {
     $('#entryEndField').hidden = !(type?.shape === 'range' && $('#entryHasEnd').checked);
@@ -85,6 +94,7 @@ export function setupEntry(ctx) {
     $('#entryMemo').value = '';
     $('#entryMemo').placeholder = MEMO_HINT[kind] || '';
     $('#entryMsg').textContent = '';
+    renderChips();
     renderEnd();
     renderPercentile();
     dialog.showModal();
@@ -98,6 +108,7 @@ export function setupEntry(ctx) {
       renderPercentile();
     });
   }
+  $('#entryMemo').addEventListener('input', renderChips);
   $('#entryValue').addEventListener('input', renderPercentile);
   $('#entryStart').addEventListener('change', renderPercentile);
   $('#entryHasEnd').addEventListener('change', renderEnd);
@@ -115,5 +126,5 @@ export function setupEntry(ctx) {
     ctx.save(ev);
   });
 
-  return { open };
+  return { open, refreshChips: () => { if (dialog.open) renderChips(); } };
 }

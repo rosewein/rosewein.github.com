@@ -904,9 +904,26 @@ async function phoneFlow(browser, base) {
   check((await small()).length === 0, `누르는 것은 모두 44px 이상 ${(await small()).join(' ')}`);
   await shot(page, 'phone-home');
 
+  // 수유에 붙이는 문구: 먹이기 전에 켜 두면 다음 수유에 붙는다
+  const chips = () => page.$$eval('#feedChips .chip', (b) => b.map((x) => `${x.textContent}${x.classList.contains('on') ? '*' : ''}`).join(' '));
+  await page.waitForFunction(() => document.querySelectorAll('#feedChips .chip').length === 3);
+  check(await chips() === '유산균 비타민D +', `수유 문구 줄 (${await chips()})`);
+  await page.click('#feedChips .chip:text-is("유산균")');
+  check(await chips() === '유산균* 비타민D +', '먹이기 전에 눌러 켜 둠');
+
   // 수유: 한 번 눌러 먹이기 시작 → 다 먹음
   await page.click('#feedBtn');
   await page.waitForFunction(() => document.querySelector('#feedBtn').textContent === '다 먹음');
+  await page.waitForFunction(() => document.querySelector('#feedChips .chip.on')?.textContent === '유산균');
+  check(true, '켜 둔 문구가 그 수유에 붙음');
+  // 먹이는 중에는 누르는 대로 그 수유에 붙고 떨어진다
+  await page.click('#feedChips .chip:text-is("비타민D")');
+  await page.waitForFunction(() => document.querySelectorAll('#feedChips .chip.on').length === 2);
+  await page.click('#feedChips .chip:text-is("유산균")');
+  await page.waitForFunction(() => document.querySelectorAll('#feedChips .chip.on').length === 1);
+  check(await chips() === '유산균 비타민D* +', `먹이는 중에 붙이고 떼기 (${await chips()})`);
+  const savedMemo = await page.evaluate(() => JSON.parse(localStorage.getItem('albam.demo.summary')).recent[0].detail.memo);
+  check(savedMemo === '비타민D', `기록의 메모에 들어감 (${savedMemo})`);
   check(await text(page, '#noticeText') === '수유 200ml 저장됨' && /^취소 \d$/.test(await text(page, '#undoBtn')), `저장 알림과 취소 (${await text(page, '#noticeText')} / ${await text(page, '#undoBtn')})`);
   check(await text(page, '#feedLabel') === '수유 · 먹는 중' && !(await page.isVisible('#feedAmountBtn')), '먹이는 중: 버튼이 [다 먹음], 양 바꾸기는 숨김');
   await shot(page, 'phone-feeding');
@@ -965,6 +982,28 @@ async function phoneFlow(browser, base) {
   check(await page.isVisible('#entryEnd') && await text(page, '#entryStartLabel') === '시작' && !(await page.isVisible('#entryValue')), '산책: 시작·끝, 숫자 칸 없음');
   await page.click('#entrySave');
   await page.waitForFunction(() => document.querySelector('#noticeText').textContent.startsWith('산책 · 10분'));
+  // 목욕: 문구를 눌러 메모에 넣기, 폰에서 문구 더하기·지우기
+  await page.click('#moreGrid button:text-is("목욕")');
+  await page.click('#entryChips .chip:text-is("보습로션")');
+  check(await page.inputValue('#entryMemo') === '보습로션', '문구를 누르면 메모 칸에 들어감');
+  await page.click('#entryChips .chip.add');
+  check(await text(page, '#phrasesTitle') === '목욕 문구' && /보습로션/.test(await text(page, '#phrasesList')), '문구 창: 목욕 문구 목록');
+  await page.fill('#phraseText', '머리 감김');
+  await page.click('#phrasesForm button[type=submit]');
+  await page.waitForFunction(() => /머리 감김/.test(document.querySelector('#phrasesList').textContent));
+  check(await noOverflow(), '문구 창이 옆으로 안 넘침');
+  await shot(page, 'phone-phrases');
+  await page.click('#phrasesList .phraseRow:first-child button');
+  await page.waitForFunction(() => !/보습로션/.test(document.querySelector('#phrasesList').textContent));
+  await page.click('#phrasesClose');
+  const bathChips = await page.$$eval('#entryChips .chip', (b) => b.map((x) => x.textContent).join(' '));
+  check(bathChips === '머리 감김 +', `더한 문구가 버튼으로, 지운 문구는 사라짐 (${bathChips})`);
+  check(await page.inputValue('#entryMemo') === '보습로션', '문구를 지워도 이미 넣은 메모는 그대로');
+  await page.click('#entryChips .chip:text-is("머리 감김")');
+  await shot(page, 'phone-bath');
+  await page.click('#entrySave');
+  await page.waitForFunction(() => document.querySelector('#noticeText').textContent.startsWith('목욕 · 10분 · 보습로션 · 머리 감김'));
+  check(true, '목욕에 문구가 붙어 저장됨');
   await page.click('#moreGrid button:text-is("메모")');
   await page.click('#entrySave');
   check(await text(page, '#entryMsg') === '메모를 써 주세요' && await page.isVisible('#entry'), '메모는 글이 비면 저장 안 함');

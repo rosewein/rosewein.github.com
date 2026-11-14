@@ -40,3 +40,13 @@ test('메모 종류는 글이 꼭, 다른 종류는 글이 있으면 detail.memo
 test('날짜·시간 칸 값은 기기 시간대 그대로', () => {
   assert.equal(toLocalInput(at(9, 5)), '2026-11-14T09:05');
 });
+
+test('문구 켜고 끄기: 메모에 " · " 로 붙이고, 다른 글은 그대로', async () => {
+  const { toggleMemo, memoHas, memoParts } = await import('../../m/phrases.js');
+  assert.equal(toggleMemo('', '유산균'), '유산균');
+  assert.equal(toggleMemo('유산균', '비타민D'), '유산균 · 비타민D');
+  assert.equal(toggleMemo('유산균 · 비타민D', '유산균'), '비타민D');
+  assert.equal(toggleMemo('조금 토함 · 유산균', '유산균'), '조금 토함');
+  assert.ok(memoHas('유산균 · 비타민D', '비타민D') && !memoHas('유산균균', '유산균'));
+  assert.deepEqual(memoParts(' 유산균 ·  · 비타민D '), ['유산균', '비타민D']);
+});

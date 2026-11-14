@@ -67,6 +67,17 @@ main { display: flex; flex-direction: column; gap: 12px; }
 #feedAmount { font-size: 22px; }
 #feedMachine { display: block; }
 
+/* 문구 버튼 줄: 누르면 켜짐/꺼짐, 맨 끝 [+]는 더하기·지우기 */
+.chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.chip {
+  height: 44px; padding: 0 14px; border-radius: 22px; border: 1px solid var(--line);
+  background: var(--bg); color: var(--text); font: inherit; font-size: 14px; white-space: nowrap;
+}
+.chip.on { border-color: var(--accent); background: var(--accent); color: var(--on-accent); font-weight: 600; }
+.chip.add { color: var(--dim); border-style: dashed; }
+.phraseRow { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid var(--line); }
+.phraseRow .btn { height: 44px; font-size: 14px; font-weight: 400; }
+
 /* 더 넣기: 기록 종류 표에서 온 버튼들 */
 #moreGrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
 #moreGrid .btn { height: 46px; padding: 0 4px; font-size: 14px; font-weight: 400; border-color: var(--line); background: var(--panel); }

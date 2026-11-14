@@ -39,6 +39,8 @@
       <button class="btn step" data-step="10">+10</button>
       <button class="btn step" data-step="machine">+30</button>
     </div>
+    <!-- 수유에 붙이는 문구(m/phrases.js): 먹이기 전에는 다음 수유에, 먹이는 중에는 그 수유에 바로 -->
+    <div class="chips" id="feedChips"></div>
   </section>
 
   <section class="card" id="diaperCard">
@@ -88,6 +90,7 @@
       </div>
       <div class="hint" id="entryPercentile"></div>
     </div>
+    <div class="chips" id="entryChips"></div>
     <label class="field" id="entryMemoField"><span>메모</span><input type="text" id="entryMemo" autocomplete="off"></label>
     <div class="hint warn" id="entryMsg"></div>
     <div class="row">
@@ -105,6 +108,21 @@
     <button class="btn grow" id="confirmNo">안 넣기</button>
     <button class="btn main grow" id="confirmYes">그래도 저장</button>
   </div>
+</dialog>
+
+<!-- 문구 더하기·지우기(m/phrases.js) -->
+<dialog id="phrases">
+  <form id="phrasesForm">
+    <h2 id="phrasesTitle"></h2>
+    <div id="phrasesList"></div>
+    <div class="hint" id="phrasesEmpty">아직 문구가 없어요. 아래에 써서 더해 주세요.</div>
+    <label class="field"><span>새 문구</span><input type="text" id="phraseText" maxlength="30" autocomplete="off" placeholder="예: 유산균"></label>
+    <div class="hint warn" id="phrasesMsg"></div>
+    <div class="row">
+      <button type="button" class="btn" id="phrasesClose">닫기</button>
+      <button type="submit" class="btn main grow">더하기</button>
+    </div>
+  </form>
 </dialog>
 
 <dialog id="login">

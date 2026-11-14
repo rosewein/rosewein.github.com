@@ -505,4 +505,40 @@ exception when insufficient_privilege then raise notice 'ok - non-family cannot 
 end $$;
 reset role;
 
+-- ── 016: 자주 쓰는 문구 ─────────────────────
+set role authenticated;
+set request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+do $$
+declare r jsonb; l jsonb;
+begin
+  r := public.care_add_phrase('feed', ' 유산균 ');
+  perform public.care_add_phrase('feed', '비타민D');
+  perform public.care_add_phrase('bath', '보습로션');
+  perform pg_temp.check(r ->> 'status' = 'saved', 'phrase added');
+  perform pg_temp.check(public.care_add_phrase('feed', '유산균') ->> 'status' = 'exists', 'same phrase is not added twice');
+  l := public.care_phrases();
+  perform pg_temp.check(jsonb_array_length(l) = 3 and l -> 0 ->> 'kind' = 'bath' and l -> 1 ->> 'text' = '유산균', 'phrases by kind then order, trimmed');
+  perform pg_temp.check(public.care_remove_phrase((r ->> 'id')::uuid) ->> 'status' = 'removed', 'phrase removed');
+  perform pg_temp.check(jsonb_array_length(public.care_phrases()) = 2, 'removed phrase hidden');
+  perform pg_temp.check(public.care_add_phrase('feed', '유산균') ->> 'id' = r ->> 'id', 'removed phrase comes back with same id');
+  perform pg_temp.check(jsonb_array_length(public.care_phrases()) = 3, 'revived phrase listed');
+  begin
+    perform public.care_add_phrase('feed', '');
+    raise exception 'FAIL: empty phrase accepted';
+  exception when sqlstate '22023' then raise notice 'ok - empty phrase rejected';
+  end;
+  begin
+    perform public.care_add_phrase('feed', '가 · 나');
+    raise exception 'FAIL: phrase with separator accepted';
+  exception when sqlstate '22023' then raise notice 'ok - phrase cannot contain the separator';
+  end;
+end $$;
+set request.jwt.claim.sub = '22222222-2222-2222-2222-222222222222';
+do $$ begin
+  perform public.care_phrases();
+  raise exception 'FAIL: stranger phrases';
+exception when insufficient_privilege then raise notice 'ok - non-family cannot read phrases';
+end $$;
+reset role;
+
 \echo 'ALL SQL TESTS PASSED'

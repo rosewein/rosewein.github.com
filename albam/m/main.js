@@ -9,12 +9,13 @@
 import { loadConfig } from '../src/config.js';
 import { createApi, AuthError, STORAGE } from '../src/api/index.js';
 import { createDemoApi } from '../src/api/demo.js';
-import { describeEvent } from '../src/domain.js';
+import { describeEvent, recordType } from '../src/domain.js';
 import { formatClock, formatDuration } from '../src/time.js';
 import { isDaylight } from '../src/sun.js';
 import { createMeasures } from '../src/ui/measures.js';
 import { createUpcoming } from '../src/ui/upcoming.js';
 import { createNotice } from './notice.js';
+import { createPhrases } from './phrases.js';
 import { setupHome } from './home.js';
 import { setupEntry } from './entry.js';
 
@@ -35,12 +36,17 @@ function main() {
     state,
     api: DEMO ? createDemoApi() : createApi(cfg),
     now: () => new Date(Date.now() + state.clockSkewMs),
-    save, finishFeed, wake,
+    save, finishFeed, wake, attachMemo,
     openEntry: (kind) => entry.open(kind),
   };
   ctx.measures = createMeasures(ctx, DEMO ? 'albam.demo.measures' : 'albam.measures');
   ctx.upcoming = createUpcoming(ctx, DEMO ? 'albam.demo.upcoming' : 'albam.upcoming');
   const notice = createNotice({ undoSeconds: cfg.undoSeconds, onUndone: () => refresh() });
+  ctx.phrases = createPhrases(ctx, DEMO ? 'albam.demo.phrases' : 'albam.phrases', {
+    labelOf: (kind) => recordType(kind)?.label || kind,
+    onChange: () => { render(); entry.refreshChips(); },
+    notify: (text, tone) => notice.show(text, tone),
+  });
   const home = setupHome(ctx);
   const entry = setupEntry(ctx);
 
@@ -128,6 +134,12 @@ function main() {
     await refresh();
   }
 
+  /** 먹이는 중인 수유에 문구를 붙이거나 뗀다(detail.memo) */
+  async function attachMemo(id, memo) {
+    try { await ctx.api.updateEvent(id, { detail: { memo } }); } catch (e) { failed(e); return; }
+    await refresh();
+  }
+
   // ── 로그인 ──
   function showLogin(message = '') {
     if (ctx.api.demo) return;
@@ -162,6 +174,7 @@ function main() {
   async function start() {
     await refresh();
     ctx.measures.load();
+    ctx.phrases.load();
     ctx.upcoming.load().then(render);
   }
 
