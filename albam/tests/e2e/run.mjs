@@ -1011,6 +1011,51 @@ async function phoneFlow(browser, base) {
   await page.click('#entrySave');
   await page.waitForFunction(() => document.querySelector('#noticeText').textContent.startsWith('메모 · 손톱 깎음'));
 
+  // 기록 쪽: 오늘 목록, 눌러서 고치기·지우기, 날짜 넘기기
+  await page.click('#tabs [data-view="records"]');
+  await page.waitForFunction(() => document.querySelectorAll('#dayList .rec').length > 3);
+  check(await text(page, '#daySub') === '오늘' && /^수유 \d+회 \d+ml · 기저귀 \d+회/.test(await text(page, '#daySummary')), `기록 쪽 머리 (${await text(page, '#daySub')} / ${await text(page, '#daySummary')})`);
+  const rows = () => page.$$eval('#dayList .rec', (r) => r.map((x) => x.querySelector('.body').textContent));
+  check((await rows()).includes('메모 손톱 깎음') && (await rows()).includes('목욕 10분 · 보습로션 · 머리 감김') && (await rows()).includes('체중 7.31kg'), `오늘 넣은 기록이 목록에 (${(await rows()).slice(0, 4).join(' | ')})`);
+  const times = await page.$$eval('#dayList .rec .time', (t) => t.map((x) => x.textContent.replace('전날 ', '').slice(0, 5)));
+  check(times.every((t, i) => i === 0 || t <= times[i - 1] || /전날/.test(t)), `시각 순, 최근 것이 위 (${times.slice(0, 5).join(' ')})`);
+  check(!(await page.isEnabled('#dayNext')), '오늘에서는 다음날로 못 감');
+  check(await noOverflow() && (await small()).length === 0, `기록 쪽: 안 넘치고 누르는 것은 44px 이상 ${(await small()).join(' ')}`);
+  await shot(page, 'phone-records');
+  // 지난 수유에 문구 붙이기 + 양 고치기
+  await page.locator('#dayList .rec', { hasText: /수유 200ml · \d+분 · 비타민D›/ }).click();
+  check(await text(page, '#entryTitle') === '기록 고치기 · 수유' && await page.inputValue('#entryAmount') === '200' && await page.inputValue('#entryMemo') === '비타민D', '수유 고치기 창: 양·메모가 채워짐');
+  check(await page.isChecked('#entryHasEnd') && await page.isVisible('#entryDelete'), '끝 시각이 켜져 있고 [지우기]가 있음');
+  await page.fill('#entryAmount', '230');
+  await page.click('#entryChips .chip:text-is("유산균")');
+  await shot(page, 'phone-edit-feed');
+  await page.click('#entrySave');
+  await page.waitForFunction(() => document.querySelector('#noticeText').textContent === '고쳤어요 · 수유');
+  await page.waitForFunction(() => [...document.querySelectorAll('#dayList .rec .body')].some((b) => /^수유 230ml · \d+분 · 비타민D · 유산균$/.test(b.textContent)));
+  check(true, '고친 양과 붙인 문구가 목록에 보임');
+  // 기저귀 종류 고치기
+  await page.locator('#dayList .rec', { hasText: /기저귀 소변›/ }).first().click();
+  await page.click('#entryDiaper [data-type="both"]');
+  await page.click('#entrySave');
+  await page.waitForFunction(() => [...document.querySelectorAll('#dayList .rec .body')].some((b) => b.textContent === '기저귀 소변+대변'));
+  check(true, '기저귀 종류 고침');
+  // 지우기는 두 번
+  const before = (await rows()).length;
+  await page.locator('#dayList .rec', { hasText: '메모 손톱 깎음' }).click();
+  await page.click('#entryDelete');
+  check(await text(page, '#entryDelete') === '한 번 더 누르면 지워요' && await page.isVisible('#entry'), '지우기 한 번: 다시 묻기');
+  await page.click('#entryDelete');
+  await page.waitForFunction(() => document.querySelector('#noticeText').textContent === '지웠어요 · 메모');
+  await page.waitForFunction((n) => document.querySelectorAll('#dayList .rec').length === n - 1, before);
+  check(true, '두 번 누르면 지워짐');
+  await page.click('#dayPrev');
+  await page.waitForFunction(() => document.querySelector('#daySub').textContent === '어제');
+  check(await page.isEnabled('#dayNext'), '어제로 넘김');
+  await page.click('#dayNext');
+  await page.waitForFunction(() => document.querySelector('#daySub').textContent === '오늘');
+  await page.click('#tabs [data-view="home"]');
+  check(await page.isVisible('#feedCard') && !(await page.isVisible('#dayList')), '입력 쪽으로 돌아옴');
+
   // 연결이 끊기면 쌓았다가 보낸다
   await page.context().setOffline(true);
   await page.click('[data-diaper="pee"]');

@@ -72,6 +72,7 @@ class DemoServer {
       case 'care_update_event': return this.updateEvent(args.p);
       case 'care_timeline': return this.timeline(args.p_days);
       case 'care_measures': return this.measures();
+      case 'care_day': return this.day(args.p_day);
       case 'care_upcoming': return this.upcoming();
       case 'care_phrases': return this.phrases;
       case 'care_add_phrase': {
@@ -202,6 +203,21 @@ class DemoServer {
     if (p.detail) e.detail = { ...(e.detail || {}), ...p.detail };
     this.save();
     return { status: 'saved', id: p.id };
+  }
+
+  /** 하루 기록(개인 폰 화면의 기록 쪽). 전날 잠들어 그날 깬 잠도 넣는다 */
+  day(key) {
+    const from = key ? new Date(`${key}T00:00:00`) : new Date(new Date().setHours(0, 0, 0, 0));
+    const to = new Date(from.getTime() + 86400000);
+    const inDay = (e) => {
+      const at = new Date(e.occurred_at);
+      if (at >= from && at < to) return true;
+      return e.kind === 'sleep' && at < from && at >= new Date(from.getTime() - 86400000) && (!e.ended_at || new Date(e.ended_at) > from);
+    };
+    const events = this.live().filter(inDay).reverse().map((e) => ({ id: e.id, kind: e.kind, at: e.occurred_at, ended_at: e.ended_at ?? null,
+      ml: e.amount_ml ?? null, value: e.value_num ?? null, type: e.detail?.type ?? null, memo: e.detail?.memo ?? null, feeding: !!e.detail?.feeding, detail: e.detail || {} }));
+    const pad = (n) => String(n).padStart(2, '0');
+    return { day: `${from.getFullYear()}-${pad(from.getMonth() + 1)}-${pad(from.getDate())}`, from: from.toISOString(), to: to.toISOString(), events };
   }
 
   timeline(days = 3) {

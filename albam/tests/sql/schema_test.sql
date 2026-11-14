@@ -541,4 +541,28 @@ exception when insufficient_privilege then raise notice 'ok - non-family cannot 
 end $$;
 reset role;
 
+-- ── 017: 하루 기록 ─────────────────────
+set role authenticated;
+set request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+do $$
+declare d jsonb; v_day date := ((now() at time zone 'Asia/Seoul') - interval '20 days')::date;
+        v_noon timestamptz := (v_day::timestamp + interval '12 hours') at time zone 'Asia/Seoul';
+begin
+  perform public.care_add_event(jsonb_build_object('kind', 'feed', 'amount_ml', 180, 'occurred_at', v_noon, 'detail', '{"memo":"유산균"}'::jsonb, 'force', true));
+  perform public.care_add_event(jsonb_build_object('kind', 'sleep', 'occurred_at', v_noon - interval '14 hours', 'ended_at', v_noon - interval '6 hours', 'force', true));
+  perform public.care_add_event(jsonb_build_object('kind', 'diaper', 'occurred_at', v_noon + interval '13 hours', 'detail', '{"type":"pee"}'::jsonb, 'force', true));
+  d := public.care_day(v_day);
+  perform pg_temp.check(d ->> 'day' = v_day::text and jsonb_array_length(d -> 'events') = 2, 'day lists that day only, plus sleep carried over midnight');
+  perform pg_temp.check(d -> 'events' -> 0 ->> 'kind' = 'sleep' and d -> 'events' -> 1 ->> 'memo' = '유산균' and (d -> 'events' -> 1 ->> 'ml')::int = 180, 'day events in time order with memo');
+  perform pg_temp.check(jsonb_array_length(public.care_day(v_day + 1) -> 'events') = 1, 'next day has the late diaper only');
+  perform pg_temp.check(public.care_day() ->> 'day' = (now() at time zone 'Asia/Seoul')::date::text, 'no date means today');
+end $$;
+set request.jwt.claim.sub = '22222222-2222-2222-2222-222222222222';
+do $$ begin
+  perform public.care_day(current_date);
+  raise exception 'FAIL: stranger day';
+exception when insufficient_privilege then raise notice 'ok - non-family cannot read a day';
+end $$;
+reset role;
+
 \echo 'ALL SQL TESTS PASSED'
