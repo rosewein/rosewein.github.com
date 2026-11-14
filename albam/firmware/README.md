@@ -14,6 +14,7 @@
 
 ## 처음 한 번: 선으로 굽기
 
+칩은 ESP32-P4 리비전 v3.2 이고, 그에 맞춰 `CONFIG_ESP32P4_SELECTS_REV_LESS_V3=n` 으로 빌드한다(`sdkconfig.defaults`).
 ESP-IDF v5.5.6 으로 빌드를 확인했다. v5.5.2 는 부품을 고르는 단계에서 멈춘다("Missing required kconfig option").
 
 ```sh

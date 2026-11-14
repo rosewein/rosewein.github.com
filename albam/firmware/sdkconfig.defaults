@@ -1,7 +1,7 @@
 CONFIG_IDF_TARGET="esp32p4"
 
-# 지금 팔리는 보드의 P4 칩은 3판 이전이다
-CONFIG_ESP32P4_SELECTS_REV_LESS_V3=y
+# 이 보드의 P4 칩은 리비전 v3.2 다. 3판 이전 칩용으로 빌드하면 켜지지 않는다
+CONFIG_ESP32P4_SELECTS_REV_LESS_V3=n
 
 # 플래시와 칸 나눔(무선 업데이트용 앱 칸 두 개)
 CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
