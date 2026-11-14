@@ -14,5 +14,8 @@ typedef struct {
 int ui_brightness_get(void);
 void ui_brightness_set(int percent);
 
+/* 문제를 찾을 때: 지금까지 들어온 터치 수와 마지막으로 누른 자리 */
+void ui_touch_diag(int *presses, int *x, int *y);
+
 /* 화면을 만들고 첫 화면을 띄운다. LVGL 잠금을 잡은 채로 부른다 */
 void ui_build(const ui_fonts_t *fonts, const char *version);

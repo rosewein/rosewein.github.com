@@ -543,6 +543,24 @@ static void build_settings(void)
     lv_obj_set_pos(button(s_settings, "닫기", back_home, 200, 84), 1052, 600);
 }
 
+/* ---- 터치가 들어오는지 보기(/info 에 나온다) ---- */
+
+static int s_presses;
+static lv_point_t s_last_press;
+
+static void pressed(lv_event_t *e)
+{
+    s_presses++;
+    lv_indev_get_point(lv_event_get_target(e), &s_last_press);
+}
+
+void ui_touch_diag(int *presses, int *x, int *y)
+{
+    *presses = s_presses;
+    *x = s_last_press.x;
+    *y = s_last_press.y;
+}
+
 /* ---- 1초마다: 화면 고치기, 화면 옮기기 ---- */
 
 static void tick(lv_timer_t *timer)
@@ -620,6 +638,9 @@ void ui_build(const ui_fonts_t *fonts, const char *version)
     net_get_status(&net);
     if (net.state == NET_NO_WIFI) {
         open_wifi(NULL);
+    }
+    for (lv_indev_t *indev = lv_indev_get_next(NULL); indev; indev = lv_indev_get_next(indev)) {
+        lv_indev_add_event_cb(indev, pressed, LV_EVENT_PRESSED, NULL);
     }
     lv_timer_create(tick, 1000, NULL);
     lv_timer_create(animate, FRAME_MS, NULL);

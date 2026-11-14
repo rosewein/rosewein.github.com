@@ -235,6 +235,10 @@ int main(int argc, char **argv)
     tap(200, 60);
     snprintf(name, sizeof(name), "%s/7-wifi", out); save(name);
 
+    int presses, px, py;
+    ui_touch_diag(&presses, &px, &py);
+    printf("터치 %d번, 마지막 (%d, %d)\n", presses, px, py);
+
     /* 8. 로그인(로그인이 필요하면 대시보드 대신 뜬다) */
     tap(1170, 290);
     s_care = CARE_NEED_LOGIN;

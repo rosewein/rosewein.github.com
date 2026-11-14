@@ -3,6 +3,7 @@
 #include "ota.h"
 #include "care.h"
 #include "store.h"
+#include "ui.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -57,18 +58,22 @@ static esp_err_t info_get(httpd_req_t *req)
             *p = ' ';
         }
     }
-    static char json[900];
+    int presses, touch_x, touch_y;
+    ui_touch_diag(&presses, &touch_x, &touch_y);
+    static char json[1000];
     snprintf(json, sizeof(json),
              "{\"name\":\"%s\",\"version\":\"%s\",\"built\":\"%s %s\",\"slot\":\"%s\",\"uptime_s\":%d,"
              "\"heap\":{\"internal_free\":%u,\"internal_min\":%u,\"internal_largest\":%u,\"psram_free\":%u,\"psram_min\":%u},"
              "\"care\":{\"state\":%d,\"ok\":%d,\"fails\":%d,\"fails_in_a_row\":%d,\"seconds_since_ok\":%d,"
-             "\"seconds_since_error\":%d,\"last_error\":\"%s\"}}",
+             "\"seconds_since_error\":%d,\"last_error\":\"%s\"},"
+             "\"touch\":{\"presses\":%d,\"x\":%d,\"y\":%d}}",
              app->project_name, app->version, app->date, app->time, running ? running->label : "?",
              (int)(esp_timer_get_time() / 1000000),
              (unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL), (unsigned)heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL),
              (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL),
              (unsigned)heap_caps_get_free_size(MALLOC_CAP_SPIRAM), (unsigned)heap_caps_get_minimum_free_size(MALLOC_CAP_SPIRAM),
-             (int)care_state(), care.ok, care.fails, care.fails_in_a_row, care.seconds_since_ok, care.seconds_since_error, care.last_error);
+             (int)care_state(), care.ok, care.fails, care.fails_in_a_row, care.seconds_since_ok, care.seconds_since_error, care.last_error,
+             presses, touch_x, touch_y);
     httpd_resp_set_type(req, "application/json");
     return httpd_resp_send(req, json, HTTPD_RESP_USE_STRLEN);
 }
