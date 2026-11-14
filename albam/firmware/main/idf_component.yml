@@ -1,7 +1,9 @@
 dependencies:
   idf: ">=5.5"
-  # 화면(EK79007)·터치(GT911)·밝기·LVGL 을 묶은 보드 지원 패키지
-  waveshare/esp32_p4_wifi6_touch_lcd_7b: "~3.0.1"
+  # 화면(ILI9881C)·터치(GT9271)·밝기·LVGL 을 묶은 보드 지원 패키지.
+  # 7·8·10.1인치 올인원이 같이 쓰므로 sdkconfig.defaults 에서 7인치를 고른다
+  waveshare/esp32_p4_wifi6_touch_lcd_x: "~2.0.3"
+  lvgl/lvgl: "~9.5.0"
   # P4 에는 와이파이가 없어 보드의 C6 칩을 통해 쓴다
   espressif/esp_wifi_remote: "^1.6"
   espressif/esp_hosted: "^2.11"

@@ -11,6 +11,20 @@ menu "Albam board"
         string "Wi-Fi password baked into the firmware (optional)"
         default ""
 
+    config ALBAM_ROTATE_270
+        bool "Landscape the other way round (270 instead of 90 degrees)"
+        default n
+        help
+            The panel is portrait (720x1280) and is rotated to landscape (1280x720).
+            Turn this on if the picture is upside down for the way the board is mounted.
+
+    config ALBAM_TOUCH_FLIP
+        bool "Touch lands on the opposite corner"
+        default n
+        help
+            Turn this on if the picture is the right way up but a touch registers
+            at the diagonally opposite point.
+
     config ALBAM_BRIGHTNESS
         int "Backlight brightness (percent)"
         range 5 100

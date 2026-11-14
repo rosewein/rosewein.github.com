@@ -1,5 +1,5 @@
 /* 알밤보드 P4 첫 펌웨어: 와이파이, 한국 시간, 가로 화면, 무선 업데이트.
- * 보드: Waveshare ESP32-P4-WIFI6-Touch-LCD-7B (7인치 1024x600) */
+ * 보드: Waveshare ESP32-P4-WIFI6-Touch-LCD-7 (7인치 올인원, 세로 720x1280 패널을 돌려 가로 1280x720) */
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_log.h"

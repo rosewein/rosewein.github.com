@@ -107,13 +107,13 @@ static void build_setup(void)
 
     /* 왼쪽: 찾은 와이파이 */
     s_list = lv_list_create(s_setup);
-    lv_obj_set_size(s_list, 400, 250);
+    lv_obj_set_size(s_list, 480, 316);
     lv_obj_set_pos(s_list, 12, 12);
 
     /* 오른쪽: 고른 이름, 비밀번호, 버튼 */
     s_ssid = label(s_setup, &lv_font_montserrat_28, 0xffffff);
-    lv_obj_set_pos(s_ssid, 430, 16);
-    lv_obj_set_width(s_ssid, 580);
+    lv_obj_set_pos(s_ssid, 512, 16);
+    lv_obj_set_width(s_ssid, 750);
     lv_label_set_long_mode(s_ssid, LV_LABEL_LONG_MODE_DOTS);
     lv_label_set_text(s_ssid, "");
 
@@ -122,29 +122,29 @@ static void build_setup(void)
     lv_textarea_set_max_length(s_pass, 64);
     lv_textarea_set_placeholder_text(s_pass, "Password");
     lv_obj_set_style_text_font(s_pass, &lv_font_montserrat_20, 0);
-    lv_obj_set_size(s_pass, 580, 50);
-    lv_obj_set_pos(s_pass, 430, 64);
+    lv_obj_set_size(s_pass, 750, 54);
+    lv_obj_set_pos(s_pass, 512, 68);
 
     s_msg = label(s_setup, &lv_font_montserrat_20, 0xffd27a);
-    lv_obj_set_pos(s_msg, 430, 130);
-    lv_obj_set_width(s_msg, 580);
+    lv_obj_set_pos(s_msg, 512, 146);
+    lv_obj_set_width(s_msg, 750);
     lv_label_set_text(s_msg, "");
 
     lv_obj_t *rescan = button(s_setup, LV_SYMBOL_REFRESH " Search", rescan_clicked);
-    lv_obj_set_size(rescan, 180, 56);
-    lv_obj_set_pos(rescan, 430, 200);
+    lv_obj_set_size(rescan, 200, 64);
+    lv_obj_set_pos(rescan, 512, 258);
 
     lv_obj_t *connect = button(s_setup, LV_SYMBOL_OK " Connect", join);
-    lv_obj_set_size(connect, 180, 56);
-    lv_obj_set_pos(connect, 630, 200);
+    lv_obj_set_size(connect, 200, 64);
+    lv_obj_set_pos(connect, 732, 258);
 
     lv_obj_t *back = button(s_setup, LV_SYMBOL_LEFT " Back", back_clicked);
-    lv_obj_set_size(back, 160, 56);
-    lv_obj_set_pos(back, 850, 200);
+    lv_obj_set_size(back, 180, 64);
+    lv_obj_set_pos(back, 1082, 258);
 
     /* 아래: 글자판. 체크 키는 연결과 같다 */
     s_keyboard = lv_keyboard_create(s_setup);
-    lv_obj_set_size(s_keyboard, 1024, 320);
+    lv_obj_set_size(s_keyboard, 1280, 380);
     lv_obj_align(s_keyboard, LV_ALIGN_BOTTOM_MID, 0, 0);
     lv_keyboard_set_textarea(s_keyboard, s_pass);
     lv_obj_add_event_cb(s_keyboard, join, LV_EVENT_READY, NULL);
@@ -159,23 +159,23 @@ static void build_home(void)
     lv_obj_remove_flag(s_home, LV_OBJ_FLAG_SCROLLABLE);
 
     s_clock = label(s_home, &lv_font_montserrat_48, 0xffffff);
-    lv_obj_set_style_transform_scale(s_clock, 640, 0);   /* 48 글꼴을 2.5배로 */
+    lv_obj_set_style_transform_scale(s_clock, 768, 0);   /* 48 글꼴을 3배로 */
     lv_obj_set_style_transform_pivot_x(s_clock, lv_pct(50), 0);
     lv_obj_set_style_transform_pivot_y(s_clock, lv_pct(50), 0);
-    lv_obj_align(s_clock, LV_ALIGN_CENTER, 0, -70);
+    lv_obj_align(s_clock, LV_ALIGN_CENTER, 0, -90);
     lv_label_set_text(s_clock, "--:--");
 
     s_date = label(s_home, &lv_font_montserrat_28, 0xb8c0c8);
-    lv_obj_align(s_date, LV_ALIGN_CENTER, 0, 60);
+    lv_obj_align(s_date, LV_ALIGN_CENTER, 0, 70);
     lv_label_set_text(s_date, "");
 
     s_net = label(s_home, &lv_font_montserrat_20, 0x8fd18f);
-    lv_obj_align(s_net, LV_ALIGN_CENTER, 0, 130);
+    lv_obj_align(s_net, LV_ALIGN_CENTER, 0, 150);
     lv_label_set_text(s_net, "");
 
     s_bar = lv_bar_create(s_home);
-    lv_obj_set_size(s_bar, 600, 18);
-    lv_obj_align(s_bar, LV_ALIGN_CENTER, 0, 180);
+    lv_obj_set_size(s_bar, 720, 18);
+    lv_obj_align(s_bar, LV_ALIGN_CENTER, 0, 210);
     lv_bar_set_range(s_bar, 0, 100);
     lv_obj_add_flag(s_bar, LV_OBJ_FLAG_HIDDEN);
 
@@ -246,9 +246,35 @@ static void tick(lv_timer_t *timer)
     }
 }
 
+/* 패널은 세로(720x1280)다. 90도(설정에 따라 270도) 돌려 가로 1280x720 으로 쓴다.
+ * 터치는 화면과 따로라서 같은 방향으로 맞춰 준다(칩이 준 좌표를 뒤집고 x·y 를 바꾼다). */
+static lv_display_t *start_landscape(void)
+{
+    bool other_way = false, touch_other_way = false;
+#ifdef CONFIG_ALBAM_ROTATE_270
+    other_way = true;
+    touch_other_way = true;
+#endif
+#ifdef CONFIG_ALBAM_TOUCH_FLIP
+    touch_other_way = !touch_other_way;
+#endif
+    bsp_display_cfg_t cfg = {
+        .lv_adapter_cfg = ESP_LV_ADAPTER_DEFAULT_CONFIG(),
+        .rotation = other_way ? ESP_LV_ADAPTER_ROTATE_270 : ESP_LV_ADAPTER_ROTATE_90,
+        /* TRIPLE_PARTIAL 은 P4 에서 돌린 화면이 멈추는 문제가 알려져 있어 쓰지 않는다 */
+        .tear_avoid_mode = ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_PARTIAL,
+        .touch_flags = {
+            .swap_xy = 1,
+            .mirror_x = touch_other_way ? 0 : 1,
+            .mirror_y = touch_other_way ? 1 : 0,
+        },
+    };
+    return bsp_display_start_with_config(&cfg);
+}
+
 void ui_start(void)
 {
-    lv_display_t *display = bsp_display_start();
+    lv_display_t *display = start_landscape();
     assert(display);
     bsp_display_brightness_set(CONFIG_ALBAM_BRIGHTNESS);
 
