@@ -78,6 +78,12 @@ class DemoServer {
       case 'care_day': return this.day(args.p_day);
       case 'care_upcoming': return this.upcoming();
       case 'care_appointments': return this.upcoming();
+      case 'care_vaccines': {
+        const ago = (days, text) => ({ id: `v-${days}-${text}`, at: minutesAgo(days * 1440), text, hospital: null });
+        const sample = [ago(149, 'B형간염 1차'), ago(130, 'BCG'), ago(88, '헥사심 1차'), ago(88, '폐렴구균 1차'), ago(88, '로타텍 1차'), ago(46, 'RSV 항체 주사'), ago(25, '헥사심 2차'), ago(25, '폐렴구균 2차'), ago(25, '로타텍 2차')];
+        const mine = this.live().filter((e) => e.kind === 'vaccine').map((e) => ({ id: e.id, at: e.occurred_at, text: e.detail?.memo || e.detail?.vaccine || '', hospital: e.detail?.hospital ?? null }));
+        return { baby: { birth_date: DEMO_BABY.birth_date, sex: 'boy' }, records: [...sample, ...mine] };
+      }
       case 'care_set_appointment': {
         const id = args.p.id || crypto.randomUUID();
         this.appointments = [...this.upcoming().filter((a) => a.id !== id), { at_time: null, place: null, note: null, items: [], ...args.p, at_time: args.p.at_time || null, place: args.p.place || null, id }];

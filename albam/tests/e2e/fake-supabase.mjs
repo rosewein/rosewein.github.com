@@ -77,6 +77,8 @@ export async function createFakeSupabase(context) {
         }
         return reply(200, days);
       }
+      case '/rest/v1/rpc/care_vaccines':
+        return reply(200, { baby: { birth_date: '2026-06-18', sex: null }, records: [] });
       case '/rest/v1/rpc/care_appointments':
         return reply(200, []);
       case '/rest/v1/rpc/care_set_appointment':

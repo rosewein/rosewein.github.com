@@ -605,4 +605,24 @@ exception when insufficient_privilege then raise notice 'ok - non-family cannot 
 end $$;
 reset role;
 
+-- ── 019: 맞은 예방접종 모아 읽기 ─────────────────────
+set role authenticated;
+set request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+do $$
+declare v jsonb;
+begin
+  perform public.care_add_event(jsonb_build_object('kind', 'vaccine', 'occurred_at', now() - interval '60 days', 'detail', '{"vaccine":"헥사심","dose":1,"memo":"헥사심 1차","hospital":"구로병원"}'::jsonb, 'force', true));
+  perform public.care_add_event(jsonb_build_object('kind', 'vaccine', 'occurred_at', now() - interval '90 days', 'detail', '{"vaccine":"BCG"}'::jsonb, 'force', true));
+  v := public.care_vaccines();
+  perform pg_temp.check(jsonb_array_length(v -> 'records') = 2 and v -> 'records' -> 0 ->> 'text' = 'BCG' and v -> 'records' -> 1 ->> 'text' = '헥사심 1차', 'vaccines in time order, memo first then vaccine name');
+  perform pg_temp.check(v -> 'records' -> 1 ->> 'hospital' = '구로병원' and v -> 'baby' ->> 'birth_date' = '2026-06-18', 'vaccines carry hospital and birth date');
+end $$;
+set request.jwt.claim.sub = '22222222-2222-2222-2222-222222222222';
+do $$ begin
+  perform public.care_vaccines();
+  raise exception 'FAIL: stranger vaccines';
+exception when insufficient_privilege then raise notice 'ok - non-family cannot read vaccines';
+end $$;
+reset role;
+
 \echo 'ALL SQL TESTS PASSED'

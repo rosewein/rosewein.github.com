@@ -156,8 +156,18 @@ body.light { --corrected: #3f5fae; }
 .typeRow { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid var(--line); }
 .typeRow .btn.step { width: 44px; height: 44px; }
 .btn.toggle { height: 44px; width: 64px; padding: 0; font-size: 14px; font-weight: 400; color: var(--dim); }
-.btn.toggle.on { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+.btn.toggle.on { border-color: var(--accent); background: var(--btn); color: var(--accent); font-weight: 600; }
 #viewSettings section, #apptList, #phraseKinds, #typeList { display: flex; flex-direction: column; }
+
+/* 예방접종 일정표: 시기마다 묶고, 줄 끝에 상태 */
+.vaxPeriod { padding: 8px 0 2px; border-top: 1px solid var(--line); font-size: 13px; color: var(--dim); display: flex; justify-content: space-between; gap: 8px; }
+.vaxRow { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 5px 0; }
+.vaxRow .st { white-space: nowrap; font-size: 13px; color: var(--dim); }
+.vaxRow.done .st { color: var(--ok); }
+.vaxRow.booked .st { color: var(--accent); font-weight: 600; }
+.vaxRow.due .st, .vaxRow.overdue .st { color: var(--warn); font-weight: 600; }
+.vaxRow.later { color: var(--dim); }
+#vaxMore { align-self: flex-start; margin: 6px 0; }
 
 /* 아래 탭 */
 #tabs {

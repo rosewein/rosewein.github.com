@@ -1100,9 +1100,22 @@ async function phoneFlow(browser, base) {
   check(/예방접종 · 헥사심 3차, 폐렴구균 3차, 로타텍 3차, 독감 1차D-20›$/.test(await text(page, '#apptList')), `일정 목록 (${await text(page, '#apptList')})`);
   check(/수유 유산균, 비타민D/.test(await text(page, '#phraseKinds')) && /목욕 머리 감김/.test(await text(page, '#phraseKinds')), '문구가 종류마다 한 줄로');
   check(await noOverflow() && (await small()).length === 0, `설정 쪽: 안 넘치고 누르는 것은 44px 이상 ${(await small()).join(' ')}`);
+  // 예방접종 일정표: 표준 일정에 맞은 기록·예약을 맞춰 본다
+  await page.waitForFunction(() => document.querySelectorAll('#vaxList .vaxRow').length > 10);
+  check(/^맞음 14 · 예약 5 · 지금 맞을 때 \d+ · 시기 지남 \d+$/.test(await text(page, '#vaxSummary')), `접종 일정표 합계 (${await text(page, '#vaxSummary')})`);
+  const vaxRows = await page.$$eval('#vaxList .vaxRow', (r) => r.map((x) => x.textContent));
+  check(vaxRows.some((r) => /^B형간염 1차맞음 \d+\/\d+$/.test(r)) && vaxRows.some((r) => /^폐렴구균 3차예약 \d+\/\d+$/.test(r)) && vaxRows.some((r) => /^RSV 항체 주사맞음/.test(r)), `맞음·예약·표에 없는 접종 (${vaxRows.slice(0, 3).join(' | ')})`);
+  check(vaxRows.some((r) => /^인플루엔자\(독감\) · 첫해는 4주 간격 2회예약/.test(r)) && !vaxRows.some((r) => /^HPV/.test(r)), '독감 줄, 남아에게 HPV 없음');
+  const before2 = vaxRows.length;
+  await page.click('#vaxMore');
+  check(await page.$$eval('#vaxList .vaxRow', (r) => r.length) > before2 && /곧 올 것까지만/.test(await text(page, '#vaxMore')), '[전체 일정 보기]로 12세까지');
+  await page.click('#vaxMore');
   const rowWidths = await page.$$eval('#phraseKinds .rec', (r) => [...new Set(r.map((x) => Math.round(x.getBoundingClientRect().width)))]);
   check(rowWidths.length === 1 && rowWidths[0] > 300, `문구 줄이 모두 화면 폭 (${rowWidths.join(' ')})`);
+  await page.evaluate(() => window.scrollTo(0, 0));
   await shot(page, 'phone-settings');
+  const toggle = await page.$eval('#typeList .btn.toggle.on', (b) => { const c = getComputedStyle(b); return c.color !== c.backgroundColor; });
+  check(toggle, '[보임] 글자가 바탕색과 달라 읽힘');
   // 새 일정
   await page.click('#apptAdd');
   check(await page.evaluate(() => document.activeElement?.id) === 'apptTitle' && await page.inputValue('#apptName') === '예방접종', '일정 창: 날짜 칸에 초점이 가지 않고, 이름은 예방접종부터');

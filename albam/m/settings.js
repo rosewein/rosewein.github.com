@@ -3,6 +3,8 @@
 //
 //   다가오는 일정      12월 22일 화 예방접종 · 헥사심 3차 …   D-38 ›     [+ 일정 넣기]
 //                      지난 2주 안의 일정도 남아 있다("3일 지남"): 접종한 날 [맞았어요]를 잊어도 나중에 옮길 수 있게
+//   예방접종 일정표    맞음 14 · 예약 5 · 지금 맞을 때 0 · 시기 지남 0
+//                      6개월(12/18~)  DTaP 3차 …… 예약 12/22         ← 표준예방접종일정표에 맞은 기록·예약을 맞춰 본다
 //   자주 쓰는 문구     수유 · 유산균, 비타민D ›   목욕 · 보습로션 ›  …
 //   더 넣기 버튼       [▲][▼] 산책 [보임]   …                        ← 모든 화면에 같이 적용
 //
@@ -10,6 +12,7 @@
 
 import { SOURCE, isBuiltinKind, recordTypes } from '../src/domain.js';
 import { describeAppointment } from '../src/ui/upcoming.js';
+import { vaccineStatus, statusText } from '../src/vaccines.js';
 import { dayKey } from './records.js';
 
 const $ = (s) => document.querySelector(s);
@@ -77,7 +80,7 @@ export function setupSettings(ctx) {
     $('#apptEmpty').hidden = list.length > 0;
   }
   async function loadAppointments() {
-    try { list = await ctx.api.getAppointments(); renderAppointments(); } catch (e) { $('#apptEmpty').hidden = false; $('#apptEmpty').textContent = '일정을 못 받았어요. 연결을 확인해 주세요'; }
+    try { list = await ctx.api.getAppointments(); renderAppointments(); renderVaccines(); } catch (e) { $('#apptEmpty').hidden = false; $('#apptEmpty').textContent = '일정을 못 받았어요. 연결을 확인해 주세요'; }
   }
   function renderApptButtons() {
     const armed = Date.now() < deleteArmedUntil;
@@ -102,7 +105,7 @@ export function setupSettings(ctx) {
     renderApptButtons();
     dialog.showModal();
   }
-  const afterChange = async () => { await loadAppointments(); ctx.upcoming.load().then(() => ctx.refresh()); };
+  const afterChange = async () => { await loadAppointments(); await loadVaccines(); ctx.upcoming.load().then(() => ctx.refresh()); };
 
   $('#apptAdd').addEventListener('click', () => openAppointment(null));
   $('#apptClose').addEventListener('click', () => dialog.close());
@@ -141,6 +144,50 @@ export function setupSettings(ctx) {
     ctx.notify(`예방접종 ${events.length}건을 기록에 넣었어요`);
     await afterChange();
   });
+
+  // ── 예방접종 일정표 ──
+  let vax = null;
+  let vaxAll = false;
+  function renderVaccines() {
+    if (!vax?.baby?.birth_date) return;
+    const now = ctx.now();
+    const s = vaccineStatus({ birth: vax.baby.birth_date, sex: vax.baby.sex, records: vax.records, appointments: list, now });
+    const c = s.counts;
+    $('#vaxSummary').textContent = `맞음 ${c.done} · 예약 ${c.booked} · 지금 맞을 때 ${c.due} · 시기 지남 ${c.overdue}`;
+    // 처음엔 지난 것과 곧 올 것(아직 안 온 시기 둘)까지만. [전체 일정 보기]로 12세까지
+    const started = s.periods.filter((p) => p.rows.some((r) => r.status !== 'later'));
+    const coming = s.periods.filter((p) => p.rows.every((r) => r.status === 'later'));
+    const shown = vaxAll ? s.periods : [...started, ...coming.slice(0, 2)];
+    const nodes = [];
+    for (const p of shown) {
+      const open = p.rows.find((r) => r.status !== 'done');
+      const head = el('div', 'vaxPeriod');
+      head.append(el('span', '', p.label), el('span', '', open ? '' : '모두 맞음'));
+      nodes.push(head);
+      for (const r of p.rows) {
+        const row = el('div', `vaxRow ${r.status}`);
+        row.append(el('span', '', `${r.name}${r.of > 1 ? ` ${r.dose}차` : ''}`), el('span', 'st', statusText(r)));
+        nodes.push(row);
+      }
+    }
+    const fluHead = el('div', 'vaxPeriod'); fluHead.append(el('span', '', '6개월부터 매년'));
+    const flu = el('div', `vaxRow ${s.flu.booked.length ? 'booked' : s.flu.done.length ? 'done' : s.flu.started ? 'due' : 'later'}`);
+    const md = (k) => { const [, m, d] = k.split('-').map(Number); return `${m}/${d}`; };
+    flu.append(el('span', '', `${s.flu.name} · 첫해는 4주 간격 2회`),
+      el('span', 'st', s.flu.booked.length ? `예약 ${md(s.flu.booked[0])}` : s.flu.done.length ? `맞음 ${s.flu.done.map(md).join(', ')}` : s.flu.started ? '지금 맞을 때' : `${md(s.flu.from)}부터`));
+    nodes.push(fluHead, flu);
+    if (s.others.length) {
+      const head = el('div', 'vaxPeriod'); head.append(el('span', '', '표에 없는 접종'));
+      nodes.push(head, ...s.others.map((o) => { const row = el('div', 'vaxRow done'); const d = new Date(o.at); row.append(el('span', '', o.text), el('span', 'st', `맞음 ${d.getMonth() + 1}/${d.getDate()}`)); return row; }));
+    }
+    $('#vaxList').replaceChildren(...nodes);
+    $('#vaxMore').hidden = !coming.length;
+    $('#vaxMore').textContent = vaxAll ? '곧 올 것까지만 보기' : '전체 일정 보기(12세까지)';
+  }
+  async function loadVaccines() {
+    try { vax = await ctx.api.getVaccines(); renderVaccines(); } catch (e) { $('#vaxSummary').textContent = '접종 기록을 못 받았어요. 연결을 확인해 주세요'; }
+  }
+  $('#vaxMore').addEventListener('click', () => { vaxAll = !vaxAll; renderVaccines(); });
 
   // ── 자주 쓰는 문구: 종류마다 한 줄, 누르면 더하기·지우기 창 ──
   function renderPhrases() {
@@ -191,5 +238,5 @@ export function setupSettings(ctx) {
   }
   $('#logout').addEventListener('click', () => ctx.api.signOut());
 
-  return { show() { render(); loadAppointments(); }, render };
+  return { show() { render(); loadAppointments(); loadVaccines(); }, render };
 }
