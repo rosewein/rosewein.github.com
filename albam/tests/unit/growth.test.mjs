@@ -69,7 +69,7 @@ test('다가오는 일정 글: 남은 날, 여러 개면 "외 n"', async () => {
   const { describeAppointment } = await import('../../src/ui/upcoming.js');
   const now = new Date(2026, 10, 14, 9, 0);
   const a = { on_date: '2026-12-22', title: '예방접종', items: ['헥사심 3차', '폐렴구균 3차', '로타텍 3차', '독감 1차'] };
-  assert.deepEqual(describeAppointment(a, now), { date: '12월 22일 화', title: '예방접종', left: 'D-38', items: '헥사심 3차 외 3' });
+  assert.deepEqual(describeAppointment(a, now), { date: '12월 22일 화', title: '예방접종', left: 'D-38', items: '헥사심 3차 외 3', days: 38 });
   assert.equal(describeAppointment({ ...a, on_date: '2026-11-14', at_time: '10:30', items: [] }, now).left, '오늘');
   assert.equal(describeAppointment({ ...a, on_date: '2026-11-15' }, now).left, '내일');
   assert.equal(describeAppointment({ ...a, on_date: '2026-11-13' }, now), null);

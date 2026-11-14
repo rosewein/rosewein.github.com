@@ -382,9 +382,25 @@ async function statsFlow(browser, base) {
   const clockOverlap = await page.evaluate(() => { const a = document.querySelector('#bigAge span:last-child').getBoundingClientRect(); const d = document.querySelector('#pageDots').getBoundingClientRect(); const t = document.querySelector('#bigDate').getBoundingClientRect(); return a.bottom > d.top + 4 || t.bottom > a.top + 1; });
   check(!clockOverlap, '시계 쪽: 날짜·나이·점이 안 겹침');
   const nextLine = await text(page, '#bigNext');
-  check(/예방접종 D-20 · 헥사심 3차 외 3$/.test(nextLine), `시계 쪽: 가까운 일정 (${nextLine})`);
-  const nextFit = await page.evaluate(() => { const n = document.querySelector('#bigNext'); const r = document.createRange(); r.selectNodeContents(n); const t = r.getBoundingClientRect(); const a = document.querySelector('#bigAge').getBoundingClientRect(); const d = document.querySelector('#pageDots').getBoundingClientRect(); return t.top >= a.bottom - 0.5 && t.bottom <= d.top + 0.5 && n.scrollWidth <= n.clientWidth + 0.5; });
-  check(nextFit, '시계 쪽: 일정 줄이 나이 아래, 쪽 점 위, 폭 안');
+  check(nextLine === '', `시계 쪽: 20일 남은 일정은 아직 안 띄움 (${nextLine})`);
+  {
+    // 이틀 전부터: 시계 쪽 맨 아랫줄과 대시보드 나이 줄 자리
+    const p2 = await (await browser.newContext(DEVICE)).newPage();
+    await p2.clock.install({ time: DAYTIME });
+    await p2.goto(`${base}?demo&appt=2`);
+    await p2.clock.runFor(800);
+    await p2.waitForTimeout(100);
+    await p2.clock.runFor(800);
+    check(await text(p2, '#ageLine') === '예방접종 D-2 · 헥사심 3차 외 3', `대시보드: 이틀 전부터 나이 줄 자리에 일정 (${await text(p2, '#ageLine')})`);
+    check(await p2.$eval('#ageLine', (a) => a.getBoundingClientRect().top) > await p2.$eval('#clock', (c) => c.getBoundingClientRect().bottom) - 0.5, '대시보드 일정 줄은 시각 아랫줄');
+    await shot(p2, 'dashboard-appointment');
+    await p2.evaluate(() => document.querySelector('#pageDots .dot').click());
+    await p2.clock.runFor(800);
+    const line2 = await text(p2, '#bigNext');
+    check(/예방접종 D-2 · 헥사심 3차 외 3$/.test(line2), `시계 쪽: 이틀 전부터 가까운 일정 (${line2})`);
+    await shot(p2, 'clock-appointment');
+    await p2.close();
+  }
   await shot(page, 'clock');
   await page.clock.runFor(65000);
   check(await pageNow() === 'Clock', '시계 쪽은 안 만져도 그대로(탁상시계)');

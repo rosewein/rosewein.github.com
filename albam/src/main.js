@@ -121,7 +121,7 @@ function main() {
   ctx.measures = createMeasures(ctx, DEMO ? 'albam.demo.measures' : 'albam.measures');
   ctx.measures.load();
   ctx.upcoming = createUpcoming(ctx, DEMO ? 'albam.demo.upcoming' : 'albam.upcoming');
-  ctx.upcoming.load().then(() => clockPage.update());
+  ctx.upcoming.load().then(() => { clockPage.update(); ctx.render(); });
 
   // ── 화면 모듈 ──
   const status = createStatusView(ctx);

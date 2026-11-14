@@ -305,7 +305,7 @@ flowchart TD
 
 **다가오는 일정**(015): `care_events`는 이미 일어난 일만 받아서(5분 넘는 미래는 거절), 예약은 `care_appointments(on_date, at_time, kind, title, place, items[], note)`에 따로 둔다. 시각·장소는 모르면 비운다.
 - `care_upcoming(p_limit default 5)`: 오늘(서울)부터의 일정을 가까운 순으로, `days_left`(오늘 0)와 함께. `care_set_appointment(p)`는 넣기·고치기(같은 id면 고치기), `care_cancel_appointment(id)`는 취소 표시.
-- 화면: 시계 쪽 나이 아랫줄에 가장 가까운 일정 하나, "12월 22일 화 예방접종 D-38 · 헥사심 3차 외 3"(`ui/upcoming.js`). 그날이면 "오늘", 하루 전 "내일". 넣는 화면은 아직 없어 SQL Editor 에서 넣는다:
+- 화면: 미리부터 띄우지 않고 **이틀 전부터**(`config.js upcomingNoticeDays`) 보인다. 시계 쪽 나이 아랫줄에 "12월 22일 화 예방접종 D-2 · 헥사심 3차 외 3", 대시보드는 나이 줄 자리에 "예방접종 D-2 · 헥사심 3차 외 3"(`ui/upcoming.js`). 그날이면 "오늘", 하루 전 "내일". 지나면 나이 줄로 돌아온다. 넣는 화면은 아직 없어 SQL Editor 에서 넣는다:
   `select public.care_set_appointment('{"on_date":"2026-12-22","title":"예방접종","items":["헥사심 3차","독감 1차"]}');`(로그인한 가족으로) 또는 표에 바로 `insert`.
 - 예방접종은 교정 나이가 아니라 태어난 날 기준으로 맞는다. 맞은 접종은 `care_events`의 `vaccine` 기록(백신 하나에 한 줄, `detail.vaccine`·`dose`·`hospital`).
 

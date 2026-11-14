@@ -134,11 +134,12 @@ class DemoServer {
     return { status: 'cancelled', id };
   }
 
-  /** 다가오는 일정: 미리 보기라 20일 뒤 예방접종 하나 */
+  /** 다가오는 일정: 미리 보기라 20일 뒤 예방접종 하나(?demo&appt=2 처럼 남은 날을 바꿔 볼 수 있다) */
   upcoming() {
-    const d = new Date(); d.setDate(d.getDate() + 20);
+    const left = Number(new URLSearchParams(location.search).get('appt') ?? 20);
+    const d = new Date(); d.setDate(d.getDate() + left);
     const on = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    return [{ id: 'demo-appointment', on_date: on, at_time: null, kind: 'vaccine', title: '예방접종', place: null, items: ['헥사심 3차', '폐렴구균 3차', '로타텍 3차', '독감 1차'], days_left: 20 }];
+    return [{ id: 'demo-appointment', on_date: on, at_time: null, kind: 'vaccine', title: '예방접종', place: null, items: ['헥사심 3차', '폐렴구균 3차', '로타텍 3차', '독감 1차'], days_left: left }];
   }
 
   /** 측정 기록: 미리 보기라 지난번 값 두 개를 넣어 둔다(성별도 예시) */

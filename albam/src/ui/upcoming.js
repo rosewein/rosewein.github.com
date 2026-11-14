@@ -1,5 +1,6 @@
 // 다가오는 일정(예방접종 예약 등): care_upcoming()(supabase/015)으로 받아 시계 쪽 맨 아랫줄에 가장 가까운 것 하나를 띄운다.
-//   12월 22일 화 예방접종 D-38 · 헥사심 3차 외 3
+//   12월 22일 화 예방접종 D-2 · 헥사심 3차 외 3
+// 미리부터 띄우지 않는다: 이틀 전(config.js upcomingNoticeDays)부터 시계 쪽 맨 아랫줄과 대시보드 나이 줄 자리에 보인다.
 // 연결이 안 되면 마지막으로 받은 것을 쓴다(남은 날은 기기 날짜로 다시 센다).
 
 const DAY_MS = 86400000;
@@ -12,7 +13,7 @@ const dayOf = (s) => { const [y, m, d] = s.split('-').map(Number); return new Da
  * 일정 한 줄 글. 지난 일정이면 ''.  (순수 함수)
  * @param {{on_date: string, title: string, items?: string[], at_time?: string|null}} a
  * @param {Date} now
- * @returns {{date: string, title: string, left: string, items: string}|null}
+ * @returns {{date: string, title: string, left: string, items: string, days: number}|null}
  */
 export function describeAppointment(a, now) {
   const day = dayOf(a.on_date);
@@ -25,6 +26,7 @@ export function describeAppointment(a, now) {
     title: a.title,
     left: left === 0 ? '오늘' : left === 1 ? '내일' : `D-${left}`,
     items: items.length > 1 ? `${items[0]} 외 ${items.length - 1}` : items[0] || '',
+    days: left,
   };
 }
 
@@ -46,11 +48,12 @@ export function createUpcoming(ctx, cacheKey) {
     } catch (e) { /* 연결 안 됨: 지난번 것 */ }
   }
 
-  /** 가장 가까운 일정 하나(없으면 null) */
+  /** 띄울 일정 하나: 가장 가까운 일정이 며칠 안(upcomingNoticeDays, 기본 2)으로 다가왔을 때만. 아니면 null */
   function next(now) {
+    const within = Number(ctx.cfg.upcomingNoticeDays ?? 2);
     for (const a of list) {
       const d = describeAppointment(a, now);
-      if (d) return d;
+      if (d) return d.days <= within ? d : null;
     }
     return null;
   }
