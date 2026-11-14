@@ -86,3 +86,57 @@ test('기록 쪽: 한 줄 글과 그날 합계', async () => {
   assert.equal(addDays('2026-11-01', -1), '2026-10-31');
   assert.equal(dayKey(at(9, 0)), '2026-11-14');
 });
+
+test('통계: 평균은 오늘을 빼고, 막대는 오늘까지', async () => {
+  const { summarize, gapsByPeriod } = await import('../../m/stats.js');
+  const d = (day, o) => ({ day, feed_count: 0, feed_ml: 0, feed_min: null, diaper_total: 0, diaper_pee: 0, diaper_poo: 0, diaper_both: 0, nap_min: 0, night_min: 0, sleep_min: 0, ...o });
+  const days = [
+    d('2026-11-12', { feed_count: 4, feed_ml: 800, feed_min: 10, diaper_total: 6, diaper_pee: 5, diaper_poo: 1, nap_min: 120, night_min: 600, sleep_min: 720 }),
+    d('2026-11-13', { feed_count: 5, feed_ml: 1000, feed_min: 12, diaper_total: 4, diaper_pee: 4, nap_min: 60, night_min: 540, sleep_min: 600 }),
+    d('2026-11-14', { feed_count: 1, feed_ml: 200, diaper_total: 1, diaper_pee: 1 }),
+  ];
+  const feed = summarize('feed', days);
+  assert.equal(feed.headline, '900ml');
+  assert.equal(feed.sub, '하루 4.5회');
+  assert.deepEqual(feed.bars.map((b) => [b.value, b.today]), [[800, false], [1000, false], [200, true]]);
+  assert.deepEqual(feed.cards.map((c) => c.value), ['200ml', '11분']);
+  const diaper = summarize('diaper', days);
+  assert.equal(`${diaper.headline} / ${diaper.sub}`, '5.0회 / 대변 하루 0.5회');
+  assert.equal(diaper.cards[1].value, '1일');
+  const sleep = summarize('sleep', days);
+  assert.equal(sleep.headline, '11.0시간');
+  assert.deepEqual(sleep.cards.map((c) => c.value), ['9.5시간', '1.5시간']);
+  assert.equal(summarize('feed', [d('2026-11-14', {})]).headline, '기록 없음');
+  const periods = [{ from: 6, to: 18, label: '낮' }, { from: 18, to: 24, label: '저녁' }, { from: 0, to: 6, label: '새벽' }];
+  const gaps = [[7, 240], [10, 250], [14, 260], [19, 480], [20, 500], [21, 490], [2, 270]];
+  assert.deepEqual(gapsByPeriod(gaps, periods).map((g) => `${g.label} ${g.text}`), ['낮 4시간 10분', '저녁 8시간 10분']);
+});
+
+test('성장곡선 좌표: 기본 나이와 교정 나이 두 줄, 또래 줄 다섯', async () => {
+  const { growthChart } = await import('../../m/stats.js');
+  const baby = { birth_date: '2026-06-18', due_date: '2026-07-10', sex: 'boy' };
+  const measures = [
+    { kind: 'weight', at: '2026-06-25T10:00:00+09:00', value: 3.1 },
+    { kind: 'weight', at: '2026-11-10T10:00:00+09:00', value: 7.35 },
+    { kind: 'height', at: '2026-11-10T10:00:00+09:00', value: 65.5 },
+  ];
+  const c = growthChart({ kind: 'weight', measures, baby, w: 340, h: 240 });
+  assert.equal(c.lines.length, 5);
+  assert.equal(c.actual.length, 2);
+  assert.equal(c.corrected.length, 1, '예정일 전에 잰 값은 교정 줄에서 뺀다');
+  assert.ok(c.corrected[0].x < c.actual[1].x, '교정 나이가 더 어려서 왼쪽');
+  assert.equal(c.corrected[0].y, c.actual[1].y);
+  assert.equal(c.months, 7);
+  assert.equal(c.last.value, 7.35);
+  assert.equal(growthChart({ kind: 'weight', measures, baby: { ...baby, sex: null }, w: 340, h: 240 }).lines.length, 0);
+  assert.equal(growthChart({ kind: 'weight', measures: [], baby, w: 340, h: 240 }).last, null);
+});
+
+test('나이 글은 화면의 나이 줄과 같은 방식(2026-11-07 = 4개월 21일, 교정 3개월 29일)', async () => {
+  const { ageText } = await import('../../m/stats.js');
+  assert.equal(ageText('2026-06-18', new Date(2026, 10, 7, 10, 0)), '4개월 21일');
+  assert.equal(ageText('2026-07-10', new Date(2026, 10, 7, 10, 0)), '3개월 29일');
+  assert.equal(ageText('2026-06-18', new Date(2026, 5, 18, 23, 0)), '0개월 1일');
+  assert.equal(ageText('2026-07-10', new Date(2026, 6, 1)), '');
+  assert.equal(ageText('2026-01-31', new Date(2026, 2, 1)), '1개월 2일');
+});

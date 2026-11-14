@@ -1063,6 +1063,37 @@ async function phoneFlow(browser, base) {
   await page.fill('#dayPick', weekAgo);
   await page.waitForFunction(() => document.querySelector('#daySub').textContent === '7일 전');
   check(await text(page, '#dayMsg') === '이 날은 기록이 없어요', '달력으로 고른 날로 감');
+  // 통계 쪽: 날짜별 막대와 평균, 성장곡선
+  await page.click('#tabs [data-view="stats"]');
+  await page.waitForFunction(() => document.querySelectorAll('#statBars .bar').length === 8);
+  check(/^\d+ml$/.test(await text(page, '#statHeadline')) && /^하루 [\d.]+회 · 지난 7일 평균\(오늘 빼고\)$/.test(await text(page, '#statSub')), `수유 통계 (${await text(page, '#statHeadline')} / ${await text(page, '#statSub')})`);
+  check(await page.$$eval('#statBars .bar.today', (b) => b.length) === 1 && (await page.$$eval('#statCards .stat', (c) => c.length)) >= 2, '막대는 오늘까지(오늘은 따로 표시), 아래 칸들');
+  check(await page.$eval('#statTabs', (t) => t.getBoundingClientRect().height) < 60 && await page.$eval('#statRange', (t) => t.getBoundingClientRect().height) < 60, '고르는 버튼은 한 줄로');
+  await page.waitForFunction(() => document.querySelector('#notice').hidden, null, { timeout: 10000 });
+  await shot(page, 'phone-stats');
+  await page.click('#statRange [data-days="30"]');
+  await page.waitForFunction(() => document.querySelectorAll('#statBars .bar').length === 31);
+  check(await noOverflow(), '30일 막대도 옆으로 안 넘침');
+  await page.click('#statTabs [data-metric="sleep"]');
+  await page.waitForFunction(() => /시간$/.test(document.querySelector('#statHeadline').textContent));
+  check(/밤잠/.test(await text(page, '#statCards')), `잠 통계 (${await text(page, '#statHeadline')})`);
+  await page.click('#statTabs [data-metric="growth"]');
+  await page.waitForFunction(() => document.querySelectorAll('#growthSvg .pct').length === 5);
+  check(await page.$$eval('#growthSvg .dot.actual', (d) => d.length) === 2 && await page.$$eval('#growthSvg .dot.corrected', (d) => d.length) === 2, '성장곡선: 기본 나이 점과 교정 나이 점');
+  check(/^7\.31kg$/.test(await text(page, '#growthLast .big')) && /기본 · \d+개월 \d+일백분위 \d+/.test(await text(page, '#growthLast')) && /교정 · \d+개월 \d+일백분위 \d+/.test(await text(page, '#growthLast')), `마지막 측정과 백분위 두 가지 (${await text(page, '#growthLast')})`);
+  check(/지난번보다 \+0\.11kg/.test(await text(page, '#growthLast')), '지난번과의 차이');
+  check(await noOverflow() && (await small()).length === 0, `통계 쪽: 안 넘치고 누르는 것은 44px 이상 ${(await small()).join(' ')}`);
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await shot(page, 'phone-growth');
+  await page.click('#growthKinds [data-kind="height"]');
+  check(/^65\.0cm$/.test(await text(page, '#growthLast .big')), '키로 바꿈');
+  // 막대를 누르면 그날 기록으로
+  await page.click('#statTabs [data-metric="feed"]');
+  await page.click('#statRange [data-days="7"]');
+  await page.waitForFunction(() => document.querySelectorAll('#statBars .bar').length === 8);
+  await page.click('#statBars .bar:nth-child(7)');
+  await page.waitForFunction(() => document.querySelector('#daySub').textContent === '어제' && !document.querySelector('#viewRecords').hidden);
+  check(await page.$eval('#tabs [data-view="records"]', (b) => b.classList.contains('on')), '막대를 누르면 그날 기록 쪽으로');
   await page.click('#tabs [data-view="home"]');
   check(await page.isVisible('#feedCard') && !(await page.isVisible('#dayList')), '입력 쪽으로 돌아옴');
 

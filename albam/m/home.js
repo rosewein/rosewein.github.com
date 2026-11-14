@@ -52,7 +52,7 @@ export function setupHome(ctx) {
     setText('#feedAmount', `${amount()}ml`);
     setText('#feedMachine', machineLabel(amount(), cfg.formula, cfg.machine));
     const limit = hungryLimit(cfg.hungryMinutes, s, last?.at, cfg.feedPeriods);
-    $('#feedCard').classList.toggle('urgent', !feeding && !!last && minutesSince(last.at, now) >= limit);
+    $('#feedCard').classList.toggle('urgent', !feeding && !!last && minutesSince(last.at, now) >= limit.minutes);
     const memo = feeding ? memoOf(feeding.id) : pre;
     const key = JSON.stringify([feeding?.id ?? null, memo, ctx.phrases.of(KIND.FEED)]);
     if (key !== chipsKey) {

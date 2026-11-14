@@ -19,6 +19,7 @@ import { createPhrases } from './phrases.js';
 import { setupHome } from './home.js';
 import { setupEntry } from './entry.js';
 import { setupRecords } from './records.js';
+import { setupStats } from './stats.js';
 
 const DEMO = new URLSearchParams(location.search).has('demo');
 const IGNORE_SKEW_MS = 5000;
@@ -52,18 +53,25 @@ function main() {
   const home = setupHome(ctx);
   const entry = setupEntry(ctx);
   const records = setupRecords(ctx);
+  ctx.openDay = (day) => { showView('records'); records.showDay(day); };
+  const stats = setupStats(ctx);
 
   // ── 쪽 바꾸기(아래 탭) ──
   let view = 'home';
+  function showView(next) {
+    view = next;
+    for (const t of document.querySelectorAll('#tabs [data-view]')) t.classList.toggle('on', t.dataset.view === view);
+    $('#viewHome').hidden = view !== 'home';
+    $('#viewRecords').hidden = view !== 'records';
+    $('#viewStats').hidden = view !== 'stats';
+    $('#top').hidden = view !== 'home';   // 다른 쪽은 머리가 따로 있다
+    window.scrollTo(0, 0);
+  }
   for (const b of document.querySelectorAll('#tabs [data-view]')) {
     b.addEventListener('click', () => {
-      view = b.dataset.view;
-      for (const t of document.querySelectorAll('#tabs [data-view]')) t.classList.toggle('on', t === b);
-      $('#viewHome').hidden = view !== 'home';
-      $('#viewRecords').hidden = view !== 'records';
-      $('#top').hidden = view !== 'home';   // 기록 쪽은 날짜 머리가 따로 있다
+      showView(b.dataset.view);
       if (view === 'records') records.show();
-      window.scrollTo(0, 0);
+      if (view === 'stats') stats.show();
     });
   }
 
@@ -127,6 +135,7 @@ function main() {
     notice.showUndo(describeEvent(ev, ctx.now()) + queued(r), () => ctx.api.cancelEvent(r.id));
     await refresh();
     if (view === 'records') records.reload();
+    if (view === 'stats') stats.reload();
   }
 
   /** 기록 고치기(기록 쪽) */

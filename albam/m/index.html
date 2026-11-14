@@ -15,7 +15,7 @@
 </head>
 <body>
 <!-- 알밤보드 개인 폰 화면(세로). 거실 화면과 같은 Supabase·같은 통신 창구(../src/api)를 쓴다. 화면만 따로 짰다.
-     쪽: 입력(수유·기저귀·잠 카드, 더 넣기) / 기록(날짜별 목록, 고치기). 통계·설정 쪽은 다음 단계 -->
+     쪽: 입력(수유·기저귀·잠 카드, 더 넣기) / 기록(날짜별 목록, 고치기) / 통계(날짜별 막대, 성장곡선). 설정 쪽은 다음 단계 -->
 <header id="top">
   <div id="today"></div>
   <div id="age"></div>
@@ -83,10 +83,52 @@
   <div class="hint" id="dayMsg"></div>
 </main>
 
+<!-- 통계 쪽(m/stats.js): 수유·기저귀·잠은 날짜별 막대, 성장은 성장곡선 -->
+<main id="viewStats" hidden>
+  <div class="seg four" id="statTabs">
+    <button data-metric="feed">수유</button>
+    <button data-metric="diaper">기저귀</button>
+    <button data-metric="sleep">잠</button>
+    <button data-metric="growth">성장</button>
+  </div>
+  <div class="seg" id="statRange">
+    <button data-days="7">7일</button>
+    <button data-days="30">30일</button>
+    <button data-days="90">90일</button>
+  </div>
+  <div class="hint warn" id="statMsg"></div>
+
+  <div id="statDays">
+    <section class="card">
+      <div><div class="big" id="statHeadline"></div><div class="hint" id="statSub"></div></div>
+      <div class="bars" id="statBars"></div>
+      <div class="axis hint" id="statAxis"></div>
+    </section>
+    <div class="cards" id="statCards"></div>
+  </div>
+
+  <div id="statGrowth" hidden>
+    <div class="row">
+      <div class="seg grow" id="growthKinds">
+        <button data-kind="weight">체중</button>
+        <button data-kind="height">키</button>
+      </div>
+      <button class="btn" id="growthAdd">+ 측정 넣기</button>
+    </div>
+    <section class="card">
+      <svg id="growthSvg" role="img"></svg>
+      <div class="legend hint"><span><i class="dotA"></i>기본 나이(생일부터)</span><span><i class="dotC"></i>교정 나이(예정일부터)</span><span>회색 줄 = 또래 백분위(WHO)</span></div>
+      <div class="hint" id="growthNote"></div>
+    </section>
+    <section class="card" id="growthLast"></section>
+  </div>
+</main>
+
 <!-- 아래 탭: 쪽 바꾸기 -->
 <nav id="tabs">
   <button data-view="home" class="on">입력</button>
   <button data-view="records">기록</button>
+  <button data-view="stats">통계</button>
 </nav>
 
 <!-- 저장·취소 결과와 [취소 n](m/notice.js) -->

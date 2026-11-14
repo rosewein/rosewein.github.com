@@ -137,6 +137,8 @@ export function setupRecords(ctx) {
   return {
     /** 쪽을 열 때: 오늘로 */
     show() { day = today(); load(); },
+    /** 통계의 막대를 눌렀을 때: 그날로 */
+    showDay(key) { day = key > today() ? today() : key; load(); },
     /** 고치거나 지운 뒤, 요약을 다시 받았을 때: 보던 날을 다시 */
     reload: load,
   };
