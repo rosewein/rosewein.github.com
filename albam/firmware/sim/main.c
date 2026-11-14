@@ -10,6 +10,7 @@
 #include "net.h"
 #include "ota.h"
 #include "ui.h"
+#include "update.h"
 
 #define W 1280
 #define H 720
@@ -55,6 +56,10 @@ void care_diag(care_diag_t *out)
     *out = (care_diag_t){ .ok = 512, .fails = 3, .seconds_since_ok = 4, .seconds_since_error = 1260 };
     snprintf(out->last_error, sizeof(out->last_error), "connect: ESP_ERR_HTTP_CONNECT (errno 113)");
 }
+void update_check_now(void) {}
+void update_status(char *out, size_t len) { snprintf(out, len, "최신 판이에요"); }
+bool update_dev_get(void) { return true; }
+void update_dev_set(bool dev) { (void)dev; }
 static int s_brightness = 70;
 int ui_brightness_get(void) { return s_brightness; }
 void ui_brightness_set(int percent) { s_brightness = percent; }
@@ -180,7 +185,7 @@ int main(int argc, char **argv)
     s_summary = (care_summary_t){ .valid = true, .feed = { .at = AGO(155), .ml = 200 }, .diaper = { .at = AGO(70), .type = DIAPER_PEE },
                                   .poo = { .at = AGO(290) }, .sleep = { .at = AGO(300), .ended_at = AGO(40) }, .today = { 3, 570 },
                                   .age = { true, 142, 4, 20, true, 3, 28 } };
-    ui_build(&fonts, "0.2.1");
+    ui_build(&fonts, "0.2.2+1a2b3c4");
     run(1200);
     snprintf(name, sizeof(name), "%s/1-calm", out); save(name);
 

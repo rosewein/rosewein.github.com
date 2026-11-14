@@ -173,6 +173,11 @@ void ota_start_server(void)
     httpd_register_uri_handler(s_server, &update);
 }
 
+void ota_set_progress(int percent)
+{
+    s_progress = percent;
+}
+
 int ota_progress(void)
 {
     return s_progress;

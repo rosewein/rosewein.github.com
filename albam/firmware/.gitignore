@@ -4,6 +4,7 @@ sdkconfig
 sdkconfig.old
 sdkconfig.local
 dependencies.lock
+build_id.txt
 sim/.lvgl/
 sim/.build/
 sim/out/

@@ -9,3 +9,4 @@ void ota_start_server(void);
 
 /* 받는 중이면 0~100, 아니면 -1 */
 int ota_progress(void);
+void ota_set_progress(int percent);   /* 자동 업데이트(update.c)가 받는 동안 알린다 */

@@ -7,6 +7,7 @@
 #include "care_text.h"
 #include "net.h"
 #include "ota.h"
+#include "update.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -474,11 +475,13 @@ static void update_info(const net_status_t *net)
         snprintf(server, sizeof(server), "읽음 %d번, 못 읽음 %d번 · 마지막 %d분 전: %.120s",
                  diag.ok, diag.fails, diag.seconds_since_error / 60, diag.last_error);
     }
-    snprintf(text, sizeof(text), "계정  %s\n와이파이  %s\n주소  %s%s%s\n서버  %s\n펌웨어  v%s\n무선 업데이트 번호  %s",
+    char update[96];
+    update_status(update, sizeof(update));
+    snprintf(text, sizeof(text), "계정  %s\n와이파이  %s\n주소  %s%s%s\n서버  %s\n펌웨어  v%s · %s\n무선 업데이트 번호  %s",
              email[0] ? email : "로그인 안 됨",
              net->state == NET_CONNECTED ? net->ssid : "연결 안 됨",
              net->ip[0] ? "http://" : "—", net->ip, net->ip[0] ? "/  ·  http://albam-board.local/" : "",
-             server, s_version, ota_code());
+             server, s_version, update, ota_code());
     set_text(s_info, text);
 }
 
@@ -495,6 +498,16 @@ static void brightness_changed(lv_event_t *e)
     ui_brightness_set(lv_slider_get_value(lv_event_get_target(e)));
 }
 
+static void dev_changed(lv_event_t *e)
+{
+    update_dev_set(lv_obj_has_state(lv_event_get_target(e), LV_STATE_CHECKED));
+}
+
+static void check_update_clicked(lv_event_t *e)
+{
+    update_check_now();
+}
+
 static void build_settings(void)
 {
     s_settings = screen();
@@ -509,13 +522,24 @@ static void build_settings(void)
     lv_obj_set_pos(label(s_settings, F.text, C_TEXT, "밝기"), 28, 492);
     lv_obj_t *slider = lv_slider_create(s_settings);
     lv_obj_set_pos(slider, 130, 500);
-    lv_obj_set_size(slider, 700, 24);
+    lv_obj_set_size(slider, 640, 24);
     lv_slider_set_range(slider, 5, 100);
     lv_slider_set_value(slider, ui_brightness_get(), LV_ANIM_OFF);
     lv_obj_add_event_cb(slider, brightness_changed, LV_EVENT_VALUE_CHANGED, NULL);
 
+    /* 시험판: master 에 합치기 전 브랜치에서 빌드한 펌웨어도 받는다 */
+    lv_obj_set_pos(label(s_settings, F.text, C_TEXT, "시험판 받기"), 900, 492);
+    lv_obj_t *dev = lv_switch_create(s_settings);
+    lv_obj_set_pos(dev, 1090, 490);
+    lv_obj_set_size(dev, 90, 46);
+    if (update_dev_get()) {
+        lv_obj_add_state(dev, LV_STATE_CHECKED);
+    }
+    lv_obj_add_event_cb(dev, dev_changed, LV_EVENT_VALUE_CHANGED, NULL);
+
     lv_obj_set_pos(button(s_settings, "와이파이 바꾸기", open_wifi, 320, 84), 28, 600);
-    lv_obj_set_pos(button(s_settings, "로그아웃", logout_clicked, 240, 84), 368, 600);
+    lv_obj_set_pos(button(s_settings, "로그아웃", logout_clicked, 200, 84), 368, 600);
+    lv_obj_set_pos(button(s_settings, "업데이트 확인", check_update_clicked, 280, 84), 588, 600);
     lv_obj_set_pos(button(s_settings, "닫기", back_home, 200, 84), 1052, 600);
 }
 

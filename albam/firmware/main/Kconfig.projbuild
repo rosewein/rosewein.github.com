@@ -23,6 +23,13 @@ menu "Albam board"
         help
             Same as supabaseAnonKey in albam/config.js. This key is public; never put the service_role key here.
 
+    config ALBAM_UPDATE_REPO
+        string "GitHub repository that publishes the firmware"
+        default "rosewein/rosewein.github.com"
+        help
+            The board downloads new firmware from this repository's releases
+            (albam-firmware for master builds, albam-firmware-dev for other branches).
+
     config ALBAM_ROTATE_270
         bool "Landscape the other way round (270 instead of 90 degrees)"
         default n

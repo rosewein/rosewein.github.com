@@ -10,6 +10,7 @@
 #include "net.h"
 #include "ota.h"
 #include "store.h"
+#include "update.h"
 
 /* 무선으로 받은 새 판이 이 시간 안에 와이파이에 못 붙으면 앞 판으로 되돌린다.
  * (와이파이가 안 되는 판이 올라가면 다시 무선으로 고칠 길이 없어서다) */
@@ -30,6 +31,7 @@ void app_main(void)
     ota_init();
     net_init();
     care_start();
+    update_start();
     board_start_ui();
 
     bool trial = on_trial();

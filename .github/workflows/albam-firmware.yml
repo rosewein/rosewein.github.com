@@ -1,4 +1,6 @@
-# 알밤보드 P4 펌웨어를 빌드해 내려받을 수 있게 둔다 (albam/firmware 가 바뀔 때만)
+# 알밤보드 P4 펌웨어를 빌드하고(albam/firmware 가 바뀔 때만), 보드가 스스로 받아 갈 수 있게 릴리스에 올린다.
+#   master 에서 빌드한 것   → 릴리스 albam-firmware      (정식판)
+#   다른 브랜치에서 빌드한 것 → 릴리스 albam-firmware-dev  (시험판: 보드 설정에서 '시험판 받기'를 켰을 때만)
 name: albam-firmware
 
 on:
@@ -9,7 +11,12 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write   # 릴리스에 파일을 올리려고
+
+# 잇달아 올리면 마지막 것만 빌드한다(릴리스에 옛 판이 나중에 올라가지 않게)
+concurrency:
+  group: albam-firmware-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -20,6 +27,8 @@ jobs:
         run: |
           cc -Wall -Wextra -I albam/firmware/main albam/firmware/test/test_care_text.c albam/firmware/main/care_text.c -o /tmp/test_care_text
           /tmp/test_care_text
+      - name: Stamp the build with the commit
+        run: echo "${GITHUB_SHA::7}" > albam/firmware/build_id.txt
       - name: Build
         uses: espressif/esp-idf-ci-action@v1
         with:
@@ -37,3 +46,24 @@ jobs:
             albam/firmware/build/partition_table/partition-table.bin
             albam/firmware/build/ota_data_initial.bin
             albam/firmware/build/flasher_args.json
+      - name: Publish for the board's automatic update
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "$GITHUB_REF_NAME" = "master" ]; then
+            TAG=albam-firmware; TITLE="알밤보드 펌웨어(정식판)"
+          else
+            TAG=albam-firmware-dev; TITLE="알밤보드 펌웨어(시험판)"
+          fi
+          mkdir -p "$RUNNER_TEMP/publish"
+          cp albam/firmware/build/albam_board.bin "$RUNNER_TEMP/publish/"
+          # 보드는 version.txt 가 자기 판과 다르면 albam_board.bin 을 받는다
+          jq -r .project_version albam/firmware/build/project_description.json > "$RUNNER_TEMP/publish/version.txt"
+          cat "$RUNNER_TEMP/publish/version.txt"
+          gh release view "$TAG" > /dev/null 2>&1 || gh release create "$TAG" --prerelease --latest=false \
+            --target "$GITHUB_SHA" --title "$TITLE" \
+            --notes "보드가 자동 업데이트로 받아 가는 파일이다. 빌드할 때마다 바뀐다. 직접 받을 일은 없다."
+          # 펌웨어를 먼저 올리고 판 번호를 나중에: 보드가 새 번호를 봤을 때는 새 펌웨어가 이미 있다
+          gh release upload "$TAG" "$RUNNER_TEMP/publish/albam_board.bin" --clobber
+          gh release upload "$TAG" "$RUNNER_TEMP/publish/version.txt" --clobber
