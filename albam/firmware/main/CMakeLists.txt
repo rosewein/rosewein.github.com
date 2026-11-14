@@ -8,3 +8,6 @@ idf_component_register(
 
 # 화면을 돌려 옮기는 PPA 부름을 board.c 의 CPU 함수로 바꿔 끼운다(PPA 가 멈추는 문제)
 target_link_libraries(${COMPONENT_LIB} INTERFACE "-Wl,--wrap=ppa_do_scale_rotate_mirror")
+
+# LVGL 라이브러리가 lv_mem_psram.c 의 함수를 찾을 수 있게, 링커가 이 파일을 먼저 집어 들게 한다
+target_link_libraries(${COMPONENT_LIB} INTERFACE "-u lv_malloc_core")
