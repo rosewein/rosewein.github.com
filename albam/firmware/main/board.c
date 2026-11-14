@@ -1,5 +1,6 @@
 /* 보드: Waveshare ESP32-P4-WIFI6-Touch-LCD-7 (7인치 올인원). 화면 ILI9881C(세로 720x1280), 터치 GT9271 */
 #include "board.h"
+#include "ota.h"
 #include "store.h"
 #include "ui.h"
 
@@ -181,7 +182,11 @@ void ui_brightness_set(bool night, int percent, bool save)
 void ui_brightness_refresh(void)
 {
     time_t now = time(NULL);
-    if (now >= s_preview_until) {
+    /* 새 펌웨어를 받는 동안에는 화면을 끈다. 플래시에 쓰는 동안 패널이 번쩍이는데,
+     * 까만 화면으로 바꿔도 그대로여서(0.3.4) 백라이트를 꺼서 가린다. 다 받으면 다시 켜지며 돌아온다 */
+    if (ota_progress() >= 0) {
+        show_brightness(0);
+    } else if (now >= s_preview_until) {
         show_brightness(is_night(now) ? s_night : s_day);
     }
 }
