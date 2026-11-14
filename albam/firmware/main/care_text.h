@@ -6,17 +6,21 @@
 #include <time.h>
 
 #define CARE_MAX_GAPS 400
+#define CARE_MAX_AMOUNTS 6
+#define CARE_ID_LEN 40           /* 기록 id(uuid 글) */
 
 typedef enum { DIAPER_NONE, DIAPER_PEE, DIAPER_POO, DIAPER_BOTH } care_diaper_t;
 
 /* care_summary() 에서 대시보드가 읽는 부분. 시각은 유닉스 초, 없으면 0 */
 typedef struct {
     bool valid;                                  /* 한 번이라도 받았는가 */
-    struct { time_t at, ended_at; int ml; bool feeding; } feed;       /* ml: 없으면 -1 */
+    struct { time_t at, ended_at; int ml; bool feeding; char id[CARE_ID_LEN]; } feed;   /* ml: 없으면 -1 */
     struct { time_t at; care_diaper_t type; } diaper;
     struct { time_t at; } poo;                   /* 대변·둘 다 중 가장 최근 */
-    struct { time_t at, ended_at; } sleep;       /* at 만 있으면 자는 중 */
+    struct { time_t at, ended_at; char id[CARE_ID_LEN]; } sleep;   /* at 만 있으면 자는 중 */
     struct { int count, ml; } today;
+    int amount_count;                            /* 수유량 빠른 선택(ml, 작은 것부터) */
+    int amounts[CARE_MAX_AMOUNTS];
     struct { bool has; int day, months, days; bool corrected; int c_months, c_days; } age;
     int gap_count;                               /* 최근 14일 수유 간격 */
     struct { uint8_t hour; uint16_t minutes; } gaps[CARE_MAX_GAPS];
@@ -50,9 +54,45 @@ typedef struct {
     care_ago_t ago;
     char label[64];      /* "마지막 수유 11:25" */
     care_card_t feed, diaper, sleep;
+    bool feeding, sleeping;   /* 먹이는 중, 자는 중: 칸을 누르면 [다 먹음], [깼어요] */
 } care_view_t;
 
-void care_build_view(const care_summary_t *summary, time_t now, care_view_t *view);
+/* happy: 방금 저장했다(3초 동안 "고마워요!") */
+void care_build_view(const care_summary_t *summary, time_t now, bool happy, care_view_t *view);
+
+/* ---- 기록하기 ---- */
+
+typedef enum {
+    ACT_NONE,
+    ACT_FEED,          /* 수유(지금 저장) */
+    ACT_FEED_START,    /* 먹이기 시작 */
+    ACT_FEED_FINISH,   /* 다 먹음: 먹이는 중인 수유에 끝을 넣는다 */
+    ACT_DIAPER,
+    ACT_SLEEP_START,   /* 잠들었어요 */
+    ACT_SLEEP_END,     /* 깼어요: 자는 중인 잠에 끝을 넣는다 */
+    ACT_UNDO,          /* 방금 한 것 되돌리기(undo_of 에 무엇을) */
+} care_action_kind_t;
+
+typedef struct {
+    care_action_kind_t kind, undo_of;
+    char id[CARE_ID_LEN];   /* 새 기록이면 비워 두면 만들어 준다 */
+    time_t at;              /* 일어난 시각 */
+    time_t started_at;      /* 다 먹음·깼어요: 시작한 시각(걸린 시간을 보여 주려고) */
+    int ml;
+    care_diaper_t diaper;
+    bool force;             /* 비슷한 기록이 있어도 저장 */
+} care_action_t;
+
+/* 저장 뒤 알림 글: "수유 200ml", "기저귀 소변", "잠 시작 13:10", "수유 200ml · 12분", "잠 1시간 20분" */
+void care_describe_action(const care_action_t *action, char *out, size_t len);
+/* "1시간 30분", "15분", "2시간" */
+void care_duration(long seconds, char *out, size_t len);
+
+/* 분유 양(웹앱 src/formula.js). 브레짜는 물을 60~300ml, 30ml 단위로 고르고 압타밀은 물 30ml 에 1스푼(다 타면 약 33.3ml).
+ * 그래서 브레짜 180 → 200ml, 210 → 230ml, 240 → 270ml */
+int care_water_for(int ml);                    /* 완성량이 브레짜 한 칸과 딱 맞으면 그 물 양, 아니면 0 */
+int care_step_machine(int ml, int direction);  /* 브레짜 한 칸 위/아래 양 */
+int care_clamp_amount(int ml);                 /* 5~500 */
 
 /* 아래는 시험하려고 내놓은 조각들 */
 void care_clock(time_t at, char *out, size_t len);                               /* "13:05" */

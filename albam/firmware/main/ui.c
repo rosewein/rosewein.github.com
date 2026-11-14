@@ -1,4 +1,5 @@
 /* 화면 네 개: 대시보드(첫 화면), 설정, 와이파이 고르기, 로그인.
+ * 대시보드의 수유·기저귀·잠 칸을 누르면 기록한다(웹앱 src/ui/quick-record.js, recorder.js 와 같은 흐름).
  * LVGL 과 우리 모듈(net·care·ota)만 쓴다. 보드 쪽 일(화면 켜기·글꼴 읽기)은 board.c 가 맡는다.
  * 그래서 PC 미리 보기(sim/)에서도 같은 코드를 그려 볼 수 있다.
  * 여기 함수는 모두 LVGL 작업 안(타이머·터치)에서 돈다. 다른 작업의 상태는 1초마다 읽어 온다. */
@@ -44,7 +45,7 @@ typedef struct {
 } ago_line_t;
 
 typedef struct {
-    lv_obj_t *box, *title, *detail;
+    lv_obj_t *box, *title, *detail, *hint;
     ago_line_t ago;
 } card_t;
 
@@ -53,6 +54,20 @@ static ago_line_t s_bubble_ago;
 static card_t s_feed, s_diaper, s_sleep;
 static care_mood_t s_mood;
 static int s_frame;
+static care_summary_t s_summary;      /* 마지막으로 받은 요약 */
+static care_view_t s_view;
+
+/* 기록하기 */
+#define UNDO_MS 6000                  /* 저장 직후 [취소]가 떠 있는 시간(웹앱 undoSeconds) */
+#define NOTICE_MS 3000
+#define HAPPY_MS 3000
+static lv_obj_t *s_feed_sheet, *s_amount_row, *s_amount_label, *s_machine_label;
+static lv_obj_t *s_diaper_sheet, *s_confirm_sheet, *s_confirm_text;
+static lv_obj_t *s_notice, *s_notice_text, *s_undo_btn, *s_undo_label;
+static int s_amount = 200;
+static bool s_busy;                   /* 서버에 보내는 중 */
+static care_action_t s_undo, s_confirming;
+static uint32_t s_undo_until, s_notice_until, s_happy_until;
 
 static lv_obj_t *s_settings, *s_info;
 static lv_obj_t *s_wifi, *s_list, *s_ssid, *s_pass, *s_wifi_msg;
@@ -86,7 +101,9 @@ static lv_obj_t *button(lv_obj_t *parent, const char *text, lv_event_cb_t cb, in
     lv_obj_set_style_border_color(b, lv_color_hex(C_LINE), 0);
     lv_obj_set_style_border_width(b, 2, 0);
     lv_obj_set_style_shadow_width(b, 0, 0);
-    lv_obj_add_event_cb(b, cb, LV_EVENT_CLICKED, NULL);
+    if (cb) {
+        lv_obj_add_event_cb(b, cb, LV_EVENT_CLICKED, NULL);
+    }
     lv_obj_t *l = label(b, F.text, C_TEXT, text);
     lv_obj_center(l);
     return b;
@@ -130,6 +147,7 @@ static void ago_line_create(ago_line_t *line, lv_obj_t *parent, const lv_font_t 
 {
     line->group = lv_spangroup_create(parent);
     lv_spangroup_set_mode(line->group, LV_SPAN_MODE_EXPAND);
+    lv_obj_remove_flag(line->group, LV_OBJ_FLAG_CLICKABLE);   /* 눌림은 뒤의 칸이 받는다 */
     lv_obj_set_style_text_color(line->group, lv_color_hex(C_TEXT), 0);
     lv_obj_set_style_text_font(line->group, unit, 0);
     line->prefix = lv_spangroup_add_span(line->group);
@@ -183,9 +201,15 @@ static void ago_line_set(ago_line_t *line, const char *prefix, care_ago_t ago, b
     lv_spangroup_refresh(line->group);
 }
 
+static void feed_clicked(lv_event_t *e);
+static void diaper_clicked(lv_event_t *e);
+static void sleep_clicked(lv_event_t *e);
+static void build_record(void);
+static void tick(lv_timer_t *timer);
+
 /* ---- 대시보드 ---- */
 
-static void card_create(card_t *card, lv_obj_t *parent, int x)
+static void card_create(card_t *card, lv_obj_t *parent, int x, lv_event_cb_t on_click)
 {
     card->box = panel(parent, x, 424, 400, 276);
     card->title = label(card->box, F.text, C_DIM, "");
@@ -194,6 +218,13 @@ static void card_create(card_t *card, lv_obj_t *parent, int x)
     lv_obj_align(card->ago.group, LV_ALIGN_LEFT_MID, 24, 4);
     card->detail = label(card->box, F.text, C_TEXT, "");
     lv_obj_align(card->detail, LV_ALIGN_BOTTOM_LEFT, 24, -18);
+
+    /* 누르면 기록한다. 오른쪽 위에 누르면 할 일을 적어 둔다("기록", "다 먹음", "깼어요") */
+    card->hint = label(card->box, F.small, C_ACCENT, "기록");
+    lv_obj_align(card->hint, LV_ALIGN_TOP_RIGHT, -24, 22);
+    lv_obj_add_flag(card->box, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_set_style_bg_color(card->box, lv_color_hex(C_BTN), LV_STATE_PRESSED);
+    lv_obj_add_event_cb(card->box, on_click, LV_EVENT_CLICKED, NULL);
 }
 
 static void card_set(card_t *card, const care_card_t *view)
@@ -205,6 +236,350 @@ static void card_set(card_t *card, const care_card_t *view)
 }
 
 static void open_settings(lv_event_t *e);
+
+/* ---- 기록하기 ----
+ *   칸을 누름 → (수유·기저귀는 고르는 창) → 서버에 보냄 → "… 저장됨 [취소 6]"
+ *   비슷한 기록이 이미 있으면 물어보고 [그래도 저장]
+ *   먹이는 중이면 수유 칸이 [다 먹음], 자는 중이면 잠 칸이 [깼어요] */
+
+static void show(lv_obj_t *obj, bool on)
+{
+    if (on) {
+        lv_obj_remove_flag(obj, LV_OBJ_FLAG_HIDDEN);
+    } else {
+        lv_obj_add_flag(obj, LV_OBJ_FLAG_HIDDEN);
+    }
+}
+
+static void close_sheets(void)
+{
+    show(s_feed_sheet, false);
+    show(s_diaper_sheet, false);
+    show(s_confirm_sheet, false);
+}
+
+/* 맨 위 알림 줄. undo 면 [취소] 버튼이 붙는다 */
+static void notice(const char *text, bool warn, bool undo, uint32_t ms)
+{
+    set_text(s_notice_text, text);
+    lv_obj_set_style_text_color(s_notice_text, lv_color_hex(warn ? C_WARN : C_STRONG), 0);
+    show(s_undo_btn, undo);
+    show(s_notice, true);
+    s_notice_until = lv_tick_get() + ms;
+    s_undo_until = undo ? s_notice_until : 0;
+}
+
+static void record(const care_action_t *action)
+{
+    if (s_busy) {
+        return;
+    }
+    close_sheets();
+    care_do(action);
+    s_busy = true;
+    notice(action->kind == ACT_UNDO ? "취소하는 중…" : "저장하는 중…", false, false, 60000);
+}
+
+static void ask_confirm(const care_action_t *adding, const care_action_t *existing)
+{
+    char have[64], add[64], clock[8], text[240];
+    care_describe_action(existing, have, sizeof(have));
+    care_describe_action(adding, add, sizeof(add));
+    care_clock(existing->at, clock, sizeof(clock));
+    long gap = (long)(adding->at > existing->at ? adding->at - existing->at : existing->at - adding->at);
+    snprintf(text, sizeof(text), "%ld분 차이로 비슷한 기록이 이미 있어요.\n있는 것: %s (%s)\n넣을 것: %s",
+             (gap + 30) / 60, existing->kind == ACT_SLEEP_START ? "잠" : have, clock, add);
+    set_text(s_confirm_text, text);
+    s_confirming = *adding;
+    show(s_notice, false);
+    show(s_confirm_sheet, true);
+}
+
+/* 서버에 보낸 기록의 결과를 받아 알린다(0.2초마다 본다) */
+static void poll_record(lv_timer_t *timer)
+{
+    uint32_t now = lv_tick_get();
+    if (s_busy) {
+        care_action_result_t r;
+        care_action_result(&r);
+        if (r.status == ACTION_BUSY) {
+            return;
+        }
+        s_busy = false;
+        bool undo = r.action.kind == ACT_UNDO;
+        char what[80], text[120];
+        if (r.status == ACTION_SAVED && undo) {
+            s_happy_until = 0;
+            notice("취소했어요", false, false, NOTICE_MS);
+        } else if (r.status == ACTION_SAVED) {
+            care_describe_action(&r.action, what, sizeof(what));
+            snprintf(text, sizeof(text), "%s 저장됨", what);
+            s_undo = r.action;
+            s_happy_until = now + HAPPY_MS;
+            notice(text, false, true, UNDO_MS);
+        } else if (r.status == ACTION_CONFIRM) {
+            ask_confirm(&r.action, &r.existing);
+        } else if (r.status == ACTION_NOT_FOUND) {
+            notice(r.action.kind == ACT_SLEEP_END ? "자는 중인 잠을 못 찾았어요" : "그 기록을 못 찾았어요", true, false, NOTICE_MS);
+        } else {
+            notice(undo ? "취소 못 했어요" : "저장 못 했어요. 다시 눌러 주세요", true, false, NOTICE_MS);
+        }
+        tick(NULL);   /* 새 요약을 바로 그린다 */
+        return;
+    }
+    if (s_undo_until) {
+        int left = (int)(s_undo_until - now + 999) / 1000;
+        char count[24];
+        snprintf(count, sizeof(count), "취소 %d", left > 0 ? left : 0);
+        set_text(s_undo_label, count);
+    }
+    if (s_notice_until && (int32_t)(now - s_notice_until) >= 0) {
+        s_notice_until = s_undo_until = 0;
+        show(s_notice, false);
+    }
+}
+
+static void undo_clicked(lv_event_t *e)
+{
+    care_action_t action = { .kind = ACT_UNDO, .undo_of = s_undo.kind, .at = time(NULL) };
+    snprintf(action.id, sizeof(action.id), "%s", s_undo.id);
+    record(&action);
+}
+
+/* 알림 글을 누르면 바로 닫는다 */
+static void notice_clicked(lv_event_t *e)
+{
+    if (!s_busy) {
+        s_notice_until = s_undo_until = 0;
+        show(s_notice, false);
+    }
+}
+
+static bool can_record(void)
+{
+    if (!s_summary.valid || !net_time_synced()) {
+        notice("아직 기록할 수 없어요(서버에 연결되지 않음)", true, false, NOTICE_MS);
+        return false;
+    }
+    return !s_busy;
+}
+
+/* 수유량 창: 빠른 선택, 브레짜 한 칸(±30)과 ±10, [지금 저장] [먹이기 시작] */
+static void show_amount(void)
+{
+    char text[32];
+    int water = care_water_for(s_amount);
+    lv_label_set_text_fmt(s_amount_label, "%dml", s_amount);
+    if (water) {
+        snprintf(text, sizeof(text), "브레짜 %d", water);
+    } else {
+        snprintf(text, sizeof(text), "브레짜 칸 아님");
+    }
+    set_text(s_machine_label, text);
+    /* 고른 양과 같은 빠른 선택 버튼에 테두리 */
+    for (uint32_t i = 0; i < lv_obj_get_child_count(s_amount_row); i++) {
+        lv_obj_t *b = lv_obj_get_child(s_amount_row, i);
+        bool on = (int)(intptr_t)lv_obj_get_user_data(b) == s_amount;
+        lv_obj_set_style_border_color(b, lv_color_hex(on ? C_ACCENT : C_LINE), 0);
+    }
+}
+
+static void quick_amount_clicked(lv_event_t *e)
+{
+    s_amount = (int)(intptr_t)lv_obj_get_user_data(lv_event_get_target(e));
+    show_amount();
+}
+
+static void step_clicked(lv_event_t *e)
+{
+    int step = (int)(intptr_t)lv_event_get_user_data(e);   /* ±10, 또는 ±30(브레짜 한 칸) */
+    s_amount = care_clamp_amount(step == 30 || step == -30 ? care_step_machine(s_amount, step) : s_amount + step);
+    show_amount();
+}
+
+static void open_feed(void)
+{
+    static const int DEFAULTS[] = { 200, 230, 270 };   /* 요약을 못 받았을 때(웹앱 defaultAmounts) */
+    const int *amounts = s_summary.amount_count ? s_summary.amounts : DEFAULTS;
+    int count = s_summary.amount_count ? s_summary.amount_count : 3;
+
+    lv_obj_clean(s_amount_row);
+    for (int i = 0; i < count; i++) {
+        char sub[24] = "";
+        int water = care_water_for(amounts[i]);
+        if (water) {
+            snprintf(sub, sizeof(sub), "브레짜 %d", water);
+        }
+        lv_obj_t *b = button(s_amount_row, "", quick_amount_clicked, 196, 124);
+        lv_obj_set_user_data(b, (void *)(intptr_t)amounts[i]);
+        lv_obj_t *number = lv_obj_get_child(b, 0);
+        lv_obj_set_style_text_font(number, F.title, 0);
+        lv_obj_set_style_text_color(number, lv_color_hex(C_STRONG), 0);
+        lv_label_set_text_fmt(number, "%d", amounts[i]);
+        lv_obj_align(number, LV_ALIGN_CENTER, 0, -18);
+        lv_obj_align(label(b, F.small, C_DIM, sub), LV_ALIGN_CENTER, 0, 30);
+    }
+    /* 처음 값: 지난번 양, 없으면 빠른 선택의 첫 값 */
+    s_amount = s_summary.feed.ml > 0 ? s_summary.feed.ml : amounts[0];
+    show_amount();
+    show(s_feed_sheet, true);
+}
+
+static void feed_save(lv_event_t *e)
+{
+    bool start = (bool)(intptr_t)lv_event_get_user_data(e);
+    care_action_t action = { .kind = start ? ACT_FEED_START : ACT_FEED, .ml = s_amount, .at = time(NULL) };
+    record(&action);
+}
+
+static void diaper_save(lv_event_t *e)
+{
+    care_action_t action = { .kind = ACT_DIAPER, .diaper = (care_diaper_t)(intptr_t)lv_event_get_user_data(e), .at = time(NULL) };
+    record(&action);
+}
+
+static void feed_clicked(lv_event_t *e)
+{
+    if (!can_record()) {
+        return;
+    }
+    if (s_view.feeding) {   /* 다 먹음 */
+        care_action_t action = { .kind = ACT_FEED_FINISH, .at = time(NULL), .started_at = s_summary.feed.at, .ml = s_summary.feed.ml };
+        snprintf(action.id, sizeof(action.id), "%s", s_summary.feed.id);
+        record(&action);
+    } else {
+        open_feed();
+    }
+}
+
+static void diaper_clicked(lv_event_t *e)
+{
+    if (can_record()) {
+        show(s_diaper_sheet, true);
+    }
+}
+
+static void sleep_clicked(lv_event_t *e)
+{
+    if (!can_record()) {
+        return;
+    }
+    care_action_t action = { .kind = ACT_SLEEP_START, .at = time(NULL) };
+    if (s_view.sleeping) {   /* 깼어요 */
+        action.kind = ACT_SLEEP_END;
+        action.started_at = s_summary.sleep.at;
+        snprintf(action.id, sizeof(action.id), "%s", s_summary.sleep.id);
+    }
+    record(&action);
+}
+
+static void sheet_close_clicked(lv_event_t *e)
+{
+    close_sheets();
+}
+
+static void confirm_yes(lv_event_t *e)
+{
+    s_confirming.force = true;
+    record(&s_confirming);
+}
+
+static void confirm_no(lv_event_t *e)
+{
+    close_sheets();
+    notice("안 넣었어요", false, false, NOTICE_MS);
+}
+
+/* 화면을 덮는 창: 어두운 바탕 + 가운데 판. 바탕이 뒤의 터치를 막는다 */
+static lv_obj_t *sheet(lv_obj_t **cover, int w, int h, const char *title)
+{
+    *cover = lv_obj_create(s_home);
+    lv_obj_set_size(*cover, W, H);
+    lv_obj_set_pos(*cover, 0, 0);
+    lv_obj_set_style_bg_color(*cover, lv_color_hex(0x000000), 0);
+    lv_obj_set_style_bg_opa(*cover, LV_OPA_70, 0);
+    lv_obj_set_style_border_width(*cover, 0, 0);
+    lv_obj_set_style_radius(*cover, 0, 0);
+    lv_obj_set_style_pad_all(*cover, 0, 0);
+    lv_obj_remove_flag(*cover, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(*cover, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_t *p = panel(*cover, (W - w) / 2, (H - h) / 2, w, h);
+    lv_obj_set_pos(label(p, F.text, C_DIM, title), 32, 22);
+    return p;
+}
+
+static lv_obj_t *big_button(lv_obj_t *parent, const char *text, lv_event_cb_t cb, void *data, int x, int y, int w, int h, bool strong)
+{
+    lv_obj_t *b = button(parent, text, NULL, w, h);
+    lv_obj_add_event_cb(b, cb, LV_EVENT_CLICKED, data);
+    lv_obj_set_pos(b, x, y);
+    lv_obj_t *l = lv_obj_get_child(b, 0);
+    lv_obj_set_style_text_font(l, F.title, 0);
+    if (strong) {
+        lv_obj_set_style_text_color(l, lv_color_hex(C_ACCENT), 0);
+        lv_obj_set_style_border_color(b, lv_color_hex(C_ACCENT), 0);
+    }
+    return b;
+}
+
+static void build_record(void)
+{
+    /* 수유 */
+    lv_obj_t *p = sheet(&s_feed_sheet, 1120, 600, "수유량(완성량) · 지금");
+    s_amount_row = lv_obj_create(p);
+    lv_obj_remove_style_all(s_amount_row);
+    lv_obj_set_pos(s_amount_row, 32, 76);
+    lv_obj_set_size(s_amount_row, 1056, 124);
+    lv_obj_set_flex_flow(s_amount_row, LV_FLEX_FLOW_ROW);
+    lv_obj_set_style_pad_column(s_amount_row, 16, 0);
+    lv_obj_remove_flag(s_amount_row, LV_OBJ_FLAG_SCROLLABLE);
+
+    big_button(p, "-10", step_clicked, (void *)(intptr_t)-10, 32, 236, 150, 124, false);
+    lv_obj_t *down = big_button(p, "-30", step_clicked, (void *)(intptr_t)-30, 198, 236, 170, 124, false);
+    lv_obj_t *up = big_button(p, "+30", step_clicked, (void *)(intptr_t)30, 752, 236, 170, 124, false);
+    big_button(p, "+10", step_clicked, (void *)(intptr_t)10, 938, 236, 150, 124, false);
+    lv_obj_align(lv_obj_get_child(down, 0), LV_ALIGN_CENTER, 0, -18);
+    lv_obj_align(label(down, F.small, C_DIM, "브레짜"), LV_ALIGN_CENTER, 0, 30);
+    lv_obj_align(lv_obj_get_child(up, 0), LV_ALIGN_CENTER, 0, -18);
+    lv_obj_align(label(up, F.small, C_DIM, "브레짜"), LV_ALIGN_CENTER, 0, 30);
+    s_amount_label = label(p, F.big, C_STRONG, "");
+    lv_obj_align(s_amount_label, LV_ALIGN_TOP_MID, 0, 226);
+    s_machine_label = label(p, F.small, C_DIM, "");
+    lv_obj_align(s_machine_label, LV_ALIGN_TOP_MID, 0, 322);
+
+    big_button(p, "닫기", sheet_close_clicked, NULL, 32, 444, 200, 124, false);
+    big_button(p, "먹이기 시작", feed_save, (void *)(intptr_t)1, 420, 444, 320, 124, false);
+    big_button(p, "지금 저장", feed_save, (void *)(intptr_t)0, 768, 444, 320, 124, true);
+
+    /* 기저귀 */
+    p = sheet(&s_diaper_sheet, 960, 420, "기저귀 · 지금");
+    big_button(p, "소변", diaper_save, (void *)(intptr_t)DIAPER_PEE, 32, 84, 286, 170, true);
+    big_button(p, "대변", diaper_save, (void *)(intptr_t)DIAPER_POO, 337, 84, 286, 170, true);
+    big_button(p, "둘 다", diaper_save, (void *)(intptr_t)DIAPER_BOTH, 642, 84, 286, 170, true);
+    big_button(p, "닫기", sheet_close_clicked, NULL, 32, 284, 200, 104, false);
+
+    /* 비슷한 기록 확인 */
+    p = sheet(&s_confirm_sheet, 960, 440, "확인");
+    s_confirm_text = label(p, F.text, C_TEXT, "");
+    lv_obj_set_pos(s_confirm_text, 32, 84);
+    lv_obj_set_width(s_confirm_text, 896);
+    lv_obj_set_style_text_line_space(s_confirm_text, 14, 0);
+    big_button(p, "안 넣기", confirm_no, NULL, 32, 304, 280, 104, false);
+    big_button(p, "그래도 저장", confirm_yes, NULL, 608, 304, 320, 104, true);
+
+    /* 맨 위 알림 줄: "수유 200ml 저장됨 [취소 6]". 설정 버튼은 가리지 않는다 */
+    s_notice = panel(s_home, 16, 8, 1114, 84);
+    lv_obj_set_style_border_color(s_notice, lv_color_hex(C_ACCENT), 0);
+    lv_obj_add_flag(s_notice, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_event_cb(s_notice, notice_clicked, LV_EVENT_CLICKED, NULL);
+    s_notice_text = label(s_notice, F.title, C_STRONG, "");
+    lv_obj_align(s_notice_text, LV_ALIGN_LEFT_MID, 24, 0);
+    s_undo_btn = button(s_notice, "", undo_clicked, 220, 64);
+    lv_obj_align(s_undo_btn, LV_ALIGN_RIGHT_MID, -10, 0);
+    s_undo_label = lv_obj_get_child(s_undo_btn, 0);
+    lv_obj_set_style_text_color(s_undo_label, lv_color_hex(C_ACCENT), 0);
+    lv_obj_add_flag(s_notice, LV_OBJ_FLAG_HIDDEN);
+}
 
 static void build_home(void)
 {
@@ -240,9 +615,10 @@ static void build_home(void)
     lv_obj_align(s_label, LV_ALIGN_BOTTOM_LEFT, 32, -20);
 
     /* 아래: 수유 · 기저귀 · 잠 */
-    card_create(&s_feed, s_home, 28);
-    card_create(&s_diaper, s_home, 440);
-    card_create(&s_sleep, s_home, 852);
+    card_create(&s_feed, s_home, 28, feed_clicked);
+    card_create(&s_diaper, s_home, 440, diaper_clicked);
+    card_create(&s_sleep, s_home, 852, sleep_clicked);
+    build_record();
 
     /* 새 펌웨어를 받는 동안만 보이는 막대 */
     s_bar = lv_bar_create(s_home);
@@ -254,12 +630,13 @@ static void build_home(void)
 
 static void update_home(const net_status_t *net, care_state_t care)
 {
-    static care_summary_t summary;
     static uint32_t seen;
-    care_copy_summary(&summary, &seen);
+    care_copy_summary(&s_summary, &seen);
 
-    care_view_t v;
-    care_build_view(&summary, time(NULL), &v);
+    care_build_view(&s_summary, time(NULL), lv_tick_get() < s_happy_until, &s_view);
+    const care_view_t v = s_view;
+    set_text(s_feed.hint, v.feeding ? "다 먹음" : "기록");
+    set_text(s_sleep.hint, v.sleeping ? "깼어요" : "잠들었어요");
 
     if (net_time_synced()) {
         set_text(s_clock, v.clock);
@@ -644,5 +1021,6 @@ void ui_build(const ui_fonts_t *fonts, const char *version)
     }
     lv_timer_create(tick, 1000, NULL);
     lv_timer_create(animate, FRAME_MS, NULL);
+    lv_timer_create(poll_record, 200, NULL);
     tick(NULL);
 }

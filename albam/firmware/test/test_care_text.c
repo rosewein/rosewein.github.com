@@ -92,7 +92,7 @@ int main(void)
     care_summary_t c = { .valid = true, .feed = { .at = at(6, 11, 25), .ml = 200 }, .diaper = { .at = at(6, 12, 50), .type = DIAPER_PEE },
                          .sleep = { .at = at(6, 9, 0), .ended_at = at(6, 13, 20) }, .today = { 3, 570 },
                          .age = { true, 142, 4, 20, true, 3, 28 } };
-    care_build_view(&c, now, &v);
+    care_build_view(&c, now, false, &v);
     same(v.clock, "14:00"); same(v.today, "2026년 11월 6일 금요일"); same(v.total, "오늘 3회 · 570ml");
     same(v.age, "D+142 · 4개월 20일 · 교정 3개월 28일");
     same(v.words, "기분 좋아요"); same(v.prefix, "먹은 지"); same(v.label, "마지막 수유 11:25");
@@ -102,28 +102,50 @@ int main(void)
     same(v.sleep.title, "잠 · 깬 지"); same(v.sleep.detail, "09:00~13:20");
 
     c.feed.at = at(6, 10, 40);                     /* 200분 전: 기준 180분을 넘음 */
-    care_build_view(&c, now, &v);
+    care_build_view(&c, now, false, &v);
     same(v.words, "배고파요…"); assert(v.urgent && v.mood == MOOD_HUNGRY && v.feed.urgent && !v.diaper.urgent);
 
     c.feed.at = at(6, 13, 0); c.diaper.at = at(6, 10, 0);   /* 기저귀 240분 */
-    care_build_view(&c, now, &v);
+    care_build_view(&c, now, false, &v);
     same(v.words, "기저귀 봐 주세요…"); same(v.prefix, "기저귀 간 지"); same(v.label, "마지막 기저귀 10:00"); assert(v.diaper.urgent);
 
     c.sleep.at = at(6, 12, 40); c.sleep.ended_at = 0;       /* 자는 중이면 급한 것보다 잠 */
-    care_build_view(&c, now, &v);
+    care_build_view(&c, now, false, &v);
     same(v.words, "쿨쿨"); same(v.sleep.title, "잠 · 자는 중"); same(v.sleep.detail, "12:40~"); same(v.prefix, "잠든 지");
     assert(!v.urgent && v.mood == MOOD_SLEEP && v.sleep.ongoing && v.ago.hours == 1 && v.ago.minutes == 20);
 
     c.feed.at = at(6, 13, 48); c.feed.feeding = true;       /* 먹이는 중 */
-    care_build_view(&c, now, &v);
+    care_build_view(&c, now, false, &v);
     same(v.words, "냠냠"); same(v.feed.title, "수유 · 먹는 중"); same(v.feed.detail, "13:48~ · 200ml"); same(v.label, "먹이기 시작 13:48");
 
-    care_build_view(NULL, now, &v);                         /* 아직 못 받음 */
+    care_build_view(NULL, now, false, &v);                         /* 아직 못 받음 */
     same(v.feed.detail, "기록 없음"); same(v.label, "수유 기록 없음"); same(v.prefix, ""); same(v.total, ""); assert(!v.ago.has && !v.urgent);
 
     c = (care_summary_t){ .valid = true, .feed = { .at = at(6, 21, 0), .ml = 200 } };
-    care_build_view(&c, at(6, 22, 0), &v);                  /* 밤 */
+    care_build_view(&c, at(6, 22, 0), false, &v);                  /* 밤 */
     same(v.words, "쉿, 밤이에요"); assert(v.mood == MOOD_SLEEP);
+
+    /* 방금 저장: 급한 것보다 기쁨 */
+    c = (care_summary_t){ .valid = true, .feed = { .at = at(6, 9, 0), .ml = 200 } };
+    care_build_view(&c, now, true, &v);
+    same(v.words, "고마워요!"); assert(v.mood == MOOD_HAPPY && !v.urgent);
+
+    /* 분유 양: 브레짜 180 → 200ml, 210 → 230, 240 → 270, 270 → 300, 300 → 330 */
+    assert(care_water_for(200) == 180 && care_water_for(230) == 210 && care_water_for(270) == 240 && care_water_for(300) == 270 && care_water_for(330) == 300);
+    assert(care_water_for(220) == 0 && care_water_for(70) == 60 && care_water_for(30) == 0 && care_water_for(370) == 0);
+    assert(care_step_machine(200, +1) == 230 && care_step_machine(230, -1) == 200 && care_step_machine(330, +1) == 330 && care_step_machine(70, -1) == 70);
+    assert(care_step_machine(220, +1) == 230 && care_step_machine(220, -1) == 200);
+    assert(care_clamp_amount(0) == 5 && care_clamp_amount(900) == 500 && care_clamp_amount(210) == 210);
+
+    /* 저장 뒤 알림 글 */
+    care_action_t a = { .kind = ACT_FEED, .ml = 200, .at = now };
+    care_describe_action(&a, text, sizeof(text));                      same(text, "수유 200ml");
+    a.kind = ACT_FEED_START; care_describe_action(&a, text, sizeof(text)); same(text, "수유 200ml · 먹이기 시작");
+    a.kind = ACT_FEED_FINISH; a.started_at = now - 12 * 60; care_describe_action(&a, text, sizeof(text)); same(text, "수유 200ml · 12분");
+    a = (care_action_t){ .kind = ACT_DIAPER, .diaper = DIAPER_BOTH }; care_describe_action(&a, text, sizeof(text)); same(text, "기저귀 소변+대변");
+    a = (care_action_t){ .kind = ACT_SLEEP_START, .at = at(6, 13, 10) }; care_describe_action(&a, text, sizeof(text)); same(text, "잠 시작 13:10");
+    a = (care_action_t){ .kind = ACT_SLEEP_END, .at = now, .started_at = now - 80 * 60 }; care_describe_action(&a, text, sizeof(text)); same(text, "잠 1시간 20분");
+    care_duration(2 * 3600, text, sizeof(text)); same(text, "2시간");
 
     printf("care_text: 모두 통과\n");
     return 0;

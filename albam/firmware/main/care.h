@@ -31,6 +31,28 @@ void care_diag(care_diag_t *out);
 /* 요약이 *seen 뒤로 바뀌었으면 복사하고 true */
 bool care_copy_summary(care_summary_t *out, uint32_t *seen);
 
+/* ---- 기록하기 ----
+ * 웹앱과 같은 서버 함수를 부른다: care_add_event(새 기록), care_update_event(다 먹음), care_set_sleep_end(깼어요),
+ * care_cancel_event(취소). 한 번에 하나씩 하고, 끝나면 요약을 바로 다시 읽는다.
+ * 연결이 안 되면 웹앱처럼 쌓아 두지 않고 "저장 못 했어요"로 끝난다. */
+typedef enum {
+    ACTION_IDLE,
+    ACTION_BUSY,
+    ACTION_SAVED,       /* 저장됨(취소도 여기) */
+    ACTION_CONFIRM,     /* 비슷한 기록이 이미 있다 → 물어보고 force 로 다시 */
+    ACTION_NOT_FOUND,   /* 먹이는 중인 수유·자는 중인 잠을 못 찾음 */
+    ACTION_FAILED,
+} care_action_status_t;
+
+typedef struct {
+    care_action_status_t status;
+    care_action_t action;   /* 한 일. 새 기록이면 id 가 채워져 있다 */
+    care_action_t existing; /* ACTION_CONFIRM: 이미 있는 기록(kind, at, ml, diaper) */
+} care_action_result_t;
+
+void care_do(const care_action_t *action);
+void care_action_result(care_action_result_t *out);
+
 /* 화면에서 부른다. 결과는 care_state() 로 본다. 비밀번호는 저장하지 않고 갱신 토큰만 저장한다 */
 void care_login(const char *email, const char *password);
 void care_logout(void);

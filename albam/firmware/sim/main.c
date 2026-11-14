@@ -51,6 +51,22 @@ bool care_copy_summary(care_summary_t *out, uint32_t *seen)
 }
 void care_login(const char *email, const char *password) { (void)email; (void)password; }
 void care_logout(void) { s_care = CARE_NEED_LOGIN; }
+/* 가짜 기록: 다음에 물으면 저장됨(s_confirm_next 면 한 번은 "비슷한 기록이 있어요") */
+static care_action_result_t s_action;
+static bool s_confirm_next;
+void care_do(const care_action_t *action)
+{
+    s_action = (care_action_result_t){ .status = ACTION_SAVED, .action = *action };
+    if (!action->id[0]) {
+        snprintf(s_action.action.id, sizeof(s_action.action.id), "11111111-2222-4333-8444-555555555555");
+    }
+    if (s_confirm_next && !action->force) {
+        s_confirm_next = false;
+        s_action.status = ACTION_CONFIRM;
+        s_action.existing = (care_action_t){ .kind = ACT_DIAPER, .diaper = DIAPER_PEE, .at = action->at - 4 * 60 };
+    }
+}
+void care_action_result(care_action_result_t *out) { *out = s_action; }
 void care_diag(care_diag_t *out)
 {
     *out = (care_diag_t){ .ok = 512, .fails = 3, .seconds_since_ok = 4, .seconds_since_error = 1260 };
@@ -185,7 +201,7 @@ int main(int argc, char **argv)
     s_summary = (care_summary_t){ .valid = true, .feed = { .at = AGO(155), .ml = 200 }, .diaper = { .at = AGO(70), .type = DIAPER_PEE },
                                   .poo = { .at = AGO(290) }, .sleep = { .at = AGO(300), .ended_at = AGO(40) }, .today = { 3, 570 },
                                   .age = { true, 142, 4, 20, true, 3, 28 } };
-    ui_build(&fonts, "0.2.2+1a2b3c4");
+    ui_build(&fonts, "0.3.0+1a2b3c4");
     run(1200);
     snprintf(name, sizeof(name), "%s/1-calm", out); save(name);
 
@@ -222,6 +238,42 @@ int main(int argc, char **argv)
     s_care = CARE_STARTING;
     run(1200);
     snprintf(name, sizeof(name), "%s/5-empty", out); save(name);
+
+    /* 기록하기: 수유 창 → +30 → 지금 저장 → "저장됨 [취소]" */
+    s_care = CARE_OK;
+    s_summary = (care_summary_t){ .valid = true, .feed = { .at = AGO(155), .ml = 200 }, .diaper = { .at = AGO(70), .type = DIAPER_PEE },
+                                  .sleep = { .at = AGO(300), .ended_at = AGO(40) }, .today = { 3, 570 },
+                                  .age = { true, 142, 4, 20, true, 3, 28 }, .amount_count = 3, .amounts = { 200, 230, 270 } };
+    snprintf(s_summary.sleep.id, sizeof(s_summary.sleep.id), "sleep-id");
+    s_generation++;
+    run(1200);
+    tap(200, 560);                 /* 수유 칸 */
+    tap(916, 358);                 /* +30 브레짜 */
+    snprintf(name, sizeof(name), "%s/9-feed-sheet", out); save(name);
+    tap(1000, 566);                /* 지금 저장 */
+    run(600);
+    snprintf(name, sizeof(name), "%s/10-saved-undo", out); save(name);
+    run(7000);                     /* 취소 버튼이 사라질 때까지 */
+
+    /* 기저귀 창 → 소변 → 비슷한 기록 확인 */
+    tap(640, 560);
+    snprintf(name, sizeof(name), "%s/11-diaper-sheet", out); save(name);
+    s_confirm_next = true;
+    tap(330, 320);                 /* 소변 */
+    run(600);
+    snprintf(name, sizeof(name), "%s/12-confirm", out); save(name);
+    tap(260, 490);                 /* 안 넣기 */
+    run(3500);
+
+    /* 자는 중이면 잠 칸이 [깼어요] */
+    s_summary.sleep.ended_at = 0;
+    s_summary.sleep.at = AGO(80);
+    s_generation++;
+    run(1200);
+    tap(1050, 560);
+    run(600);
+    snprintf(name, sizeof(name), "%s/13-woke", out); save(name);
+    run(7000);
 
     /* 6. 설정 */
     s_care = CARE_OK;

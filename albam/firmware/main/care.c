@@ -17,6 +17,7 @@
 #include "esp_crt_bundle.h"
 #include "esp_http_client.h"
 #include "esp_log.h"
+#include "esp_random.h"
 #include "esp_timer.h"
 #include "sdkconfig.h"
 
@@ -52,6 +53,10 @@ static char s_message[160];      /* 마지막 오류 글 */
 static int s_fails, s_total_fails, s_total_ok;
 static char s_last_error[200];
 static int64_t s_last_error_at, s_last_ok_at;
+
+/* 화면이 넣어 둔 기록 요청과 그 결과 */
+static bool s_want_action;
+static care_action_result_t s_action;
 
 /* 화면이 넣어 둔 로그인 요청 */
 static bool s_want_login, s_want_logout;
@@ -266,6 +271,18 @@ static int int_of(const cJSON *object, const char *key, int fallback)
     return cJSON_IsNumber(item) ? (int)item->valuedouble : fallback;
 }
 
+static void text_of(const cJSON *object, const char *key, char *out, size_t len)
+{
+    const cJSON *item = cJSON_GetObjectItem(object, key);
+    snprintf(out, len, "%s", cJSON_IsString(item) ? item->valuestring : "");
+}
+
+static care_diaper_t diaper_of(const char *type)
+{
+    return !type ? DIAPER_NONE : !strcmp(type, "pee") ? DIAPER_PEE : !strcmp(type, "poo") ? DIAPER_POO
+           : !strcmp(type, "both") ? DIAPER_BOTH : DIAPER_NONE;
+}
+
 /* care_summary() 의 답에서 대시보드가 쓰는 부분만 꺼낸다(모양은 웹앱 src/domain.js 의 Summary) */
 static bool parse_summary(const char *response, care_summary_t *s)
 {
@@ -282,19 +299,25 @@ static bool parse_summary(const char *response, care_summary_t *s)
     s->feed.ended_at = time_of(feed, "ended_at");
     s->feed.ml = int_of(feed, "ml", -1);
     s->feed.feeding = cJSON_IsTrue(cJSON_GetObjectItem(feed, "feeding"));
+    text_of(feed, "id", s->feed.id, sizeof(s->feed.id));
 
     const cJSON *diaper = cJSON_GetObjectItem(json, "last_diaper");
     const cJSON *type = cJSON_GetObjectItem(diaper, "type");
     s->diaper.at = time_of(diaper, "at");
-    if (cJSON_IsString(type)) {
-        s->diaper.type = !strcmp(type->valuestring, "pee") ? DIAPER_PEE : !strcmp(type->valuestring, "poo") ? DIAPER_POO
-                         : !strcmp(type->valuestring, "both") ? DIAPER_BOTH : DIAPER_NONE;
-    }
+    s->diaper.type = diaper_of(cJSON_IsString(type) ? type->valuestring : NULL);
     s->poo.at = time_of(cJSON_GetObjectItem(json, "last_poo"), "at");
 
     const cJSON *sleep = cJSON_GetObjectItem(json, "last_sleep");
     s->sleep.at = time_of(sleep, "at");
     s->sleep.ended_at = time_of(sleep, "ended_at");
+    text_of(sleep, "id", s->sleep.id, sizeof(s->sleep.id));
+
+    const cJSON *amount;
+    cJSON_ArrayForEach(amount, cJSON_GetObjectItem(json, "feed_amounts")) {
+        if (s->amount_count < CARE_MAX_AMOUNTS && cJSON_IsNumber(amount)) {
+            s->amounts[s->amount_count++] = (int)amount->valuedouble;
+        }
+    }
 
     const cJSON *today = cJSON_GetObjectItem(json, "today");
     s->today.count = int_of(today, "feed_count", 0);
@@ -349,6 +372,154 @@ static int fetch_summary(void)
     return result;
 }
 
+/* ---- 기록하기 ---- */
+
+static void iso_time(time_t at, char *out, size_t len)
+{
+    struct tm t;
+    gmtime_r(&at, &t);
+    snprintf(out, len, "%04d-%02d-%02dT%02d:%02d:%02dZ", t.tm_year + 1900, t.tm_mon + 1, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec);
+}
+
+/* 새 기록의 id 는 보드가 만든다(다시 보내도 한 번만 저장되게 하는 열쇠). 무작위 uuid */
+static void new_id(char *out, size_t len)
+{
+    uint8_t b[16];
+    esp_fill_random(b, sizeof(b));
+    b[6] = (b[6] & 0x0f) | 0x40;
+    b[8] = (b[8] & 0x3f) | 0x80;
+    snprintf(out, len, "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
+             b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7], b[8], b[9], b[10], b[11], b[12], b[13], b[14], b[15]);
+}
+
+/* 끝 시각 넣기·지우기(다 먹음과 그 취소): care_update_event {id, ended_at, detail: {feeding}} */
+static cJSON *feed_end_body(const char *id, time_t ended_at, bool feeding)
+{
+    char when[32];
+    cJSON *root = cJSON_CreateObject(), *p = cJSON_AddObjectToObject(root, "p");
+    cJSON_AddStringToObject(p, "id", id);
+    if (ended_at) {
+        iso_time(ended_at, when, sizeof(when));
+        cJSON_AddStringToObject(p, "ended_at", when);
+    } else {
+        cJSON_AddNullToObject(p, "ended_at");
+    }
+    cJSON_AddBoolToObject(cJSON_AddObjectToObject(p, "detail"), "feeding", feeding);
+    return root;
+}
+
+/* 잠 끝 넣기·지우기(깼어요와 그 취소): care_set_sleep_end(p_id, p_ended_at) */
+static cJSON *sleep_end_body(const char *id, time_t ended_at)
+{
+    char when[32];
+    cJSON *root = cJSON_CreateObject();
+    cJSON_AddStringToObject(root, "p_id", id);
+    if (ended_at) {
+        iso_time(ended_at, when, sizeof(when));
+        cJSON_AddStringToObject(root, "p_ended_at", when);
+    } else {
+        cJSON_AddNullToObject(root, "p_ended_at");
+    }
+    return root;
+}
+
+/* 기록 하나를 서버에 보낸다. 결과는 result 에 */
+static void do_action(care_action_result_t *result)
+{
+    static const char *const DIAPER[] = { "", "pee", "poo", "both" };
+    care_action_t *a = &result->action;
+    const char *path = "/rest/v1/rpc/care_add_event";
+    cJSON *root = NULL;
+    care_action_kind_t what = a->kind == ACT_UNDO ? a->undo_of : a->kind;
+
+    if (a->kind == ACT_UNDO && what == ACT_FEED_FINISH) {          /* 다시 먹이는 중으로 */
+        path = "/rest/v1/rpc/care_update_event";
+        root = feed_end_body(a->id, 0, true);
+    } else if (a->kind == ACT_UNDO && what == ACT_SLEEP_END) {     /* 다시 자는 중으로 */
+        path = "/rest/v1/rpc/care_set_sleep_end";
+        root = sleep_end_body(a->id, 0);
+    } else if (a->kind == ACT_UNDO) {                              /* 방금 넣은 기록을 취소 */
+        path = "/rest/v1/rpc/care_cancel_event";
+        root = cJSON_CreateObject();
+        cJSON_AddStringToObject(root, "p_id", a->id);
+    } else if (what == ACT_FEED_FINISH) {
+        path = "/rest/v1/rpc/care_update_event";
+        root = feed_end_body(a->id, a->at, false);
+    } else if (what == ACT_SLEEP_END) {
+        path = "/rest/v1/rpc/care_set_sleep_end";
+        root = sleep_end_body(a->id, a->at);
+    } else {
+        char when[32];
+        if (!a->id[0]) {
+            new_id(a->id, sizeof(a->id));
+        }
+        iso_time(a->at, when, sizeof(when));
+        root = cJSON_CreateObject();
+        cJSON *p = cJSON_AddObjectToObject(root, "p");
+        cJSON_AddStringToObject(p, "id", a->id);
+        cJSON_AddStringToObject(p, "kind", what == ACT_DIAPER ? "diaper" : what == ACT_SLEEP_START ? "sleep" : "feed");
+        cJSON_AddStringToObject(p, "occurred_at", when);
+        cJSON_AddStringToObject(p, "source", "living_room_touch");
+        cJSON *detail = cJSON_AddObjectToObject(p, "detail");
+        if (what == ACT_DIAPER) {
+            cJSON_AddStringToObject(detail, "type", DIAPER[a->diaper]);
+        } else if (what == ACT_FEED_START) {
+            cJSON_AddBoolToObject(detail, "feeding", true);
+        }
+        if (what == ACT_FEED || what == ACT_FEED_START) {
+            cJSON_AddNumberToObject(p, "amount_ml", a->ml);
+        }
+        cJSON_AddBoolToObject(p, "force", a->force);
+    }
+
+    char *body = cJSON_PrintUnformatted(root), *response;
+    cJSON_Delete(root);
+    int sent = post(path, body, true, &response);
+    if (sent == RESULT_AUTH && !strstr(s_message, "not_family") && refresh_session() == RESULT_OK) {
+        sent = post(path, body, true, &response);   /* 토큰이 끝났다고 하면 한 번 갱신하고 다시 */
+    }
+    cJSON_free(body);
+
+    result->status = ACTION_FAILED;
+    if (sent == RESULT_OK) {
+        cJSON *json = cJSON_Parse(response);
+        const cJSON *status = cJSON_GetObjectItem(json, "status");
+        const char *word = cJSON_IsString(status) ? status->valuestring : "";
+        if (!strcmp(word, "saved") || !strcmp(word, "cancelled")) {
+            result->status = ACTION_SAVED;
+        } else if (!strcmp(word, "not_found")) {
+            result->status = ACTION_NOT_FOUND;
+        } else if (!strcmp(word, "confirm")) {
+            const cJSON *existing = cJSON_GetObjectItem(json, "existing");
+            const cJSON *kind = cJSON_GetObjectItem(existing, "kind");
+            const cJSON *type = cJSON_GetObjectItem(cJSON_GetObjectItem(existing, "detail"), "type");
+            const char *k = cJSON_IsString(kind) ? kind->valuestring : "";
+            result->status = ACTION_CONFIRM;
+            result->existing = (care_action_t){
+                .kind = !strcmp(k, "diaper") ? ACT_DIAPER : !strcmp(k, "sleep") ? ACT_SLEEP_START : ACT_FEED,
+                .at = time_of(existing, "at"),
+                .ml = int_of(existing, "ml", 0),
+                .diaper = diaper_of(cJSON_IsString(type) ? type->valuestring : NULL),
+            };
+        }
+        cJSON_Delete(json);
+    } else {
+        ESP_LOGW(TAG, "기록 못 함: %s", s_message);
+    }
+    free(response);
+}
+
+/* 지금은 기록을 보낼 수 없다(로그인 안 됨, 와이파이 없음) */
+static void fail_action(void)
+{
+    xSemaphoreTake(s_lock, portMAX_DELAY);
+    if (s_want_action) {
+        s_want_action = false;
+        s_action.status = ACTION_FAILED;
+    }
+    xSemaphoreGive(s_lock);
+}
+
 static void wait_for(int seconds)
 {
     ulTaskNotifyTake(pdTRUE, seconds < 0 ? portMAX_DELAY : pdMS_TO_TICKS(seconds * 1000));
@@ -385,6 +556,7 @@ static void care_task(void *arg)
             if (care_state() == CARE_STARTING) {
                 set_state(CARE_NEED_LOGIN);
             }
+            fail_action();
             wait_for(-1);
             continue;
         }
@@ -395,6 +567,7 @@ static void care_task(void *arg)
             if (care_state() == CARE_OK) {
                 set_state(CARE_OFFLINE);
             }
+            fail_action();
             wait_for(2);
             continue;
         }
@@ -406,6 +579,20 @@ static void care_task(void *arg)
             result = refresh_session();
             session_dead = result != RESULT_OK && result != RESULT_NETWORK;
         }
+        /* 화면이 넣어 둔 기록을 먼저 보내고, 이어서 요약을 다시 읽는다 */
+        static care_action_result_t doing;
+        xSemaphoreTake(s_lock, portMAX_DELAY);
+        bool want_action = s_want_action;
+        doing = s_action;
+        s_want_action = false;
+        xSemaphoreGive(s_lock);
+        if (want_action) {
+            if (result == RESULT_OK) {
+                do_action(&doing);
+            } else {
+                doing.status = ACTION_FAILED;
+            }
+        }
         if (result == RESULT_OK) {
             result = fetch_summary();
             if (result == RESULT_AUTH && !strstr(s_message, "not_family")) {
@@ -416,6 +603,15 @@ static void care_task(void *arg)
                     result = fetch_summary();
                 }
             }
+        }
+
+        /* 요약까지 새로 읽은 뒤에 결과를 알린다(화면이 바로 새 숫자를 보게) */
+        if (want_action) {
+            xSemaphoreTake(s_lock, portMAX_DELAY);
+            if (!s_want_action) {
+                s_action = doing;
+            }
+            xSemaphoreGive(s_lock);
         }
 
         bool not_family = result == RESULT_AUTH && strstr(s_message, "not_family") != NULL;
@@ -496,6 +692,22 @@ bool care_copy_summary(care_summary_t *out, uint32_t *seen)
     }
     xSemaphoreGive(s_lock);
     return changed;
+}
+
+void care_do(const care_action_t *action)
+{
+    xSemaphoreTake(s_lock, portMAX_DELAY);
+    s_action = (care_action_result_t){ .status = ACTION_BUSY, .action = *action };
+    s_want_action = true;
+    xSemaphoreGive(s_lock);
+    xTaskNotifyGive(s_task);
+}
+
+void care_action_result(care_action_result_t *out)
+{
+    xSemaphoreTake(s_lock, portMAX_DELAY);
+    *out = s_action;
+    xSemaphoreGive(s_lock);
 }
 
 void care_login(const char *email, const char *password)

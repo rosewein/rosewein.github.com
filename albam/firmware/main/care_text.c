@@ -192,7 +192,79 @@ static double minutes_since(time_t at, time_t now)
     return at ? difftime(now, at) / 60.0 : -1;
 }
 
-void care_build_view(const care_summary_t *s, time_t now, care_view_t *v)
+void care_duration(long seconds, char *out, size_t len)
+{
+    long minutes = seconds > 0 ? (seconds + 30) / 60 : 0;
+    long h = minutes / 60, m = minutes % 60;
+    if (!h) {
+        snprintf(out, len, "%ld분", m);
+    } else if (m) {
+        snprintf(out, len, "%ld시간 %ld분", h, m);
+    } else {
+        snprintf(out, len, "%ld시간", h);
+    }
+}
+
+void care_describe_action(const care_action_t *a, char *out, size_t len)
+{
+    static const char *const DIAPER[] = { "", "소변", "대변", "소변+대변" };
+    char extra[32];
+    switch (a->kind) {
+    case ACT_FEED:
+    case ACT_FEED_START:
+        snprintf(out, len, "수유 %dml%s", a->ml, a->kind == ACT_FEED_START ? " · 먹이기 시작" : "");
+        break;
+    case ACT_FEED_FINISH:
+        care_duration((long)difftime(a->at, a->started_at), extra, sizeof(extra));
+        snprintf(out, len, "수유 %dml · %s", a->ml, extra);
+        break;
+    case ACT_DIAPER:
+        snprintf(out, len, "기저귀 %s", DIAPER[a->diaper]);
+        break;
+    case ACT_SLEEP_START:
+        care_clock(a->at, extra, sizeof(extra));
+        snprintf(out, len, "잠 시작 %s", extra);
+        break;
+    case ACT_SLEEP_END:
+        care_duration((long)difftime(a->at, a->started_at), extra, sizeof(extra));
+        snprintf(out, len, "잠 %s", extra);
+        break;
+    default:
+        out[0] = '\0';
+        break;
+    }
+}
+
+/* 물 양 → 완성량(10ml 단위 반올림). 210 → 233.3 → 230 */
+static int ml_for_water(int water)
+{
+    return (int)((water / 30.0 * (100.0 / 3.0)) / 10.0 + 0.5) * 10;
+}
+
+int care_water_for(int ml)
+{
+    int water = (int)(ml / (100.0 / 3.0) * 30.0 / 30.0 + 0.5) * 30;
+    int back = ml_for_water(water);
+    return water >= 60 && water <= 300 && back - ml <= 1 && ml - back <= 1 ? water : 0;
+}
+
+int care_step_machine(int ml, int direction)
+{
+    /* 칸에 맞는 양이면 그 칸의 물 양에서, 아니면(220) 물 양을 거꾸로 셈해서 가까운 위/아래 칸으로 */
+    int exact = care_water_for(ml);
+    double steps = (exact ? exact : ml / (100.0 / 3.0) * 30.0) / 30.0;
+    int n = direction > 0 ? (int)(steps + 0.02) + 1 : (int)(steps - 0.02 + 0.999999) - 1;
+    int water = n * 30;
+    water = water < 60 ? 60 : water > 300 ? 300 : water;
+    return ml_for_water(water);
+}
+
+int care_clamp_amount(int ml)
+{
+    return ml < 5 ? 5 : ml > 500 ? 500 : ml;
+}
+
+void care_build_view(const care_summary_t *s, time_t now, bool happy, care_view_t *v)
 {
     static const care_summary_t EMPTY = { .feed = { .ml = -1 } };
     static const char *const WEEKDAY[] = { "일요일", "월요일", "화요일", "수요일", "목요일", "금요일", "토요일" };
@@ -223,7 +295,13 @@ void care_build_view(const care_summary_t *s, time_t now, care_view_t *v)
     care_focus_t focus = FOCUS_FEED;
     const char *words = "기분 좋아요";
     v->mood = MOOD_NORMAL;
-    if (feeding) {
+    v->feeding = feeding;
+    v->sleeping = sleeping;
+    if (happy) {
+        v->mood = MOOD_HAPPY;
+        focus = sleeping ? FOCUS_SLEEP : FOCUS_FEED;
+        words = "고마워요!";
+    } else if (feeding) {
         words = "냠냠";
     } else if (sleeping) {
         v->mood = MOOD_SLEEP;
