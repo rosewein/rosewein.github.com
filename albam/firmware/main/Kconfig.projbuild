@@ -11,6 +11,18 @@ menu "Albam board"
         string "Wi-Fi password baked into the firmware (optional)"
         default ""
 
+    config ALBAM_SUPABASE_URL
+        string "Supabase project URL"
+        default "https://dkeiwryjvussejrevigh.supabase.co"
+        help
+            Same as supabaseUrl in albam/config.js.
+
+    config ALBAM_SUPABASE_KEY
+        string "Supabase publishable key"
+        default "sb_publishable_87W4Yg7J_a7vb9XnoSp4OA_OrX5krqY"
+        help
+            Same as supabaseAnonKey in albam/config.js. This key is public; never put the service_role key here.
+
     config ALBAM_ROTATE_270
         bool "Landscape the other way round (270 instead of 90 degrees)"
         default n

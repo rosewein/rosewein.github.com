@@ -16,6 +16,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Test dashboard text rules
+        run: |
+          cc -Wall -Wextra -I albam/firmware/main albam/firmware/test/test_care_text.c albam/firmware/main/care_text.c -o /tmp/test_care_text
+          /tmp/test_care_text
       - name: Build
         uses: espressif/esp-idf-ci-action@v1
         with:

@@ -2,16 +2,17 @@
 
 거실 S10 대신 쓸 보드(Waveshare ESP32-P4-WIFI6-Touch-LCD-7, 7인치 올인원)의 첫 펌웨어다.
 화면은 ILI9881C(세로 720×1280), 터치는 GT9271 이다. 보드 지원 패키지는 `waveshare/esp32_p4_wifi6_touch_lcd_x` 를 쓰고 7인치를 고른다(`CONFIG_BSP_LCD_TYPE_720_1280_7_INCH`).
-아직 육아 기록 화면은 없다. 선으로 한 번 구운 뒤부터 무선으로 새 판을 보낼 수 있게 하는 뼈대다.
+지금은 읽기 전용이다. 수유·기저귀·잠이 얼마나 지났는지 보여 주고, 기록은 아직 S10 웹앱에서 넣는다.
 
 | 들어 있는 것 | 내용 |
 | --- | --- |
 | 와이파이 | 처음 켜면 화면에서 와이파이를 고르고 비밀번호를 넣는다. 보드에 저장된다 |
-| 한국 시간 | 인터넷 시간(NTP)을 받아 한국 시간으로 시계를 보여 준다 |
-| 가로 화면 | 세로 패널을 90도 돌려 1280×720 가로로 쓴다. 시계, 날짜, 연결 상태, 판 번호 |
+| 한국 시간 | 인터넷 시간(NTP)을 받아 한국 시간으로 보여 준다 |
+| 가로 화면 | 세로 패널을 90도 돌려 1280×720 가로로 쓴다 |
+| 한글 | 웹앱과 같은 Pretendard. TTF 를 넣어 두고 보드에서 크기별로 그린다 |
+| 로그인 | 화면 글자판으로 가족 계정 이메일과 비밀번호를 넣는다. 비밀번호는 저장하지 않고 갱신 토큰만 남긴다 |
+| 대시보드 | 20초마다 `care_summary` 를 읽어 알밤·말풍선과 수유·기저귀·잠 세 칸을 보여 준다(웹앱과 같은 규칙) |
 | 무선 업데이트 | 같은 와이파이에서 `http://albam-board.local/` 로 새 `.bin` 을 보낸다 |
-
-화면 글자는 아직 숫자와 영문뿐이다. LVGL 기본 글꼴에 한글이 없어서, 한글은 화면을 옮길 때 넣는다.
 
 ## 처음 한 번: 선으로 굽기
 
@@ -59,18 +60,37 @@ CONFIG_ALBAM_WIFI_PASSWORD="비밀번호"
 | --- | --- |
 | `main/main.c` | 시작 순서, 새 판 확정·되돌리기 |
 | `main/net.c` | 와이파이(보드의 C6 칩을 거친다), 한국 시간, `albam-board.local` |
+| `main/care.c` | 서버(Supabase) 로그인·토큰 갱신, 20초마다 요약 읽기. 웹앱 `src/api/supabase-rest.js` 와 같은 HTTP 호출 |
+| `main/care_text.c` | 요약을 화면에 보일 글로 바꾸는 규칙(지난 시간, 급한 항목, 기저귀 세부). 웹앱 `src/time.js`·`src/ui/status.js` 와 같다 |
+| `main/ui.c` | 화면 네 개: 대시보드, 설정, 와이파이 고르기, 로그인(LVGL 9) |
+| `main/board.c` | 보드에 붙은 일: 화면·터치 켜기, 가로 회전, 글꼴 읽기 |
 | `main/ota.c` | 무선 업데이트 서버(`/`, `/info`, `/update`) |
-| `main/ui.c` | 시계 화면과 와이파이 고르기 화면(LVGL 9) |
-| `main/store.c` | 꺼져도 남는 값(와이파이, 업데이트 번호) |
+| `main/store.c` | 꺼져도 남는 값(와이파이, 갱신 토큰, 업데이트 번호) |
+| `main/assets/` | 글꼴(TTF)과 알밤 그림. `tools/make_assets.py` 가 웹앱의 `fonts/`·`sprites/` 에서 만든다 |
 | `partitions.csv` | 앱 칸 두 개(무선 업데이트용) |
+
+웹앱의 대시보드 규칙(`status.js`, `time.js`, `config.js` 의 기준 시간)을 바꾸면 `care_text.c` 도 같이 고친다.
+
+## 보드 없이 확인하기
+
+```sh
+# 글 규칙 시험(웹앱 tests/unit/logic.test.mjs 와 같은 경우들)
+cc -I main test/test_care_text.c main/care_text.c -o /tmp/test_care_text && /tmp/test_care_text
+
+# 화면 미리 보기: ui.c 를 PC 에서 그려 sim/out/*.png 로 남긴다(통신은 가짜 값)
+sim/build.sh
+```
+
+미리 보기는 화면 배치와 글이 넘치는지를 보는 용도다. 통신(`care.c`)과 보드 쪽(`board.c`)은 들어가지 않는다.
 
 ## 보드에서 확인할 것
 
 빌드는 깃허브 Actions 가 확인한다. 아래는 보드에 구워야 알 수 있다.
 
 - 화면이 바로 서 있는지. 거꾸로면 `sdkconfig.local` 에 `CONFIG_ALBAM_ROTATE_270=y` 를 넣는다.
+- 로그인이 되고 대시보드 숫자가 S10 웹앱과 같은지.
 - 누른 자리가 맞는지. 대각선 반대쪽이 눌리면 `CONFIG_ALBAM_TOUCH_FLIP=y` 를 넣는다.
-- 화면이 멈추지 않는지. 돌린 화면은 `DOUBLE_PARTIAL` 방식으로 그린다(`ui.c` 의 `start_landscape()`).
+- 화면이 멈추지 않는지. 돌린 화면은 `DOUBLE_PARTIAL` 방식으로 그린다(`board.c` 의 `start_landscape()`).
 - 와이파이가 붙는지. 시작 로그에 `Version mismatch: Host [2.13.0] > Co-proc [0.0.0]` 경고가 나온다(보드의 C6 칩 펌웨어가 오래됨). 와이파이 찾기나 연결이 안 되면 C6 펌웨어를 올려야 한다.
 - 밝기가 바뀌는지(`CONFIG_ALBAM_BRIGHTNESS`). 백라이트는 GPIO 26 의 PWM 이고 `bsp_display_brightness_set()` 으로 켠다. 시작 로그에 `ledc: GPIO 26 is not usable` 경고가 나온다.
 - 무선으로 보낸 판이 켜지고, 일부러 잘못된 판을 보냈을 때 되돌아가는지.

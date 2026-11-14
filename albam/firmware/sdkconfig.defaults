@@ -29,7 +29,10 @@ CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192
 CONFIG_LWIP_SNTP_MAX_SERVERS=2
 CONFIG_LWIP_LOCAL_HOSTNAME="albam-board"
 
-# LVGL 글꼴(숫자·영문). 한글 글꼴은 화면을 옮길 때 넣는다
-CONFIG_LV_FONT_MONTSERRAT_20=y
+# 한글은 Pretendard TTF 를 보드에서 그린다(main/assets). 글자 그림을 담아 두려면 메모리가 넉넉해야 해서
+# LVGL 이 자기 작은 풀 대신 시스템 메모리(PSRAM)를 쓰게 한다
+CONFIG_LV_USE_TINY_TTF=y
+CONFIG_LV_USE_CLIB_MALLOC=y
+# 글자판과 그림 글자(와이파이 표시)는 LVGL 기본 글꼴
 CONFIG_LV_FONT_MONTSERRAT_28=y
 CONFIG_LV_FONT_MONTSERRAT_48=y
