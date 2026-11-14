@@ -23,6 +23,11 @@ void ui_sound(ui_sound_t sound);
 int ui_volume_get(void);
 void ui_volume_set(int percent, bool save);
 
+/* 화면이 살아 있는지: 1초마다 는다(멈추면 화면이 멈춘 것) */
+uint32_t ui_ticks(void);
+/* 화면을 돌려 옮기는 일을 몇 번 시작해 몇 번 끝냈나(board.c). 다르면 그 안에서 멈춘 것 */
+void board_rotate_counts(uint32_t *started, uint32_t *finished);
+
 /* 문제를 찾을 때: 지금까지 들어온 터치 수와 마지막으로 누른 자리 */
 void ui_touch_diag(int *presses, int *x, int *y);
 

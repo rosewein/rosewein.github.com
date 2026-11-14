@@ -30,13 +30,24 @@ extern const uint8_t semibold_end[] asm("_binary_pretendard_semibold_ttf_end");
  * 크기를 바꾸거나 색을 바꾸는 부름은 우리 화면에서 쓰지 않으며, 오면 원래 함수로 넘긴다. */
 esp_err_t __real_ppa_do_scale_rotate_mirror(ppa_client_handle_t client, const ppa_srm_oper_config_t *config);
 
+static volatile uint32_t s_rotate_started, s_rotate_finished;
+
+void board_rotate_counts(uint32_t *started, uint32_t *finished)
+{
+    *started = s_rotate_started;
+    *finished = s_rotate_finished;
+}
+
 esp_err_t __wrap_ppa_do_scale_rotate_mirror(ppa_client_handle_t client, const ppa_srm_oper_config_t *c)
 {
+    s_rotate_started++;
     int bytes = c->in.srm_cm == PPA_SRM_COLOR_MODE_RGB565 ? 2 : c->in.srm_cm == PPA_SRM_COLOR_MODE_RGB888 ? 3 : 0;
     bool plain = bytes && c->out.srm_cm == c->in.srm_cm && c->scale_x == 1.0f && c->scale_y == 1.0f &&
                  !c->mirror_x && !c->mirror_y && !c->rgb_swap && !c->byte_swap;
     if (!plain) {
-        return __real_ppa_do_scale_rotate_mirror(client, c);
+        esp_err_t err = __real_ppa_do_scale_rotate_mirror(client, c);
+        s_rotate_finished++;
+        return err;
     }
 
     const int w = c->in.block_w, h = c->in.block_h;
@@ -80,6 +91,7 @@ esp_err_t __wrap_ppa_do_scale_rotate_mirror(ppa_client_handle_t client, const pp
     /* 화면 패키지는 PPA 가 메모리에 바로 썼다고 여긴다. CPU 로 쓴 것을 메모리까지 내보낸다 */
     esp_cache_msync(dst - (size_t)c->out.block_offset_x * bytes, out_h * dst_stride,
                     ESP_CACHE_MSYNC_FLAG_DIR_C2M | ESP_CACHE_MSYNC_FLAG_UNALIGNED);
+    s_rotate_finished++;
     return ESP_OK;
 }
 

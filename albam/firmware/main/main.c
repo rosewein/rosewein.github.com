@@ -11,12 +11,44 @@
 #include "ota.h"
 #include "store.h"
 #include "update.h"
+#include "ui.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include "esp_system.h"
 
 /* 무선으로 받은 새 판이 이 시간 안에 와이파이에 못 붙으면 앞 판으로 되돌린다.
  * (와이파이가 안 되는 판이 올라가면 다시 무선으로 고칠 길이 없어서다) */
 #define NEW_FIRMWARE_PROOF_SECONDS 120
 
+/* 화면이 이만큼 멈춰 있으면 스스로 다시 켠다. 0.2.0 과 0.4.0 에서 밤새 화면이 멈춘 채 있었다.
+ * 까닭을 찾을 때까지, 멈춘 채 두지 않고 1분 안에 되살아나게 한다. 멈춘 횟수와 그때 상태는 /info 에 남는다 */
+#define UI_STALL_SECONDS 60
+
 static const char *TAG = "main";
+
+static void restart_if_ui_stalled(int uptime)
+{
+    static uint32_t last_ticks;
+    static int stalled;
+    uint32_t ticks = ui_ticks();
+    stalled = ticks == last_ticks ? stalled + 1 : 0;
+    last_ticks = ticks;
+    if (stalled < UI_STALL_SECONDS) {
+        return;
+    }
+    /* 다음에 켜졌을 때 볼 수 있게 남긴다: 몇 번째인지, 켠 지 얼마 만인지, 돌려 옮기기 안에서 멈췄는지 */
+    char count[16], info[96];
+    uint32_t started, finished;
+    board_rotate_counts(&started, &finished);
+    int stalls = store_get("stalls", count, sizeof(count)) ? atoi(count) : 0;
+    snprintf(count, sizeof(count), "%d", stalls + 1);
+    snprintf(info, sizeof(info), "uptime %ds, ticks %u, rotate %u/%u", uptime, (unsigned)ticks, (unsigned)finished, (unsigned)started);
+    store_set("stalls", count);
+    store_set("stall_info", info);
+    ESP_LOGE(TAG, "화면이 %d초 멈춤(%s). 다시 켠다.", UI_STALL_SECONDS, info);
+    esp_restart();
+}
 
 static bool on_trial(void)
 {
@@ -54,6 +86,7 @@ void app_main(void)
             ESP_LOGE(TAG, "새 판이 와이파이에 못 붙음. 앞 판으로 되돌린다.");
             esp_ota_mark_app_invalid_rollback_and_reboot();
         }
+        restart_if_ui_stalled(seconds);
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
 }

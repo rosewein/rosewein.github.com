@@ -1109,8 +1109,17 @@ void ui_touch_diag(int *presses, int *x, int *y)
 
 /* ---- 1초마다: 화면 고치기, 화면 옮기기 ---- */
 
+static volatile uint32_t s_ticks;
+
+/* 화면이 살아 있으면 1초마다 는다. main.c 가 이 값이 멈췄는지 지켜본다 */
+uint32_t ui_ticks(void)
+{
+    return s_ticks;
+}
+
 static void tick(lv_timer_t *timer)
 {
+    s_ticks++;
     net_status_t net;
     net_get_status(&net);
     care_state_t care = care_state();
