@@ -9,6 +9,8 @@
 #include <string.h>
 #include <time.h>
 #include "bsp/esp-bsp.h"
+#include "driver/i2c_master.h"
+#include "esp_log.h"
 #include "esp_app_desc.h"
 #include "lvgl.h"
 #include "sdkconfig.h"
@@ -269,14 +271,34 @@ static lv_display_t *start_landscape(void)
             .mirror_y = touch_other_way ? 1 : 0,
         },
     };
+    /* I2C 버스를 화면보다 먼저 연다. 7인치 패널 드라이버가 같은 버스(1번)를 따로 열어 버려서,
+     * 나중에 터치를 붙일 때 보드 패키지가 버스를 또 열다가 멈춘다. 먼저 열어 두면 드라이버가 그 버스를 같이 쓴다. */
+    ESP_ERROR_CHECK(bsp_i2c_init());
     return bsp_display_start_with_config(&cfg);
+}
+
+/* 이 보드의 밝기는 화면 쪽 조절 칩(I2C 0x45, 0x96 번 값 0~255)이 맡는다.
+ * 보드 패키지의 밝기 함수는 다른 크기 보드의 방식(PWM)이라 여기서는 듣지 않는다. */
+static void set_brightness(int percent)
+{
+    const i2c_device_config_t chip = { .dev_addr_length = I2C_ADDR_BIT_LEN_7, .device_address = 0x45, .scl_speed_hz = 100000 };
+    i2c_master_dev_handle_t dev;
+    if (i2c_master_bus_add_device(bsp_i2c_get_handle(), &chip, &dev) != ESP_OK) {
+        ESP_LOGW("ui", "밝기 칩을 못 찾음");
+        return;
+    }
+    const uint8_t command[] = { 0x96, (uint8_t)(percent * 255 / 100) };
+    if (i2c_master_transmit(dev, command, sizeof(command), 100) != ESP_OK) {
+        ESP_LOGW("ui", "밝기를 못 바꿈");
+    }
+    i2c_master_bus_rm_device(dev);
 }
 
 void ui_start(void)
 {
     lv_display_t *display = start_landscape();
     assert(display);
-    bsp_display_brightness_set(CONFIG_ALBAM_BRIGHTNESS);
+    set_brightness(CONFIG_ALBAM_BRIGHTNESS);
 
     bsp_display_lock(-1);
     build_home();

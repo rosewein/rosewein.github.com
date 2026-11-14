@@ -14,6 +14,8 @@ CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE=y
 
 # 보드: Waveshare ESP32-P4-WIFI6-Touch-LCD-7 (7인치 올인원, 패널은 세로 720x1280)
 CONFIG_BSP_LCD_TYPE_720_1280_7_INCH=y
+# 패널 드라이버가 I2C 1번(SDA 7, SCL 8)으로 정해 놓고 쓴다
+CONFIG_BSP_I2C_NUM=1
 # 돌려서 가로로 쓰려면 화면 버퍼가 3개 있어야 한다
 CONFIG_BSP_LCD_DPI_BUFFER_NUMS=3
 

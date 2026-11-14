@@ -71,5 +71,6 @@ CONFIG_ALBAM_WIFI_PASSWORD="비밀번호"
 - 화면이 바로 서 있는지. 거꾸로면 `sdkconfig.local` 에 `CONFIG_ALBAM_ROTATE_270=y` 를 넣는다.
 - 누른 자리가 맞는지. 대각선 반대쪽이 눌리면 `CONFIG_ALBAM_TOUCH_FLIP=y` 를 넣는다.
 - 화면이 멈추지 않는지. 돌린 화면은 `DOUBLE_PARTIAL` 방식으로 그린다(`ui.c` 의 `start_landscape()`).
-- 와이파이가 붙는지. 보드의 C6 칩에 들어 있는 펌웨어가 오래됐으면 시작 로그에 판이 안 맞는다는 경고가 나온다.
+- 와이파이가 붙는지. 시작 로그에 `Version mismatch: Host [2.13.0] > Co-proc [0.0.0]` 경고가 나온다(보드의 C6 칩 펌웨어가 오래됨). 와이파이 찾기나 연결이 안 되면 C6 펌웨어를 올려야 한다.
+- 밝기가 바뀌는지(`CONFIG_ALBAM_BRIGHTNESS`). 이 보드는 밝기를 I2C 칩(0x45)으로 조절한다.
 - 무선으로 보낸 판이 켜지고, 일부러 잘못된 판을 보냈을 때 되돌아가는지.
