@@ -6,7 +6,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <string.h>
 #include "bsp/esp-bsp.h"
+#include "driver/ppa.h"
+#include "esp_cache.h"
 #include "esp_app_desc.h"
 #include "lvgl.h"
 #include "sdkconfig.h"
@@ -16,6 +19,67 @@ extern const uint8_t regular_start[] asm("_binary_pretendard_regular_ttf_start")
 extern const uint8_t regular_end[] asm("_binary_pretendard_regular_ttf_end");
 extern const uint8_t semibold_start[] asm("_binary_pretendard_semibold_ttf_start");
 extern const uint8_t semibold_end[] asm("_binary_pretendard_semibold_ttf_end");
+
+/* 화면을 돌려 옮기는 일을 P4 의 그림 가속기(PPA) 대신 CPU 로 한다.
+ *
+ * 화면 패키지(esp_lvgl_adapter)는 고친 부분을 세로 패널 방향으로 돌려 옮길 때 PPA 를 부르고 끝나기를 기다린다.
+ * 그런데 P4 에서는 PPA 가 끝내 답을 안 줘서 화면이 통째로 멈추는 일이 있다(0.2.2 에서 시계까지 멈춤. 패키지 README 의
+ * "PPA Freeze Fix"). 그 함수를 링커에서 바꿔 끼워(CMakeLists.txt 의 --wrap) 같은 일을 CPU 로 한다.
+ * 크기를 바꾸거나 색을 바꾸는 부름은 우리 화면에서 쓰지 않으며, 오면 원래 함수로 넘긴다. */
+esp_err_t __real_ppa_do_scale_rotate_mirror(ppa_client_handle_t client, const ppa_srm_oper_config_t *config);
+
+esp_err_t __wrap_ppa_do_scale_rotate_mirror(ppa_client_handle_t client, const ppa_srm_oper_config_t *c)
+{
+    int bytes = c->in.srm_cm == PPA_SRM_COLOR_MODE_RGB565 ? 2 : c->in.srm_cm == PPA_SRM_COLOR_MODE_RGB888 ? 3 : 0;
+    bool plain = bytes && c->out.srm_cm == c->in.srm_cm && c->scale_x == 1.0f && c->scale_y == 1.0f &&
+                 !c->mirror_x && !c->mirror_y && !c->rgb_swap && !c->byte_swap;
+    if (!plain) {
+        return __real_ppa_do_scale_rotate_mirror(client, c);
+    }
+
+    const int w = c->in.block_w, h = c->in.block_h;
+    const size_t src_stride = (size_t)c->in.pic_w * bytes, dst_stride = (size_t)c->out.pic_w * bytes;
+    const uint8_t *src = (const uint8_t *)c->in.buffer + c->in.block_offset_y * src_stride + (size_t)c->in.block_offset_x * bytes;
+    uint8_t *dst = (uint8_t *)c->out.buffer + c->out.block_offset_y * dst_stride + (size_t)c->out.block_offset_x * bytes;
+    /* 돌린 뒤의 크기: 90·270도면 가로세로가 바뀐다 */
+    const bool turned = c->rotation_angle == PPA_SRM_ROTATION_ANGLE_90 || c->rotation_angle == PPA_SRM_ROTATION_ANGLE_270;
+    const int out_w = turned ? h : w, out_h = turned ? w : h;
+
+    /* 옮길 자리(dx, dy)를 한 줄씩 채운다. 그 자리에 올 원본 점(sx, sy):
+     *   270(시계 방향 90도): sx = dy,         sy = h - 1 - dx
+     *   90:                  sx = w - 1 - dy, sy = dx
+     *   180:                 sx = w - 1 - dx, sy = h - 1 - dy */
+    for (int dy = 0; dy < out_h; dy++) {
+        uint8_t *out = dst + dy * dst_stride;
+        if (c->rotation_angle == PPA_SRM_ROTATION_ANGLE_0) {
+            memcpy(out, src + dy * src_stride, (size_t)w * bytes);
+            continue;
+        }
+        for (int dx = 0; dx < out_w; dx++) {
+            int sx, sy;
+            if (c->rotation_angle == PPA_SRM_ROTATION_ANGLE_270) {
+                sx = dy;
+                sy = h - 1 - dx;
+            } else if (c->rotation_angle == PPA_SRM_ROTATION_ANGLE_90) {
+                sx = w - 1 - dy;
+                sy = dx;
+            } else {
+                sx = w - 1 - dx;
+                sy = h - 1 - dy;
+            }
+            const uint8_t *in = src + sy * src_stride + (size_t)sx * bytes;
+            if (bytes == 2) {
+                *(uint16_t *)(out + dx * 2) = *(const uint16_t *)in;
+            } else {
+                memcpy(out + dx * 3, in, 3);
+            }
+        }
+    }
+    /* 화면 패키지는 PPA 가 메모리에 바로 썼다고 여긴다. CPU 로 쓴 것을 메모리까지 내보낸다 */
+    esp_cache_msync(dst - (size_t)c->out.block_offset_x * bytes, out_h * dst_stride,
+                    ESP_CACHE_MSYNC_FLAG_DIR_C2M | ESP_CACHE_MSYNC_FLAG_UNALIGNED);
+    return ESP_OK;
+}
 
 /* 패널은 세로(720x1280)다. 90도(설정에 따라 270도) 돌려 가로 1280x720 으로 쓴다.
  * 터치는 화면과 따로라서 같은 방향으로 맞춰 준다(칩이 준 좌표를 뒤집고 x·y 를 바꾼다). */
@@ -32,7 +96,7 @@ static lv_display_t *start_landscape(void)
     bsp_display_cfg_t cfg = {
         .lv_adapter_cfg = ESP_LV_ADAPTER_DEFAULT_CONFIG(),
         .rotation = other_way ? ESP_LV_ADAPTER_ROTATE_270 : ESP_LV_ADAPTER_ROTATE_90,
-        /* TRIPLE_PARTIAL 은 P4 에서 돌린 화면이 멈추는 문제가 알려져 있어 쓰지 않는다 */
+        /* 고친 부분만 다시 그려 보낸다. 돌려 옮기는 일은 위의 CPU 함수가 한다 */
         .tear_avoid_mode = ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_PARTIAL,
         .touch_flags = {
             .swap_xy = 1,

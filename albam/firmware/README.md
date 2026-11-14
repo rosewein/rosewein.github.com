@@ -109,7 +109,7 @@ sim/build.sh
 - 화면이 바로 서 있는지. 거꾸로면 `sdkconfig.local` 에 `CONFIG_ALBAM_ROTATE_270=y` 를 넣는다.
 - 로그인이 되고 대시보드 숫자가 S10 웹앱과 같은지.
 - 누른 자리가 맞는지. 대각선 반대쪽이 눌리면 `CONFIG_ALBAM_TOUCH_FLIP=y` 를 넣는다.
-- 화면이 멈추지 않는지. 돌린 화면은 `DOUBLE_PARTIAL` 방식으로 그린다(`board.c` 의 `start_landscape()`).
+- 화면이 멈추지 않는지(시계가 계속 가는지). 0.2.2 에서 화면이 통째로 멈췄다. 화면을 돌려 옮기는 P4 그림 가속기(PPA)가 멈추는 문제로 보고, 그 일을 CPU 로 하게 바꿨다(`board.c` 의 `__wrap_ppa_do_scale_rotate_mirror`).
 - 와이파이가 붙는지. 시작 로그에 `Version mismatch: Host [2.13.0] > Co-proc [0.0.0]` 경고가 나온다(보드의 C6 칩 펌웨어가 오래됨). 와이파이 찾기나 연결이 안 되면 C6 펌웨어를 올려야 한다.
 - 밝기가 바뀌는지(`CONFIG_ALBAM_BRIGHTNESS`). 백라이트는 GPIO 26 의 PWM 이고 `bsp_display_brightness_set()` 으로 켠다. 시작 로그에 `ledc: GPIO 26 is not usable` 경고가 나온다.
 - 무선으로 보낸 판이 켜지고, 일부러 잘못된 판을 보냈을 때 되돌아가는지.
