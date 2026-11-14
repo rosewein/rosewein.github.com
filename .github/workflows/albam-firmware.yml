@@ -1,0 +1,35 @@
+# 알밤보드 P4 펌웨어를 빌드해 내려받을 수 있게 둔다 (albam/firmware 가 바뀔 때만)
+name: albam-firmware
+
+on:
+  push:
+    paths:
+      - 'albam/firmware/**'
+      - '.github/workflows/albam-firmware.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: v5.5.2
+          target: esp32p4
+          path: albam/firmware
+          command: idf.py build && idf.py merge-bin -o albam_board_full.bin
+      - uses: actions/upload-artifact@v4
+        with:
+          name: albam-board-firmware
+          path: |
+            albam/firmware/build/albam_board.bin
+            albam/firmware/build/albam_board_full.bin
+            albam/firmware/build/bootloader/bootloader.bin
+            albam/firmware/build/partition_table/partition-table.bin
+            albam/firmware/build/ota_data_initial.bin
+            albam/firmware/build/flasher_args.json

@@ -1,0 +1,9 @@
+dependencies:
+  idf: ">=5.5"
+  # 화면(EK79007)·터치(GT911)·밝기·LVGL 을 묶은 보드 지원 패키지
+  waveshare/esp32_p4_wifi6_touch_lcd_7b: "~3.0.1"
+  # P4 에는 와이파이가 없어 보드의 C6 칩을 통해 쓴다
+  espressif/esp_wifi_remote: "^1.6"
+  espressif/esp_hosted: "^2.11"
+  # albam-board.local 로 찾기
+  espressif/mdns: "^1.8"
