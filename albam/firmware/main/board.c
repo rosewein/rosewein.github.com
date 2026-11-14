@@ -1,6 +1,10 @@
 /* 보드: Waveshare ESP32-P4-WIFI6-Touch-LCD-7 (7인치 올인원). 화면 ILI9881C(세로 720x1280), 터치 GT9271 */
 #include "board.h"
+#include "store.h"
 #include "ui.h"
+
+#include <stdio.h>
+#include <stdlib.h>
 
 #include "bsp/esp-bsp.h"
 #include "esp_app_desc.h"
@@ -56,10 +60,30 @@ static const lv_font_t *font(bool semibold, int size, const lv_font_t *symbols)
     return f;
 }
 
+static int s_brightness;
+
+int ui_brightness_get(void)
+{
+    return s_brightness;
+}
+
+/* 백라이트는 GPIO 26 의 PWM 이다 */
+void ui_brightness_set(int percent)
+{
+    char text[8];
+    s_brightness = percent < 5 ? 5 : percent > 100 ? 100 : percent;
+    bsp_display_brightness_set(s_brightness);
+    snprintf(text, sizeof(text), "%d", s_brightness);
+    store_set("brightness", text);
+}
+
 void board_start_ui(void)
 {
     lv_display_t *display = start_landscape();
     assert(display);
+
+    char saved[8];
+    s_brightness = store_get("brightness", saved, sizeof(saved)) ? atoi(saved) : CONFIG_ALBAM_BRIGHTNESS;
 
     bsp_display_lock(-1);
     const ui_fonts_t fonts = {
@@ -72,6 +96,6 @@ void board_start_ui(void)
     ui_build(&fonts, esp_app_get_description()->version);
     bsp_display_unlock();
 
-    /* 백라이트(GPIO 26 PWM)는 따로 켜 줘야 한다. 안 켜면 화면이 까맣다 */
-    bsp_display_brightness_set(CONFIG_ALBAM_BRIGHTNESS);
+    /* 백라이트는 따로 켜 줘야 한다. 안 켜면 화면이 까맣다 */
+    bsp_display_brightness_set(s_brightness < 5 ? 5 : s_brightness > 100 ? 100 : s_brightness);
 }

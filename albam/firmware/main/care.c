@@ -22,6 +22,8 @@
 
 #define POLL_SECONDS 20          /* 다른 기기 기록을 다시 읽는 주기(웹앱 pollSeconds) */
 #define REFRESH_MARGIN 120       /* 만료 2분 전이면 미리 갱신 */
+#define RETRY_SECONDS 5          /* 못 읽었으면 조금 뒤 다시 */
+#define OFFLINE_AFTER 3          /* 이만큼 잇달아 못 읽어야 "연결 안 됨"(한 번 끊긴 것으로는 안 띄운다) */
 #define TIMEOUT_MS 10000
 #define MAX_RESPONSE (512 * 1024)
 
@@ -45,6 +47,11 @@ static char s_refresh[512];
 static char *s_access;
 static int64_t s_expires;        /* 켠 뒤 지난 초 기준 */
 static char s_message[160];      /* 마지막 오류 글 */
+
+/* 문제를 찾을 때 보는 값(/info 와 설정 화면) */
+static int s_fails, s_total_fails, s_total_ok;
+static char s_last_error[200];
+static int64_t s_last_error_at, s_last_ok_at;
 
 /* 화면이 넣어 둔 로그인 요청 */
 static bool s_want_login, s_want_logout;
@@ -96,9 +103,23 @@ static int post(const char *path, const char *body, bool with_auth, char **respo
     size_t size = 0, room = 8192;
     char *text = malloc(room);
     int body_len = strlen(body);
-    if (text && esp_http_client_open(client, body_len) == ESP_OK &&
-        esp_http_client_write(client, body, body_len) == body_len &&
-        esp_http_client_fetch_headers(client) >= 0) {
+    /* 어느 단계에서 막혔는지 남긴다: 연결(TLS 포함) / 보내기 / 답 머리말 / 답 읽기 */
+    const char *stage = "memory";
+    esp_err_t err = text ? esp_http_client_open(client, body_len) : ESP_ERR_NO_MEM;
+    if (err == ESP_OK) {
+        stage = "send";
+        err = esp_http_client_write(client, body, body_len) == body_len ? ESP_OK : ESP_FAIL;
+    } else if (text) {
+        stage = "connect";
+    }
+    if (err == ESP_OK) {
+        stage = "headers";
+        err = esp_http_client_fetch_headers(client) >= 0 ? ESP_OK : ESP_FAIL;
+    }
+    if (err != ESP_OK) {
+        snprintf(s_message, sizeof(s_message), "%s: %s (errno %d)", stage, esp_err_to_name(err), esp_http_client_get_errno(client));
+        ESP_LOGW(TAG, "%s → %s", path, s_message);
+    } else {
         status = esp_http_client_get_status_code(client);
         for (;;) {
             if (size + 1 >= room) {
@@ -120,6 +141,10 @@ static int post(const char *path, const char *body, bool with_auth, char **respo
             size += got;
         }
     }
+    if (err == ESP_OK && !status) {
+        snprintf(s_message, sizeof(s_message), "read: stopped after %u bytes", (unsigned)size);
+        ESP_LOGW(TAG, "%s → %s", path, s_message);
+    }
     esp_http_client_close(client);
     esp_http_client_cleanup(client);
 
@@ -140,6 +165,9 @@ static int post(const char *path, const char *body, bool with_auth, char **respo
         }
         cJSON_Delete(json);
         ESP_LOGW(TAG, "%s → HTTP %d %s", path, status, s_message);
+        if (!s_message[0]) {
+            snprintf(s_message, sizeof(s_message), "HTTP %d", status);
+        }
         if (status == 401 || status == 403 || strstr(s_message, "JWT") || strstr(s_message, "not_family")) {
             result = RESULT_AUTH;
         } else if (status >= 500) {
@@ -392,15 +420,31 @@ static void care_task(void *arg)
 
         bool not_family = result == RESULT_AUTH && strstr(s_message, "not_family") != NULL;
         if (result == RESULT_OK) {
+            xSemaphoreTake(s_lock, portMAX_DELAY);
+            s_fails = 0;
+            s_total_ok++;
+            s_last_ok_at = uptime();
+            xSemaphoreGive(s_lock);
             set_state(CARE_OK);
-        } else if (session_dead || not_family || result == RESULT_AUTH) {
+            wait_for(POLL_SECONDS);
+            continue;
+        }
+        if (session_dead || not_family || result == RESULT_AUTH) {
             forget_session();
             set_state(not_family ? CARE_NOT_FAMILY : CARE_NEED_LOGIN);
             continue;
-        } else {
-            set_state(CARE_OFFLINE);     /* 로그인은 그대로 두고 다음에 다시 */
         }
-        wait_for(POLL_SECONDS);
+        /* 못 읽음: 로그인은 그대로 두고 조금 뒤 다시. 잇달아 실패해야 "연결 안 됨" */
+        xSemaphoreTake(s_lock, portMAX_DELAY);
+        int fails = ++s_fails;
+        s_total_fails++;
+        s_last_error_at = uptime();
+        snprintf(s_last_error, sizeof(s_last_error), "%s", s_message[0] ? s_message : "unknown");
+        xSemaphoreGive(s_lock);
+        if (fails >= OFFLINE_AFTER) {
+            set_state(CARE_OFFLINE);
+        }
+        wait_for(RETRY_SECONDS);
     }
 }
 
@@ -427,6 +471,19 @@ const char *care_email(void)
     strlcpy(copy, s_email, sizeof(copy));
     xSemaphoreGive(s_lock);
     return copy;
+}
+
+void care_diag(care_diag_t *out)
+{
+    xSemaphoreTake(s_lock, portMAX_DELAY);
+    int64_t now = uptime();
+    out->ok = s_total_ok;
+    out->fails = s_total_fails;
+    out->fails_in_a_row = s_fails;
+    out->seconds_since_ok = s_last_ok_at ? (int)(now - s_last_ok_at) : -1;
+    out->seconds_since_error = s_last_error_at ? (int)(now - s_last_error_at) : -1;
+    strlcpy(out->last_error, s_last_error, sizeof(out->last_error));
+    xSemaphoreGive(s_lock);
 }
 
 bool care_copy_summary(care_summary_t *out, uint32_t *seen)

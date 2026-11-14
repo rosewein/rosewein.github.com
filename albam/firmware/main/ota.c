@@ -1,6 +1,7 @@
 /* 무선 업데이트: 같은 와이파이에서 새 펌웨어(.bin)를 POST /update 로 받는다.
  * 화면에 나오는 6자리 번호를 X-OTA-Code 머리말로 보내야 받는다. */
 #include "ota.h"
+#include "care.h"
 #include "store.h"
 
 #include <stdio.h>
@@ -8,11 +9,13 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_app_desc.h"
+#include "esp_heap_caps.h"
 #include "esp_http_server.h"
 #include "esp_log.h"
 #include "esp_ota_ops.h"
 #include "esp_random.h"
 #include "esp_system.h"
+#include "esp_timer.h"
 
 static const char *TAG = "ota";
 
@@ -46,9 +49,26 @@ static esp_err_t info_get(httpd_req_t *req)
 {
     const esp_app_desc_t *app = esp_app_get_description();
     const esp_partition_t *running = esp_ota_get_running_partition();
-    char json[200];
-    snprintf(json, sizeof(json), "{\"name\":\"%s\",\"version\":\"%s\",\"built\":\"%s %s\",\"slot\":\"%s\"}",
-             app->project_name, app->version, app->date, app->time, running ? running->label : "?");
+    /* 문제를 찾을 때 브라우저로 볼 값: 켜진 시간, 남은 메모리(안쪽·PSRAM), 서버 읽기 상태 */
+    care_diag_t care;
+    care_diag(&care);
+    for (char *p = care.last_error; *p; p++) {
+        if (*p == '"' || *p == '\\' || (unsigned char)*p < 0x20) {
+            *p = ' ';
+        }
+    }
+    static char json[900];
+    snprintf(json, sizeof(json),
+             "{\"name\":\"%s\",\"version\":\"%s\",\"built\":\"%s %s\",\"slot\":\"%s\",\"uptime_s\":%d,"
+             "\"heap\":{\"internal_free\":%u,\"internal_min\":%u,\"internal_largest\":%u,\"psram_free\":%u,\"psram_min\":%u},"
+             "\"care\":{\"state\":%d,\"ok\":%d,\"fails\":%d,\"fails_in_a_row\":%d,\"seconds_since_ok\":%d,"
+             "\"seconds_since_error\":%d,\"last_error\":\"%s\"}}",
+             app->project_name, app->version, app->date, app->time, running ? running->label : "?",
+             (int)(esp_timer_get_time() / 1000000),
+             (unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL), (unsigned)heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL),
+             (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL),
+             (unsigned)heap_caps_get_free_size(MALLOC_CAP_SPIRAM), (unsigned)heap_caps_get_minimum_free_size(MALLOC_CAP_SPIRAM),
+             (int)care_state(), care.ok, care.fails, care.fails_in_a_row, care.seconds_since_ok, care.seconds_since_error, care.last_error);
     httpd_resp_set_type(req, "application/json");
     return httpd_resp_send(req, json, HTTPD_RESP_USE_STRLEN);
 }

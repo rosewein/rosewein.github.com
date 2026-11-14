@@ -50,6 +50,14 @@ bool care_copy_summary(care_summary_t *out, uint32_t *seen)
 }
 void care_login(const char *email, const char *password) { (void)email; (void)password; }
 void care_logout(void) { s_care = CARE_NEED_LOGIN; }
+void care_diag(care_diag_t *out)
+{
+    *out = (care_diag_t){ .ok = 512, .fails = 3, .seconds_since_ok = 4, .seconds_since_error = 1260 };
+    snprintf(out->last_error, sizeof(out->last_error), "connect: ESP_ERR_HTTP_CONNECT (errno 113)");
+}
+static int s_brightness = 70;
+int ui_brightness_get(void) { return s_brightness; }
+void ui_brightness_set(int percent) { s_brightness = percent; }
 
 /* ---- 그리기 ---- */
 static uint32_t tick_now(void) { return s_ms; }
@@ -172,7 +180,7 @@ int main(int argc, char **argv)
     s_summary = (care_summary_t){ .valid = true, .feed = { .at = AGO(155), .ml = 200 }, .diaper = { .at = AGO(70), .type = DIAPER_PEE },
                                   .poo = { .at = AGO(290) }, .sleep = { .at = AGO(300), .ended_at = AGO(40) }, .today = { 3, 570 },
                                   .age = { true, 142, 4, 20, true, 3, 28 } };
-    ui_build(&fonts, "0.2.0");
+    ui_build(&fonts, "0.2.1");
     run(1200);
     snprintf(name, sizeof(name), "%s/1-calm", out); save(name);
 

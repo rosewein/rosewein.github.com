@@ -20,6 +20,14 @@ void care_start(void);
 care_state_t care_state(void);
 const char *care_email(void);
 
+/* 문제를 찾을 때 보는 값: 읽은 횟수, 못 읽은 횟수와 마지막 까닭 */
+typedef struct {
+    int ok, fails, fails_in_a_row;
+    int seconds_since_ok, seconds_since_error;   /* 없으면 -1 */
+    char last_error[200];
+} care_diag_t;
+void care_diag(care_diag_t *out);
+
 /* 요약이 *seen 뒤로 바뀌었으면 복사하고 true */
 bool care_copy_summary(care_summary_t *out, uint32_t *seen);
 
