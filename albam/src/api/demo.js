@@ -50,6 +50,9 @@ class DemoServer {
   loggedIn = true;
   session = { email: 'demo' };
   onSessionChange = () => {};
+  /** 설정에서 바꾼 일정·기록 종류: 미리 보기라 새로 고치면 처음으로 */
+  appointments = null;
+  types = DEFAULT_RECORD_TYPES;
   /** 자주 쓰는 문구: 미리 보기라 새로 고치면 처음으로 */
   phrases = [{ id: 'p1', kind: 'feed', text: '유산균' }, { id: 'p2', kind: 'feed', text: '비타민D' }, { id: 'p3', kind: 'bath', text: '보습로션' }];
 
@@ -74,6 +77,24 @@ class DemoServer {
       case 'care_measures': return this.measures();
       case 'care_day': return this.day(args.p_day);
       case 'care_upcoming': return this.upcoming();
+      case 'care_appointments': return this.upcoming();
+      case 'care_set_appointment': {
+        const id = args.p.id || crypto.randomUUID();
+        this.appointments = [...this.upcoming().filter((a) => a.id !== id), { at_time: null, place: null, note: null, items: [], ...args.p, at_time: args.p.at_time || null, place: args.p.place || null, id }];
+        return { status: 'saved', id };
+      }
+      case 'care_cancel_appointment':
+        this.appointments = this.upcoming().filter((a) => a.id !== args.p_id);
+        return { status: 'cancelled', id: args.p_id };
+      case 'care_show_record_type':
+        this.types = this.types.map((t) => (t.key === args.p_key ? { ...t, in_more: args.p_show } : t));
+        return { status: 'saved', key: args.p_key };
+      case 'care_order_record_types': {
+        const order = args.p_keys;
+        const rank = (t) => (order.includes(t.key) ? order.indexOf(t.key) + 3 : ['feed', 'diaper', 'sleep'].indexOf(t.key));
+        this.types = [...this.types].sort((a, b) => rank(a) - rank(b));
+        return { status: 'saved' };
+      }
       case 'care_phrases': return this.phrases;
       case 'care_add_phrase': {
         const text = String(args.p_text || '').trim();
@@ -114,7 +135,7 @@ class DemoServer {
       last_poo: (({ id, occurred_at: at, detail } = {}) => (id ? { id, at, type: detail.type } : null))(all.find((e) => e.kind === 'diaper' && ['poo', 'both'].includes(e.detail?.type))),
       last_sleep: sleep ? { id: sleep.id, at: sleep.occurred_at, ended_at: sleep.ended_at } : null,
       feed_amounts: this.feedAmounts(),
-      record_types: DEFAULT_RECORD_TYPES,
+      record_types: this.types,
       baby: DEMO_BABY,
       age: ageOn(now, DEMO_BABY),
       recent: all.slice(0, RECENT_LIMIT).map((e) => ({
@@ -151,6 +172,11 @@ class DemoServer {
 
   /** 다가오는 일정: 미리 보기라 20일 뒤 예방접종 하나(?demo&appt=2 처럼 남은 날을 바꿔 볼 수 있다) */
   upcoming() {
+    if (this.appointments) {
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const left = (a) => Math.round((new Date(`${a.on_date}T00:00:00`) - today) / 86400000);
+      return this.appointments.filter((a) => left(a) >= 0).sort((a, b) => a.on_date.localeCompare(b.on_date)).map((a) => ({ ...a, days_left: left(a) }));
+    }
     const left = Number(new URLSearchParams(location.search).get('appt') ?? 20);
     const d = new Date(); d.setDate(d.getDate() + left);
     const on = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;

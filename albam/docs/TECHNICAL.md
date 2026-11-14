@@ -135,6 +135,7 @@ albam/
 │  ├─ home.js              카드(지난 시간·마지막 기록·바로 저장), 더 넣기 버튼, 다가오는 일정
 │  ├─ entry.js             넣기·고치기 창(종류의 모양을 따름). checkForm()·buildEvent()·buildPatch() 는 순수 함수
 │  ├─ stats.js             통계 쪽: 날짜별 막대와 평균, 성장곡선. summarize()·gapsByPeriod()·growthChart()·ageText() 는 순수 함수
+│  ├─ settings.js          설정 쪽: 일정, 문구 모아 보기, 더 넣기 버튼, 로그아웃. parseItems()·buildAppointment()·vaccineEvents() 는 순수 함수
 │  ├─ records.js           기록 쪽: 날짜 넘기기, 그날 합계, 줄을 누르면 고치기. describeRow()·daySummary() 는 순수 함수
 │  ├─ phrases.js           자주 쓰는 문구: 버튼 줄, 더하기·지우기 창. toggleMemo() 는 순수 함수
 │  └─ notice.js            아래 알림 막대: 저장됨 + [취소 n]
@@ -156,6 +157,7 @@ albam/
 │  ├─ 015_appointments.sql  다가오는 일정 care_appointments · care_upcoming()(예방접종 예약 등)
 │  ├─ 016_phrases.sql       자주 쓰는 문구 care_phrases(기록에 눌러서 붙이는 메모)
 │  ├─ 017_day.sql           하루 기록 care_day(날짜)(개인 폰 화면의 기록 쪽)
+│  ├─ 018_record_type_settings.sql  더 넣기 버튼 보임·순서, 일정 목록 care_appointments()(개인 폰 화면의 설정 쪽)
 │  └─ queries/              SQL Editor 에서 돌려 보는 확인용 질의
 ├─ sprites/                도트 그림 원본 PNG + sprites.json
 ├─ fonts/                  프리텐다드 글꼴(한글 2,780자 판, 보통·굵게, SIL OFL 1.1)
@@ -604,7 +606,14 @@ flowchart TD
   - 기저귀: 하루 횟수, 대변 있는 횟수, 대변 없는 날 수. 잠: 하루 잠, 밤잠·낮잠(밤잠은 깨는 날에 세는 `care_stats`의 규칙 그대로).
   - **[성장]**: `care_measures()`의 체중·키를 WHO 또래 줄(백분위 3·15·50·85·97) 위에 그린다. 주황 점은 기본 나이(생일부터), 파란 빈 점은 교정 나이(예정일부터, 예정일 전에 잰 값은 뺌). 아래에 마지막 측정의 백분위를 기본·교정 나란히 보여 준다. 나이 글은 화면의 나이 줄과 같은 방식(`ageText`).
   - 가로는 0~(마지막 측정 + 2)개월(적어도 6, 많아도 24). 성별이 없으면 또래 줄을 그리지 않는다.
-- 다음 단계: 설정(기본 수유량·일정 넣기·더 넣기 버튼 고르기).
+- **설정 쪽**(018, `m/settings.js`): 아래 탭 [설정]. 여기서 바꾼 것은 Supabase 에 들어가 모든 화면에 같이 적용된다. 연결돼 있을 때만 된다.
+  - **다가오는 일정**: 넣기·고치기·지우기(두 번). `care_appointments(14)`로 받아서 지난 2주 안의 일정도 "3일 지남"으로 남아 있다. 이름에 '접종'이 들어가면 `kind = vaccine`.
+  - **[맞았어요 · 기록으로 옮기기]**: 오늘이거나 지난 접종 일정에서 보인다. 항목 하나에 예방접종 기록 한 줄(`detail.vaccine`·`dose`·`memo`·`hospital`)을 넣고 일정을 닫는다. 시각은 일정의 시각, 없으면 오늘이면 지금·지난 날이면 오전 9시.
+  - **자주 쓰는 문구**: 종류마다 한 줄, 누르면 더하기·지우기 창.
+  - **더 넣기 버튼**: 종류마다 [▲][▼]로 순서, [보임]/[숨김]. `care_order_record_types(keys[])`·`care_show_record_type(key, show)`. 숨겨도 기록은 남고 목록·통계에는 나온다. 수유·기저귀·잠은 못 바꾼다.
+  - 터미타임을 놀이에 넣으려면: 놀이 문구에 '터미타임'을 더하고 터미타임 버튼을 숨긴다(예전 터미타임 기록은 그대로 터미타임 종류로 남는다).
+  - 계정: 로그인한 이메일, 로그아웃.
+- 아직 없는 것: 측정 묶기(체중+키 한 화면), 기본 수유량 설정(지금은 마지막으로 먹인 양에서 시작), 표준 접종 일정표와 빠진 접종 표시.
 
 ## 6. 주요 흐름
 
@@ -840,7 +849,7 @@ flowchart LR
 - 이 저장소는 GitHub Pages로 나간다. main에 합치면 `https://rosewein.github.io/albam/`에 반영된다.
 - 서비스 워커는 네트워크를 먼저 쓴다. 그래서 고친 파일은 다음에 열 때 바로 보인다. 오프라인일 때만 캐시를 쓴다.
 - 파일을 더하거나 이름을 바꾸면 `sw.js`의 `FILES`에 반영하고 `VERSION`을 올린다.
-- SQL은 Supabase SQL Editor에서 번호 순서대로 직접 실행한다(지금 `001`~`017`). 바꿀 때는 `008_…sql`처럼 번호를 붙여 새 파일로 더하고, 이미 실행한 파일은 고치지 않는다. 함수를 바꿀 때는 새 파일에 `create or replace`로 함수 전체를 다시 쓴다(002의 `care_summary()`처럼).
+- SQL은 Supabase SQL Editor에서 번호 순서대로 직접 실행한다(지금 `001`~`018`). 바꿀 때는 `008_…sql`처럼 번호를 붙여 새 파일로 더하고, 이미 실행한 파일은 고치지 않는다. 함수를 바꿀 때는 새 파일에 `create or replace`로 함수 전체를 다시 쓴다(002의 `care_summary()`처럼).
 - `config.js`에는 publishable(anon) key만 둔다. 공개돼도 되는 값이고, 읽고 쓰기는 RLS와 가족 명단이 막는다. service_role 키는 절대 넣지 않는다.
 
 ## 12. 고치고 늘리는 법

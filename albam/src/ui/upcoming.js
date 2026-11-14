@@ -10,21 +10,21 @@ const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 const dayOf = (s) => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
 
 /**
- * 일정 한 줄 글. 지난 일정이면 ''.  (순수 함수)
+ * 일정 한 줄 글(순수 함수). 지난 일정이면 null, past 를 켜면 "3일 지남"으로(설정 쪽 목록)
  * @param {{on_date: string, title: string, items?: string[], at_time?: string|null}} a
  * @param {Date} now
  * @returns {{date: string, title: string, left: string, items: string, all: string[], days: number}|null}
  */
-export function describeAppointment(a, now) {
+export function describeAppointment(a, now, { past = false } = {}) {
   const day = dayOf(a.on_date);
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const left = Math.round((day - today) / DAY_MS);
-  if (left < 0) return null;
+  if (left < 0 && !past) return null;
   const items = a.items || [];
   return {
     date: `${day.getMonth() + 1}월 ${day.getDate()}일 ${WEEKDAYS[day.getDay()]}${a.at_time ? ` ${a.at_time}` : ''}`,
     title: a.title,
-    left: left === 0 ? '오늘' : left === 1 ? '내일' : `D-${left}`,
+    left: left < 0 ? `${-left}일 지남` : left === 0 ? '오늘' : left === 1 ? '내일' : `D-${left}`,
     items: items.length > 1 ? `${items[0]} 외 ${items.length - 1}` : items[0] || '',
     all: items,
     days: left,

@@ -114,7 +114,7 @@ export function createPhrases(ctx, cacheKey, { labelOf, onChange, notify }) {
       $('#phrasesMsg').textContent = '더하지 못했어요(연결을 확인해 주세요)';
     }
   });
-  $('#phrasesClose').addEventListener('click', () => { dialog.close(); notify('문구를 고쳤어요'); });
+  $('#phrasesClose').addEventListener('click', () => { dialog.close(); notify('문구를 고쳤어요'); onChange(); });
 
-  return { load, of, renderChips };
+  return { load, of, renderChips, manage, labelOf };
 }
