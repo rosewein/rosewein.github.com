@@ -154,7 +154,7 @@ static void ago_line_set(ago_line_t *line, const char *prefix, care_ago_t ago, b
     }
     snprintf(line->key, sizeof(line->key), "%s", key);
 
-    char texts[5][24] = { "", "", "", "", "" };   /* 앞말, 숫자1, 단위1, 숫자2, 단위2 */
+    char texts[5][48] = { "", "", "", "", "" };   /* 앞말, 숫자1, 단위1, 숫자2, 단위2 */
     const char *tail = ongoing ? "째" : "";
     if (!ago.has || (!ago.hours && !ago.minutes)) {
         snprintf(texts[1], sizeof(texts[1]), "%s", whole);   /* "—", "방금" 은 통째로 크게 */
