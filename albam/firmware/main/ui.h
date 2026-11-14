@@ -14,6 +14,7 @@ typedef struct {
 #include <stdbool.h>
 int ui_brightness_get(bool night);
 void ui_brightness_set(bool night, int percent, bool save);   /* 막대를 움직이는 동안은 save 없이, 손을 떼면 저장 */
+void ui_brightness_wake(void);                                 /* 화면을 눌렀다: 밤이면 30초 동안 낮 밝기로 */
 void ui_brightness_refresh(void);                              /* 1초마다: 지금 시각에 맞는 밝기로 */
 
 /* 효과음(sound.c). 소리 크기는 0~100, 0 이면 끔. 밤에는 절반으로 낸다 */

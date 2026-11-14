@@ -133,9 +133,10 @@ static const lv_font_t *font(bool semibold, int size, const lv_font_t *symbols)
 #define NIGHT_END_HOUR 6
 #define NIGHT_DEFAULT 20
 #define PREVIEW_SECONDS 3     /* 설정에서 막대를 움직이면 그 밝기를 잠깐 보여 준다 */
+#define WAKE_SECONDS 30       /* 밤에 화면을 누르면 이만큼 낮 밝기로(웹앱 nightWakeSeconds) */
 
 static int s_day, s_night, s_shown = -1;
-static time_t s_preview_until;
+static time_t s_preview_until, s_wake_until;
 
 static int clamp_percent(int percent)
 {
@@ -178,6 +179,16 @@ void ui_brightness_set(bool night, int percent, bool save)
     }
 }
 
+/* 화면을 눌렀다: 밤이면 잠깐 낮 밝기로. 누를 때마다 30초가 다시 시작된다 */
+void ui_brightness_wake(void)
+{
+    time_t now = time(NULL);
+    s_wake_until = now + WAKE_SECONDS;
+    if (is_night(now) && now >= s_preview_until && ota_progress() < 0) {
+        show_brightness(s_day);
+    }
+}
+
 /* 1초마다: 지금이 낮인지 밤인지에 맞춘다 */
 void ui_brightness_refresh(void)
 {
@@ -187,7 +198,7 @@ void ui_brightness_refresh(void)
     if (ota_progress() >= 0) {
         show_brightness(0);
     } else if (now >= s_preview_until) {
-        show_brightness(is_night(now) ? s_night : s_day);
+        show_brightness(is_night(now) && now >= s_wake_until ? s_night : s_day);
     }
 }
 

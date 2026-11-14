@@ -147,6 +147,33 @@ int main(void)
     a = (care_action_t){ .kind = ACT_SLEEP_END, .at = now, .started_at = now - 80 * 60 }; care_describe_action(&a, text, sizeof(text)); same(text, "잠 1시간 20분");
     care_duration(2 * 3600, text, sizeof(text)); same(text, "2시간");
 
+    /* 오늘 기록 목록 한 줄 */
+    char when[24];
+    time_t n7 = at(7, 14, 0);
+    care_event_t ev = { .at = at(7, 6, 0), .ml = 200 };
+    snprintf(ev.kind, sizeof(ev.kind), "feed");
+    care_describe_row(&ev, n7, when, sizeof(when), text, sizeof(text)); same(when, "06:00"); same(text, "수유 200ml");
+    ev.at = n7 - 12 * 60; ev.ended_at = n7;
+    care_describe_row(&ev, n7, when, sizeof(when), text, sizeof(text)); same(when, "13:48~14:00"); same(text, "수유 200ml · 12분");
+    ev.at = n7 - 8 * 60; ev.ended_at = 0; ev.feeding = true;
+    care_describe_row(&ev, n7, when, sizeof(when), text, sizeof(text)); same(when, "13:52~"); same(text, "수유 200ml (먹는 중 8분)");
+    ev = (care_event_t){ .at = at(6, 20, 0), .ended_at = at(7, 5, 40), .ml = -1 };
+    snprintf(ev.kind, sizeof(ev.kind), "sleep");
+    care_describe_row(&ev, n7, when, sizeof(when), text, sizeof(text)); same(when, "20:00~05:40"); same(text, "잠 9시간 40분");
+    ev = (care_event_t){ .at = at(7, 13, 0), .ml = -1 };
+    snprintf(ev.kind, sizeof(ev.kind), "sleep");
+    care_describe_row(&ev, n7, when, sizeof(when), text, sizeof(text)); same(when, "13:00~"); same(text, "잠 (자는 중 1시간)");
+    ev = (care_event_t){ .at = at(7, 8, 30), .ml = -1, .diaper = DIAPER_BOTH };
+    snprintf(ev.kind, sizeof(ev.kind), "diaper");
+    care_describe_row(&ev, n7, when, sizeof(when), text, sizeof(text)); same(when, "08:30"); same(text, "기저귀 소변+대변");
+    ev = (care_event_t){ .at = at(7, 8, 53), .ml = -1, .has_value = true, .value = 37.1 };
+    snprintf(ev.kind, sizeof(ev.kind), "temperature");
+    care_describe_row(&ev, n7, when, sizeof(when), text, sizeof(text)); same(when, "08:53"); same(text, "체온 37.1°C");
+    ev = (care_event_t){ .at = at(7, 10, 0), .ended_at = at(7, 10, 10), .ml = -1 };
+    snprintf(ev.kind, sizeof(ev.kind), "bath"); snprintf(ev.note, sizeof(ev.note), "보습로션");
+    care_describe_row(&ev, n7, when, sizeof(when), text, sizeof(text)); same(when, "10:00~10:10"); same(text, "목욕 · 10분 · 보습로션");
+    assert(care_is_today(at(7, 0, 5), n7) && !care_is_today(at(6, 23, 55), n7) && !care_is_today(0, n7));
+
     printf("care_text: 모두 통과\n");
     return 0;
 }

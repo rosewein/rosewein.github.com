@@ -54,6 +54,12 @@ static int s_fails, s_total_fails, s_total_ok;
 static char s_last_error[200];
 static int64_t s_last_error_at, s_last_ok_at;
 
+/* 오늘 기록 목록(목록 화면이 떠 있을 때만 읽는다) */
+static volatile bool s_want_timeline;
+static care_event_t s_events[CARE_MAX_EVENTS];
+static int s_event_count;
+static uint32_t s_events_generation;
+
 /* 화면이 넣어 둔 기록 요청과 그 결과 */
 static bool s_want_action;
 static care_action_result_t s_action;
@@ -372,6 +378,61 @@ static int fetch_summary(void)
     return result;
 }
 
+/* care_timeline(1) 의 답에서 오늘 기록만 꺼낸다(시각 순으로 온다). 많으면 나중 것을 남긴다 */
+static int fetch_timeline(void)
+{
+    static care_event_t fresh[CARE_MAX_EVENTS];
+    static const char *const NOTES[] = { "medicine", "what", "hospital", "reason", "memo" };
+    char *response;
+    int result = post("/rest/v1/rpc/care_timeline", "{\"p_days\":1}", true, &response);
+    if (result != RESULT_OK) {
+        return result;
+    }
+    cJSON *json = cJSON_Parse(response);
+    free(response);
+    time_t now = time(NULL);
+    int count = 0;
+    const cJSON *item;
+    cJSON_ArrayForEach(item, json) {
+        time_t at = time_of(item, "at");
+        if (!care_is_today(at, now)) {
+            continue;
+        }
+        if (count == CARE_MAX_EVENTS) {
+            memmove(fresh, fresh + 1, sizeof(fresh) - sizeof(fresh[0]));
+            count--;
+        }
+        care_event_t *e = &fresh[count++];
+        memset(e, 0, sizeof(*e));
+        e->at = at;
+        e->ended_at = time_of(item, "ended_at");
+        text_of(item, "kind", e->kind, sizeof(e->kind));
+        e->ml = int_of(item, "ml", -1);
+        const cJSON *value = cJSON_GetObjectItem(item, "value"), *type = cJSON_GetObjectItem(item, "type");
+        e->has_value = cJSON_IsNumber(value);
+        e->value = e->has_value ? value->valuedouble : 0;
+        e->diaper = diaper_of(cJSON_IsString(type) ? type->valuestring : NULL);
+        e->feeding = cJSON_IsTrue(cJSON_GetObjectItem(item, "feeding"));
+        /* 세부 글: 약 이름 · 무엇 · 병원 · 까닭 · 메모 중 있는 것 */
+        const cJSON *detail = cJSON_GetObjectItem(item, "detail");
+        size_t used = 0;
+        for (size_t i = 0; i < sizeof(NOTES) / sizeof(NOTES[0]); i++) {
+            const cJSON *note = cJSON_GetObjectItem(detail, NOTES[i]);
+            if (cJSON_IsString(note) && note->valuestring[0] && used < sizeof(e->note) - 1) {
+                used += snprintf(e->note + used, sizeof(e->note) - used, "%s%s", used ? " · " : "", note->valuestring);
+            }
+        }
+    }
+    cJSON_Delete(json);
+
+    xSemaphoreTake(s_lock, portMAX_DELAY);
+    memcpy(s_events, fresh, sizeof(fresh[0]) * count);
+    s_event_count = count;
+    s_events_generation++;
+    xSemaphoreGive(s_lock);
+    return RESULT_OK;
+}
+
 /* ---- 기록하기 ---- */
 
 static void iso_time(time_t at, char *out, size_t len)
@@ -605,6 +666,10 @@ static void care_task(void *arg)
             }
         }
 
+        if (result == RESULT_OK && s_want_timeline) {
+            fetch_timeline();   /* 못 읽으면 앞의 목록을 그대로 둔다 */
+        }
+
         /* 요약까지 새로 읽은 뒤에 결과를 알린다(화면이 바로 새 숫자를 보게) */
         if (want_action) {
             xSemaphoreTake(s_lock, portMAX_DELAY);
@@ -692,6 +757,27 @@ bool care_copy_summary(care_summary_t *out, uint32_t *seen)
     }
     xSemaphoreGive(s_lock);
     return changed;
+}
+
+void care_want_timeline(bool want)
+{
+    s_want_timeline = want;
+    if (want) {
+        xTaskNotifyGive(s_task);   /* 바로 한 번 읽는다 */
+    }
+}
+
+int care_copy_timeline(care_event_t *out, int max, uint32_t *seen)
+{
+    int count = -1;
+    xSemaphoreTake(s_lock, portMAX_DELAY);
+    if (*seen != s_events_generation) {
+        count = s_event_count < max ? s_event_count : max;
+        memcpy(out, s_events, sizeof(out[0]) * count);
+        *seen = s_events_generation;
+    }
+    xSemaphoreGive(s_lock);
+    return count;
 }
 
 void care_do(const care_action_t *action)

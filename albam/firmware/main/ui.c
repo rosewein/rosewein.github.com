@@ -71,6 +71,8 @@ static uint32_t s_undo_until, s_notice_until, s_happy_until;
 
 static lv_obj_t *s_settings, *s_info;
 static lv_obj_t *s_updating, *s_updating_text, *s_updating_bar;
+static lv_obj_t *s_day, *s_day_title, *s_day_total, *s_day_list;
+#define DAY_IDLE_MS 60000             /* 목록에서 이만큼 안 만지면 대시보드로(웹앱 statsIdleSeconds) */
 static lv_obj_t *s_wifi, *s_list, *s_ssid, *s_pass, *s_wifi_msg;
 static lv_obj_t *s_login, *s_email, *s_login_pass, *s_login_msg, *s_login_keyboard;
 static net_ap_t s_aps[MAX_APS];
@@ -207,6 +209,8 @@ static void diaper_clicked(lv_event_t *e);
 static void sleep_clicked(lv_event_t *e);
 static void build_record(void);
 static void tick(lv_timer_t *timer);
+static void open_day(lv_event_t *e);
+static void swiped(lv_event_t *e);
 
 /* ---- 대시보드 ---- */
 
@@ -605,6 +609,9 @@ static void build_home(void)
     lv_obj_align(s_clock, LV_ALIGN_TOP_RIGHT, -156, 22);
     s_today = label(s_home, F.small, C_DIM, "");
     lv_obj_align(s_today, LV_ALIGN_TOP_RIGHT, -290, 34);
+    lv_obj_add_event_cb(s_home, swiped, LV_EVENT_GESTURE, NULL);
+    lv_obj_t *day = button(s_home, "오늘 기록", open_day, 180, 64);
+    lv_obj_set_pos(day, 500, 16);
     s_status = label(s_home, F.small, C_WARN, "");
     lv_obj_align(s_status, LV_ALIGN_TOP_RIGHT, -156, 70);
 
@@ -953,6 +960,119 @@ static void build_settings(void)
     lv_obj_set_pos(button(s_settings, "닫기", back_home, 200, 84), 1052, 616);
 }
 
+/* ---- 오늘 기록: 대시보드에서 왼쪽으로 밀거나 [오늘 기록]을 누르면 나온다 ----
+ *   오늘 기록 (11/14)                오늘 3회 · 570ml   [대시보드]
+ *   06:03          수유 200ml
+ *   06:05~07:50    잠 1시간 45분
+ * 보기만 한다. 고치기·지우기는 폰에서. */
+
+static void open_day(lv_event_t *e)
+{
+    care_want_timeline(true);
+    lv_screen_load_anim(s_day, LV_SCREEN_LOAD_ANIM_MOVE_LEFT, 200, 0, false);
+}
+
+static void close_day(lv_event_t *e)
+{
+    care_want_timeline(false);
+    lv_screen_load_anim(s_home, LV_SCREEN_LOAD_ANIM_MOVE_RIGHT, 200, 0, false);
+}
+
+/* 옆으로 밀기: 대시보드에서 왼쪽으로 → 오늘 기록, 오늘 기록에서 오른쪽으로 → 대시보드 */
+static void swiped(lv_event_t *e)
+{
+    lv_indev_t *indev = lv_indev_active();
+    lv_dir_t dir = lv_indev_get_gesture_dir(indev);
+    lv_obj_t *on = lv_event_get_current_target(e);
+    bool sheet_open = !lv_obj_has_flag(s_feed_sheet, LV_OBJ_FLAG_HIDDEN) || !lv_obj_has_flag(s_diaper_sheet, LV_OBJ_FLAG_HIDDEN) ||
+                      !lv_obj_has_flag(s_confirm_sheet, LV_OBJ_FLAG_HIDDEN);
+    if (on == s_home && dir == LV_DIR_LEFT && !sheet_open) {
+        lv_indev_wait_release(indev);   /* 민 손가락이 칸을 누른 것으로 치지 않게 */
+        open_day(NULL);
+    } else if (on == s_day && dir == LV_DIR_RIGHT) {
+        lv_indev_wait_release(indev);
+        close_day(NULL);
+    }
+}
+
+static void update_day(void)
+{
+    static care_event_t events[CARE_MAX_EVENTS];
+    static int count = -1;            /* -1: 아직 못 읽음 */
+    static uint32_t seen;
+    static int shown_minute = -1;
+
+    time_t now = time(NULL);
+    int got = care_copy_timeline(events, CARE_MAX_EVENTS, &seen);
+    if (got >= 0) {
+        count = got;
+    }
+    /* 받은 것이 바뀌었거나 분이 바뀌면 다시 그린다("자는 중 1시간 20분"이 늘어난다) */
+    int minute = (int)(now / 60);
+    if (got < 0 && minute == shown_minute) {
+        return;
+    }
+    shown_minute = minute;
+
+    struct tm t;
+    char title[48];
+    localtime_r(&now, &t);
+    snprintf(title, sizeof(title), "오늘 기록 (%d/%d)", t.tm_mon + 1, t.tm_mday);
+    set_text(s_day_title, title);
+    set_text(s_day_total, s_view.total);
+
+    int32_t scroll = lv_obj_get_scroll_y(s_day_list);
+    bool at_end = lv_obj_get_scroll_bottom(s_day_list) <= 4;
+    lv_obj_clean(s_day_list);
+    if (count <= 0) {
+        lv_obj_t *empty = label(s_day_list, F.text, C_DIM, count < 0 ? "읽는 중…" : "기록이 없어요");
+        lv_obj_set_style_pad_all(empty, 24, 0);
+        return;
+    }
+    for (int i = 0; i < count; i++) {
+        char when[24], what[160];
+        care_describe_row(&events[i], now, when, sizeof(when), what, sizeof(what));
+        lv_obj_t *row = lv_obj_create(s_day_list);
+        lv_obj_remove_style_all(row);
+        lv_obj_set_size(row, lv_pct(100), 60);
+        lv_obj_remove_flag(row, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_set_style_border_color(row, lv_color_hex(C_LINE), 0);
+        lv_obj_set_style_border_width(row, 1, 0);
+        lv_obj_set_style_border_side(row, LV_BORDER_SIDE_BOTTOM, 0);
+        lv_obj_align(label(row, F.text, C_DIM, when), LV_ALIGN_LEFT_MID, 24, 0);
+        lv_obj_t *text = label(row, F.text, C_STRONG, what);
+        lv_obj_align(text, LV_ALIGN_LEFT_MID, 300, 0);
+        lv_obj_set_width(text, 900);
+        lv_label_set_long_mode(text, LV_LABEL_LONG_MODE_DOTS);
+    }
+    /* 맨 아래(가장 최근)를 보고 있었으면 계속 맨 아래를 보여 준다 */
+    lv_obj_update_layout(s_day_list);
+    if (at_end) {
+        lv_obj_scroll_to_y(s_day_list, LV_COORD_MAX, LV_ANIM_OFF);
+    } else {
+        lv_obj_scroll_to_y(s_day_list, scroll, LV_ANIM_OFF);
+    }
+}
+
+static void build_day(void)
+{
+    s_day = screen();
+    lv_obj_add_event_cb(s_day, swiped, LV_EVENT_GESTURE, NULL);
+    s_day_title = label(s_day, F.title, C_STRONG, "오늘 기록");
+    lv_obj_set_pos(s_day_title, 28, 20);
+    s_day_total = label(s_day, F.text, C_TEXT, "");
+    lv_obj_align(s_day_total, LV_ALIGN_TOP_RIGHT, -260, 30);
+    lv_obj_t *back = button(s_day, "대시보드", close_day, 210, 64);
+    lv_obj_align(back, LV_ALIGN_TOP_RIGHT, -24, 16);
+
+    s_day_list = panel(s_day, 28, 100, W - 56, H - 120);
+    lv_obj_add_flag(s_day_list, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_scroll_dir(s_day_list, LV_DIR_VER);
+    lv_obj_set_flex_flow(s_day_list, LV_FLEX_FLOW_COLUMN);
+    lv_obj_remove_flag(s_day_list, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_flag(s_day_list, LV_OBJ_FLAG_GESTURE_BUBBLE);
+}
+
 /* ---- 새 펌웨어 받는 중 ---- */
 
 static void build_updating(void)
@@ -975,6 +1095,7 @@ static lv_point_t s_last_press;
 
 static void pressed(lv_event_t *e)
 {
+    ui_brightness_wake();
     s_presses++;
     lv_indev_get_point(lv_event_get_target(e), &s_last_press);
 }
@@ -999,6 +1120,12 @@ static void tick(lv_timer_t *timer)
     update_home(&net, care);
     if (now == s_settings) {
         update_info(&net);
+    }
+    if (now == s_day) {
+        update_day();
+        if (lv_display_get_inactive_time(NULL) > DAY_IDLE_MS) {
+            close_day(NULL);
+        }
     }
 
     /* 새 펌웨어를 받는 동안에는 까만 화면에 진행 막대만 보여 준다.
@@ -1073,6 +1200,7 @@ void ui_build(const ui_fonts_t *fonts, const char *version)
     build_wifi();
     build_login();
     build_updating();
+    build_day();
     lv_screen_load(s_home);
 
     net_status_t net;

@@ -67,6 +67,19 @@ void care_do(const care_action_t *action)
     }
 }
 void care_action_result(care_action_result_t *out) { *out = s_action; }
+void care_want_timeline(bool want) { (void)want; }
+static care_event_t s_events[40];
+static int s_event_count;
+int care_copy_timeline(care_event_t *out, int max, uint32_t *seen)
+{
+    if (*seen == 1) {
+        return -1;
+    }
+    *seen = 1;
+    (void)max;
+    memcpy(out, s_events, sizeof(s_events[0]) * s_event_count);
+    return s_event_count;
+}
 void care_diag(care_diag_t *out)
 {
     *out = (care_diag_t){ .ok = 512, .fails = 3, .seconds_since_ok = 4, .seconds_since_error = 1260 };
@@ -79,6 +92,7 @@ void update_dev_set(bool dev) { (void)dev; }
 int ui_brightness_get(bool night) { return night ? 20 : 70; }
 void ui_brightness_set(bool night, int percent, bool save) { (void)night; (void)percent; (void)save; }
 void ui_brightness_refresh(void) {}
+void ui_brightness_wake(void) {}
 void ui_sound(ui_sound_t sound) { (void)sound; }
 int ui_volume_get(void) { return 50; }
 void ui_volume_set(int percent, bool save) { (void)percent; (void)save; }
@@ -277,6 +291,28 @@ int main(int argc, char **argv)
     run(600);
     snprintf(name, sizeof(name), "%s/13-woke", out); save(name);
     run(7000);
+
+    /* 오늘 기록: [오늘 기록]을 눌러 연다 */
+    {
+        static const struct { const char *kind; int at, end, ml; care_diaper_t diaper; double value; const char *note; } ROWS[] = {
+            { "feed", 14 * 60, 0, 200 }, { "sleep", 13 * 60 + 50, 12 * 60, -1 }, { "diaper", 11 * 60 + 30, 0, -1, DIAPER_BOTH },
+            { "feed", 10 * 60, 0, 230 }, { "temperature", 9 * 60, 0, -1, 0, 36.9 }, { "bath", 8 * 60, 7 * 60 + 48, -1, 0, 0, "보습로션" },
+            { "diaper", 7 * 60, 0, -1, DIAPER_PEE }, { "feed", 6 * 60, 0, 200 }, { "sleep", 5 * 60, 4 * 60 + 10, -1 },
+            { "diaper", 3 * 60, 0, -1, DIAPER_POO }, { "feed", 155, 0, 200 }, { "diaper", 70, 0, -1, DIAPER_PEE }, { "sleep", 80, 0, -1 },
+        };
+        for (size_t i = 0; i < sizeof(ROWS) / sizeof(ROWS[0]); i++) {
+            care_event_t *e = &s_events[s_event_count++];
+            *e = (care_event_t){ .at = AGO(ROWS[i].at), .ended_at = ROWS[i].end ? AGO(ROWS[i].end) : 0, .ml = ROWS[i].ml,
+                                 .diaper = ROWS[i].diaper, .has_value = ROWS[i].value != 0, .value = ROWS[i].value };
+            snprintf(e->kind, sizeof(e->kind), "%s", ROWS[i].kind);
+            snprintf(e->note, sizeof(e->note), "%s", ROWS[i].note ? ROWS[i].note : "");
+        }
+    }
+    tap(590, 48);
+    run(1500);
+    snprintf(name, sizeof(name), "%s/15-day", out); save(name);
+    tap(1150, 48);                 /* 대시보드로 */
+    run(1500);
 
     /* 새 펌웨어 받는 중: 까만 화면에 막대만 */
     s_ota = 42;

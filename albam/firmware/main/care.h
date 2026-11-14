@@ -53,6 +53,12 @@ typedef struct {
 void care_do(const care_action_t *action);
 void care_action_result(care_action_result_t *out);
 
+/* ---- 오늘 기록 목록 ----
+ * 목록 화면이 떠 있는 동안만(want) 요약과 함께 care_timeline(1일)을 읽는다 */
+void care_want_timeline(bool want);
+/* *seen 뒤로 바뀌었으면 복사하고 개수를, 그대로면 -1 을 준다. 아직 못 읽었으면 *seen 은 0 그대로 */
+int care_copy_timeline(care_event_t *out, int max, uint32_t *seen);
+
 /* 화면에서 부른다. 결과는 care_state() 로 본다. 비밀번호는 저장하지 않고 갱신 토큰만 저장한다 */
 void care_login(const char *email, const char *password);
 void care_logout(void);

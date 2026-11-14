@@ -88,6 +88,27 @@ void care_describe_action(const care_action_t *action, char *out, size_t len);
 /* "1시간 30분", "15분", "2시간" */
 void care_duration(long seconds, char *out, size_t len);
 
+/* ---- 오늘 기록 목록 ---- */
+
+#define CARE_MAX_EVENTS 96
+
+/* care_timeline() 의 기록 하나 */
+typedef struct {
+    time_t at, ended_at;
+    char kind[20];          /* feed, diaper, sleep, bath, temperature … */
+    int ml;                 /* 없으면 -1 */
+    bool has_value;
+    double value;           /* 체온·체중·키 */
+    care_diaper_t diaper;
+    bool feeding;           /* 먹이는 중 */
+    char note[72];          /* 약 이름·메모 등 */
+} care_event_t;
+
+/* 목록 한 줄(웹앱 src/ui/day-list.js 의 describeRow): "06:03" + "수유 200ml", "20:00~05:40" + "잠 9시간 40분" */
+void care_describe_row(const care_event_t *event, time_t now, char *when, size_t when_len, char *what, size_t what_len);
+/* 오늘(자정부터) 일어난 일인가. 자정을 넘겨 이어진 잠은 시작한 날에 둔다 */
+bool care_is_today(time_t at, time_t now);
+
 /* 분유 양(웹앱 src/formula.js). 브레짜는 물을 60~300ml, 30ml 단위로 고르고 압타밀은 물 30ml 에 1스푼(다 타면 약 33.3ml).
  * 그래서 브레짜 180 → 200ml, 210 → 230ml, 240 → 270ml */
 int care_water_for(int ml);                    /* 완성량이 브레짜 한 칸과 딱 맞으면 그 물 양, 아니면 0 */

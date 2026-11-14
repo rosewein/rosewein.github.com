@@ -235,6 +235,75 @@ void care_describe_action(const care_action_t *a, char *out, size_t len)
     }
 }
 
+bool care_is_today(time_t at, time_t now)
+{
+    return at && at <= now + 300 && days_before(at, now) == 0;
+}
+
+void care_describe_row(const care_event_t *e, time_t now, char *when, size_t when_len, char *what, size_t what_len)
+{
+    static const char *const DIAPER[] = { "", "소변", "대변", "소변+대변" };
+    /* 수유·기저귀·잠 말고 다른 종류의 이름과 단위(웹앱 domain.js 의 DEFAULT_RECORD_TYPES) */
+    static const struct { const char *key, *label, *unit; int digits; } OTHERS[] = {
+        { "bath", "목욕", "", 0 }, { "temperature", "체온", "°C", 1 }, { "medication", "투약", "", 0 },
+        { "weight", "체중", "kg", 2 }, { "height", "키", "cm", 1 }, { "memo", "메모", "", 0 },
+        { "tummy_time", "터미타임", "", 0 }, { "play", "놀이", "", 0 }, { "hospital", "병원", "", 0 }, { "other", "기타", "", 0 },
+    };
+    char start[8], end[8], took[32], ml[16] = "";
+    care_clock(e->at, start, sizeof(start));
+    if (e->ended_at) {
+        care_clock(e->ended_at, end, sizeof(end));
+        care_duration((long)difftime(e->ended_at, e->at), took, sizeof(took));
+        snprintf(when, when_len, "%s~%s", start, end);
+    } else {
+        care_duration((long)difftime(now, e->at), took, sizeof(took));   /* 아직 안 끝난 것: 지금까지 */
+        snprintf(when, when_len, "%s", start);
+    }
+    if (e->ml >= 0) {
+        snprintf(ml, sizeof(ml), "%d", e->ml);
+    }
+
+    if (!strcmp(e->kind, "sleep")) {
+        if (e->ended_at) {
+            snprintf(what, what_len, "잠 %s", took);
+        } else {
+            snprintf(when, when_len, "%s~", start);
+            snprintf(what, what_len, "잠 (자는 중 %s)", took);
+        }
+    } else if (!strcmp(e->kind, "feed")) {
+        if (e->ended_at) {
+            snprintf(what, what_len, "수유 %sml · %s", ml, took);
+        } else if (e->feeding) {
+            snprintf(when, when_len, "%s~", start);
+            snprintf(what, what_len, "수유 %sml (먹는 중 %s)", ml, took);
+        } else {
+            snprintf(what, what_len, "수유 %sml", ml);
+        }
+    } else if (!strcmp(e->kind, "diaper")) {
+        snprintf(what, what_len, "기저귀 %s", DIAPER[e->diaper]);
+    } else {
+        const char *label = e->kind, *unit = "";
+        int digits = 0;
+        for (size_t i = 0; i < sizeof(OTHERS) / sizeof(OTHERS[0]); i++) {
+            if (!strcmp(e->kind, OTHERS[i].key)) {
+                label = OTHERS[i].label;
+                unit = OTHERS[i].unit;
+                digits = OTHERS[i].digits;
+            }
+        }
+        int n = snprintf(what, what_len, "%s", label);
+        if (e->has_value && n > 0 && n < (int)what_len) {
+            n += snprintf(what + n, what_len - n, " %.*f%s", digits, e->value, unit);
+        }
+        if (e->ended_at && n > 0 && n < (int)what_len) {
+            n += snprintf(what + n, what_len - n, " · %s", took);
+        }
+        if (e->note[0] && n > 0 && n < (int)what_len) {
+            snprintf(what + n, what_len - n, " · %s", e->note);
+        }
+    }
+}
+
 /* 물 양 → 완성량(10ml 단위 반올림). 210 → 233.3 → 230 */
 static int ml_for_water(int water)
 {
