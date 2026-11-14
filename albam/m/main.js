@@ -40,7 +40,7 @@ function main() {
     api: DEMO ? createDemoApi() : createApi(cfg),
     now: () => new Date(Date.now() + state.clockSkewMs),
     save, finishFeed, wake, attachMemo, update, remove,
-    openEntry: (kind) => entry.open(kind),
+    openEntry: (kind, opts) => entry.open(kind, opts),
     openEdit: (e) => entry.openEdit(e),
   };
   ctx.measures = createMeasures(ctx, DEMO ? 'albam.demo.measures' : 'albam.measures');
@@ -142,6 +142,7 @@ function main() {
     await refresh();
     if (view === 'records') records.reload();
     if (view === 'stats') stats.reload();
+    if (view === 'settings') settings.show();
   }
 
   /** 기록 고치기(기록 쪽) */

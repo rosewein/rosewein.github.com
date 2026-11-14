@@ -18,7 +18,7 @@ import { memoHas, toggleMemo } from './phrases.js';
 const $ = (s) => document.querySelector(s);
 const DEFAULT_RANGE_MIN = 10;
 const DELETE_CONFIRM_MS = 3000;
-const MEMO_HINT = { medication: '약 이름', hospital: '병원 · 사유', play: '무슨 놀이', bath: '예: 보습로션', vaccine: '백신 이름', other: '무엇' };
+const MEMO_HINT = { medication: '약 이름', hospital: '병원 · 사유', play: '무슨 놀이', bath: '예: 보습로션', vaccine: '백신 이름', checkup: '예: 2차', other: '무엇' };
 const BUILTIN_LABEL = { feed: '수유', diaper: '기저귀', sleep: '잠' };
 
 /** Date → datetime-local 값("2026-11-14T09:30", 기기 시간대) */
@@ -173,8 +173,8 @@ export function setupEntry(ctx) {
     dialog.showModal();
   }
 
-  /** 새로 넣기(더 넣기에서) */
-  function open(k) {
+  /** 새로 넣기(더 넣기에서). memo 를 주면 메모 칸을 미리 채운다(검진 시기표의 [받았어요]) */
+  function open(k, { memo = '' } = {}) {
     if (!recordType(k)) return;
     kind = k; shape = shapeOf(k); type = recordType(k); editing = null;
     const now = ctx.now();
@@ -182,7 +182,7 @@ export function setupEntry(ctx) {
     const range = shape === 'range';
     fill({
       start: range ? new Date(now - DEFAULT_RANGE_MIN * 60000) : now, end: now, hasEnd: range,
-      value: ctx.measures.last(k) ?? type.default ?? 0, amount: null, memo: '',
+      value: ctx.measures.last(k) ?? type.default ?? 0, amount: null, memo,
     });
   }
 
