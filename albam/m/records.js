@@ -1,6 +1,6 @@
 // 기록 쪽: 날짜를 넘기며 그날 기록을 본다. 줄을 누르면 고치기 창(m/entry.js).
 //
-//   [◀]   11월 14일 토요일 · 오늘   [▶]
+//   [◀]   11월 14일 토요일 ▾ · 오늘   [▶]      ← 날짜를 누르면 달력(날짜 글 위에 투명한 날짜 칸이 겹쳐 있다)
 //   수유 4회 780ml · 기저귀 5회(대변 1) · 잠 9시간 10분
 //   11:25~11:37  수유 200ml · 12분 · 유산균            ›
 //   09:10        기저귀 대변                            ›
@@ -133,7 +133,6 @@ export function setupRecords(ctx) {
   $('#dayPrev').addEventListener('click', () => go(addDays(day, -1)));
   $('#dayNext').addEventListener('click', () => go(addDays(day, 1)));
   $('#dayPick').addEventListener('change', () => { if ($('#dayPick').value) go($('#dayPick').value); });
-  $('#dayTitleBtn').addEventListener('click', () => { try { $('#dayPick').showPicker(); } catch (e) { $('#dayPick').focus(); } });
 
   return {
     /** 쪽을 열 때: 오늘로 */

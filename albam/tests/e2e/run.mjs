@@ -1026,6 +1026,9 @@ async function phoneFlow(browser, base) {
   await page.locator('#dayList .rec', { hasText: /수유 200ml · \d+분 · 비타민D›/ }).click();
   check(await text(page, '#entryTitle') === '기록 고치기 · 수유' && await page.inputValue('#entryAmount') === '200' && await page.inputValue('#entryMemo') === '비타민D', '수유 고치기 창: 양·메모가 채워짐');
   check(await page.isChecked('#entryHasEnd') && await page.isVisible('#entryDelete'), '끝 시각이 켜져 있고 [지우기]가 있음');
+  check(await page.evaluate(() => document.activeElement?.id) === 'entryTitle', '창이 열릴 때 시각 칸에 초점이 가지 않음(아이폰에서 달력이 바로 뜨던 것)');
+  const widths = await page.$$eval('#entryStart, #entryEnd, #entryAmount, #entryMemo', (els) => els.map((e) => Math.round(e.getBoundingClientRect().width)));
+  check(new Set(widths).size === 1 && await page.$eval('#entryForm', (f) => f.scrollWidth <= f.clientWidth), `시각·양·메모 칸 폭이 같고 창 안에 들어감 (${widths.join(' ')})`);
   await page.fill('#entryAmount', '230');
   await page.click('#entryChips .chip:text-is("유산균")');
   await shot(page, 'phone-edit-feed');
@@ -1053,6 +1056,13 @@ async function phoneFlow(browser, base) {
   check(await page.isEnabled('#dayNext'), '어제로 넘김');
   await page.click('#dayNext');
   await page.waitForFunction(() => document.querySelector('#daySub').textContent === '오늘');
+  // 날짜를 누르면 달력: 날짜 글 한가운데를 누르면 투명한 날짜 칸이 받는다
+  const hit = await page.evaluate(() => { const r = document.querySelector('#dayTitle').getBoundingClientRect(); return document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2).id; });
+  check(hit === 'dayPick', `날짜 글을 누르면 날짜 칸이 받음 (${hit})`);
+  const weekAgo = await page.evaluate(() => { const d = new Date(); d.setDate(d.getDate() - 7); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; });
+  await page.fill('#dayPick', weekAgo);
+  await page.waitForFunction(() => document.querySelector('#daySub').textContent === '7일 전');
+  check(await text(page, '#dayMsg') === '이 날은 기록이 없어요', '달력으로 고른 날로 감');
   await page.click('#tabs [data-view="home"]');
   check(await page.isVisible('#feedCard') && !(await page.isVisible('#dayList')), '입력 쪽으로 돌아옴');
 
