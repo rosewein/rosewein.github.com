@@ -25,6 +25,7 @@ void ui_volume_set(int percent, bool save);
 
 /* 화면이 살아 있는지: 1초마다 는다(멈추면 화면이 멈춘 것) */
 uint32_t ui_ticks(void);
+const char *ui_where(void);   /* 마지막으로 연 화면("home", "day", "settings" …) */
 /* 화면을 돌려 옮기는 일을 몇 번 시작해 몇 번 끝냈나(board.c). 다르면 그 안에서 멈춘 것 */
 void board_rotate_counts(uint32_t *started, uint32_t *finished);
 

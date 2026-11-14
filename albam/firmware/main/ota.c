@@ -62,7 +62,7 @@ void ota_info_json(char *json, size_t len)
     int presses, touch_x, touch_y;
     ui_touch_diag(&presses, &touch_x, &touch_y);
     /* 화면이 살아 있는지(ticks 가 1초마다 는다), 멈춰서 스스로 다시 켠 횟수와 그때 상태 */
-    char stalls[8] = "0", stall_info[96] = "";
+    char stalls[8] = "0", stall_info[160] = "";
     uint32_t rotate_started, rotate_finished;
     store_get("stalls", stalls, sizeof(stalls));
     store_get("stall_info", stall_info, sizeof(stall_info));
@@ -73,7 +73,7 @@ void ota_info_json(char *json, size_t len)
              "\"care\":{\"state\":%d,\"ok\":%d,\"fails\":%d,\"fails_in_a_row\":%d,\"seconds_since_ok\":%d,"
              "\"seconds_since_error\":%d,\"last_error\":\"%s\"},"
              "\"touch\":{\"presses\":%d,\"x\":%d,\"y\":%d},"
-             "\"ui\":{\"ticks\":%u,\"rotate_started\":%u,\"rotate_finished\":%u,\"stalls\":%s,\"last_stall\":\"%s\"}}",
+             "\"ui\":{\"at\":\"%s\",\"ticks\":%u,\"rotate_started\":%u,\"rotate_finished\":%u,\"stalls\":%s,\"last_stall\":\"%s\"}}",
              app->project_name, app->version, app->date, app->time, running ? running->label : "?",
              (int)(esp_timer_get_time() / 1000000),
              (int)esp_reset_reason(),   /* 왜 다시 켜졌나: 1 전원, 3 스스로(업데이트 등), 4 죽음(panic), 5·6·7 감시 타이머(화면이 멈춰 깊이 다시 켬 포함), 9 전압 */
@@ -82,12 +82,12 @@ void ota_info_json(char *json, size_t len)
              (unsigned)heap_caps_get_free_size(MALLOC_CAP_SPIRAM), (unsigned)heap_caps_get_minimum_free_size(MALLOC_CAP_SPIRAM),
              (int)care_state(), care.ok, care.fails, care.fails_in_a_row, care.seconds_since_ok, care.seconds_since_error, care.last_error,
              presses, touch_x, touch_y,
-             (unsigned)ui_ticks(), (unsigned)rotate_started, (unsigned)rotate_finished, stalls[0] ? stalls : "0", stall_info);
+             ui_where(), (unsigned)ui_ticks(), (unsigned)rotate_started, (unsigned)rotate_finished, stalls[0] ? stalls : "0", stall_info);
 }
 
 static esp_err_t info_get(httpd_req_t *req)
 {
-    static char json[1300];
+    static char json[1500];
     ota_info_json(json, sizeof(json));
     httpd_resp_set_type(req, "application/json");
     return httpd_resp_send(req, json, HTTPD_RESP_USE_STRLEN);

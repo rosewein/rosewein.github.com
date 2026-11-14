@@ -52,6 +52,7 @@ typedef struct {
 static lv_obj_t *s_home, *s_age, *s_total, *s_today, *s_clock, *s_status, *s_sprite, *s_words, *s_label, *s_bar;
 static ago_line_t s_bubble_ago;
 static card_t s_feed, s_diaper, s_sleep;
+static const char *volatile s_where = "home";
 static care_mood_t s_mood;
 static int s_frame;
 static care_summary_t s_summary;      /* 마지막으로 받은 요약 */
@@ -742,11 +743,13 @@ static void rescan_clicked(lv_event_t *e)
 
 static void back_home(lv_event_t *e)
 {
+    s_where = "home";
     lv_screen_load(s_home);
 }
 
 static void open_wifi(lv_event_t *e)
 {
+    s_where = "wifi";
     s_joining = false;
     lv_label_set_text(s_ssid, "");
     lv_textarea_set_text(s_pass, "");
@@ -820,6 +823,7 @@ static void login_keyboard_ready(lv_event_t *e)
 
 static void open_login(void)
 {
+    s_where = "login";
     lv_textarea_set_text(s_login_pass, "");
     lv_screen_load(s_login);
 }
@@ -880,6 +884,7 @@ static void update_info(const net_status_t *net)
 
 static void open_settings(lv_event_t *e)
 {
+    s_where = "settings";
     net_status_t net;
     net_get_status(&net);
     update_info(&net);
@@ -966,16 +971,21 @@ static void build_settings(void)
  *   06:05~07:50    잠 1시간 45분
  * 보기만 한다. 고치기·지우기는 폰에서. */
 
+/* 화면은 미끄러지는 효과 없이 바로 바꾼다. 0.4.0~0.4.3 은 옆으로 미끄러지게 했는데(lv_screen_load_anim),
+ * 0.4.3 에서 [대시보드]를 눌러 돌아오는 순간 화면이 멈췄다(서버에 남은 마지막 터치 자리로 확인).
+ * 0.4.0 이 밤새 멈춘 것도 목록에서 1분 뒤 스스로 돌아오는 같은 길이었을 것으로 본다 */
 static void open_day(lv_event_t *e)
 {
+    s_where = "day";
     care_want_timeline(true);
-    lv_screen_load_anim(s_day, LV_SCREEN_LOAD_ANIM_MOVE_LEFT, 200, 0, false);
+    lv_screen_load(s_day);
 }
 
 static void close_day(lv_event_t *e)
 {
+    s_where = "home(from day)";
     care_want_timeline(false);
-    lv_screen_load_anim(s_home, LV_SCREEN_LOAD_ANIM_MOVE_RIGHT, 200, 0, false);
+    lv_screen_load(s_home);
 }
 
 /* 옆으로 밀기: 대시보드에서 왼쪽으로 → 오늘 기록, 오늘 기록에서 오른쪽으로 → 대시보드 */
@@ -1110,6 +1120,12 @@ void ui_touch_diag(int *presses, int *x, int *y)
 /* ---- 1초마다: 화면 고치기, 화면 옮기기 ---- */
 
 static volatile uint32_t s_ticks;
+
+/* 화면이 멈췄을 때 무엇을 하다 멈췄는지 남기려고, 마지막으로 연 화면을 적어 둔다 */
+const char *ui_where(void)
+{
+    return s_where;
+}
 
 /* 화면이 살아 있으면 1초마다 는다. main.c 가 이 값이 멈췄는지 지켜본다 */
 uint32_t ui_ticks(void)

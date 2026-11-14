@@ -18,6 +18,7 @@
 #include "esp_system.h"
 #include "hal/wdt_hal.h"
 #include "soc/rtc.h"
+#include "esp_timer.h"
 
 /* 무선으로 받은 새 판이 이 시간 안에 와이파이에 못 붙으면 앞 판으로 되돌린다.
  * (와이파이가 안 되는 판이 올라가면 다시 무선으로 고칠 길이 없어서다) */
@@ -64,11 +65,15 @@ static void deep_restart(void)
     esp_restart();   /* 감시 타이머가 안 먹었을 때만 여기까지 온다 */
 }
 
-static void watch_ui(int uptime)
+/* 1초마다 화면이 움직이는지 본다. 화면 작업보다 높은 우선순위의 따로 된 작업에서 돈다.
+ * 0.4.3 은 이것을 app_main 고리(우선순위 1)에서 돌렸는데, 화면이 멈춘 뒤로 이 고리도 같이 멈춰서
+ * 한 번도 움직이지 못했다(화면 작업이 CPU 를 붙들고 있었던 것으로 보인다) */
+static void watch_ui(void)
 {
     static uint32_t last_ticks;
     static int stalled, healthy;
     static bool gave_up;
+    int uptime = (int)(esp_timer_get_time() / 1000000);
     uint32_t ticks = ui_ticks();
     bool moving = ticks != last_ticks;
     last_ticks = ticks;
@@ -82,12 +87,12 @@ static void watch_ui(int uptime)
     }
 
     /* 멈췄다. 다음에 볼 수 있게 남긴다: 몇 번째인지, 켠 지 얼마 만인지, 돌려 옮기기 안에서 멈췄는지 */
-    char info[96];
+    char info[160];
     uint32_t started, finished;
     board_rotate_counts(&started, &finished);
     int streak = stored_int("stall_streak");
-    snprintf(info, sizeof(info), "uptime %ds, ticks %u, rotate %u/%u, streak %d", uptime, (unsigned)ticks,
-             (unsigned)finished, (unsigned)started, streak);
+    snprintf(info, sizeof(info), "uptime %ds, ticks %u, rotate %u/%u, streak %d, at %.24s", uptime, (unsigned)ticks,
+             (unsigned)finished, (unsigned)started, streak, ui_where());
     store_int("stalls", stored_int("stalls") + 1);
     store_set("stall_info", info);
     care_report_stall();             /* 서버에도 남긴다(통신은 화면과 따로 돈다) */
@@ -101,6 +106,14 @@ static void watch_ui(int uptime)
     ESP_LOGE(TAG, "화면이 멈춤(%s). 다시 켠다.", info);
     store_int("stall_streak", streak + 1);
     deep_restart();
+}
+
+static void watch_task(void *arg)
+{
+    for (;;) {
+        vTaskDelay(pdMS_TO_TICKS(1000));
+        watch_ui();
+    }
 }
 
 static bool on_trial(void)
@@ -119,6 +132,8 @@ void app_main(void)
     update_start();
     board_start_ui();
     sound_start();
+
+    xTaskCreate(watch_task, "watch", 4096, NULL, configMAX_PRIORITIES - 2, NULL);
 
     bool trial = on_trial();
     bool server = false;
@@ -139,7 +154,6 @@ void app_main(void)
             ESP_LOGE(TAG, "새 판이 와이파이에 못 붙음. 앞 판으로 되돌린다.");
             esp_ota_mark_app_invalid_rollback_and_reboot();
         }
-        watch_ui(seconds);
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
 }

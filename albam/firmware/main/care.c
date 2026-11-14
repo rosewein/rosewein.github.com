@@ -442,7 +442,7 @@ static int fetch_timeline(void)
 /* 보드 상태(/info 와 같은 내용)를 서버에 남긴다. 못 남기면 다음 차례에 다시 */
 static void report_device(void)
 {
-    static char info[1300], body[1400];
+    static char info[1500], body[1600];
     static int64_t tried_at = -60;
     const char *reason = s_report_reason;
     if (uptime() - tried_at < 60 && (!reason || strcmp(reason, "stall") != 0)) {
