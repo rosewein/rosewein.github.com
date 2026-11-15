@@ -28,6 +28,8 @@ uint32_t ui_ticks(void);
 const char *ui_where(void);   /* 마지막으로 연 화면("home", "day", "settings" …) */
 /* 화면을 돌려 옮기는 일을 몇 번 시작해 몇 번 끝냈나(board.c). 다르면 그 안에서 멈춘 것 */
 void board_rotate_counts(uint32_t *started, uint32_t *finished);
+/* I2C(터치·소리 칩) 통신이 실패한 횟수와 버스를 초기화한 횟수(board.c) */
+void board_i2c_counts(uint32_t *errors, uint32_t *resets);
 
 /* 문제를 찾을 때: 지금까지 들어온 터치 수와 마지막으로 누른 자리 */
 void ui_touch_diag(int *presses, int *x, int *y);

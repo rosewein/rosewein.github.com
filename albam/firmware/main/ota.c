@@ -69,12 +69,14 @@ void ota_info_json(char *json, size_t len)
     store_get("stalls", stalls, sizeof(stalls));
     store_get("stall_info", stall_info, sizeof(stall_info));
     board_rotate_counts(&rotate_started, &rotate_finished);
+    uint32_t i2c_errors, i2c_resets;
+    board_i2c_counts(&i2c_errors, &i2c_resets);
     snprintf(json, len,
              "{\"name\":\"%s\",\"version\":\"%s\",\"built\":\"%s %s\",\"slot\":\"%s\",\"uptime_s\":%d,\"reset_reason\":%d,"
              "\"heap\":{\"internal_free\":%u,\"internal_min\":%u,\"internal_largest\":%u,\"psram_free\":%u,\"psram_min\":%u},"
              "\"care\":{\"state\":%d,\"ok\":%d,\"fails\":%d,\"fails_in_a_row\":%d,\"seconds_since_ok\":%d,"
              "\"seconds_since_error\":%d,\"last_error\":\"%s\"},"
-             "\"touch\":{\"presses\":%d,\"x\":%d,\"y\":%d},"
+             "\"touch\":{\"presses\":%d,\"x\":%d,\"y\":%d},\"i2c\":{\"errors\":%u,\"resets\":%u},"
              "\"ui\":{\"at\":\"%s\",\"ticks\":%u,\"rotate_started\":%u,\"rotate_finished\":%u,\"stalls\":%s,\"last_stall\":\"%s\",\"trace\":\"%s\"}}",
              app->project_name, app->version, app->date, app->time, running ? running->label : "?",
              (int)(esp_timer_get_time() / 1000000),
@@ -83,7 +85,7 @@ void ota_info_json(char *json, size_t len)
              (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL),
              (unsigned)heap_caps_get_free_size(MALLOC_CAP_SPIRAM), (unsigned)heap_caps_get_minimum_free_size(MALLOC_CAP_SPIRAM),
              (int)care_state(), care.ok, care.fails, care.fails_in_a_row, care.seconds_since_ok, care.seconds_since_error, care.last_error,
-             presses, touch_x, touch_y,
+             presses, touch_x, touch_y, (unsigned)i2c_errors, (unsigned)i2c_resets,
              ui_where(), (unsigned)ui_ticks(), (unsigned)rotate_started, (unsigned)rotate_finished, stalls[0] ? stalls : "0", stall_info, stall_trace);
 }
 

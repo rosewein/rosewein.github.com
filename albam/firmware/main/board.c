@@ -10,6 +10,7 @@
 #include <string.h>
 #include <time.h>
 #include "bsp/esp-bsp.h"
+#include "driver/i2c_master.h"
 #include "driver/ppa.h"
 #include "esp_cache.h"
 #include "esp_app_desc.h"
@@ -93,6 +94,84 @@ esp_err_t __wrap_ppa_do_scale_rotate_mirror(ppa_client_handle_t client, const pp
                     ESP_CACHE_MSYNC_FLAG_DIR_C2M | ESP_CACHE_MSYNC_FLAG_UNALIGNED);
     s_rotate_finished++;
     return ESP_OK;
+}
+
+/* ---- I2C: 화면이 멈추던 까닭 ----
+ *
+ * 0.4.5 가 남긴 기록으로 멈춘 자리를 찾았다. 화면 작업이 터치 칩(GT911)에 I2C 로 쓰다가
+ * I2C 드라이버 안(s_i2c_send_commands)에서 끝없이 돌고 있었다:
+ *   touch_gt911_i2c_write → esp_lcd_panel_io_tx_param → i2c_master_multi_buffer_transmit → … → s_i2c_send_commands
+ * 터치를 읽는 일이 화면 작업 안에서 돌기 때문에 그게 안 끝나면 화면도 터치도 같이 멈춘다.
+ * 보드 패키지와 터치 드라이버는 I2C 를 (1) 잡음 거르기 없이 열고 (2) 끝날 때까지 한없이 기다리게 부른다.
+ * 그래서 선에 잡음이 한 번 끼면 그대로 멈춘다. 링커에서 바꿔 끼워(CMakeLists.txt 의 --wrap) 둘 다 고친다:
+ *   - 버스를 열 때 잡음 거르기를 켜고 칩 안의 풀업도 켠다
+ *   - 한없이 기다리지 않고 0.1초까지만 기다린다. 잇달아 실패하면 버스를 초기화한다
+ * 실패한 횟수는 /info 의 i2c 에 남는다. */
+#define I2C_TIMEOUT_MS 100
+#define I2C_RESET_AFTER 3
+
+static volatile uint32_t s_i2c_errors, s_i2c_resets;
+static int s_i2c_failed_in_a_row;
+
+void board_i2c_counts(uint32_t *errors, uint32_t *resets)
+{
+    *errors = s_i2c_errors;
+    *resets = s_i2c_resets;
+}
+
+esp_err_t __real_i2c_new_master_bus(const i2c_master_bus_config_t *config, i2c_master_bus_handle_t *bus);
+esp_err_t __real_i2c_master_transmit(i2c_master_dev_handle_t dev, const uint8_t *data, size_t size, int timeout_ms);
+esp_err_t __real_i2c_master_multi_buffer_transmit(i2c_master_dev_handle_t dev, i2c_master_transmit_multi_buffer_info_t *buffers, size_t count, int timeout_ms);
+esp_err_t __real_i2c_master_transmit_receive(i2c_master_dev_handle_t dev, const uint8_t *write, size_t write_size, uint8_t *read, size_t read_size, int timeout_ms);
+esp_err_t __real_i2c_master_receive(i2c_master_dev_handle_t dev, uint8_t *read, size_t size, int timeout_ms);
+
+esp_err_t __wrap_i2c_new_master_bus(const i2c_master_bus_config_t *config, i2c_master_bus_handle_t *bus)
+{
+    i2c_master_bus_config_t safer = *config;
+    safer.glitch_ignore_cnt = 7;                 /* 짧은 잡음은 무시한다(IDF 가 권하는 값) */
+    safer.flags.enable_internal_pullup = true;
+    return __real_i2c_new_master_bus(&safer, bus);
+}
+
+static int i2c_timeout(int timeout_ms)
+{
+    return timeout_ms < 0 || timeout_ms > I2C_TIMEOUT_MS ? I2C_TIMEOUT_MS : timeout_ms;
+}
+
+/* 잇달아 실패하면 버스를 초기화한다(클럭을 아홉 번 보내 붙들린 선을 풀어 준다) */
+static esp_err_t i2c_result(esp_err_t err)
+{
+    if (err == ESP_OK) {
+        s_i2c_failed_in_a_row = 0;
+        return err;
+    }
+    s_i2c_errors++;
+    if (++s_i2c_failed_in_a_row >= I2C_RESET_AFTER && bsp_i2c_get_handle()) {
+        s_i2c_failed_in_a_row = 0;
+        s_i2c_resets++;
+        i2c_master_bus_reset(bsp_i2c_get_handle());
+    }
+    return err;
+}
+
+esp_err_t __wrap_i2c_master_transmit(i2c_master_dev_handle_t dev, const uint8_t *data, size_t size, int timeout_ms)
+{
+    return i2c_result(__real_i2c_master_transmit(dev, data, size, i2c_timeout(timeout_ms)));
+}
+
+esp_err_t __wrap_i2c_master_multi_buffer_transmit(i2c_master_dev_handle_t dev, i2c_master_transmit_multi_buffer_info_t *buffers, size_t count, int timeout_ms)
+{
+    return i2c_result(__real_i2c_master_multi_buffer_transmit(dev, buffers, count, i2c_timeout(timeout_ms)));
+}
+
+esp_err_t __wrap_i2c_master_transmit_receive(i2c_master_dev_handle_t dev, const uint8_t *write, size_t write_size, uint8_t *read, size_t read_size, int timeout_ms)
+{
+    return i2c_result(__real_i2c_master_transmit_receive(dev, write, write_size, read, read_size, i2c_timeout(timeout_ms)));
+}
+
+esp_err_t __wrap_i2c_master_receive(i2c_master_dev_handle_t dev, uint8_t *read, size_t size, int timeout_ms)
+{
+    return i2c_result(__real_i2c_master_receive(dev, read, size, i2c_timeout(timeout_ms)));
 }
 
 /* 패널은 세로(720x1280)다. 90도(설정에 따라 270도) 돌려 가로 1280x720 으로 쓴다.

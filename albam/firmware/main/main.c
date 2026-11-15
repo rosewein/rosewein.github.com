@@ -34,7 +34,7 @@
  *   - 그래도 또 멈추면 한 번만 더 해 보고 그만둔다. 화면은 멈춰 있어도 통신은 살아 있으므로
  *     자동 업데이트와 서버에 상태 남기기는 계속 된다
  * 멈춘 횟수와 그때 상태는 /info 의 ui 와 서버(care_device_log)에 남는다 */
-#define UI_STALL_SECONDS 60
+#define UI_STALL_SECONDS 20
 #define UI_STALL_RESTARTS 2      /* 잇달아 이만큼까지만 다시 켠다 */
 #define UI_HEALTHY_SECONDS 600   /* 이만큼 멀쩡히 돌면 '잇달아'를 다시 0 부터 센다 */
 

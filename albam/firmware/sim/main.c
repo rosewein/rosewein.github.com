@@ -94,6 +94,7 @@ void ui_brightness_set(bool night, int percent, bool save) { (void)night; (void)
 void ui_brightness_refresh(void) {}
 void ui_brightness_wake(void) {}
 void board_rotate_counts(uint32_t *started, uint32_t *finished) { *started = *finished = 0; }
+void board_i2c_counts(uint32_t *errors, uint32_t *resets) { *errors = *resets = 0; }
 void ui_sound(ui_sound_t sound) { (void)sound; }
 int ui_volume_get(void) { return 50; }
 void ui_volume_set(int percent, bool save) { (void)percent; (void)save; }
