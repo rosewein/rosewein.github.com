@@ -19,6 +19,8 @@
 #include "hal/wdt_hal.h"
 #include "soc/rtc.h"
 #include "esp_timer.h"
+#include "esp_private/freertos_debug.h"
+#include "riscv/rvruntime-frames.h"
 
 /* 무선으로 받은 새 판이 이 시간 안에 와이파이에 못 붙으면 앞 판으로 되돌린다.
  * (와이파이가 안 되는 판이 올라가면 다시 무선으로 고칠 길이 없어서다) */
@@ -68,6 +70,34 @@ static void deep_restart(void)
 /* 1초마다 화면이 움직이는지 본다. 화면 작업보다 높은 우선순위의 따로 된 작업에서 돈다.
  * 0.4.3 은 이것을 app_main 고리(우선순위 1)에서 돌렸는데, 화면이 멈춘 뒤로 이 고리도 같이 멈춰서
  * 한 번도 움직이지 못했다(화면 작업이 CPU 를 붙들고 있었던 것으로 보인다) */
+/* 화면 작업("lvgl")이 지금 코드의 어디에 서 있는지 적는다: 상태, 멈춘 자리(pc)와 돌아갈 자리(ra),
+ * 그리고 그 작업의 스택에 쌓여 있는 코드 주소들(부른 순서를 거슬러 볼 수 있다).
+ * 주소는 빌드할 때 나오는 map 파일(릴리스의 map-<커밋>.txt.gz)로 함수 이름을 찾는다.
+ * 0.4.4 에서 화면이 두 번 멈췄는데(목록에서 돌아온 직후, 그리고 아무도 안 만진 99분째)
+ * 어디서 멈추는지를 몰라 고치지 못하고 있다 */
+static void trace_lvgl_task(char *out, size_t len)
+{
+    TaskHandle_t task = xTaskGetHandle("lvgl");
+    TaskSnapshot_t snap;
+    if (!task || !vTaskGetSnapshot(task, &snap)) {
+        snprintf(out, len, "no lvgl task");
+        return;
+    }
+    const RvExcFrame *frame = (const RvExcFrame *)snap.pxTopOfStack;
+    int n = snprintf(out, len, "state %d pc %08x ra %08x stack", (int)eTaskGetState(task), (unsigned)frame->mepc, (unsigned)frame->ra);
+    /* 스택에서 코드 주소처럼 보이는 값만 고른다(플래시의 코드 0x40000000~, 램의 코드 0x4ff00000~) */
+    uint32_t last = 0;
+    const uint32_t *word = (const uint32_t *)snap.pxTopOfStack, *end = (const uint32_t *)snap.pxEndOfStack;
+    for (int seen = 0; word < end && seen < 2000 && n > 0 && n < (int)len - 10; word++, seen++) {
+        uint32_t v = *word;
+        bool code = (v >= 0x40000000 && v < 0x4c000000) || (v >= 0x4ff00000 && v < 0x4ffc0000);
+        if (code && v != last) {
+            n += snprintf(out + n, len - n, " %08x", (unsigned)v);
+            last = v;
+        }
+    }
+}
+
 static void watch_ui(void)
 {
     static uint32_t last_ticks;
@@ -93,8 +123,11 @@ static void watch_ui(void)
     int streak = stored_int("stall_streak");
     snprintf(info, sizeof(info), "uptime %ds, ticks %u, rotate %u/%u, streak %d, at %.24s", uptime, (unsigned)ticks,
              (unsigned)finished, (unsigned)started, streak, ui_where());
+    static char trace[420];
+    trace_lvgl_task(trace, sizeof(trace));
     store_int("stalls", stored_int("stalls") + 1);
     store_set("stall_info", info);
+    store_set("stall_trace", trace);
     care_report_stall();             /* 서버에도 남긴다(통신은 화면과 따로 돈다) */
     vTaskDelay(pdMS_TO_TICKS(12000));
 

@@ -65,5 +65,8 @@ jobs:
             --target "$GITHUB_SHA" --title "$TITLE" \
             --notes "보드가 자동 업데이트로 받아 가는 파일이다. 빌드할 때마다 바뀐다. 직접 받을 일은 없다."
           # 펌웨어를 먼저 올리고 판 번호를 나중에: 보드가 새 번호를 봤을 때는 새 펌웨어가 이미 있다
+          # 보드가 멈춘 자리를 주소로 남긴다(/info 의 ui.trace). 그 주소의 함수 이름을 찾을 map 파일을 판마다 올려 둔다
+          gzip -c albam/firmware/build/albam_board.map > "$RUNNER_TEMP/publish/map-${GITHUB_SHA::7}.txt.gz"
+          gh release upload "$TAG" "$RUNNER_TEMP/publish/map-${GITHUB_SHA::7}.txt.gz" --clobber
           gh release upload "$TAG" "$RUNNER_TEMP/publish/albam_board.bin" --clobber
           gh release upload "$TAG" "$RUNNER_TEMP/publish/version.txt" --clobber
