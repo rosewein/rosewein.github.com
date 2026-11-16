@@ -60,7 +60,7 @@ void care_want_timeline(bool want);
 int care_copy_timeline(care_event_t *out, int max, uint32_t *seen);
 
 /* ---- 보드 상태 남기기 ----
- * 보드의 /info 내용을 서버(care_device_log, supabase/013)에 남긴다: 켜진 뒤 처음 연결됐을 때, 10분마다,
+ * 보드의 /info 내용을 서버(care_device_log, supabase/021)에 남긴다: 켜진 뒤 처음 연결됐을 때, 10분마다,
  * 그리고 화면이 멈춰 다시 켜기 직전(care_report_stall). 보드가 이상할 때 사람이 /info 를 옮겨 적지 않아도 되게 */
 void care_report_stall(void);
 

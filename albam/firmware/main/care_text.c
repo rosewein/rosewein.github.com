@@ -248,6 +248,7 @@ void care_describe_row(const care_event_t *e, time_t now, char *when, size_t whe
         { "bath", "목욕", "", 0 }, { "temperature", "체온", "°C", 1 }, { "medication", "투약", "", 0 },
         { "weight", "체중", "kg", 2 }, { "height", "키", "cm", 1 }, { "memo", "메모", "", 0 },
         { "tummy_time", "터미타임", "", 0 }, { "play", "놀이", "", 0 }, { "hospital", "병원", "", 0 }, { "other", "기타", "", 0 },
+        { "walk", "산책", "", 0 }, { "vaccine", "예방접종", "", 0 }, { "checkup", "영유아검진", "", 0 },
     };
     char start[8], end[8], took[32], ml[16] = "";
     care_clock(e->at, start, sizeof(start));

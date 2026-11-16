@@ -1,0 +1,217 @@
+/* 알밤보드 개인 폰 화면(세로).
+ * 거실 화면(../styles/app.css)과 달리 좌표로 놓지 않는다: 위에서 아래로 흐르고 길면 스크롤된다.
+ * 색 이름은 거실 화면과 같다(어두운 화면 / 해 뜬 동안 밝은 종이색). 누르는 것은 높이 44px 이상.
+ * 순서: 글꼴 → 색 → 바탕 → 머리 → 카드 → 버튼 → 더 넣기 → 알림 → 창
+ */
+@font-face { font-family: 'Pretendard'; font-weight: 400; src: url('../fonts/Pretendard-Regular.subset.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'Pretendard'; font-weight: 600; src: url('../fonts/Pretendard-SemiBold.subset.woff2') format('woff2'); font-display: swap; }
+
+:root {
+  --bg: #0b0908; --panel: #15100d; --line: #3b2c21; --line-hi: #6a4e36;
+  --text: #e6d8c0; --strong: #f6ead3; --dim: #a39478;
+  --accent: #e9a253; --warn: #ff8a65; --ok: #92c26f;
+  --btn: #1e1610; --btn-press: #3a2a1c; --on-accent: #2a1608;
+}
+body.light {
+  --bg: #efe5d3; --panel: #f8f0e2; --line: #cdbb9e; --line-hi: #8e7050;
+  --text: #3b2b1d; --strong: #1c120a; --dim: #6f5b47;
+  --accent: #a8520a; --warn: #b8351a; --ok: #3f7422;
+  --btn: #fbf5ea; --btn-press: #e6d7bd; --on-accent: #fff6e8;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  background: var(--bg); color: var(--text); min-height: 100dvh;
+  font-family: 'Pretendard', system-ui, sans-serif; font-size: 15px; line-height: 1.4; letter-spacing: -0.02em;
+  padding: calc(16px + env(safe-area-inset-top)) 16px calc(148px + env(safe-area-inset-bottom));
+  max-width: 480px; margin: 0 auto;
+  -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+}
+[hidden] { display: none !important; }
+h2 { font-size: 13px; font-weight: 400; color: var(--dim); margin: 0 0 8px; }
+.val { font-weight: 600; color: var(--strong); font-variant-numeric: tabular-nums; }
+.hint { font-size: 12px; color: var(--dim); }
+.warn { color: var(--warn); }
+.center { text-align: center; }
+.grow { flex: 1; min-width: 0; }
+
+/* 머리: 오늘 날짜 / 나이 */
+#top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+#today { font-size: 20px; font-weight: 600; color: var(--strong); }
+#age { font-size: 13px; color: var(--dim); }
+#net { font-size: 13px; color: var(--accent); margin: -6px 0 10px; }
+#net.warn { color: var(--warn); }
+
+main { display: flex; flex-direction: column; gap: 12px; }
+
+/* 카드: 이름·마지막 기록 / 지난 시간(가장 큰 글씨) / 버튼 */
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.card.urgent { border-color: var(--warn); }
+.card.urgent .big { color: var(--warn); }
+.head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.head .label { font-size: 14px; color: var(--dim); white-space: nowrap; }
+.head .detail { font-size: 13px; color: var(--dim); text-align: right; }
+.big { font-size: 30px; font-weight: 600; color: var(--strong); line-height: 1.1; font-variant-numeric: tabular-nums; }
+.row { display: flex; gap: 8px; align-items: center; }
+.row.three > * { flex: 1; }
+
+.btn {
+  height: 48px; padding: 0 14px; border-radius: 8px; border: 1px solid var(--line-hi);
+  background: var(--btn); color: var(--text); font: inherit; font-size: 16px; font-weight: 600; white-space: nowrap;
+}
+.btn:active { background: var(--btn-press); }
+.btn.main { border-color: var(--accent); color: var(--accent); }
+.btn.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn.step { padding: 0; width: 52px; font-size: 14px; font-weight: 400; }
+.btn:disabled { opacity: 0.45; }
+#feedAmount { font-size: 22px; }
+#feedMachine { display: block; }
+
+/* 문구 버튼 줄: 누르면 켜짐/꺼짐, 맨 끝 [+]는 더하기·지우기 */
+.chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.chip {
+  height: 44px; padding: 0 14px; border-radius: 22px; border: 1px solid var(--line);
+  background: var(--bg); color: var(--text); font: inherit; font-size: 14px; white-space: nowrap;
+}
+.chip.on { border-color: var(--accent); background: var(--accent); color: var(--on-accent); font-weight: 600; }
+.chip.add { color: var(--dim); border-style: dashed; }
+.phraseRow { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid var(--line); }
+.phraseRow .btn { height: 44px; font-size: 14px; font-weight: 400; }
+
+/* 더 넣기: 기록 종류 표에서 온 버튼들 */
+#moreGrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+#moreGrid .btn { height: 46px; padding: 0 4px; font-size: 14px; font-weight: 400; border-color: var(--line); background: var(--panel); }
+
+#upcomingList { display: flex; flex-direction: column; }
+.appt { display: flex; justify-content: space-between; gap: 8px; padding: 10px 0; border-top: 1px solid var(--line); }
+.appt .left { color: var(--accent); font-weight: 600; white-space: nowrap; }
+
+/* 기록 쪽: 날짜 머리, 그날 합계, 줄 */
+#dayHead { display: flex; align-items: center; gap: 8px; position: relative; }
+#dayHead .btn { width: 48px; padding: 0; font-weight: 400; }
+#dayTitleBtn { flex: 1; min-height: 48px; position: relative; color: var(--strong); font-size: 18px; font-weight: 600; display: flex; flex-direction: column; align-items: center; }
+#dayTitle::after { content: ' ▾'; color: var(--dim); font-weight: 400; }
+#dayPick { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; border: 0; margin: 0; padding: 0; -webkit-appearance: none; appearance: none; font-size: 16px; }
+#daySummary { font-size: 13px; }
+#dayList { display: flex; flex-direction: column; }
+.rec {
+  min-height: 52px; padding: 8px 0; display: grid; grid-template-columns: 92px 1fr 12px; align-items: center; gap: 8px; text-align: left;
+  background: none; border: 0; border-top: 1px solid var(--line); color: var(--text); font: inherit;
+}
+.rec .time { font-size: 13px; color: var(--dim); font-variant-numeric: tabular-nums; }
+.rec .go { color: var(--dim); }
+.warnBtn { border-color: var(--warn); color: var(--warn); font-size: 13px; }
+
+/* 통계 쪽: 고르는 줄, 막대, 칸 */
+#statGrowth, #statDays { display: flex; flex-direction: column; gap: 12px; }
+#statGrowth > .row { align-items: stretch; }
+.seg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.seg.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+#growthKinds { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.seg button { height: 44px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--text); font: inherit; font-size: 15px; }
+.seg button.on { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+.bars { height: 150px; display: flex; align-items: flex-end; gap: 6px; }
+.bars.n30 { gap: 2px; } .bars.n90 { gap: 1px; }
+.bar { flex: 1; min-width: 0; height: 100%; display: flex; align-items: flex-end; background: none; border: 0; padding: 0; }
+.bar .fill { display: block; width: 100%; min-height: 2px; background: var(--line-hi); border-radius: 3px 3px 0 0; }
+.bar.today .fill { background: var(--accent); }
+.axis { display: flex; justify-content: space-between; }
+.cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.stat { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+.stat .val { font-size: 20px; }
+.stat.wide { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 8px; }
+.gap { display: grid; grid-template-columns: 44px 1fr auto; align-items: center; gap: 8px; }
+.gap .val { font-size: 14px; }
+.gap .track { display: block; height: 10px; border-radius: 5px; background: var(--bg); overflow: hidden; }
+.gap .track .fill { display: block; height: 100%; border-radius: 5px; background: var(--line-hi); }
+
+/* 성장곡선: 또래 줄은 회색, 기본 나이는 주황 점, 교정 나이는 파란 빈 점(색만이 아니라 모양도 다르게) */
+:root { --corrected: #8fa6e0; }
+body.light { --corrected: #3f5fae; }
+#growthSvg { width: 100%; height: auto; display: block; }
+#growthSvg .grid { stroke: var(--line); stroke-width: 1; }
+#growthSvg .tick { font-size: 10px; fill: var(--dim); }
+#growthSvg .pct { fill: none; stroke: var(--line-hi); stroke-width: 1; }
+#growthSvg .pct.mid { stroke: var(--dim); stroke-width: 1.5; }
+#growthSvg .line { fill: none; stroke-width: 2; }
+#growthSvg .line.actual { stroke: var(--accent); }
+#growthSvg .line.corrected { stroke: var(--corrected); stroke-dasharray: 4 3; }
+#growthSvg .dot.actual { fill: var(--accent); }
+#growthSvg .dot.corrected { fill: var(--panel); stroke: var(--corrected); stroke-width: 2; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.legend i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; }
+.legend .dotA { background: var(--accent); }
+.legend .dotC { border: 2px solid var(--corrected); }
+.two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.stat.actual .hint:first-child { color: var(--accent); }
+.stat.corrected .hint:first-child { color: var(--corrected); }
+
+/* 설정 쪽 */
+.secHead { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 4px; }
+.secHead h2 { margin: 0; }
+.btn.small { height: 44px; font-size: 14px; font-weight: 400; }
+#apptList .rec { grid-template-columns: 1fr auto 12px; }
+#apptList .left { color: var(--accent); font-weight: 600; white-space: nowrap; }
+.rec.two { grid-template-columns: 1fr 12px; }
+.typeRow { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid var(--line); }
+.typeRow .btn.step { width: 44px; height: 44px; }
+.btn.toggle { height: 44px; width: 64px; padding: 0; font-size: 14px; font-weight: 400; color: var(--dim); }
+.btn.toggle.on { border-color: var(--accent); background: var(--btn); color: var(--accent); font-weight: 600; }
+#viewSettings section, #apptList, #phraseKinds, #typeList { display: flex; flex-direction: column; }
+
+/* 예방접종 일정표: 시기마다 묶고, 줄 끝에 상태 */
+.vaxPeriod { padding: 8px 0 2px; border-top: 1px solid var(--line); font-size: 13px; color: var(--dim); display: flex; justify-content: space-between; gap: 8px; }
+.vaxRow { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 5px 0; }
+.vaxRow .st { white-space: nowrap; font-size: 13px; color: var(--dim); }
+.vaxRow.done .st { color: var(--ok); }
+.vaxRow.booked .st { color: var(--accent); font-weight: 600; }
+.vaxRow.due .st, .vaxRow.overdue .st { color: var(--warn); font-weight: 600; }
+.vaxRow.later { color: var(--dim); }
+.vaxRow .btn { height: 44px; font-size: 13px; font-weight: 400; padding: 0 10px; }
+.vaxRow.act { align-items: center; }
+#checkMore { align-self: flex-start; margin: 6px 0; }
+#vaxMore { align-self: flex-start; margin: 6px 0; }
+
+/* 아래 탭 */
+#tabs {
+  position: fixed; left: 0; right: 0; bottom: 0; height: calc(56px + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom);
+  display: flex; background: var(--bg); border-top: 1px solid var(--line);
+}
+#tabs button { flex: 1; background: none; border: 0; color: var(--dim); font: inherit; font-size: 15px; }
+#tabs button.on { color: var(--accent); font-weight: 600; }
+
+/* 아래 알림: 저장됨 + [취소 n] */
+#notice {
+  position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(68px + env(safe-area-inset-bottom));
+  width: min(448px, calc(100vw - 32px)); min-height: 56px; padding: 8px 8px 8px 14px;
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  background: var(--panel); border: 1px solid var(--accent); border-radius: 12px; color: var(--strong);
+}
+#notice.warn { border-color: var(--warn); color: var(--warn); }
+#undoBtn { height: 44px; }
+
+/* 창 */
+dialog {
+  width: min(448px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); margin: auto; padding: 16px;
+  background: var(--bg); color: var(--text); border: 1px solid var(--line-hi); border-radius: 14px;
+}
+dialog::backdrop { background: rgba(0, 0, 0, 0.6); }
+dialog form, dialog { overflow-y: auto; }
+dialog form { display: flex; flex-direction: column; gap: 12px; overflow-x: hidden; }
+dialog form > * { min-width: 0; }
+dialog h2:focus { outline: none; }
+dialog h2 { font-size: 18px; font-weight: 600; color: var(--strong); margin: 0; }
+dialog p { margin: 12px 0; }
+.field { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--dim); min-width: 0; }
+.field input, #entryValue {
+  height: 48px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--line-hi);
+  background: var(--panel); color: var(--strong); font: inherit; font-size: 16px; min-width: 0; width: 100%; max-width: 100%;
+  /* 아이폰 사파리의 날짜·시간 칸은 제 모양(폭이 내용만큼, 글이 가운데)을 고집해 창 밖으로 넘친다 → 기본 모양을 끄고 다른 칸과 맞춘다 */
+  display: block; -webkit-appearance: none; appearance: none; margin: 0; line-height: 46px;
+}
+.field input::-webkit-date-and-time-value { text-align: left; margin: 0; min-height: 0; }
+.field input[type="number"], #entryValue { line-height: normal; }
+#entryValue { font-size: 22px; padding: 0 4px; }
+.check { display: flex; align-items: center; gap: 8px; min-height: 44px; }
+.check input { width: 20px; height: 20px; accent-color: var(--accent); }
+#entryNumber { display: flex; flex-direction: column; gap: 6px; }

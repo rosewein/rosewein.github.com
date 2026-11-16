@@ -172,6 +172,9 @@ int main(void)
     ev = (care_event_t){ .at = at(7, 10, 0), .ended_at = at(7, 10, 10), .ml = -1 };
     snprintf(ev.kind, sizeof(ev.kind), "bath"); snprintf(ev.note, sizeof(ev.note), "보습로션");
     care_describe_row(&ev, n7, when, sizeof(when), text, sizeof(text)); same(when, "10:00~10:10"); same(text, "목욕 · 10분 · 보습로션");
+    ev = (care_event_t){ .at = at(7, 11, 0), .ended_at = at(7, 11, 40), .ml = -1 };
+    snprintf(ev.kind, sizeof(ev.kind), "walk");
+    care_describe_row(&ev, n7, when, sizeof(when), text, sizeof(text)); same(text, "산책 · 40분");
     assert(care_is_today(at(7, 0, 5), n7) && !care_is_today(at(6, 23, 55), n7) && !care_is_today(0, n7));
 
     printf("care_text: 모두 통과\n");

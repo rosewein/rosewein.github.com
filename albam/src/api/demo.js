@@ -50,6 +50,11 @@ class DemoServer {
   loggedIn = true;
   session = { email: 'demo' };
   onSessionChange = () => {};
+  /** 설정에서 바꾼 일정·기록 종류: 미리 보기라 새로 고치면 처음으로 */
+  appointments = null;
+  types = DEFAULT_RECORD_TYPES;
+  /** 자주 쓰는 문구: 미리 보기라 새로 고치면 처음으로 */
+  phrases = [{ id: 'p1', kind: 'feed', text: '유산균' }, { id: 'p2', kind: 'feed', text: '비타민D' }, { id: 'p3', kind: 'bath', text: '보습로션' }];
 
   constructor() {
     this.events = this.load() ?? sampleEvents();
@@ -69,6 +74,46 @@ class DemoServer {
       case 'care_stats': return this.stats(args.p_days);
       case 'care_update_event': return this.updateEvent(args.p);
       case 'care_timeline': return this.timeline(args.p_days);
+      case 'care_measures': return this.measures();
+      case 'care_day': return this.day(args.p_day);
+      case 'care_upcoming': return this.upcoming();
+      case 'care_appointments': return this.upcoming();
+      case 'care_vaccines': {
+        const ago = (days, text) => ({ id: `v-${days}-${text}`, at: minutesAgo(days * 1440), text, hospital: null });
+        const sample = [ago(149, 'B형간염 1차'), ago(130, 'BCG'), ago(88, '헥사심 1차'), ago(88, '폐렴구균 1차'), ago(88, '로타텍 1차'), ago(46, 'RSV 항체 주사'), ago(25, '헥사심 2차'), ago(25, '폐렴구균 2차'), ago(25, '로타텍 2차')];
+        const mine = this.live().filter((e) => e.kind === 'vaccine').map((e) => ({ id: e.id, at: e.occurred_at, text: e.detail?.memo || e.detail?.vaccine || '', hospital: e.detail?.hospital ?? null }));
+        const checkups = this.live().filter((e) => e.kind === 'checkup').map((e) => ({ id: e.id, at: e.occurred_at, text: e.detail?.memo || '' }));
+        return { baby: { birth_date: DEMO_BABY.birth_date, sex: 'boy' }, records: [...sample, ...mine], checkups: [{ id: 'c1', at: minutesAgo(128 * 1440), text: '1차' }, ...checkups] };
+      }
+      case 'care_set_appointment': {
+        const id = args.p.id || crypto.randomUUID();
+        this.appointments = [...this.upcoming().filter((a) => a.id !== id), { at_time: null, place: null, note: null, items: [], ...args.p, at_time: args.p.at_time || null, place: args.p.place || null, id }];
+        return { status: 'saved', id };
+      }
+      case 'care_cancel_appointment':
+        this.appointments = this.upcoming().filter((a) => a.id !== args.p_id);
+        return { status: 'cancelled', id: args.p_id };
+      case 'care_show_record_type':
+        this.types = this.types.map((t) => (t.key === args.p_key ? { ...t, in_more: args.p_show } : t));
+        return { status: 'saved', key: args.p_key };
+      case 'care_order_record_types': {
+        const order = args.p_keys;
+        const rank = (t) => (order.includes(t.key) ? order.indexOf(t.key) + 3 : ['feed', 'diaper', 'sleep'].indexOf(t.key));
+        this.types = [...this.types].sort((a, b) => rank(a) - rank(b));
+        return { status: 'saved' };
+      }
+      case 'care_phrases': return this.phrases;
+      case 'care_add_phrase': {
+        const text = String(args.p_text || '').trim();
+        const had = this.phrases.find((p) => p.kind === args.p_kind && p.text === text);
+        if (had) return { status: 'exists', id: had.id };
+        const id = crypto.randomUUID();
+        this.phrases = [...this.phrases, { id, kind: args.p_kind, text }];
+        return { status: 'saved', id };
+      }
+      case 'care_remove_phrase':
+        this.phrases = this.phrases.filter((p) => p.id !== args.p_id);
+        return { status: 'removed', id: args.p_id };
       case 'care_set_sleep_end': return this.setSleepEnd(args.p_id, args.p_ended_at);
       case 'care_voice_log': {   // 호출어 시험 기록: 미리 보기에서는 화면 시험용으로만 남긴다
         const log = (window.__albamVoiceLog ??= []);
@@ -97,7 +142,7 @@ class DemoServer {
       last_poo: (({ id, occurred_at: at, detail } = {}) => (id ? { id, at, type: detail.type } : null))(all.find((e) => e.kind === 'diaper' && ['poo', 'both'].includes(e.detail?.type))),
       last_sleep: sleep ? { id: sleep.id, at: sleep.occurred_at, ended_at: sleep.ended_at } : null,
       feed_amounts: this.feedAmounts(),
-      record_types: DEFAULT_RECORD_TYPES,
+      record_types: this.types,
       baby: DEMO_BABY,
       age: ageOn(now, DEMO_BABY),
       recent: all.slice(0, RECENT_LIMIT).map((e) => ({
@@ -130,6 +175,27 @@ class DemoServer {
     e.deleted_at = new Date().toISOString();
     this.save();
     return { status: 'cancelled', id };
+  }
+
+  /** 다가오는 일정: 미리 보기라 20일 뒤 예방접종 하나(?demo&appt=2 처럼 남은 날을 바꿔 볼 수 있다) */
+  upcoming() {
+    if (this.appointments) {
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const left = (a) => Math.round((new Date(`${a.on_date}T00:00:00`) - today) / 86400000);
+      return this.appointments.filter((a) => left(a) >= 0).sort((a, b) => a.on_date.localeCompare(b.on_date)).map((a) => ({ ...a, days_left: left(a) }));
+    }
+    const left = Number(new URLSearchParams(location.search).get('appt') ?? 20);
+    const d = new Date(); d.setDate(d.getDate() + left);
+    const on = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    return [{ id: 'demo-appointment', on_date: on, at_time: null, kind: 'vaccine', title: '예방접종', place: null, items: ['헥사심 3차', '폐렴구균 3차', '로타텍 3차', '독감 1차'], days_left: left }];
+  }
+
+  /** 측정 기록: 미리 보기라 지난번 값 두 개를 넣어 둔다(성별도 예시) */
+  measures() {
+    const sample = [{ kind: 'weight', at: minutesAgo(60 * 24 * 13), value: 7.2 }, { kind: 'height', at: minutesAgo(60 * 24 * 13), value: 65 }];
+    const mine = this.live().filter((e) => (e.kind === 'weight' || e.kind === 'height') && e.value_num != null)
+      .map((e) => ({ id: e.id, kind: e.kind, at: e.occurred_at, value: e.value_num }));
+    return { baby: { birth_date: DEMO_BABY.birth_date, due_date: DEMO_BABY.due_date, sex: 'boy' }, measures: [...sample, ...mine] };
   }
 
   /** 최근 n일 날짜별 통계. 미리 보기라 지난날은 그럴듯한 가짜 숫자로 채운다 */
@@ -170,6 +236,21 @@ class DemoServer {
     if (p.detail) e.detail = { ...(e.detail || {}), ...p.detail };
     this.save();
     return { status: 'saved', id: p.id };
+  }
+
+  /** 하루 기록(개인 폰 화면의 기록 쪽). 전날 잠들어 그날 깬 잠도 넣는다 */
+  day(key) {
+    const from = key ? new Date(`${key}T00:00:00`) : new Date(new Date().setHours(0, 0, 0, 0));
+    const to = new Date(from.getTime() + 86400000);
+    const inDay = (e) => {
+      const at = new Date(e.occurred_at);
+      if (at >= from && at < to) return true;
+      return e.kind === 'sleep' && at < from && at >= new Date(from.getTime() - 86400000) && (!e.ended_at || new Date(e.ended_at) > from);
+    };
+    const events = this.live().filter(inDay).reverse().map((e) => ({ id: e.id, kind: e.kind, at: e.occurred_at, ended_at: e.ended_at ?? null,
+      ml: e.amount_ml ?? null, value: e.value_num ?? null, type: e.detail?.type ?? null, memo: e.detail?.memo ?? null, feeding: !!e.detail?.feeding, detail: e.detail || {} }));
+    const pad = (n) => String(n).padStart(2, '0');
+    return { day: `${from.getFullYear()}-${pad(from.getMonth() + 1)}-${pad(from.getDate())}`, from: from.toISOString(), to: to.toISOString(), events };
   }
 
   timeline(days = 3) {

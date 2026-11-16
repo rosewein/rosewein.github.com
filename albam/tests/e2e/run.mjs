@@ -381,6 +381,26 @@ async function statsFlow(browser, base) {
   check((await curvedEdgeOffenders(page, '#bigClock, #bigDate, #bigAge, #pageDots')).length === 0, '시계 쪽: 위·아래 곡면에 글 없음');
   const clockOverlap = await page.evaluate(() => { const a = document.querySelector('#bigAge span:last-child').getBoundingClientRect(); const d = document.querySelector('#pageDots').getBoundingClientRect(); const t = document.querySelector('#bigDate').getBoundingClientRect(); return a.bottom > d.top + 4 || t.bottom > a.top + 1; });
   check(!clockOverlap, '시계 쪽: 날짜·나이·점이 안 겹침');
+  const nextLine = await text(page, '#bigNext');
+  check(nextLine === '', `시계 쪽: 20일 남은 일정은 아직 안 띄움 (${nextLine})`);
+  {
+    // 이틀 전부터: 시계 쪽 맨 아랫줄과 대시보드 나이 줄 자리
+    const p2 = await (await browser.newContext(DEVICE)).newPage();
+    await p2.clock.install({ time: DAYTIME });
+    await p2.goto(`${base}?demo&appt=2`);
+    await p2.clock.runFor(800);
+    await p2.waitForTimeout(100);
+    await p2.clock.runFor(800);
+    check(await text(p2, '#ageLine') === '예방접종 D-2 · 헥사심 3차 외 3', `대시보드: 이틀 전부터 나이 줄 자리에 일정 (${await text(p2, '#ageLine')})`);
+    check(await p2.$eval('#ageLine', (a) => a.getBoundingClientRect().top) > await p2.$eval('#clock', (c) => c.getBoundingClientRect().bottom) - 0.5, '대시보드 일정 줄은 시각 아랫줄');
+    await shot(p2, 'dashboard-appointment');
+    await p2.evaluate(() => document.querySelector('#pageDots .dot').click());
+    await p2.clock.runFor(800);
+    const line2 = await text(p2, '#bigNext');
+    check(/예방접종 D-2 · 헥사심 3차 외 3$/.test(line2), `시계 쪽: 이틀 전부터 가까운 일정 (${line2})`);
+    await shot(p2, 'clock-appointment');
+    await p2.close();
+  }
   await shot(page, 'clock');
   await page.clock.runFor(65000);
   check(await pageNow() === 'Clock', '시계 쪽은 안 만져도 그대로(탁상시계)');
@@ -658,7 +678,7 @@ async function moreFlow(browser, base) {
   await page.clock.runFor(800);
   await page.click('#lateBtn');
   const labels = await page.$$eval('#moreGrid button', (b) => b.map((x) => x.textContent));
-  check(['목욕', '체온', '투약', '체중', '키', '메모', '터미타임', '놀이', '병원', '기타'].every((l) => labels.includes(l)) && !labels.includes('수유'),
+  check(['산책', '목욕', '체온', '투약', '체중', '키', '메모', '터미타임', '놀이', '병원', '예방접종', '영유아검진', '기타'].every((l) => labels.includes(l)) && !labels.includes('수유'),
     `더보기 창에 종류 버튼 ${labels.join(' ')}`);
   check((await curvedEdgeOffenders(page, '#moreSheet h2, #moreSheet button')).length === 0, '더보기 창: 위·아래 곡면에 글·버튼 없음');
   await shot(page, 'more');
@@ -670,6 +690,19 @@ async function moreFlow(browser, base) {
   const fits = await page.$eval('#lateDetail', (r) => r.scrollWidth <= r.clientWidth + 0.5);
   check(fits, '체온 줄이 창 안에 들어감');
   await shot(page, 'more-temperature');
+  // 체중: 지난번 값(미리 보기 7.20kg)에서 시작하고 제목에 성장 백분위(기본 · 교정)
+  await page.click('#lateSheet [data-close]');
+  await page.click('#lateBtn');
+  await page.click('#moreGrid button:text-is("체중")');
+  check(await text(page, '#lateDetail .valueView') === '7.20kg', `체중 넣기: 지난번 값에서 시작 (${await text(page, '#lateDetail .valueView')})`);
+  check(/^체중 넣기 · 백분위 \d+ · 교정 \d+$/.test(await text(page, '#lateTitle')), `체중 제목에 백분위 (${await text(page, '#lateTitle')})`);
+  check(await page.$eval('#lateTitle', (h) => { const r = document.createRange(); r.selectNodeContents(h); return r.getBoundingClientRect().right; }) <= await page.$eval('#lateKindOther', (b) => b.getBoundingClientRect().left), '백분위 제목이 종류 버튼과 안 겹침');
+  await shot(page, 'more-weight');
+  await page.click('#lateSheet [data-close]');
+  await page.click('#lateBtn');
+  await page.click('#moreGrid button:text-is("체온")');
+  await page.click('#lateDetail .stepBtn:text-is("+1.0")');
+  await page.click('#lateDetail .stepBtn:text-is("+0.1")');
   await page.click('#lateSave');
   await page.waitForTimeout(400);
   check((await text(page, '#undoText')).startsWith('체온 37.9°C'), `저장: ${await text(page, '#undoText')}`);
@@ -847,6 +880,322 @@ async function wakeFlow(browser, base) {
   check(errors.length === 0, `오류 없음 ${errors.join(' ')}`);
 }
 
+// ── 개인 폰 화면(m/): 세로 390x844 ──
+const PHONE = { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true, timezoneId: 'Asia/Seoul' };
+async function phoneFlow(browser, base) {
+  const page = await (await browser.newContext(PHONE)).newPage();
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await page.goto(`${base}m/?demo`);
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.waitForFunction(() => document.querySelector('#feedBtn')?.textContent.startsWith('수유'));
+  const noOverflow = () => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth);
+  const small = () => page.evaluate(() => [...document.querySelectorAll('button')].filter((b) => b.offsetParent && b.getBoundingClientRect().height < 44).map((b) => b.textContent));
+  check(await text(page, '#feedBtn') === '수유 200ml' && await text(page, '#feedLabel') === '수유 · 먹은 지', `수유 카드: ${await text(page, '#feedLabel')} / ${await text(page, '#feedBtn')}`);
+  check(/^\d+시간 \d+분$/.test(await text(page, '#feedAgo')) && /· 200ml$/.test(await text(page, '#feedDetail')), `수유 지난 시간·마지막 기록 (${await text(page, '#feedAgo')} / ${await text(page, '#feedDetail')})`);
+  check(await text(page, '#sleepBtn') === '잠들었어요' && /~/.test(await text(page, '#sleepDetail')), '잠 카드: 깬 지 + 잠들었어요');
+  check(/D\+\d+ · \d+개월/.test(await text(page, '#age')), `나이 줄 (${await text(page, '#age')})`);
+  const more = await page.$$eval('#moreGrid button', (b) => b.map((x) => x.textContent));
+  check(more[0] === '산책' && more.includes('예방접종') && more.includes('영유아검진') && !more.includes('수유'), `더 넣기 버튼 ${more.join(' ')}`);
+  await page.waitForFunction(() => !document.querySelector('#upcomingSec').hidden);
+  check(/예방접종 · 헥사심 3차, 폐렴구균 3차, 로타텍 3차, 독감 1차D-20$/.test(await text(page, '#upcomingList')), `다가오는 일정은 미리부터 다 보임 (${await text(page, '#upcomingList')})`);
+  check(await noOverflow(), '옆으로 넘치지 않음');
+  check((await small()).length === 0, `누르는 것은 모두 44px 이상 ${(await small()).join(' ')}`);
+  await shot(page, 'phone-home');
+
+  // 수유에 붙이는 문구: 먹이기 전에 켜 두면 다음 수유에 붙는다
+  const chips = () => page.$$eval('#feedChips .chip', (b) => b.map((x) => `${x.textContent}${x.classList.contains('on') ? '*' : ''}`).join(' '));
+  await page.waitForFunction(() => document.querySelectorAll('#feedChips .chip').length === 3);
+  check(await chips() === '유산균 비타민D +', `수유 문구 줄 (${await chips()})`);
+  await page.click('#feedChips .chip:text-is("유산균")');
+  check(await chips() === '유산균* 비타민D +', '먹이기 전에 눌러 켜 둠');
+
+  // 수유: 한 번 눌러 먹이기 시작 → 다 먹음
+  await page.click('#feedBtn');
+  await page.waitForFunction(() => document.querySelector('#feedBtn').textContent === '다 먹음');
+  await page.waitForFunction(() => document.querySelector('#feedChips .chip.on')?.textContent === '유산균');
+  check(true, '켜 둔 문구가 그 수유에 붙음');
+  // 먹이는 중에는 누르는 대로 그 수유에 붙고 떨어진다
+  await page.click('#feedChips .chip:text-is("비타민D")');
+  await page.waitForFunction(() => document.querySelectorAll('#feedChips .chip.on').length === 2);
+  await page.click('#feedChips .chip:text-is("유산균")');
+  await page.waitForFunction(() => document.querySelectorAll('#feedChips .chip.on').length === 1);
+  check(await chips() === '유산균 비타민D* +', `먹이는 중에 붙이고 떼기 (${await chips()})`);
+  const savedMemo = await page.evaluate(() => JSON.parse(localStorage.getItem('albam.demo.summary')).recent[0].detail.memo);
+  check(savedMemo === '비타민D', `기록의 메모에 들어감 (${savedMemo})`);
+  check(await text(page, '#noticeText') === '수유 200ml 저장됨' && /^취소 \d$/.test(await text(page, '#undoBtn')), `저장 알림과 취소 (${await text(page, '#noticeText')} / ${await text(page, '#undoBtn')})`);
+  check(await text(page, '#feedLabel') === '수유 · 먹는 중' && !(await page.isVisible('#feedAmountBtn')), '먹이는 중: 버튼이 [다 먹음], 양 바꾸기는 숨김');
+  await shot(page, 'phone-feeding');
+  await page.click('#feedBtn');
+  await page.waitForFunction(() => document.querySelector('#feedBtn').textContent === '수유 200ml');
+  check(/^수유 200ml · \d+분 저장됨$/.test(await text(page, '#noticeText')), `다 먹음 (${await text(page, '#noticeText')})`);
+
+  // 양 바꾸기: 이번 한 번만
+  await page.click('#feedAmountBtn');
+  await page.click('#feedSteps [data-step="machine"]');
+  check(await text(page, '#feedBtn') === '수유 230ml' && await text(page, '#feedMachine') === '브레짜 210', `양 바꾸기 +30 (${await text(page, '#feedBtn')} / ${await text(page, '#feedMachine')})`);
+  await page.click('#feedSteps [data-step="-10"]');
+  check(await text(page, '#feedBtn') === '수유 220ml' && await text(page, '#feedMachine') === '브레짜 칸 아님', '±10 은 브레짜 칸 아님');
+  check(await noOverflow(), '양 바꾸기 줄도 옆으로 안 넘침');
+  await page.click('#feedAmountBtn');
+  check(await text(page, '#feedBtn') === '수유 200ml', '양 바꾸기를 닫으면 원래 양');
+
+  // 방금 넣은 수유와 비슷한 기록: 확인 창
+  await page.click('#feedBtn');
+  await page.waitForSelector('#confirm[open]');
+  check(/비슷한 기록이 이미 있어요/.test(await text(page, '#confirmText')), '10분 안 같은 종류는 확인 창');
+  await page.click('#confirmNo');
+  check(await text(page, '#noticeText') === '안 넣었어요', '안 넣기');
+
+  // 기저귀: 저장 → 취소
+  await page.click('[data-diaper="poo"]');
+  await page.waitForFunction(() => document.querySelector('#noticeText').textContent === '기저귀 대변 저장됨');
+  check(await text(page, '#diaperAgo') === '방금' && /대변$/.test(await text(page, '#diaperDetail')), `기저귀 카드가 바로 바뀜 (${await text(page, '#diaperAgo')} / ${await text(page, '#diaperDetail')})`);
+  await page.click('#undoBtn');
+  await page.waitForFunction(() => document.querySelector('#noticeText').textContent === '취소했어요');
+  await page.waitForFunction(() => document.querySelector('#diaperAgo').textContent !== '방금');
+  check(/소변$/.test(await text(page, '#diaperDetail')), '취소하면 앞 기록으로 돌아옴');
+
+  // 잠: 잠들었어요 → 깼어요
+  await page.click('#sleepBtn');
+  await page.waitForFunction(() => document.querySelector('#sleepBtn').textContent === '깼어요');
+  check(await text(page, '#sleepLabel') === '잠 · 자는 중', '자는 중');
+  await page.click('#sleepBtn');
+  await page.waitForFunction(() => document.querySelector('#sleepBtn').textContent === '잠들었어요');
+  check(/^잠 \d+분 저장됨$/.test(await text(page, '#noticeText')), `깼어요 (${await text(page, '#noticeText')})`);
+
+  // 더 넣기: 체중은 지난번 값에서 + 백분위, 산책은 시작~끝, 메모는 글이 꼭
+  await page.click('#moreGrid button:text-is("체중")');
+  check(await page.inputValue('#entryValue') === '7.20' && /^백분위 \d+ · 교정 \d+$/.test(await text(page, '#entryPercentile')), `체중: 지난번 값 + 백분위 (${await page.inputValue('#entryValue')} / ${await text(page, '#entryPercentile')})`);
+  await page.click('#entry [data-n="10"]');
+  await page.click('#entry [data-n="1"]');
+  check(await page.inputValue('#entryValue') === '7.31', `± 버튼 (${await page.inputValue('#entryValue')})`);
+  check(await noOverflow(), '체중 창이 옆으로 안 넘침');
+  await shot(page, 'phone-weight');
+  await page.click('#entrySave');
+  await page.waitForFunction(() => document.querySelector('#noticeText').textContent.startsWith('체중 7.31kg'));
+  await page.click('#moreGrid button:text-is("체중")');
+  check(await page.inputValue('#entryValue') === '7.31', '다음에 열면 방금 넣은 값에서 시작');
+  await page.click('#entryClose');
+  await page.click('#moreGrid button:text-is("산책")');
+  check(await page.isVisible('#entryEnd') && await text(page, '#entryStartLabel') === '시작' && !(await page.isVisible('#entryValue')), '산책: 시작·끝, 숫자 칸 없음');
+  await page.click('#entrySave');
+  await page.waitForFunction(() => document.querySelector('#noticeText').textContent.startsWith('산책 · 10분'));
+  // 목욕: 문구를 눌러 메모에 넣기, 폰에서 문구 더하기·지우기
+  await page.click('#moreGrid button:text-is("목욕")');
+  await page.click('#entryChips .chip:text-is("보습로션")');
+  check(await page.inputValue('#entryMemo') === '보습로션', '문구를 누르면 메모 칸에 들어감');
+  await page.click('#entryChips .chip.add');
+  check(await text(page, '#phrasesTitle') === '목욕 문구' && /보습로션/.test(await text(page, '#phrasesList')), '문구 창: 목욕 문구 목록');
+  await page.fill('#phraseText', '머리 감김');
+  await page.click('#phrasesForm button[type=submit]');
+  await page.waitForFunction(() => /머리 감김/.test(document.querySelector('#phrasesList').textContent));
+  check(await noOverflow(), '문구 창이 옆으로 안 넘침');
+  await shot(page, 'phone-phrases');
+  await page.click('#phrasesList .phraseRow:first-child button');
+  await page.waitForFunction(() => !/보습로션/.test(document.querySelector('#phrasesList').textContent));
+  await page.click('#phrasesClose');
+  const bathChips = await page.$$eval('#entryChips .chip', (b) => b.map((x) => x.textContent).join(' '));
+  check(bathChips === '머리 감김 +', `더한 문구가 버튼으로, 지운 문구는 사라짐 (${bathChips})`);
+  check(await page.inputValue('#entryMemo') === '보습로션', '문구를 지워도 이미 넣은 메모는 그대로');
+  await page.click('#entryChips .chip:text-is("머리 감김")');
+  await shot(page, 'phone-bath');
+  await page.click('#entrySave');
+  await page.waitForFunction(() => document.querySelector('#noticeText').textContent.startsWith('목욕 · 10분 · 보습로션 · 머리 감김'));
+  check(true, '목욕에 문구가 붙어 저장됨');
+  await page.click('#moreGrid button:text-is("메모")');
+  await page.click('#entrySave');
+  check(await text(page, '#entryMsg') === '메모를 써 주세요' && await page.isVisible('#entry'), '메모는 글이 비면 저장 안 함');
+  await page.fill('#entryMemo', '손톱 깎음');
+  await page.click('#entrySave');
+  await page.waitForFunction(() => document.querySelector('#noticeText').textContent.startsWith('메모 · 손톱 깎음'));
+
+  // 기록 쪽: 오늘 목록, 눌러서 고치기·지우기, 날짜 넘기기
+  await page.click('#tabs [data-view="records"]');
+  await page.waitForFunction(() => document.querySelectorAll('#dayList .rec').length > 3);
+  check(await text(page, '#daySub') === '오늘' && /^수유 \d+회 \d+ml · 기저귀 \d+회/.test(await text(page, '#daySummary')), `기록 쪽 머리 (${await text(page, '#daySub')} / ${await text(page, '#daySummary')})`);
+  const rows = () => page.$$eval('#dayList .rec', (r) => r.map((x) => x.querySelector('.body').textContent));
+  check((await rows()).includes('메모 손톱 깎음') && (await rows()).includes('목욕 10분 · 보습로션 · 머리 감김') && (await rows()).includes('체중 7.31kg'), `오늘 넣은 기록이 목록에 (${(await rows()).slice(0, 4).join(' | ')})`);
+  const times = await page.$$eval('#dayList .rec .time', (t) => t.map((x) => x.textContent.replace('전날 ', '').slice(0, 5)));
+  check(times.every((t, i) => i === 0 || t <= times[i - 1] || /전날/.test(t)), `시각 순, 최근 것이 위 (${times.slice(0, 5).join(' ')})`);
+  check(!(await page.isEnabled('#dayNext')), '오늘에서는 다음날로 못 감');
+  check(await noOverflow() && (await small()).length === 0, `기록 쪽: 안 넘치고 누르는 것은 44px 이상 ${(await small()).join(' ')}`);
+  await shot(page, 'phone-records');
+  // 지난 수유에 문구 붙이기 + 양 고치기
+  await page.locator('#dayList .rec', { hasText: /수유 200ml · \d+분 · 비타민D›/ }).click();
+  check(await text(page, '#entryTitle') === '기록 고치기 · 수유' && await page.inputValue('#entryAmount') === '200' && await page.inputValue('#entryMemo') === '비타민D', '수유 고치기 창: 양·메모가 채워짐');
+  check(await page.isChecked('#entryHasEnd') && await page.isVisible('#entryDelete'), '끝 시각이 켜져 있고 [지우기]가 있음');
+  check(await page.evaluate(() => document.activeElement?.id) === 'entryTitle', '창이 열릴 때 시각 칸에 초점이 가지 않음(아이폰에서 달력이 바로 뜨던 것)');
+  const widths = await page.$$eval('#entryStart, #entryEnd, #entryAmount, #entryMemo', (els) => els.map((e) => Math.round(e.getBoundingClientRect().width)));
+  check(new Set(widths).size === 1 && await page.$eval('#entryForm', (f) => f.scrollWidth <= f.clientWidth), `시각·양·메모 칸 폭이 같고 창 안에 들어감 (${widths.join(' ')})`);
+  await page.fill('#entryAmount', '230');
+  await page.click('#entryChips .chip:text-is("유산균")');
+  await shot(page, 'phone-edit-feed');
+  await page.click('#entrySave');
+  await page.waitForFunction(() => document.querySelector('#noticeText').textContent === '고쳤어요 · 수유');
+  await page.waitForFunction(() => [...document.querySelectorAll('#dayList .rec .body')].some((b) => /^수유 230ml · \d+분 · 비타민D · 유산균$/.test(b.textContent)));
+  check(true, '고친 양과 붙인 문구가 목록에 보임');
+  // 기저귀 종류 고치기
+  await page.locator('#dayList .rec', { hasText: /기저귀 소변›/ }).first().click();
+  await page.click('#entryDiaper [data-type="both"]');
+  await page.click('#entrySave');
+  await page.waitForFunction(() => [...document.querySelectorAll('#dayList .rec .body')].some((b) => b.textContent === '기저귀 소변+대변'));
+  check(true, '기저귀 종류 고침');
+  // 지우기는 두 번
+  const before = (await rows()).length;
+  await page.locator('#dayList .rec', { hasText: '메모 손톱 깎음' }).click();
+  await page.click('#entryDelete');
+  check(await text(page, '#entryDelete') === '한 번 더 누르면 지워요' && await page.isVisible('#entry'), '지우기 한 번: 다시 묻기');
+  await page.click('#entryDelete');
+  await page.waitForFunction(() => document.querySelector('#noticeText').textContent === '지웠어요 · 메모');
+  await page.waitForFunction((n) => document.querySelectorAll('#dayList .rec').length === n - 1, before);
+  check(true, '두 번 누르면 지워짐');
+  await page.click('#dayPrev');
+  await page.waitForFunction(() => document.querySelector('#daySub').textContent === '어제');
+  check(await page.isEnabled('#dayNext'), '어제로 넘김');
+  await page.click('#dayNext');
+  await page.waitForFunction(() => document.querySelector('#daySub').textContent === '오늘');
+  // 날짜를 누르면 달력: 날짜 글 한가운데를 누르면 투명한 날짜 칸이 받는다
+  const hit = await page.evaluate(() => { const r = document.querySelector('#dayTitle').getBoundingClientRect(); return document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2).id; });
+  check(hit === 'dayPick', `날짜 글을 누르면 날짜 칸이 받음 (${hit})`);
+  const weekAgo = await page.evaluate(() => { const d = new Date(); d.setDate(d.getDate() - 7); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; });
+  await page.fill('#dayPick', weekAgo);
+  await page.waitForFunction(() => document.querySelector('#daySub').textContent === '7일 전');
+  check(await text(page, '#dayMsg') === '이 날은 기록이 없어요', '달력으로 고른 날로 감');
+  // 통계 쪽: 날짜별 막대와 평균, 성장곡선
+  await page.click('#tabs [data-view="stats"]');
+  await page.waitForFunction(() => document.querySelectorAll('#statBars .bar').length === 8);
+  check(/^\d+ml$/.test(await text(page, '#statHeadline')) && /^하루 [\d.]+회 · 지난 7일 평균\(오늘 빼고\)$/.test(await text(page, '#statSub')), `수유 통계 (${await text(page, '#statHeadline')} / ${await text(page, '#statSub')})`);
+  check(await page.$$eval('#statBars .bar.today', (b) => b.length) === 1 && (await page.$$eval('#statCards .stat', (c) => c.length)) >= 2, '막대는 오늘까지(오늘은 따로 표시), 아래 칸들');
+  check(await page.$eval('#statTabs', (t) => t.getBoundingClientRect().height) < 60 && await page.$eval('#statRange', (t) => t.getBoundingClientRect().height) < 60, '고르는 버튼은 한 줄로');
+  await page.waitForFunction(() => document.querySelector('#notice').hidden, null, { timeout: 10000 });
+  await shot(page, 'phone-stats');
+  await page.click('#statRange [data-days="30"]');
+  await page.waitForFunction(() => document.querySelectorAll('#statBars .bar').length === 31);
+  check(await noOverflow(), '30일 막대도 옆으로 안 넘침');
+  await page.click('#statTabs [data-metric="sleep"]');
+  await page.waitForFunction(() => /시간$/.test(document.querySelector('#statHeadline').textContent));
+  check(/밤잠/.test(await text(page, '#statCards')), `잠 통계 (${await text(page, '#statHeadline')})`);
+  await page.click('#statTabs [data-metric="growth"]');
+  await page.waitForFunction(() => document.querySelectorAll('#growthSvg .pct').length === 5);
+  check(await page.$$eval('#growthSvg .dot.actual', (d) => d.length) === 2 && await page.$$eval('#growthSvg .dot.corrected', (d) => d.length) === 2, '성장곡선: 기본 나이 점과 교정 나이 점');
+  check(/^7\.31kg$/.test(await text(page, '#growthLast .big')) && /기본 · \d+개월 \d+일백분위 \d+/.test(await text(page, '#growthLast')) && /교정 · \d+개월 \d+일백분위 \d+/.test(await text(page, '#growthLast')), `마지막 측정과 백분위 두 가지 (${await text(page, '#growthLast')})`);
+  check(/지난번보다 \+0\.11kg/.test(await text(page, '#growthLast')), '지난번과의 차이');
+  check(await noOverflow() && (await small()).length === 0, `통계 쪽: 안 넘치고 누르는 것은 44px 이상 ${(await small()).join(' ')}`);
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await shot(page, 'phone-growth');
+  await page.click('#growthKinds [data-kind="height"]');
+  check(/^65\.0cm$/.test(await text(page, '#growthLast .big')), '키로 바꿈');
+  // 막대를 누르면 그날 기록으로
+  await page.click('#statTabs [data-metric="feed"]');
+  await page.click('#statRange [data-days="7"]');
+  await page.waitForFunction(() => document.querySelectorAll('#statBars .bar').length === 8);
+  await page.click('#statBars .bar:nth-child(7)');
+  await page.waitForFunction(() => document.querySelector('#daySub').textContent === '어제' && !document.querySelector('#viewRecords').hidden);
+  check(await page.$eval('#tabs [data-view="records"]', (b) => b.classList.contains('on')), '막대를 누르면 그날 기록 쪽으로');
+  // 설정 쪽: 일정 넣기·고치기, 문구 모아 보기, 더 넣기 버튼 숨기기·순서
+  await page.click('#tabs [data-view="settings"]');
+  await page.waitForFunction(() => document.querySelectorAll('#apptList .rec').length === 1);
+  check(/예방접종 · 헥사심 3차, 폐렴구균 3차, 로타텍 3차, 독감 1차D-20›$/.test(await text(page, '#apptList')), `일정 목록 (${await text(page, '#apptList')})`);
+  check(/수유 유산균, 비타민D/.test(await text(page, '#phraseKinds')) && /목욕 머리 감김/.test(await text(page, '#phraseKinds')), '문구가 종류마다 한 줄로');
+  check(await noOverflow() && (await small()).length === 0, `설정 쪽: 안 넘치고 누르는 것은 44px 이상 ${(await small()).join(' ')}`);
+  // 예방접종 일정표: 표준 일정에 맞은 기록·예약을 맞춰 본다
+  await page.waitForFunction(() => document.querySelectorAll('#vaxList .vaxRow').length > 10);
+  check(/^맞음 14 · 예약 5 · 지금 맞을 때 \d+ · 시기 지남 \d+$/.test(await text(page, '#vaxSummary')), `접종 일정표 합계 (${await text(page, '#vaxSummary')})`);
+  const vaxRows = await page.$$eval('#vaxList .vaxRow', (r) => r.map((x) => x.textContent));
+  check(vaxRows.some((r) => /^B형간염 1차맞음 \d+\/\d+$/.test(r)) && vaxRows.some((r) => /^폐렴구균 3차예약 \d+\/\d+$/.test(r)) && vaxRows.some((r) => /^RSV 항체 주사맞음/.test(r)), `맞음·예약·표에 없는 접종 (${vaxRows.slice(0, 3).join(' | ')})`);
+  check(vaxRows.some((r) => /^인플루엔자\(독감\) · 첫해는 4주 간격 2회예약/.test(r)) && !vaxRows.some((r) => /^HPV/.test(r)), '독감 줄, 남아에게 HPV 없음');
+  const before2 = vaxRows.length;
+  await page.click('#vaxMore');
+  check(await page.$$eval('#vaxList .vaxRow', (r) => r.length) > before2 && /곧 올 것까지만/.test(await text(page, '#vaxMore')), '[전체 일정 보기]로 12세까지');
+  await page.click('#vaxMore');
+  // 영유아 건강검진: 1차는 받음(미리 보기), 2차는 지금 받을 때 → [받았어요]
+  await page.waitForFunction(() => document.querySelectorAll('#checkList .vaxRow').length >= 3);
+  const checks = await page.$$eval('#checkList .vaxRow', (r) => r.map((x) => x.textContent));
+  check(/^건강검진 1차 · 생후 14~35일받음 \d+\/\d+$/.test(checks[0]) && /^건강검진 2차 · 4~6개월지금 받을 때\(\d+\/\d+까지\)받았어요$/.test(checks[1]), `검진 시기 (${checks.slice(0, 2).join(' | ')})`);
+  check(/^받음 1 · 예약 0 · 지금 받을 때 1 · 시기 지남 0$/.test(await text(page, '#checkSummary')), `검진 합계 (${await text(page, '#checkSummary')})`);
+  await page.click('#checkList [aria-label="건강검진 2차 받았어요"]');
+  check(await text(page, '#entryTitle') === '영유아검진 넣기' && await page.inputValue('#entryMemo') === '2차', '[받았어요]: 영유아검진 창이 "2차"가 채워진 채로 열림');
+  await page.click('#entrySave');
+  await page.waitForFunction(() => /^건강검진 2차 · 4~6개월받음/.test(document.querySelectorAll('#checkList .vaxRow')[1]?.textContent || ''));
+  check(/^받음 2 · 예약 0 · 지금 받을 때 0 · 시기 지남 0$/.test(await text(page, '#checkSummary')), '받은 검진이 바로 받음으로');
+  await page.waitForFunction(() => document.querySelector('#notice').hidden, null, { timeout: 10000 });
+  const rowWidths = await page.$$eval('#phraseKinds .rec', (r) => [...new Set(r.map((x) => Math.round(x.getBoundingClientRect().width)))]);
+  check(rowWidths.length === 1 && rowWidths[0] > 300, `문구 줄이 모두 화면 폭 (${rowWidths.join(' ')})`);
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await shot(page, 'phone-settings');
+  const toggle = await page.$eval('#typeList .btn.toggle.on', (b) => { const c = getComputedStyle(b); return c.color !== c.backgroundColor; });
+  check(toggle, '[보임] 글자가 바탕색과 달라 읽힘');
+  // 새 일정
+  await page.click('#apptAdd');
+  check(await page.evaluate(() => document.activeElement?.id) === 'apptTitle' && await page.inputValue('#apptName') === '예방접종', '일정 창: 날짜 칸에 초점이 가지 않고, 이름은 예방접종부터');
+  await page.click('#apptForm button[type=submit]');
+  const tomorrow = await page.evaluate(() => { const d = new Date(); d.setDate(d.getDate() + 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; });
+  await page.fill('#apptDate', tomorrow);
+  await page.fill('#apptName', '영유아검진');
+  await page.fill('#apptItems', '');
+  await page.fill('#apptPlace', '소아과');
+  await shot(page, 'phone-appointment');
+  await page.click('#apptForm button[type=submit]');
+  await page.waitForFunction(() => document.querySelectorAll('#apptList .rec').length === 2);
+  check(/영유아검진 · 소아과내일›/.test(await text(page, '#apptList .rec:first-child')), `넣은 일정이 가까운 순으로 (${await text(page, '#apptList .rec:first-child')})`);
+  // 고치기 → 오늘로 당기면 [맞았어요]가 생긴다(접종 일정만)
+  await page.locator('#apptList .rec', { hasText: '헥사심 3차' }).click();
+  check(await text(page, '#apptTitle') === '일정 고치기' && !(await page.isVisible('#apptDone')), '아직 안 온 접종 일정에는 [맞았어요]가 없음');
+  const todayKey = await page.evaluate(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; });
+  await page.fill('#apptDate', todayKey);
+  await page.fill('#apptItems', '헥사심 3차, 독감 1차');
+  await page.click('#apptForm button[type=submit]');
+  await page.waitForFunction(() => /오늘›/.test(document.querySelector('#apptList').textContent));
+  await page.locator('#apptList .rec', { hasText: '헥사심 3차' }).click();
+  check(await page.isVisible('#apptDone'), '오늘인 접종 일정에는 [맞았어요 · 기록으로 옮기기]');
+  await page.click('#apptDone');
+  await page.waitForFunction(() => document.querySelector('#noticeText').textContent === '예방접종 2건을 기록에 넣었어요');
+  await page.waitForFunction(() => document.querySelectorAll('#apptList .rec').length === 1);
+  check(true, '맞은 접종은 기록으로 가고 일정은 닫힘');
+  // 일정 지우기는 두 번
+  await page.click('#apptList .rec');
+  await page.click('#apptDelete');
+  check(await text(page, '#apptDelete') === '한 번 더 누르면 지워요', '일정 지우기 한 번: 다시 묻기');
+  await page.click('#apptDelete');
+  await page.waitForFunction(() => document.querySelectorAll('#apptList .rec').length === 0);
+  check(await text(page, '#apptEmpty') === '넣어 둔 일정이 없어요', '일정이 없을 때 안내');
+  // 더 넣기 버튼: 터미타임 숨기기, 예방접종을 맨 위로
+  await page.click('#typeList [aria-label="터미타임 더 넣기에 보임"]');
+  await page.waitForSelector('#typeList [aria-label="터미타임 더 넣기에 숨김"]');
+  for (let i = 0; i < 12 && (await text(page, '#typeList .typeRow:first-child .grow')) !== '예방접종'; i += 1) {
+    await page.click('#typeList [aria-label="예방접종 위로"]');
+    await page.waitForTimeout(150);
+  }
+  check(await text(page, '#typeList .typeRow:first-child .grow') === '예방접종' && !(await page.isEnabled('#typeList [aria-label="예방접종 위로"]')), '예방접종을 맨 위로 올림');
+  // 설정에서 문구 창 열기
+  await page.locator('#phraseKinds .rec', { hasText: '놀이' }).click();
+  await page.fill('#phraseText', '터미타임');
+  await page.click('#phrasesForm button[type=submit]');
+  await page.waitForFunction(() => /터미타임/.test(document.querySelector('#phrasesList').textContent));
+  await page.click('#phrasesClose');
+  await page.waitForFunction(() => /놀이 터미타임/.test(document.querySelector('#phraseKinds').textContent));
+  check(true, '설정에서 놀이 문구에 터미타임을 더함');
+  await page.click('#tabs [data-view="records"]');
+  await page.waitForFunction(() => [...document.querySelectorAll('#dayList .rec .body')].filter((b) => /^예방접종/.test(b.textContent)).length === 2);
+  check((await rows()).includes('예방접종 헥사심 3차') && (await rows()).includes('예방접종 독감 1차'), '맞은 접종이 오늘 기록에 백신마다 한 줄');
+  await page.click('#tabs [data-view="home"]');
+  const more2 = await page.$$eval('#moreGrid button', (b) => b.map((x) => x.textContent));
+  check(more2[0] === '예방접종' && !more2.includes('터미타임'), `입력 쪽 더 넣기에 바로 반영 (${more2.join(' ')})`);
+  check(await page.isVisible('#feedCard') && !(await page.isVisible('#dayList')), '입력 쪽으로 돌아옴');
+
+  // 연결이 끊기면 쌓았다가 보낸다
+  await page.context().setOffline(true);
+  await page.click('[data-diaper="pee"]');
+  await page.waitForFunction(() => /대기 1건/.test(document.querySelector('#net').textContent));
+  check(await text(page, '#noticeText') === '기저귀 소변 (대기) 저장됨', `오프라인 저장 (${await text(page, '#noticeText')})`);
+  await page.context().setOffline(false);
+  await page.waitForFunction(() => document.querySelector('#net').hidden, null, { timeout: 30000 });
+  check(true, '다시 연결되면 대기가 사라짐');
+  check(errors.length === 0, `페이지 오류 없음 ${errors.join(' ')}`);
+}
+
 const server = await serve();
 const base = `http://localhost:${server.address().port}/albam/`;
 const browser = await chromium.launch();
@@ -860,6 +1209,7 @@ try {
   console.log('# 더보기'); await moreFlow(browser, base);
   console.log('# 호출어'); await wakeFlow(browser, base);
   console.log('# Supabase(가짜)'); await supabaseFlow(browser, base);
+  console.log('# 개인 폰 화면'); await phoneFlow(browser, base);
 } finally {
   await browser.close();
   server.close();

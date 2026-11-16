@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>알밤보드 폰</title>
+<meta name="description" content="알밤보드 개인 폰 화면(세로): 빠른 입력">
+<meta name="theme-color" content="#0b0908">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="../icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="../icon-180.png">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<!-- 알밤보드 개인 폰 화면(세로). 거실 화면과 같은 Supabase·같은 통신 창구(../src/api)를 쓴다. 화면만 따로 짰다.
+     쪽: 입력(수유·기저귀·잠 카드, 더 넣기) / 기록(날짜별 목록, 고치기) / 통계(날짜별 막대, 성장곡선) / 설정(일정, 문구, 더 넣기 버튼) -->
+<header id="top">
+  <div id="today"></div>
+  <div id="age"></div>
+</header>
+<div id="net" hidden></div>
+
+<main id="viewHome">
+  <!-- 카드 하나 = 상태(지난 시간·마지막 기록) + 바로 저장 버튼(m/home.js) -->
+  <section class="card" id="feedCard">
+    <div class="head"><span class="label" id="feedLabel">수유</span><span class="detail" id="feedDetail"></span></div>
+    <div class="big" id="feedAgo"></div>
+    <div class="row" id="feedActions">
+      <button class="btn main grow" id="feedBtn"></button>
+      <button class="btn" id="feedAmountBtn">양 바꾸기</button>
+    </div>
+    <!-- 양 바꾸기: 이번 한 번만 다른 양으로. [-30 브레짜] [-10] 200ml [+10] [+30 브레짜] -->
+    <div class="row" id="feedSteps" hidden>
+      <button class="btn step" data-step="-machine">-30</button>
+      <button class="btn step" data-step="-10">-10</button>
+      <div class="grow center"><span class="val" id="feedAmount"></span><span class="hint" id="feedMachine"></span></div>
+      <button class="btn step" data-step="10">+10</button>
+      <button class="btn step" data-step="machine">+30</button>
+    </div>
+    <!-- 수유에 붙이는 문구(m/phrases.js): 먹이기 전에는 다음 수유에, 먹이는 중에는 그 수유에 바로 -->
+    <div class="chips" id="feedChips"></div>
+  </section>
+
+  <section class="card" id="diaperCard">
+    <div class="head"><span class="label">기저귀 · 간 지</span><span class="detail" id="diaperDetail"></span></div>
+    <div class="big" id="diaperAgo"></div>
+    <div class="row three">
+      <button class="btn" data-diaper="pee">소변</button>
+      <button class="btn" data-diaper="poo">대변</button>
+      <button class="btn" data-diaper="both">소+대</button>
+    </div>
+  </section>
+
+  <section class="card" id="sleepCard">
+    <div class="head"><span class="label" id="sleepLabel">잠</span><span class="detail" id="sleepDetail"></span></div>
+    <div class="big" id="sleepAgo"></div>
+    <div class="row"><button class="btn grow" id="sleepBtn"></button></div>
+  </section>
+
+  <section>
+    <h2>더 넣기</h2>
+    <div id="moreGrid"></div>
+  </section>
+
+  <section id="upcomingSec" hidden>
+    <h2>다가오는 일정</h2>
+    <div id="upcomingList"></div>
+  </section>
+</main>
+
+<!-- 기록 쪽(m/records.js): 날짜를 넘기며 그날 기록. 줄을 누르면 고치기 -->
+<main id="viewRecords" hidden>
+  <div id="dayHead">
+    <button class="btn" id="dayPrev" aria-label="전날">◀</button>
+    <!-- 날짜 글 위에 투명한 날짜 칸을 겹쳐 둔다: 누르면 폰의 달력이 바로 뜬다(아이폰은 숨긴 칸을 코드로 열 수 없다) -->
+    <label id="dayTitleBtn"><span id="dayTitle"></span><span class="hint" id="daySub"></span><input type="date" id="dayPick" aria-label="날짜 고르기"></label>
+    <button class="btn" id="dayNext" aria-label="다음날">▶</button>
+  </div>
+  <div class="hint" id="daySummary"></div>
+  <div id="dayList"></div>
+  <div class="hint" id="dayMsg"></div>
+</main>
+
+<!-- 통계 쪽(m/stats.js): 수유·기저귀·잠은 날짜별 막대, 성장은 성장곡선 -->
+<main id="viewStats" hidden>
+  <div class="seg four" id="statTabs">
+    <button data-metric="feed">수유</button>
+    <button data-metric="diaper">기저귀</button>
+    <button data-metric="sleep">잠</button>
+    <button data-metric="growth">성장</button>
+  </div>
+  <div class="seg" id="statRange">
+    <button data-days="7">7일</button>
+    <button data-days="30">30일</button>
+    <button data-days="90">90일</button>
+  </div>
+  <div class="hint warn" id="statMsg"></div>
+
+  <div id="statDays">
+    <section class="card">
+      <div><div class="big" id="statHeadline"></div><div class="hint" id="statSub"></div></div>
+      <div class="bars" id="statBars"></div>
+      <div class="axis hint" id="statAxis"></div>
+    </section>
+    <div class="cards" id="statCards"></div>
+  </div>
+
+  <div id="statGrowth" hidden>
+    <div class="row">
+      <div class="seg grow" id="growthKinds">
+        <button data-kind="weight">체중</button>
+        <button data-kind="height">키</button>
+      </div>
+      <button class="btn" id="growthAdd">+ 측정 넣기</button>
+    </div>
+    <section class="card">
+      <svg id="growthSvg" role="img"></svg>
+      <div class="legend hint"><span><i class="dotA"></i>기본 나이(생일부터)</span><span><i class="dotC"></i>교정 나이(예정일부터)</span><span>회색 줄 = 또래 백분위(WHO)</span></div>
+      <div class="hint" id="growthNote"></div>
+    </section>
+    <section class="card" id="growthLast"></section>
+  </div>
+</main>
+
+<!-- 설정 쪽(m/settings.js): 일정, 문구, 더 넣기 버튼, 로그아웃. 바꾼 것은 모든 화면에 같이 적용된다 -->
+<main id="viewSettings" hidden>
+  <section>
+    <div class="secHead"><h2>다가오는 일정</h2><button class="btn small" id="apptAdd">+ 일정 넣기</button></div>
+    <div id="apptList"></div>
+    <div class="hint" id="apptEmpty">넣어 둔 일정이 없어요</div>
+  </section>
+  <!-- 예방접종 일정표: 표준예방접종일정표(src/vaccines.js)에 맞은 기록·예약을 맞춰 본다 -->
+  <section>
+    <h2>예방접종 일정표</h2>
+    <div class="hint" id="vaxSummary"></div>
+    <div id="vaxList"></div>
+    <button class="btn small" id="vaxMore" hidden></button>
+    <div class="hint" id="vaxNote">질병관리청 표준예방접종일정표(2024) 기준. 생일로 센다(교정 나이 아님). 실제 접종은 병원 안내를 따른다.</div>
+  </section>
+  <!-- 영유아 건강검진: 검진 시기표(src/checkups.js)에 받은 기록·예약을 맞춰 본다 -->
+  <section>
+    <h2>영유아 건강검진</h2>
+    <div class="hint" id="checkSummary"></div>
+    <div id="checkList"></div>
+    <button class="btn small" id="checkMore" hidden></button>
+    <div class="hint">국민건강보험공단 검진 시기 기준. 공단 안내문과 다르면 안내문이 맞다.</div>
+  </section>
+  <section>
+    <h2>자주 쓰는 문구 · 누르면 더하기·지우기</h2>
+    <div id="phraseKinds"></div>
+  </section>
+  <section>
+    <h2>더 넣기 버튼 · 순서와 보임(모든 화면에 같이 적용)</h2>
+    <div id="typeList"></div>
+  </section>
+  <section>
+    <h2>계정</h2>
+    <div class="row"><span class="grow" id="account"></span><button class="btn small" id="logout">로그아웃</button></div>
+  </section>
+</main>
+
+<!-- 아래 탭: 쪽 바꾸기 -->
+<nav id="tabs">
+  <button data-view="home" class="on">입력</button>
+  <button data-view="records">기록</button>
+  <button data-view="stats">통계</button>
+  <button data-view="settings">설정</button>
+</nav>
+
+<!-- 저장·취소 결과와 [취소 n](m/notice.js) -->
+<div id="notice" hidden><span id="noticeText"></span><button class="btn" id="undoBtn" hidden></button></div>
+
+<!-- 넣기·고치기(m/entry.js): 시각, 끝 시각, 양, 기저귀 종류, 숫자 ±, 글.
+     제목에 autofocus: 창이 열릴 때 첫 칸에 초점이 가면 아이폰이 달력·자판을 바로 띄워서 -->
+<dialog id="entry">
+  <form method="dialog" id="entryForm">
+    <h2 id="entryTitle" tabindex="-1" autofocus></h2>
+    <label class="field"><span id="entryStartLabel">시각</span><input type="datetime-local" id="entryStart" required></label>
+    <label class="check" id="entryEndToggle"><input type="checkbox" id="entryHasEnd"> <span id="entryEndToggleText">끝 시각도 넣기</span></label>
+    <label class="field" id="entryEndField"><span>끝</span><input type="datetime-local" id="entryEnd"></label>
+    <div id="entryNumber">
+      <div class="row">
+        <button type="button" class="btn step" data-n="-10"></button>
+        <button type="button" class="btn step" data-n="-1"></button>
+        <input class="grow center val" id="entryValue" type="number" inputmode="decimal">
+        <button type="button" class="btn step" data-n="1"></button>
+        <button type="button" class="btn step" data-n="10"></button>
+      </div>
+      <div class="hint" id="entryPercentile"></div>
+    </div>
+    <label class="field" id="entryAmountField"><span>양(ml)</span><input type="number" id="entryAmount" inputmode="numeric" min="0" max="1000" step="10"></label>
+    <div class="row three" id="entryDiaper">
+      <button type="button" class="btn" data-type="pee">소변</button>
+      <button type="button" class="btn" data-type="poo">대변</button>
+      <button type="button" class="btn" data-type="both">소+대</button>
+    </div>
+    <div class="chips" id="entryChips"></div>
+    <label class="field" id="entryMemoField"><span>메모</span><input type="text" id="entryMemo" autocomplete="off"></label>
+    <div class="hint warn" id="entryMsg"></div>
+    <div class="row">
+      <button type="button" class="btn" id="entryClose">닫기</button>
+      <button type="button" class="btn" id="entryDelete" hidden>지우기</button>
+      <button type="submit" class="btn main grow" id="entrySave">저장</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- 비슷한 기록이 이미 있을 때 -->
+<dialog id="confirm">
+  <h2 tabindex="-1" autofocus>비슷한 기록이 있어요</h2>
+  <p id="confirmText"></p>
+  <div class="row">
+    <button class="btn grow" id="confirmNo">안 넣기</button>
+    <button class="btn main grow" id="confirmYes">그래도 저장</button>
+  </div>
+</dialog>
+
+<!-- 일정 넣기·고치기(m/settings.js) -->
+<dialog id="appt">
+  <form id="apptForm">
+    <h2 id="apptTitle" tabindex="-1" autofocus></h2>
+    <div class="two">
+      <label class="field"><span>날짜</span><input type="date" id="apptDate" required></label>
+      <label class="field"><span>시각(몰라도 됨)</span><input type="time" id="apptTime"></label>
+    </div>
+    <label class="field"><span>무슨 일정</span><input type="text" id="apptName" maxlength="60" autocomplete="off"></label>
+    <label class="field"><span>할 것(쉼표로 나눠서)</span><input type="text" id="apptItems" autocomplete="off" placeholder="예: 헥사심 3차, 독감 1차"></label>
+    <label class="field"><span>어디서</span><input type="text" id="apptPlace" autocomplete="off"></label>
+    <label class="field"><span>메모</span><input type="text" id="apptNote" autocomplete="off"></label>
+    <div class="hint warn" id="apptMsg"></div>
+    <button type="button" class="btn main" id="apptDone" hidden>맞았어요 · 기록으로 옮기기</button>
+    <div class="row">
+      <button type="button" class="btn" id="apptClose">닫기</button>
+      <button type="button" class="btn" id="apptDelete" hidden>지우기</button>
+      <button type="submit" class="btn main grow">저장</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- 문구 더하기·지우기(m/phrases.js) -->
+<dialog id="phrases">
+  <form id="phrasesForm">
+    <h2 id="phrasesTitle" tabindex="-1" autofocus></h2>
+    <div id="phrasesList"></div>
+    <div class="hint" id="phrasesEmpty">아직 문구가 없어요. 아래에 써서 더해 주세요.</div>
+    <label class="field"><span>새 문구</span><input type="text" id="phraseText" maxlength="30" autocomplete="off" placeholder="예: 유산균"></label>
+    <div class="hint warn" id="phrasesMsg"></div>
+    <div class="row">
+      <button type="button" class="btn" id="phrasesClose">닫기</button>
+      <button type="submit" class="btn main grow">더하기</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="login">
+  <form id="loginForm">
+    <h2>알밤보드 로그인</h2>
+    <label class="field"><span>이메일</span><input type="email" id="email" autocomplete="username" required></label>
+    <label class="field"><span>비밀번호</span><input type="password" id="password" autocomplete="current-password" required></label>
+    <div class="hint warn" id="loginMsg"></div>
+    <div class="row"><button type="submit" class="btn main grow" id="loginBtn">로그인</button></div>
+  </form>
+</dialog>
+
+<script src="../config.js"></script>
+<script type="module" src="main.js"></script>
+</body>
+</html>

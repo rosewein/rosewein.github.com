@@ -163,9 +163,15 @@ export function createStatusView(ctx) {
   /** 오른쪽 위 구석 아랫줄: D+142 · 4개월 20일 · 교정 3개월 28일(시계 쪽과 같은 ageParts). 윗줄 지금 시각은 tick */
   function renderAge(age) {
     const box = $('#ageLine');
-    const key = JSON.stringify(age ?? null);
+    // 일정이 이틀 안으로 다가오면 나이 대신 그 일정: 예방접종 내일 · 헥사심 3차 외 3
+    const appt = ctx.upcoming?.next(ctx.now()) ?? null;
+    const key = JSON.stringify([age ?? null, appt]);
     if (box.dataset.key === key) return;
     box.dataset.key = key;
+    if (appt) {
+      box.replaceChildren(el('span', { className: 'val' }, `${appt.title} `), el('span', { className: 'acc' }, appt.left), appt.items ? ` · ${appt.items}` : '');
+      return;
+    }
     box.replaceChildren(...(age ? ageParts(age).map(([text, val]) => el('span', { className: val ? 'val' : '' }, text)) : []));
   }
 
