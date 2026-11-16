@@ -1,0 +1,52 @@
+menu "Albam board"
+
+    config ALBAM_WIFI_SSID
+        string "Wi-Fi name baked into the firmware (optional)"
+        default ""
+        help
+            Leave empty to pick the network on the touch screen.
+            Put it in sdkconfig.local, never in sdkconfig.defaults (the repository is public).
+
+    config ALBAM_WIFI_PASSWORD
+        string "Wi-Fi password baked into the firmware (optional)"
+        default ""
+
+    config ALBAM_SUPABASE_URL
+        string "Supabase project URL"
+        default "https://dkeiwryjvussejrevigh.supabase.co"
+        help
+            Same as supabaseUrl in albam/config.js.
+
+    config ALBAM_SUPABASE_KEY
+        string "Supabase publishable key"
+        default "sb_publishable_87W4Yg7J_a7vb9XnoSp4OA_OrX5krqY"
+        help
+            Same as supabaseAnonKey in albam/config.js. This key is public; never put the service_role key here.
+
+    config ALBAM_UPDATE_REPO
+        string "GitHub repository that publishes the firmware"
+        default "rosewein/rosewein.github.com"
+        help
+            The board downloads new firmware from this repository's releases
+            (albam-firmware for master builds, albam-firmware-dev for other branches).
+
+    config ALBAM_ROTATE_270
+        bool "Landscape the other way round (270 instead of 90 degrees)"
+        default n
+        help
+            The panel is portrait (720x1280) and is rotated to landscape (1280x720).
+            Turn this on if the picture is upside down for the way the board is mounted.
+
+    config ALBAM_TOUCH_FLIP
+        bool "Touch lands on the opposite corner"
+        default n
+        help
+            Turn this on if the picture is the right way up but a touch registers
+            at the diagonally opposite point.
+
+    config ALBAM_BRIGHTNESS
+        int "Backlight brightness (percent)"
+        range 5 100
+        default 70
+
+endmenu

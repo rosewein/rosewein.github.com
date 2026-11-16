@@ -1,0 +1,46 @@
+CONFIG_IDF_TARGET="esp32p4"
+
+# 이 보드의 P4 칩은 리비전 v3.2 다. 3판 이전 칩용으로 빌드하면 켜지지 않는다
+CONFIG_ESP32P4_SELECTS_REV_LESS_V3=n
+
+# 플래시와 칸 나눔(무선 업데이트용 앱 칸 두 개)
+CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+CONFIG_PARTITION_TABLE_OFFSET=0x10000
+
+# 새 판이 와이파이에 못 붙으면 앞 판으로 되돌아간다
+CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE=y
+
+# 보드: Waveshare ESP32-P4-WIFI6-Touch-LCD-7 (7인치 올인원, 패널은 세로 720x1280)
+CONFIG_BSP_LCD_TYPE_720_1280_7_INCH=y
+# 패널 드라이버가 I2C 1번(SDA 7, SCL 8)으로 정해 놓고 쓴다
+CONFIG_BSP_I2C_NUM=1
+# I2C 는 느린 쪽(100kHz)으로. 터치를 읽다가 버스가 멈추는 일이 있어 여유를 둔다(board.c 의 I2C 설명)
+CONFIG_BSP_I2C_FAST_MODE=n
+# 돌려서 가로로 쓰려면 화면 버퍼가 3개 있어야 한다
+CONFIG_BSP_LCD_DPI_BUFFER_NUMS=3
+
+# 화면 버퍼는 PSRAM 에 둔다
+CONFIG_SPIRAM=y
+CONFIG_IDF_EXPERIMENTAL_FEATURES=y
+CONFIG_SPIRAM_SPEED_200M=y
+
+# 안쪽 메모리(약 0.7MB)는 와이파이·화면 드라이버가 써야 한다. 서버 연결(TLS)은 PSRAM 을 쓰게 하고,
+# LVGL 도 PSRAM 을 쓴다(main/lv_mem_psram.c). 남은 양은 /info 의 heap 에서 본다.
+# (안쪽 256KB 를 따로 떼어 두는 SPIRAM_MALLOC_RESERVE_INTERNAL 은 오히려 보통 쓸 몫을 줄여 0.2.4 가
+#  켜진 지 1분도 안 돼 죽고 다시 켜지기를 되풀이했다. 넣지 않는다)
+CONFIG_MBEDTLS_EXTERNAL_MEM_ALLOC=y
+
+CONFIG_FREERTOS_HZ=1000
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192
+CONFIG_LWIP_SNTP_MAX_SERVERS=2
+CONFIG_LWIP_LOCAL_HOSTNAME="albam-board"
+
+# 한글은 Pretendard TTF 를 보드에서 그린다(main/assets). 글자 그림을 담아 두려면 메모리가 넉넉해야 해서
+# LVGL 의 메모리를 모두 PSRAM 에서 받는다(main/lv_mem_psram.c)
+CONFIG_LV_USE_TINY_TTF=y
+CONFIG_LV_USE_CUSTOM_MALLOC=y
+# 글자판과 그림 글자(와이파이 표시)는 LVGL 기본 글꼴
+CONFIG_LV_FONT_MONTSERRAT_28=y
+CONFIG_LV_FONT_MONTSERRAT_48=y

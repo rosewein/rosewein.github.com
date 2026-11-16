@@ -1,0 +1,7 @@
+# 무선 업데이트용: 앱 칸 두 개(6MB씩)를 번갈아 쓴다. 16MB 기준(보드 플래시는 그보다 크다).
+# Name,   Type, SubType, Offset, Size
+nvs,      data, nvs,     ,       0x6000,
+otadata,  data, ota,     ,       0x2000,
+phy_init, data, phy,     ,       0x1000,
+ota_0,    app,  ota_0,   ,       6M,
+ota_1,    app,  ota_1,   ,       6M,
