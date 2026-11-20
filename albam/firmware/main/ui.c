@@ -72,7 +72,15 @@ static uint32_t s_undo_until, s_notice_until, s_happy_until;
 
 static lv_obj_t *s_settings, *s_info;
 static lv_obj_t *s_updating, *s_updating_text, *s_updating_bar;
-static lv_obj_t *s_day, *s_day_title, *s_day_total, *s_day_list;
+static lv_obj_t *s_day, *s_day_title, *s_day_total, *s_day_list, *s_day_msg;
+
+/* 오늘 기록에서 줄을 눌러 고치기 */
+static care_event_t s_events[CARE_MAX_EVENTS];   /* 목록에 보이는 기록 */
+static int s_event_count = -1;                   /* -1: 아직 못 읽음 */
+static care_event_t s_edit;                      /* 고치는 중인 기록(창에서 바꾼 값) */
+static lv_obj_t *s_edit_sheet, *s_edit_title, *s_edit_start, *s_edit_end_row, *s_edit_end;
+static lv_obj_t *s_edit_amount_row, *s_edit_amount, *s_edit_machine, *s_edit_diaper_row, *s_edit_diaper[4], *s_edit_delete;
+static uint32_t s_delete_armed_until;            /* [지우기]를 한 번 누른 뒤 이때까지 한 번 더 누르면 지운다 */
 #define DAY_IDLE_MS 60000             /* 목록에서 이만큼 안 만지면 대시보드로(웹앱 statsIdleSeconds) */
 static lv_obj_t *s_wifi, *s_list, *s_ssid, *s_pass, *s_wifi_msg;
 static lv_obj_t *s_login, *s_email, *s_login_pass, *s_login_msg, *s_login_keyboard;
@@ -212,6 +220,10 @@ static void build_record(void);
 static void tick(lv_timer_t *timer);
 static void open_day(lv_event_t *e);
 static void swiped(lv_event_t *e);
+static void row_clicked(lv_event_t *e);
+static void sheet_close_clicked(lv_event_t *e);
+static lv_obj_t *big_button(lv_obj_t *parent, const char *text, lv_event_cb_t cb, void *data, int x, int y, int w, int h, bool strong);
+static lv_obj_t *sheet(lv_obj_t *screen, lv_obj_t **cover, int w, int h, const char *title);
 
 /* ---- 대시보드 ---- */
 
@@ -262,6 +274,7 @@ static void close_sheets(void)
     show(s_feed_sheet, false);
     show(s_diaper_sheet, false);
     show(s_confirm_sheet, false);
+    show(s_edit_sheet, false);
 }
 
 /* 맨 위 알림 줄. undo 면 [취소] 버튼이 붙는다 */
@@ -269,6 +282,8 @@ static void notice(const char *text, bool warn, bool undo, uint32_t ms)
 {
     set_text(s_notice_text, text);
     lv_obj_set_style_text_color(s_notice_text, lv_color_hex(warn ? C_WARN : C_STRONG), 0);
+    set_text(s_day_msg, text);       /* 오늘 기록 화면에서도 보이게 */
+    lv_obj_set_style_text_color(s_day_msg, lv_color_hex(warn ? C_WARN : C_ACCENT), 0);
     show(s_undo_btn, undo);
     show(s_notice, true);
     s_notice_until = lv_tick_get() + ms;
@@ -283,7 +298,7 @@ static void record(const care_action_t *action)
     close_sheets();
     care_do(action);
     s_busy = true;
-    notice(action->kind == ACT_UNDO ? "취소하는 중…" : "저장하는 중…", false, false, 60000);
+    notice(action->kind == ACT_UNDO ? "취소하는 중…" : action->kind == ACT_DELETE ? "지우는 중…" : "저장하는 중…", false, false, 60000);
 }
 
 static void ask_confirm(const care_action_t *adding, const care_action_t *existing)
@@ -313,9 +328,19 @@ static void poll_record(lv_timer_t *timer)
         }
         s_busy = false;
         bool undo = r.action.kind == ACT_UNDO;
+        bool edit = r.action.kind == ACT_EDIT, delete = r.action.kind == ACT_DELETE;
         char what[80], text[120];
-        ui_sound(r.status != ACTION_SAVED ? UI_SOUND_ERROR : undo ? UI_SOUND_CANCEL : UI_SOUND_SAVE);
-        if (r.status == ACTION_SAVED && undo) {
+        ui_sound(r.status != ACTION_SAVED ? UI_SOUND_ERROR : undo || delete ? UI_SOUND_CANCEL : UI_SOUND_SAVE);
+        if (edit || delete) {
+            /* 고치기·지우기: 되돌리기 버튼은 없다(지우기는 누르기 전에 한 번 더 묻는다) */
+            if (r.status == ACTION_SAVED) {
+                notice(edit ? "고쳤어요" : "지웠어요", false, false, NOTICE_MS);
+            } else if (r.status == ACTION_NOT_FOUND) {
+                notice("그 기록을 못 찾았어요", true, false, NOTICE_MS);
+            } else {
+                notice(edit ? "고치지 못했어요. 다시 해 보세요" : "지우지 못했어요. 다시 해 보세요", true, false, NOTICE_MS);
+            }
+        } else if (r.status == ACTION_SAVED && undo) {
             s_happy_until = 0;
             notice("취소했어요", false, false, NOTICE_MS);
         } else if (r.status == ACTION_SAVED) {
@@ -343,6 +368,7 @@ static void poll_record(lv_timer_t *timer)
     if (s_notice_until && (int32_t)(now - s_notice_until) >= 0) {
         s_notice_until = s_undo_until = 0;
         show(s_notice, false);
+        set_text(s_day_msg, "");
     }
 }
 
@@ -505,9 +531,9 @@ static void confirm_no(lv_event_t *e)
 }
 
 /* 화면을 덮는 창: 어두운 바탕 + 가운데 판. 바탕이 뒤의 터치를 막는다 */
-static lv_obj_t *sheet(lv_obj_t **cover, int w, int h, const char *title)
+static lv_obj_t *sheet(lv_obj_t *screen, lv_obj_t **cover, int w, int h, const char *title)
 {
-    *cover = lv_obj_create(s_home);
+    *cover = lv_obj_create(screen);
     lv_obj_set_size(*cover, W, H);
     lv_obj_set_pos(*cover, 0, 0);
     lv_obj_set_style_bg_color(*cover, lv_color_hex(0x000000), 0);
@@ -539,7 +565,7 @@ static lv_obj_t *big_button(lv_obj_t *parent, const char *text, lv_event_cb_t cb
 static void build_record(void)
 {
     /* 수유 */
-    lv_obj_t *p = sheet(&s_feed_sheet, 1120, 600, "수유량(완성량) · 지금");
+    lv_obj_t *p = sheet(s_home, &s_feed_sheet, 1120, 600, "수유량(완성량) · 지금");
     s_amount_row = lv_obj_create(p);
     lv_obj_remove_style_all(s_amount_row);
     lv_obj_set_pos(s_amount_row, 32, 76);
@@ -566,14 +592,14 @@ static void build_record(void)
     big_button(p, "지금 저장", feed_save, (void *)(intptr_t)0, 768, 444, 320, 124, true);
 
     /* 기저귀 */
-    p = sheet(&s_diaper_sheet, 960, 420, "기저귀 · 지금");
+    p = sheet(s_home, &s_diaper_sheet, 960, 420, "기저귀 · 지금");
     big_button(p, "소변", diaper_save, (void *)(intptr_t)DIAPER_PEE, 32, 84, 286, 170, true);
     big_button(p, "대변", diaper_save, (void *)(intptr_t)DIAPER_POO, 337, 84, 286, 170, true);
     big_button(p, "둘 다", diaper_save, (void *)(intptr_t)DIAPER_BOTH, 642, 84, 286, 170, true);
     big_button(p, "닫기", sheet_close_clicked, NULL, 32, 284, 200, 104, false);
 
     /* 비슷한 기록 확인 */
-    p = sheet(&s_confirm_sheet, 960, 440, "확인");
+    p = sheet(s_home, &s_confirm_sheet, 960, 440, "확인");
     s_confirm_text = label(p, F.text, C_TEXT, "");
     lv_obj_set_pos(s_confirm_text, 32, 84);
     lv_obj_set_width(s_confirm_text, 896);
@@ -999,24 +1025,202 @@ static void swiped(lv_event_t *e)
     if (on == s_home && dir == LV_DIR_LEFT && !sheet_open) {
         lv_indev_wait_release(indev);   /* 민 손가락이 칸을 누른 것으로 치지 않게 */
         open_day(NULL);
-    } else if (on == s_day && dir == LV_DIR_RIGHT) {
+    } else if (on == s_day && dir == LV_DIR_RIGHT && lv_obj_has_flag(s_edit_sheet, LV_OBJ_FLAG_HIDDEN)) {
         lv_indev_wait_release(indev);
         close_day(NULL);
     }
 }
 
+/* ---- 기록 고치기: 오늘 기록의 줄을 누르면 열린다 ----
+ *   수유 200ml
+ *   시각  [-10분] [-1분]  14:32  [+1분] [+10분]
+ *   끝    [-10분] [-1분]  15:10  [+1분] [+10분]      (끝이 있는 기록만)
+ *   양    [-10] [-30 브레짜] 200ml [+30 브레짜] [+10]  (수유만)   /  [소변] [대변] [둘 다] (기저귀만)
+ *   [닫기]            [지우기]            [저장]
+ * 웹앱의 고치는 창(late-entry.js 의 openEdit)과 같은 서버 함수(care_update_event, care_cancel_event)를 쓴다. */
+
+static void show_edit(void)
+{
+    char text[160], when[24];
+    time_t now = time(NULL);
+    care_describe_row(&s_edit, now, when, sizeof(when), text, sizeof(text));
+    set_text(s_edit_title, text);
+    care_clock_on(s_edit.at, now, false, when, sizeof(when));
+    set_text(s_edit_start, when);
+    show(s_edit_end_row, s_edit.ended_at != 0);
+    if (s_edit.ended_at) {
+        care_clock_on(s_edit.ended_at, now, false, when, sizeof(when));
+        set_text(s_edit_end, when);
+    }
+    bool feed = !strcmp(s_edit.kind, "feed"), diaper = !strcmp(s_edit.kind, "diaper");
+    show(s_edit_amount_row, feed);
+    show(s_edit_diaper_row, diaper);
+    /* 끝 시각 줄이 없으면 그 자리로 올린다 */
+    lv_obj_set_y(s_edit_amount_row, s_edit.ended_at ? 316 : 200);
+    lv_obj_set_y(s_edit_diaper_row, s_edit.ended_at ? 316 : 200);
+    if (feed) {
+        int water = care_water_for(s_edit.ml);
+        lv_label_set_text_fmt(s_edit_amount, "%dml", s_edit.ml);
+        if (water) {
+            snprintf(text, sizeof(text), "브레짜 %d", water);
+        } else {
+            snprintf(text, sizeof(text), "브레짜 칸 아님");
+        }
+        set_text(s_edit_machine, text);
+    }
+    for (int type = DIAPER_PEE; type <= DIAPER_BOTH; type++) {
+        lv_obj_set_style_border_color(s_edit_diaper[type], lv_color_hex(type == (int)s_edit.diaper ? C_ACCENT : C_LINE), 0);
+    }
+    set_text(lv_obj_get_child(s_edit_delete, 0), lv_tick_get() < s_delete_armed_until ? "한 번 더 누르면 지워요" : "지우기");
+}
+
+static void row_clicked(lv_event_t *e)
+{
+    int index = (int)(intptr_t)lv_event_get_user_data(e);
+    if (s_busy || index < 0 || index >= s_event_count || !s_events[index].id[0]) {
+        return;
+    }
+    ui_sound(UI_SOUND_TAP);
+    s_edit = s_events[index];
+    s_delete_armed_until = 0;
+    show_edit();
+    show(s_edit_sheet, true);
+}
+
+/* 시각 옮기기. data: 분(±1, ±10)에 끝 시각이면 1000 을 더한 값. 미래로는 못 가고, 끝은 시작보다 앞설 수 없다 */
+static void edit_time_clicked(lv_event_t *e)
+{
+    int data = (int)(intptr_t)lv_event_get_user_data(e);
+    bool end = data > 500 || data < -500 ? true : false;
+    int minutes = end ? (data > 0 ? data - 1000 : data + 1000) : data;
+    time_t now = time(NULL);
+    time_t *target = end ? &s_edit.ended_at : &s_edit.at;
+    time_t moved = *target + minutes * 60;
+    if (moved > now) {
+        moved = now;
+    }
+    if (end && moved < s_edit.at) {
+        moved = s_edit.at;
+    }
+    if (!end && s_edit.ended_at && moved > s_edit.ended_at) {
+        moved = s_edit.ended_at;
+    }
+    *target = moved;
+    ui_sound(UI_SOUND_TAP);
+    show_edit();
+}
+
+static void edit_amount_clicked(lv_event_t *e)
+{
+    int step = (int)(intptr_t)lv_event_get_user_data(e);
+    s_edit.ml = care_clamp_amount(step == 30 || step == -30 ? care_step_machine(s_edit.ml, step) : s_edit.ml + step);
+    ui_sound(UI_SOUND_TAP);
+    show_edit();
+}
+
+static void edit_diaper_clicked(lv_event_t *e)
+{
+    s_edit.diaper = (care_diaper_t)(intptr_t)lv_event_get_user_data(e);
+    ui_sound(UI_SOUND_TAP);
+    show_edit();
+}
+
+static void edit_save(lv_event_t *e)
+{
+    care_action_t action = { .kind = ACT_EDIT, .at = s_edit.at, .ended_at = s_edit.ended_at, .ml = s_edit.ml, .diaper = s_edit.diaper,
+                             .of = !strcmp(s_edit.kind, "feed") ? ACT_FEED : !strcmp(s_edit.kind, "diaper") ? ACT_DIAPER
+                                   : !strcmp(s_edit.kind, "sleep") ? ACT_SLEEP_START : ACT_NONE };
+    snprintf(action.id, sizeof(action.id), "%s", s_edit.id);
+    record(&action);
+}
+
+/* 지우기는 되돌릴 수 없어서 두 번 눌러야 한다(3초 안에) */
+static void edit_delete(lv_event_t *e)
+{
+    if (lv_tick_get() >= s_delete_armed_until) {
+        s_delete_armed_until = lv_tick_get() + 3000;
+        ui_sound(UI_SOUND_TAP);
+        show_edit();
+        return;
+    }
+    care_action_t action = { .kind = ACT_DELETE };
+    snprintf(action.id, sizeof(action.id), "%s", s_edit.id);
+    record(&action);
+}
+
+/* 한 줄: 이름표 + [-10분][-1분] 값 [+1분][+10분]. base 는 끝 시각 줄이면 1000 */
+static lv_obj_t *time_row(lv_obj_t *parent, const char *name, int y, int base, lv_obj_t **value)
+{
+    lv_obj_t *row = lv_obj_create(parent);
+    lv_obj_remove_style_all(row);
+    lv_obj_set_pos(row, 0, y);
+    lv_obj_set_size(row, 1120, 104);
+    lv_obj_remove_flag(row, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_align(label(row, F.text, C_DIM, name), LV_ALIGN_LEFT_MID, 32, 0);
+    big_button(row, "-10분", edit_time_clicked, (void *)(intptr_t)(base ? -10 - base : -10), 150, 0, 170, 104, false);
+    big_button(row, "-1분", edit_time_clicked, (void *)(intptr_t)(base ? -1 - base : -1), 336, 0, 150, 104, false);
+    big_button(row, "+1분", edit_time_clicked, (void *)(intptr_t)(base + 1), 752, 0, 150, 104, false);
+    big_button(row, "+10분", edit_time_clicked, (void *)(intptr_t)(base + 10), 918, 0, 170, 104, false);
+    *value = label(row, F.title, C_STRONG, "");
+    lv_obj_align(*value, LV_ALIGN_CENTER, 59, 0);
+    return row;
+}
+
+static void build_edit(void)
+{
+    lv_obj_t *p = sheet(s_day, &s_edit_sheet, 1120, 660, "기록 고치기");
+    s_edit_title = label(p, F.title, C_STRONG, "");
+    lv_obj_set_pos(s_edit_title, 200, 14);
+    lv_obj_set_width(s_edit_title, 880);
+    lv_label_set_long_mode(s_edit_title, LV_LABEL_LONG_MODE_DOTS);
+
+    time_row(p, "시각", 84, 0, &s_edit_start);
+    s_edit_end_row = time_row(p, "끝", 200, 1000, &s_edit_end);
+
+    /* 수유량 */
+    s_edit_amount_row = lv_obj_create(p);
+    lv_obj_remove_style_all(s_edit_amount_row);
+    lv_obj_set_pos(s_edit_amount_row, 0, 316);
+    lv_obj_set_size(s_edit_amount_row, 1120, 104);
+    lv_obj_remove_flag(s_edit_amount_row, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_align(label(s_edit_amount_row, F.text, C_DIM, "양"), LV_ALIGN_LEFT_MID, 32, 0);
+    big_button(s_edit_amount_row, "-10", edit_amount_clicked, (void *)(intptr_t)-10, 150, 0, 150, 104, false);
+    big_button(s_edit_amount_row, "-30", edit_amount_clicked, (void *)(intptr_t)-30, 316, 0, 170, 104, false);
+    big_button(s_edit_amount_row, "+30", edit_amount_clicked, (void *)(intptr_t)30, 752, 0, 170, 104, false);
+    big_button(s_edit_amount_row, "+10", edit_amount_clicked, (void *)(intptr_t)10, 938, 0, 150, 104, false);
+    s_edit_amount = label(s_edit_amount_row, F.title, C_STRONG, "");
+    lv_obj_align(s_edit_amount, LV_ALIGN_CENTER, 59, -18);
+    s_edit_machine = label(s_edit_amount_row, F.small, C_DIM, "");
+    lv_obj_align(s_edit_machine, LV_ALIGN_CENTER, 59, 26);
+
+    /* 기저귀 종류 */
+    s_edit_diaper_row = lv_obj_create(p);
+    lv_obj_remove_style_all(s_edit_diaper_row);
+    lv_obj_set_pos(s_edit_diaper_row, 0, 316);
+    lv_obj_set_size(s_edit_diaper_row, 1120, 104);
+    lv_obj_remove_flag(s_edit_diaper_row, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_align(label(s_edit_diaper_row, F.text, C_DIM, "종류"), LV_ALIGN_LEFT_MID, 32, 0);
+    s_edit_diaper[DIAPER_PEE] = big_button(s_edit_diaper_row, "소변", edit_diaper_clicked, (void *)(intptr_t)DIAPER_PEE, 150, 0, 300, 104, false);
+    s_edit_diaper[DIAPER_POO] = big_button(s_edit_diaper_row, "대변", edit_diaper_clicked, (void *)(intptr_t)DIAPER_POO, 469, 0, 300, 104, false);
+    s_edit_diaper[DIAPER_BOTH] = big_button(s_edit_diaper_row, "둘 다", edit_diaper_clicked, (void *)(intptr_t)DIAPER_BOTH, 788, 0, 300, 104, false);
+
+    big_button(p, "닫기", sheet_close_clicked, NULL, 32, 520, 200, 108, false);
+    s_edit_delete = big_button(p, "지우기", edit_delete, NULL, 300, 520, 420, 108, false);
+    lv_obj_set_style_text_color(lv_obj_get_child(s_edit_delete, 0), lv_color_hex(C_WARN), 0);
+    big_button(p, "저장", edit_save, NULL, 788, 520, 300, 108, true);
+}
+
 static void update_day(void)
 {
-    static care_event_t events[CARE_MAX_EVENTS];
-    static int count = -1;            /* -1: 아직 못 읽음 */
     static uint32_t seen;
     static int shown_minute = -1;
 
     time_t now = time(NULL);
-    int got = care_copy_timeline(events, CARE_MAX_EVENTS, &seen);
+    int got = care_copy_timeline(s_events, CARE_MAX_EVENTS, &seen);
     if (got >= 0) {
-        count = got;
+        s_event_count = got;
     }
+    const int count = s_event_count;
     /* 받은 것이 바뀌었거나 분이 바뀌면 다시 그린다("자는 중 1시간 20분"이 늘어난다) */
     int minute = (int)(now / 60);
     if (got < 0 && minute == shown_minute) {
@@ -1041,11 +1245,14 @@ static void update_day(void)
     }
     for (int i = 0; i < count; i++) {
         char when[24], what[160];
-        care_describe_row(&events[i], now, when, sizeof(when), what, sizeof(what));
+        care_describe_row(&s_events[i], now, when, sizeof(when), what, sizeof(what));
         lv_obj_t *row = lv_obj_create(s_day_list);
         lv_obj_remove_style_all(row);
         lv_obj_set_size(row, lv_pct(100), 60);
-        lv_obj_remove_flag(row, LV_OBJ_FLAG_CLICKABLE);
+        /* 줄을 누르면 그 기록을 고치는 창이 열린다 */
+        lv_obj_set_style_bg_color(row, lv_color_hex(C_BTN), LV_STATE_PRESSED);
+        lv_obj_set_style_bg_opa(row, LV_OPA_COVER, LV_STATE_PRESSED);
+        lv_obj_add_event_cb(row, row_clicked, LV_EVENT_CLICKED, (void *)(intptr_t)i);
         lv_obj_set_style_border_color(row, lv_color_hex(C_LINE), 0);
         lv_obj_set_style_border_width(row, 1, 0);
         lv_obj_set_style_border_side(row, LV_BORDER_SIDE_BOTTOM, 0);
@@ -1072,6 +1279,8 @@ static void build_day(void)
     lv_obj_set_pos(s_day_title, 28, 20);
     s_day_total = label(s_day, F.text, C_TEXT, "");
     lv_obj_align(s_day_total, LV_ALIGN_TOP_RIGHT, -260, 30);
+    s_day_msg = label(s_day, F.text, C_ACCENT, "");          /* "고쳤어요", "지웠어요" */
+    lv_obj_set_pos(s_day_msg, 420, 30);
     lv_obj_t *back = button(s_day, "대시보드", close_day, 210, 64);
     lv_obj_align(back, LV_ALIGN_TOP_RIGHT, -24, 16);
 
@@ -1081,6 +1290,7 @@ static void build_day(void)
     lv_obj_set_flex_flow(s_day_list, LV_FLEX_FLOW_COLUMN);
     lv_obj_remove_flag(s_day_list, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_add_flag(s_day_list, LV_OBJ_FLAG_GESTURE_BUBBLE);
+    build_edit();
 }
 
 /* ---- 새 펌웨어 받는 중 ---- */
@@ -1148,7 +1358,11 @@ static void tick(lv_timer_t *timer)
     }
     if (now == s_day) {
         update_day();
+        if (!lv_obj_has_flag(s_edit_sheet, LV_OBJ_FLAG_HIDDEN)) {
+            show_edit();     /* [지우기] 글이 3초 뒤 원래대로 돌아온다 */
+        }
         if (lv_display_get_inactive_time(NULL) > DAY_IDLE_MS) {
+            close_sheets();
             close_day(NULL);
         }
     }

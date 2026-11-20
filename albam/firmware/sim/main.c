@@ -307,12 +307,23 @@ int main(int argc, char **argv)
             *e = (care_event_t){ .at = AGO(ROWS[i].at), .ended_at = ROWS[i].end ? AGO(ROWS[i].end) : 0, .ml = ROWS[i].ml,
                                  .diaper = ROWS[i].diaper, .has_value = ROWS[i].value != 0, .value = ROWS[i].value };
             snprintf(e->kind, sizeof(e->kind), "%s", ROWS[i].kind);
+            snprintf(e->id, sizeof(e->id), "id-%d", (int)i);
             snprintf(e->note, sizeof(e->note), "%s", ROWS[i].note ? ROWS[i].note : "");
         }
     }
     tap(590, 48);
     run(1500);
     snprintf(name, sizeof(name), "%s/15-day", out); save(name);
+    /* 줄을 눌러 고치기: 수유(맨 아래에서 세 번째 줄), 그리고 잠(끝이 있는 줄) */
+    tap(600, 524);
+    tap(1000, 416);                /* +10분 은 미래라 안 움직임, 대신 양 +10 */
+    snprintf(name, sizeof(name), "%s/16-edit-feed", out); save(name);
+    tap(500, 600);                 /* 지우기 한 번: "한 번 더 누르면 지워요" */
+    snprintf(name, sizeof(name), "%s/17-edit-delete-armed", out); save(name);
+    tap(130, 600);                 /* 닫기 */
+    tap(600, 382);                 /* 잠 50분 줄 */
+    snprintf(name, sizeof(name), "%s/18-edit-sleep", out); save(name);
+    tap(130, 600);
     tap(1150, 48);                 /* 대시보드로 */
     run(1500);
 

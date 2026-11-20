@@ -411,6 +411,7 @@ static int fetch_timeline(void)
         care_event_t *e = &fresh[count++];
         memset(e, 0, sizeof(*e));
         e->at = at;
+        text_of(item, "id", e->id, sizeof(e->id));
         e->ended_at = time_of(item, "ended_at");
         text_of(item, "kind", e->kind, sizeof(e->kind));
         e->ml = int_of(item, "ml", -1);
@@ -529,7 +530,29 @@ static void do_action(care_action_result_t *result)
     cJSON *root = NULL;
     care_action_kind_t what = a->kind == ACT_UNDO ? a->undo_of : a->kind;
 
-    if (a->kind == ACT_UNDO && what == ACT_FEED_FINISH) {          /* 다시 먹이는 중으로 */
+    if (a->kind == ACT_DELETE) {                                   /* 있는 기록 지우기(서버는 취소 표시만 한다) */
+        path = "/rest/v1/rpc/care_cancel_event";
+        root = cJSON_CreateObject();
+        cJSON_AddStringToObject(root, "p_id", a->id);
+    } else if (a->kind == ACT_EDIT) {                              /* 있는 기록 고치기: 보낸 것만 바뀐다 */
+        char when[32];
+        path = "/rest/v1/rpc/care_update_event";
+        root = cJSON_CreateObject();
+        cJSON *p = cJSON_AddObjectToObject(root, "p");
+        cJSON_AddStringToObject(p, "id", a->id);
+        iso_time(a->at, when, sizeof(when));
+        cJSON_AddStringToObject(p, "occurred_at", when);
+        if (a->ended_at) {
+            iso_time(a->ended_at, when, sizeof(when));
+            cJSON_AddStringToObject(p, "ended_at", when);
+        }
+        if (a->of == ACT_FEED && a->ml > 0) {
+            cJSON_AddNumberToObject(p, "amount_ml", a->ml);
+        }
+        if (a->of == ACT_DIAPER && a->diaper != DIAPER_NONE) {
+            cJSON_AddStringToObject(cJSON_AddObjectToObject(p, "detail"), "type", DIAPER[a->diaper]);
+        }
+    } else if (a->kind == ACT_UNDO && what == ACT_FEED_FINISH) {   /* 다시 먹이는 중으로 */
         path = "/rest/v1/rpc/care_update_event";
         root = feed_end_body(a->id, 0, true);
     } else if (a->kind == ACT_UNDO && what == ACT_SLEEP_END) {     /* 다시 자는 중으로 */

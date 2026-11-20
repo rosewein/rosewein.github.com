@@ -71,10 +71,14 @@ typedef enum {
     ACT_SLEEP_START,   /* 잠들었어요 */
     ACT_SLEEP_END,     /* 깼어요: 자는 중인 잠에 끝을 넣는다 */
     ACT_UNDO,          /* 방금 한 것 되돌리기(undo_of 에 무엇을) */
+    ACT_EDIT,          /* 있는 기록 고치기: 시각(at), 끝(ended_at), 수유량(ml), 기저귀 종류(diaper). of 에 무슨 기록인지 */
+    ACT_DELETE,        /* 있는 기록 지우기 */
 } care_action_kind_t;
 
 typedef struct {
     care_action_kind_t kind, undo_of;
+    care_action_kind_t of;  /* ACT_EDIT: ACT_FEED·ACT_DIAPER·ACT_SLEEP_START 중 하나, 그 밖의 종류면 ACT_NONE */
+    time_t ended_at;        /* ACT_EDIT: 끝 시각(끝이 없는 기록이면 0) */
     char id[CARE_ID_LEN];   /* 새 기록이면 비워 두면 만들어 준다 */
     time_t at;              /* 일어난 시각 */
     time_t started_at;      /* 다 먹음·깼어요: 시작한 시각(걸린 시간을 보여 주려고) */
@@ -94,6 +98,7 @@ void care_duration(long seconds, char *out, size_t len);
 
 /* care_timeline() 의 기록 하나 */
 typedef struct {
+    char id[CARE_ID_LEN];
     time_t at, ended_at;
     char kind[20];          /* feed, diaper, sleep, bath, temperature … */
     int ml;                 /* 없으면 -1 */
