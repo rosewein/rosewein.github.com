@@ -47,6 +47,9 @@
 
 ## 저장소 구성
 
+이어서 작업할 때는 [HANDOFF.md](HANDOFF.md)(인수인계 메모)를 먼저 읽어 주세요.
+
+
 ```
 seoul-layer-map/
 ├─ index.html   지도(데이터가 들어 있는 한 파일)
