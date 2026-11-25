@@ -1,0 +1,124 @@
+import json, os, sys
+B = os.path.dirname(os.path.abspath(__file__))
+topo = json.load(open(f"{B}/emd_topo.json"))
+obj = topo["objects"].pop("seoul_neighborhoods_geo")
+topo["objects"]["emd"] = obj
+trams = json.load(open(f"{B}/tram.json"))
+years = json.load(open(f"{B}/years.json")) if os.path.exists(f"{B}/years.json") else {}
+gu_periods = json.load(open(f"{B}/gu_periods.json")) if os.path.exists(f"{B}/gu_periods.json") else []
+extra_events = json.load(open(f"{B}/events_extra.json")) if os.path.exists(f"{B}/events_extra.json") else []
+method_html = open(f"{B}/method.html").read() if os.path.exists(f"{B}/method.html") else ""
+
+GU = {"11110":"종로구","11140":"중구","11170":"용산구","11200":"성동구","11215":"광진구","11230":"동대문구","11260":"중랑구",
+"11290":"성북구","11305":"강북구","11320":"도봉구","11350":"노원구","11380":"은평구","11410":"서대문구","11440":"마포구",
+"11470":"양천구","11500":"강서구","11530":"구로구","11545":"금천구","11560":"영등포구","11590":"동작구","11620":"관악구",
+"11650":"서초구","11680":"강남구","11710":"송파구","11740":"강동구"}
+
+missing = []
+for g in obj["geometries"]:
+    p = g["properties"]
+    key = f'{GU[p["gu"]]}/{p["nm"]}'
+    rec = years.get(key)
+    if rec is None:
+        missing.append(key); p["y"] = 1963; p["yc"] = "미확인(기본값)"
+    else:
+        p["y"] = int(rec["y"]);
+        if rec.get("note"): p["yn"] = rec["note"]
+        if rec.get("conf"): p["yc"] = rec["conf"]
+print("missing years:", len(missing), missing[:40], file=sys.stderr)
+
+eras = [
+  {"year":1914, "label":"1914 부제 실시(축소)", "official":"36.18"},
+  {"year":1936, "label":"1936 경성부 확장", "official":"133.94"},
+  {"year":1949, "label":"1949 서울특별시 확장", "official":"268.35"},
+  {"year":1963, "label":"1963 대확장", "official":"613.04"},
+  {"year":1973, "label":"1973 고양 신도면 일부 편입", "official":"627.06"},
+  {"year":1995, "label":"현재(1995 이후)", "official":"605.2"},
+]
+
+events = []
+import re as _re
+def short(lbl, y):
+    m=_re.match(r'^(\d{4}(?:\.\d{1,2}){0,2})', lbl or "")
+    return m.group(1) if m else str(y)
+seen={}
+for l in trams["lines"]:
+    kind = "kido" if l["op"] == "기동차" else "tram"
+    key=(l["line"], l["openLabel"])
+    conf = None if l["conf"] in ("확인",) else l["conf"]
+    if key in seen:
+        seen[key]["text"] = seen[key]["text"].replace(" 개통", "") + " · " + l["name"] + " 개통"; continue
+    ev={"year": l["open"], "date": short(l["openLabel"], l["open"]), "kind": kind, "text": f'{l["line"]} {l["name"]} 개통', "conf": conf, "sort": 2}
+    seen[key]=ev; events.append(ev)
+closes={}
+for l in trams["lines"]:
+    if l["close"] == 1968: continue
+    closes.setdefault((l["close"], l["op"]), []).append(l)
+for (y,op),ls in sorted(closes.items()):
+    names=[]
+    for l in ls:
+        if l["line"] not in names: names.append(l["line"])
+    kind="kido" if op=="기동차" else "tram"
+    if y==1904: txt=f'{", ".join(names)} 폐지'; conf="연도 추정"
+    elif y==1950: txt=f'{", ".join(names)} 폐선(6·25 이후, 시기 미상)'; conf="시기 미확인"
+    elif y==1966 and op=="기동차": txt="경성궤도 기동차(뚝섬선·광장리선) 운행 종료"; conf=None
+    elif y==1966: txt=f'{", ".join(names)} 운행 중단(세종로 지하도 공사 뒤 재개 안 함)'; conf=None
+    else: txt=f'{", ".join(names)} 폐지'; conf=None
+    events.append({"year": y, "date": str(y), "kind": kind, "text": txt, "conf": conf, "sort": 3})
+events.append({"year": 1968, "date": "1968.11.30", "kind": "tram", "text": "서울 전차 전 노선 운행 정지", "sort": 3})
+events += extra_events
+if os.path.exists(f"{B}/metro_events.json"): events += json.load(open(f"{B}/metro_events.json"))
+if os.path.exists(f"{B}/rail_events.json"): events += json.load(open(f"{B}/rail_events.json"))
+if os.path.exists(f"{B}/bus_events.json"): events += json.load(open(f"{B}/bus_events.json"))
+
+data = {
+  "topo": topo, "trams": trams, "eras": eras, "guPeriods": gu_periods, "events": events,
+  "guNames": GU, "riverNorth": ["11440","11170","11200","11215"],
+  "riverSouth": ["11500","11560","11590","11650","11680","11710","11740"],
+  "methodHtml": method_html, "startYear": 1920,
+  "rail": json.load(open(f"{B}/rail.json")) if os.path.exists(f"{B}/rail.json") else None,
+  "metro": json.load(open(f"{B}/metro.json")) if os.path.exists(f"{B}/metro.json") else None,
+  "bus": json.load(open(f"{B}/bus.json")) if os.path.exists(f"{B}/bus.json") else None,
+  "bus2026": json.load(open(f"{B}/bus2026.json")) if os.path.exists(f"{B}/bus2026.json") else None,
+}
+# 버스: 2004년 7월 개편 이후 해마다 그릴 노선(2026년 노선망에서 그 해 뒤에 생긴 노선을 뺀다)
+OLD_FROM = 1998
+if data["bus2026"] and os.path.exists(f"{B}/route_years.json"):
+    ry = json.load(open(f"{B}/route_years.json"))
+    nums = data["bus2026"]["nums"]
+    for n in nums:
+        if n.get("dead"): continue
+        r = ry.get(n["no"], {})
+        n["oy"] = r.get("oy"); n["kind"] = r.get("kind"); n["src"] = r.get("src")
+    # 통합으로 생긴 계승 노선: 통합 전 노선들이 모두 폐선 노선으로 복원됐으면 통합한 해부터 그린다(겹쳐 세지 않게)
+    deadby = {}
+    for n in nums:
+        if n.get("dead"): deadby.setdefault(n["no"], []).append(n)
+    merged = []
+    for n in nums:
+        if n.get("dead") or n.get("kind") != "계승": continue
+        m = _re.search(r"([0-9A-Z·]+)번 (\d{4}) 통합", n.get("src") or "")
+        if not m: continue
+        preds, Y = m.group(1).split("·"), int(m.group(2))
+        hits = [max(deadby.get(p, []), key=lambda d: d["cy"], default=None) for p in preds]
+        if all(h and abs(h["cy"] - (Y + 0.5)) <= 1.5 for h in hits):
+            n["oy"] = Y; n["src"] += f" — 통합 전 노선을 따로 그려서 {Y}년부터"
+            merged.append((n["no"], Y))
+    print("merger-adjusted:", merged, file=sys.stderr)
+    grp = lambda no: _re.sub(r"(출근|퇴근|구산출|구산퇴|홍대출|홍대퇴|[AB])$", "", no)
+    def old_active(r, y):
+        oy = r.get("oy") if (r.get("oy") or 0) <= 2004 else None
+        return (oy is None or oy <= y) and (r["live"] or (r.get("cy") is not None and r["cy"] > y))
+    drawn = {}
+    for y in range(OLD_FROM, 2004):
+        drawn[y] = len({r["no"] for r in data["bus"]["routes"] if old_active(r, y)})
+    for y in range(2004, 2027):
+        live = {grp(n["no"]) for n in nums if not n.get("dead") and n["oy"] and n["oy"] <= y}
+        dead_n = sum(1 for n in nums if n.get("dead") and n["oy"] <= y + 0.5 < n["cy"])
+        drawn[y] = len(live) + dead_n
+    data["busDrawn"] = drawn; data["busOldFrom"] = OLD_FROM
+    print("bus drawn by year:", drawn, file=sys.stderr)
+tpl = open(f"{B}/template.html").read()
+out = tpl.replace("/*__DATA__*/", "const DATA = " + json.dumps(data, ensure_ascii=False, separators=(",", ":")) + ";")
+open(f"{B}/seoul-tram-boundary.html", "w").write(out)
+print("wrote", len(out), "bytes", file=sys.stderr)

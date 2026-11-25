@@ -1,0 +1,751 @@
+<title>서울 전차·시역 연대지도</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hahmlet:wght@300;500;700&family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: 지도가 화면 대부분을 차지하는 무대, 그 아래 고정 연도 띠(슬라이더), 그 아래 연표·메모. 옛 측량도의 종이·먹·철도 붉은선을 차용 */
+:root {
+  --paper: #e8ebe4;
+  --paper-2: #dde2da;
+  --ink: #1e2420;
+  --ink-2: #4d5852;
+  --rule: #b8c0b7;
+  --river: #9dbccd;
+  --tram: #b0252d;
+  --kido: #6b4f9a;
+  --area: #c8b36b;
+  --area-new: #b0812c;
+  --ring: #6e6b55;
+  --wall: #3d4842;
+  --gu: #5f6b62;
+  --focus: #1f6fb2;
+  --bus: #f2149a;
+  --rail: #2a2f2c;
+  --display: "Hahmlet", "Noto Serif KR", "AppleMyungjo", serif;
+  --body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #111714; --paper-2: #18201c; --ink: #e2e7e1; --ink-2: #a2ada5; --rule: #334039;
+    --river: #2b475a; --tram: #ff6a5c; --kido: #b796e6; --area: #7d6f3c; --area-new: #d0a648;
+    --ring: #9a9880; --wall: #c3ccc4; --gu: #8e9a91; --focus: #6fb2ec; --bus: #ff5cb8; --rail: #c9d1ca; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #111714; --paper-2: #18201c; --ink: #e2e7e1; --ink-2: #a2ada5; --rule: #334039;
+  --river: #2b475a; --tram: #ff6a5c; --kido: #b796e6; --area: #7d6f3c; --area-new: #d0a648;
+  --ring: #9a9880; --wall: #c3ccc4; --gu: #8e9a91; --focus: #6fb2ec; --bus: #ff5cb8; --rail: #c9d1ca; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--paper); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.55; }
+.wrap { max-width: 1080px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+header.top { padding-block: 18px 10px; display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 6px 20px; }
+h1 { font-family: var(--display); font-weight: 500; font-size: clamp(20px, 4.6vw, 28px); line-height: 1.2; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+.sub { color: var(--ink-2); font-size: 13px; margin: 2px 0 0; }
+
+.stage { position: relative; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); background: var(--paper-2); }
+#map { display: block; width: 100%; height: clamp(360px, 62vh, 700px); touch-action: none; cursor: grab; }
+#map:active { cursor: grabbing; }
+.yearplate { position: absolute; top: 10px; left: max(12px, env(safe-area-inset-left, 0px)); right: 96px; pointer-events: none; }
+.yearplate .y { font-family: var(--display); font-weight: 700; font-size: clamp(44px, 12vw, 84px); line-height: 0.9; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.yearplate .era { font-size: 12.5px; color: var(--ink-2); margin-top: 6px; letter-spacing: 0.02em; }
+.yearplate .stat { font-family: var(--mono); font-size: 12px; color: var(--ink-2); margin-top: 2px; font-variant-numeric: tabular-nums; }
+.camera { position: absolute; right: max(10px, env(safe-area-inset-right, 0px)); top: 10px; display: flex; flex-direction: column; gap: 6px; }
+.camera button { font: 500 12px var(--body); color: var(--ink); background: var(--paper); border: 1px solid var(--rule); border-radius: 4px; padding: 6px 9px; cursor: pointer; }
+.camera button[aria-pressed="true"] { border-color: var(--ink); }
+.camera button:focus-visible, .chip:focus-visible, .play:focus-visible, input[type=range]:focus-visible, .ev:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+.info { position: absolute; left: max(10px, env(safe-area-inset-left, 0px)); right: max(10px, env(safe-area-inset-right, 0px)); bottom: 10px; max-width: 420px; background: var(--paper); border: 1px solid var(--ink); border-radius: 4px; padding: 10px 12px; font-size: 13.5px; box-shadow: 0 2px 0 var(--rule); }
+.info b { font-weight: 600; }
+.info .meta { color: var(--ink-2); font-size: 12.5px; }
+.info .x { position: absolute; top: 4px; right: 6px; background: none; border: 0; color: var(--ink-2); font-size: 18px; cursor: pointer; padding: 2px 6px; }
+
+.timebar { position: sticky; bottom: 0; z-index: 5; background: var(--paper); border-bottom: 1px solid var(--rule); padding-bottom: env(safe-area-inset-bottom, 0px); }
+.timebar .wrap { padding-block: 10px 12px; display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; align-items: center; }
+.play { width: 42px; height: 42px; border-radius: 50%; border: 1.5px solid var(--ink); background: var(--paper); color: var(--ink); cursor: pointer; display: grid; place-items: center; grid-row: span 2; }
+.play svg { width: 16px; height: 16px; fill: currentColor; }
+.speed { grid-column: 1 / -1; display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--ink-2); }
+.speed span { margin-right: 4px; }
+.speed button { font: 500 12px var(--mono); color: var(--ink-2); background: transparent; border: 1px solid var(--rule); border-radius: 999px; padding: 3px 9px; min-height: 28px; cursor: pointer; }
+.speed button[aria-pressed="true"] { color: var(--paper); background: var(--ink); border-color: var(--ink); }
+.speed button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.track { position: relative; min-width: 0; }
+#ticks { display: block; width: 100%; height: 18px; }
+input[type=range] { width: 100%; margin: 0; accent-color: var(--tram); height: 24px; }
+.scale { position: relative; height: 15px; font-family: var(--mono); font-size: 11px; color: var(--ink-2); grid-column: 2; min-width: 0; }
+.scale span { position: absolute; top: 0; transform: translateX(-50%); white-space: nowrap; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 6px; padding-block: 12px 4px; }
+.chip { font: 500 13px var(--body); color: var(--ink-2); background: transparent; border: 1px solid var(--rule); border-radius: 999px; padding: 5px 12px 5px 9px; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; }
+.chip[aria-pressed="true"] { color: var(--ink); border-color: var(--ink); background: var(--paper-2); }
+.chip i { width: 14px; height: 0; border-top: 3px solid; display: inline-block; }
+.chip i.fill { height: 10px; border: 1px solid var(--ring); border-top-width: 1px; }
+
+main.notes { padding-block: 18px 40px; display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 28px; }
+@media (max-width: 760px) { main.notes { grid-template-columns: minmax(0, 1fr); } }
+h2 { font-family: var(--display); font-weight: 500; font-size: 19px; margin: 0 0 10px; }
+.log { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--rule); }
+.ev { display: grid; grid-template-columns: 74px 12px minmax(0, 1fr); gap: 0 8px; padding: 7px 4px; border-bottom: 1px solid var(--rule); cursor: pointer; font-size: 13.5px; align-items: baseline; }
+.ev:hover { background: var(--paper-2); }
+.ev .d { font-family: var(--mono); font-size: 12px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.ev .k { width: 9px; height: 9px; border-radius: 50%; display: inline-block; transform: translateY(1px); }
+.ev .k.tram { background: var(--tram); } .ev .k.kido { background: var(--kido); } .ev .k.area { background: var(--area-new); } .ev .k.gu { background: var(--gu); } .ev .k.bus { background: var(--bus); border-radius: 0; transform: translateY(1px) rotate(45deg) scale(.85); } .ev .k.rail { background: var(--rail); border-radius: 1px; }
+.ev.past { color: var(--ink); } .ev.future { color: var(--ink-2); opacity: .6; }
+.ev.now { background: var(--paper-2); box-shadow: inset 3px 0 0 var(--ink); }
+.ev .c { color: var(--ink-2); font-size: 12px; }
+.areas { width: 100%; border-collapse: collapse; font-size: 13.5px; margin-bottom: 18px; }
+.areas th, .areas td { text-align: left; padding: 6px 4px; border-bottom: 1px solid var(--rule); }
+.areas td.n { font-family: var(--mono); text-align: right; font-variant-numeric: tabular-nums; }
+.areas th { font-weight: 500; color: var(--ink-2); font-size: 12px; }
+.prose p { margin: 0 0 10px; max-width: 62ch; font-size: 14px; }
+.prose ul { margin: 0 0 12px; padding-left: 18px; font-size: 13.5px; }
+.prose a { color: var(--ink); }
+.small { font-size: 12.5px; color: var(--ink-2); }
+svg text { font-family: var(--body); }
+.rts { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0 4px; max-height: 120px; overflow-y: auto; }
+.rt { font: 500 12px var(--mono); padding: 2px 6px; border: 1px solid var(--bus); color: var(--ink); background: var(--paper); border-radius: 3px; cursor: pointer; }
+.rt:hover, .rt:focus-visible { background: var(--bus); color: var(--paper); outline: none; }
+.legend-bus { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12.5px; color: var(--ink-2); margin: 2px 0 0; }
+.legend-bus svg { vertical-align: -2px; margin-right: 4px; }
+#busChart { display: block; width: 100%; height: 150px; }
+@media (prefers-reduced-motion: reduce) { .pulse { animation: none !important; } }
+@keyframes pulse { 0% { stroke-opacity: .9 } 100% { stroke-opacity: 0 } }
+.pulse { animation: pulse 1.6s ease-out infinite; }
+</style>
+
+<header class="top wrap">
+  <div>
+    <h1>서울 전차·시역 연대지도</h1>
+    <p class="sub">1899년 경인선과 전차부터 지하철·버스까지, 경성부·서울시 경계와 구 체계가 바뀌어 온 순서대로</p>
+  </div>
+</header>
+
+<div class="stage">
+  <svg id="map" role="img" aria-label="서울 전차 노선과 시역 변화 지도"></svg>
+  <div class="yearplate" aria-live="polite">
+    <div class="y" id="yLabel">1899</div>
+    <div class="era" id="eraLabel"></div>
+    <div class="stat" id="statLabel"></div>
+  </div>
+  <div class="camera">
+    <button id="autoCam" type="button" aria-pressed="true" title="연도에 맞춰 화면 범위를 자동으로 조정">자동 시점</button>
+    <button id="viewCore" type="button" title="도성 일대로 확대">도심</button>
+    <button id="viewAll" type="button" title="현재 서울 전체">서울 전체</button>
+  </div>
+  <div class="info" id="info" hidden><button class="x" id="infoX" type="button" aria-label="닫기">×</button><div id="infoBody"></div></div>
+</div>
+
+<div class="timebar">
+  <div class="wrap">
+    <button class="play" id="play" type="button" aria-label="재생"><svg viewBox="0 0 16 16" id="playIcon"><path d="M4 2l10 6-10 6z"/></svg></button>
+    <div class="track">
+      <svg id="ticks" aria-hidden="true"></svg>
+      <input type="range" id="year" min="1899" max="2026" step="1" value="1899" aria-label="연도">
+    </div>
+    <div class="scale" id="scale"><span data-y="1899">1899</span><span data-y="1936">1936</span><span data-y="1963">1963</span><span data-y="1995">1995</span><span data-y="2026">2026</span></div>
+    <div class="speed" role="group" aria-label="재생 속도"><span>재생 속도</span><button type="button" data-speed="0.5" aria-pressed="false">0.5×</button><button type="button" data-speed="1" aria-pressed="true">1×</button><button type="button" data-speed="2" aria-pressed="false">2×</button><button type="button" data-speed="4" aria-pressed="false">4×</button></div>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="chips" role="group" aria-label="레이어">
+    <button class="chip" type="button" data-layer="rail" aria-pressed="true" id="railChip" hidden><i style="color:var(--rail);border-top-width:4px;border-top-style:double"></i>철도(국철)</button>
+    <button class="chip" type="button" data-layer="metro" aria-pressed="true" id="metroChip" hidden><i style="color:#00A84D;border-top-width:4px"></i>지하철·광역철도</button>
+    <button class="chip" type="button" data-layer="tram" aria-pressed="true"><i style="color:var(--tram)"></i>전차</button>
+    <button class="chip" type="button" data-layer="kido" aria-pressed="true"><i style="color:var(--kido)"></i>경성궤도 기동차</button>
+    <button class="chip" type="button" data-layer="area" aria-pressed="true"><i class="fill" style="background:var(--area)"></i>시역</button>
+    <button class="chip" type="button" data-layer="rings" aria-pressed="true"><i style="color:var(--ring);border-top-style:dashed;border-top-width:2px"></i>이전 경계</button>
+    <button class="chip" type="button" data-layer="gu" aria-pressed="true"><i style="color:var(--gu);border-top-width:1px"></i>구 경계</button>
+    <button class="chip" type="button" data-layer="wall" aria-pressed="true"><i style="color:var(--wall);border-top-style:dotted"></i>한양도성</button>
+    <button class="chip" type="button" data-layer="bus" aria-pressed="true" id="busChip" hidden><i style="color:var(--bus);border-top-width:2px"></i>버스</button>
+    <button class="chip" type="button" data-layer="dong" aria-pressed="false"><i style="color:var(--rule);border-top-width:1px"></i>현재 법정동</button>
+  </div>
+  <div class="legend-bus" id="busLegend" hidden>
+    <span><svg width="46" height="12" viewBox="0 0 46 12"><path d="M1,6H9" stroke="var(--bus)" stroke-width="1" stroke-opacity=".6"/><path d="M13,6H21" stroke="var(--bus)" stroke-width="2.2"/><path d="M25,6H33" stroke="var(--bus)" stroke-width="3.6"/><path d="M37,6H45" stroke="var(--bus)" stroke-width="6"/></svg>버스 노선망(마을버스 제외): 1998–2003년은 2004년 6월 노선에서 거꾸로 맞춤. 2004년부터는 2026년 11월 노선에 그 사이 없어진 노선 219개를 되살려 해마다 맞춤. 굵을수록 지나는 노선이 많음</span>
+    <span><svg width="20" height="12" viewBox="0 0 20 12"><path d="M1,6H19" stroke="var(--bus)" stroke-width="2.2"/></svg>새로 생긴 노선(3년 안)</span>
+    <span><svg width="20" height="12" viewBox="0 0 20 12"><path d="M1,6H19" stroke="var(--ink-2)" stroke-width="2.2" stroke-dasharray="5 4"/></svg>없어진 노선(3년 안)</span>
+    <span><svg width="20" height="12" viewBox="0 0 20 12"><path d="M1,6H19" stroke="var(--area-new)" stroke-width="2.2"/></svg>연장·단축·경로 변경(최근 3년)</span>
+  </div>
+  <p class="small" style="margin:2px 0 0">선로 형상 © OpenStreetMap contributors</p>
+</div>
+
+<main class="notes wrap">
+  <section>
+    <h2>연표</h2>
+    <p class="small" style="margin:0 0 8px">항목을 누르면 그 해로 이동합니다. 지도에서 선이나 땅을 누르면 개통일·편입 연도가 나옵니다.</p>
+    <ul class="log" id="log"></ul>
+  </section>
+  <section class="prose">
+    <h2>시역 면적</h2>
+    <table class="areas">
+      <thead><tr><th>시점</th><th style="text-align:right">공식 면적</th><th style="text-align:right">지도 근사</th></tr></thead>
+      <tbody id="areaRows"></tbody>
+    </table>
+    <div id="busBlock" hidden>
+      <h2>서울 시내버스 규모</h2>
+      <svg id="busChart" role="img" aria-label="연도별 서울 시내버스 노선 수와 운행 대수"></svg>
+      <p class="small" style="margin:4px 0 18px">분홍 선은 공식 집계입니다. 출처마다 집계 기준(좌석·지역순환·마을버스 포함 여부)이 달라 이어 붙인 값이고, 빈 해는 자료를 찾지 못한 해입니다. 회색 점선은 지도에 실제로 그린 노선 수입니다(그 해 7월 1일 기준). 2004년부터는 2026년 노선에 그 사이 없어진 노선을 되살려 더한 값이라 공식 집계와 거의 겹칩니다. 2003년 이전은 경로를 아는 노선만 그려서 공식 집계보다 적습니다.</p>
+    </div>
+    <h2>이 지도를 읽는 법</h2>
+    <div id="method"></div>
+  </section>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
+<script>
+/*__DATA__*/
+</script>
+<script>
+(function () {
+  const topo = DATA.topo;
+  const obj = topo.objects.emd;
+  const geoms = obj.geometries;
+  const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+  // ---------- precompute ----------
+  const BOUNDARY_YEARS = DATA.eras.map(e => e.year);
+  const eraOf = (y) => { let e = null; for (const er of DATA.eras) if (er.year <= y) e = er; return e; };
+  const mergeWhere = (fn) => topojson.merge(topo, geoms.filter(fn));
+  const eraPoly = {}, eraNew = {};
+  DATA.eras.forEach((er, i) => {
+    eraPoly[er.year] = mergeWhere(g => g.properties.y <= er.year);
+    eraNew[er.year] = i === 0 ? eraPoly[er.year] : mergeWhere(g => g.properties.y === er.year);
+  });
+  const seoulNow = mergeWhere(() => true);
+  const north = new Set(DATA.riverNorth), south = new Set(DATA.riverSouth);
+  const river = topojson.mesh(topo, obj, (a, b) => a !== b && ((north.has(a.properties.gu) && south.has(b.properties.gu)) || (south.has(a.properties.gu) && north.has(b.properties.gu))));
+  const dongMesh = topojson.mesh(topo, obj, (a, b) => a !== b);
+  const dongFeatures = topojson.feature(topo, obj).features;
+  const guName = DATA.guNames;
+
+  const trams = DATA.trams.lines.map(l => ({ ...l, geo: { type: "LineString", coordinates: l.coords } }));
+  const wallGeo = { type: "LineString", coordinates: DATA.trams.wall };
+
+  // ---------- svg ----------
+  const svg = d3.select("#map");
+  const root = svg.append("g");
+  const gArea = root.append("g"), gNew = root.append("g"), gRings = root.append("g"), gDong = root.append("g"),
+        gGu = root.append("g"), gRiver = root.append("g"), gWall = root.append("g"), gTram = root.append("g"),
+        gRail = root.append("g"), gMetro = root.append("g"), gBus = root.append("g"), gLabels = root.append("g"), gHit = root.append("g");
+  // 버스 종점: {route, name, from, to, lon, lat, conf, source} — 자료가 들어오면 칩이 나타남
+  const rail = DATA.rail || null;
+  if (rail) document.getElementById("railChip").hidden = false;
+  const metro = DATA.metro || null;
+  if (metro) document.getElementById("metroChip").hidden = false;
+  const bus = DATA.bus || null;
+  if (bus) { document.getElementById("busChip").hidden = false; document.getElementById("busLegend").hidden = false; document.getElementById("busBlock").hidden = false; }
+  let selRoute = null;  // {net: "old"|"new", i}
+  const bus2026 = DATA.bus2026 || null;
+  const nets = { old: bus, new: bus2026 };
+  // 2003년까지는 2004년 6월 노선망에서, 2004년부터는 2026년 11월 노선망에서 그 해 뒤에 생긴 노선을 빼서 그린다
+  const OLD_FROM = DATA.busOldFrom || 2003;
+  function netFor(y) {
+    if (bus && y >= OLD_FROM && y <= 2003) return "old";
+    if (bus2026 && y >= 2004) return "new";
+    return null;
+  }
+  function routeOf(net, i) { const N = nets[net]; return N && i != null ? N.routes[i] : null; }
+  function oldActive(i, y) {
+    const r = bus.routes[i]; const oy = r.oy && r.oy <= 2004 ? r.oy : null;
+    return (oy == null || oy <= y) && (r.live || (r.cy != null && r.cy > y));
+  }
+  // 지금 노선은 그 해 안에 생겼으면 그리고, 없어진 노선(cy가 있음)은 그 해 한가운데(7월 1일)에 다니고 있었으면 그린다
+  function numActive(k, y) {
+    const n = bus2026.nums[k];
+    if (n.oy == null) return false;
+    return n.cy != null ? (n.oy <= y + 0.5 && y + 0.5 < n.cy) : n.oy <= y;
+  }
+  function isActive(net, i, y) { return net === "old" ? oldActive(i, y) : numActive(bus2026.routes[i].k, y); }
+  const byNum = {};
+  if (bus2026) bus2026.routes.forEach((r, i) => { (byNum[r.k] = byNum[r.k] || []).push(i); });
+  const corrCache = {};
+  function corrFor(net, y) {
+    const key = net + y;
+    if (corrCache[key]) return corrCache[key];
+    const N = nets[net];
+    const out = [1, 2, 4, 8, 13, 21].map(lo => ({ lo, lines: [] }));
+    const act = net === "old" ? (i => oldActive(i, y)) : (k => numActive(k, y));
+    N.segs.forEach(s => {
+      let c = 0;
+      for (const i of s.r) if (act(i)) c++;
+      if (!c) return;
+      const b = c >= 21 ? 5 : c >= 13 ? 4 : c >= 8 ? 3 : c >= 4 ? 2 : c >= 2 ? 1 : 0;
+      for (const ln of s.g) out[b].lines.push(ln);
+    });
+    return (corrCache[key] = out.filter(b => b.lines.length));
+  }
+  const SYM = { "신설": d3.symbolTriangle, "폐선": d3.symbolCross };
+  const busSym = (t) => d3.symbol().type(SYM[t] || d3.symbolDiamond).size(t === "신설" || t === "폐선" ? 70 : 46)();
+  let W = 0, H = 0, projection = d3.geoMercator(), path = d3.geoPath(projection), kNow = 1;
+
+  const layerOn = { rail: true, metro: true, tram: true, kido: true, area: true, rings: true, gu: true, wall: true, dong: false, bus: true };
+
+  function fit() {
+    const r = svg.node().getBoundingClientRect();
+    W = r.width; H = r.height;
+    svg.attr("viewBox", `0 0 ${W} ${H}`);
+    projection = d3.geoMercator().fitExtent([[12, 12], [W - 12, H - 12]], seoulNow);
+    path = d3.geoPath(projection);
+  }
+
+  const zoom = d3.zoom().scaleExtent([0.8, 60]).on("zoom", (ev) => {
+    root.attr("transform", ev.transform);
+    kNow = ev.transform.k;
+    gLabels.selectAll("text").attr("font-size", d => (d.fs || 11) / kNow).attr("stroke-width", 3 / kNow);
+    gRail.selectAll("rect").call(sizeRail);
+    sizeBus();
+    gMetro.selectAll("circle").attr("r", st => (Object.keys(st.opens).filter(l => st.opens[l] <= year).length > 1 ? 3.4 : 2.3) / kNow);
+    if (ev.sourceEvent) setAuto(false);
+  });
+  svg.call(zoom).on("dblclick.zoom", null);
+
+  function sizeRail(sel) {
+    const sz = 5.5 / kNow;
+    sel.attr("x", st => st._p[0] - sz / 2).attr("y", st => st._p[1] - sz / 2).attr("width", sz).attr("height", sz);
+  }
+  function sizeBus() {
+    gBus.selectAll("circle.node").attr("r", n => (3 + Math.sqrt(n.r.length) * 1.2) / kNow);
+    gBus.selectAll("path.bev").attr("transform", e => `translate(${e._p[0]},${e._p[1]}) scale(${1 / kNow})${e.t === "폐선" ? " rotate(45)" : ""}`);
+  }
+  function pxPerKm() {
+    const a = projection([127.0, 37.55]), b = projection([127.0, 37.55 + 1 / 111.0]);
+    return Math.abs(a[1] - b[1]);
+  }
+
+  // ---------- static layers ----------
+  function drawStatic() {
+    gRiver.selectAll("*").remove();
+    gRiver.append("path").datum(river).attr("d", path).attr("fill", "none")
+      .attr("stroke", "var(--river)").attr("stroke-width", 0.9 * pxPerKm()).attr("stroke-linecap", "round").attr("stroke-linejoin", "round");
+    gRiver.append("path").datum(seoulNow).attr("d", path).attr("fill", "none")
+      .attr("stroke", "var(--rule)").attr("stroke-width", 1).attr("vector-effect", "non-scaling-stroke").attr("stroke-dasharray", "2 3");
+    gWall.selectAll("*").remove();
+    gWall.append("path").datum(wallGeo).attr("d", path).attr("fill", "none").attr("stroke", "var(--wall)")
+      .attr("stroke-width", 1.4).attr("stroke-dasharray", "1.5 2.5").attr("stroke-linecap", "round").attr("vector-effect", "non-scaling-stroke");
+    gDong.selectAll("*").remove();
+    gDong.append("path").datum(dongMesh).attr("d", path).attr("fill", "none").attr("stroke", "var(--rule)")
+      .attr("stroke-width", 0.6).attr("vector-effect", "non-scaling-stroke");
+    gHit.selectAll("*").remove();
+    gHit.selectAll("path").data(dongFeatures).join("path").attr("d", path)
+      .attr("fill", "transparent").attr("stroke", "none").style("cursor", "pointer")
+      .on("click", (ev, d) => showDong(d));
+  }
+
+  // ---------- dynamic render ----------
+  let year = 1899, lastEraYear = null, lastGuKey = null;
+
+  function render() {
+    const er = eraOf(year);
+    // area + new area
+    gArea.selectAll("*").remove(); gNew.selectAll("*").remove(); gRings.selectAll("*").remove();
+    if (er) {
+      gArea.append("path").datum(eraPoly[er.year]).attr("d", path).attr("fill", "var(--area)").attr("fill-opacity", 0.32)
+        .attr("stroke", "var(--ink)").attr("stroke-width", 1.6).attr("vector-effect", "non-scaling-stroke");
+      if (er.year !== DATA.eras[0].year || year - er.year < 3) {
+        gNew.append("path").datum(eraNew[er.year]).attr("d", path).attr("fill", "var(--area-new)")
+          .attr("fill-opacity", Math.max(0.12, 0.42 - (year - er.year) * 0.012)).attr("stroke", "none");
+      }
+      // past rings
+      DATA.eras.filter(e => e.year < er.year && eraNew[e.year].coordinates.length).forEach(e => {
+        gRings.append("path").datum(eraPoly[e.year]).attr("d", path).attr("fill", "none").attr("stroke", "var(--ring)")
+          .attr("stroke-width", 1).attr("stroke-dasharray", "4 3").attr("vector-effect", "non-scaling-stroke");
+      });
+    }
+    gArea.style("display", layerOn.area ? null : "none"); gNew.style("display", layerOn.area ? null : "none");
+    gRings.style("display", layerOn.rings ? null : "none");
+
+    // gu
+    gGu.selectAll("*").remove();
+    const labels = [];
+    const gp = guPeriodOf(year);
+    if (gp && er) {
+      gp.names.forEach((nm, gi) => {
+        const grp = { name: nm };
+        const mp = topojson.merge(topo, geoms.filter((g, k) => gp.idx[k] === gi && g.properties.y <= year));
+        if (!mp.coordinates.length) return;
+        gGu.append("path").datum(mp).attr("d", path).attr("fill", "none").attr("stroke", "var(--gu)")
+          .attr("stroke-width", 0.9).attr("vector-effect", "non-scaling-stroke");
+        // label at centroid of largest polygon
+        let best = null, ba = -1;
+        mp.coordinates.forEach(c => { const p = { type: "Polygon", coordinates: c }; const a = d3.geoArea(p); if (a > ba) { ba = a; best = p; } });
+        const c = path.centroid(best);
+        if (isFinite(c[0])) labels.push({ x: c[0], y: c[1], t: grp.name, fs: 10.5, cls: "gu" });
+      });
+    }
+    gGu.style("display", layerOn.gu ? null : "none");
+
+    // trams
+    gTram.selectAll("*").remove();
+    trams.forEach(t => {
+      const isK = t.op === "기동차";
+      if (isK ? !layerOn.kido : !layerOn.tram) return;
+      if (year < t.open) return;
+      const active = year < t.close;
+      const col = isK ? "var(--kido)" : "var(--tram)";
+      if (active && year - t.open <= 0) {
+        gTram.append("path").datum(t.geo).attr("d", path).attr("fill", "none").attr("stroke", col)
+          .attr("stroke-width", 10).attr("stroke-linecap", "round").attr("class", "pulse").attr("vector-effect", "non-scaling-stroke");
+      }
+      gTram.append("path").datum(t.geo).attr("d", path).attr("fill", "none").attr("stroke", col)
+        .attr("stroke-width", active ? 3 : 1.4).attr("stroke-opacity", active ? 1 : 0.45)
+        .attr("stroke-dasharray", active ? null : "3 3").attr("stroke-linecap", "round").attr("stroke-linejoin", "round")
+        .attr("vector-effect", "non-scaling-stroke");
+      gTram.append("path").datum(t.geo).attr("d", path).attr("fill", "none").attr("stroke", "transparent")
+        .attr("stroke-width", 16).attr("vector-effect", "non-scaling-stroke").style("cursor", "pointer")
+        .on("click", (ev) => { ev.stopPropagation(); showTram(t); });
+    });
+    gWall.style("display", layerOn.wall ? null : "none");
+    gDong.style("display", layerOn.dong ? null : "none");
+
+    // rail (국철): 검은 선 위에 바탕색 점선을 얹은 옛 지도식 철도 기호
+    gRail.selectAll("*").remove();
+    if (layerOn.rail && rail) {
+      rail.segs.forEach(sg => {
+        if (sg.open > year) return;
+        const a = rail.stations[sg.a], b = rail.stations[sg.b];
+        const d = path({ type: "LineString", coordinates: sg.p || [[a.lng, a.lat], [b.lng, b.lat]] });
+        const live = !sg.close || year < sg.close;
+        const ln = (x) => gRail.append("path").attr("d", d).attr("fill", "none").attr("stroke-linejoin", "round").attr("vector-effect", "non-scaling-stroke");
+        if (live) {
+          if (year === sg.open) ln().attr("stroke", "var(--rail)").attr("stroke-width", 10).attr("class", "pulse").attr("stroke-linecap", "round");
+          ln().attr("stroke", "var(--rail)").attr("stroke-width", 4.2).attr("stroke-linecap", "butt");
+          ln().attr("stroke", "var(--paper-2)").attr("stroke-width", 1.9).attr("stroke-dasharray", "5 5");
+        } else {
+          ln().attr("stroke", "var(--rail)").attr("stroke-width", 1.2).attr("stroke-opacity", 0.45).attr("stroke-dasharray", "2 3");
+        }
+        ln().attr("stroke", "transparent").attr("stroke-width", 14).style("cursor", "pointer")
+          .on("click", (ev) => { ev.stopPropagation(); showInfo(`<b>${sg.line}</b> · ${a.name}–${b.name}<div class="meta">개통 ${sg.openLabel || sg.open}${sg.close ? ` · 폐선 ${sg.closeLabel || sg.close}` : ""}${sg.note ? " · " + sg.note : ""}</div>`); });
+      });
+      gRail.selectAll("rect").data(rail.stations.filter(st => st.open <= year && (!st.close || year < st.close))).join("rect")
+        .each(function (st) { st._p = projection([st.lng, st.lat]); })
+        .call(sizeRail)
+        .attr("fill", "var(--rail)").attr("stroke", "var(--paper-2)").attr("stroke-width", 1).attr("vector-effect", "non-scaling-stroke").style("cursor", "pointer")
+        .on("click", (ev, st) => { ev.stopPropagation(); showInfo(`<b>${st.name}역</b> <span class="meta">(철도)</span><div class="meta">${st.lines.join("·")} · 개업 ${st.openLabel || st.open}${st.close ? ` · 폐역 ${st.closeLabel || st.close}` : ""}</div>${st.note ? `<div class="meta">${st.note}</div>` : ""}`); });
+    }
+
+    // metro
+    gMetro.selectAll("*").remove();
+    if (layerOn.metro && metro) {
+      const k = kNow;
+      metro.lines.forEach(L => {
+        L.edges.forEach(e => {
+          if (e.open > year) return;
+          const a = metro.stations[e.a], b = metro.stations[e.b];
+          const d = path({ type: "LineString", coordinates: e.p || [[a.lng, a.lat], [b.lng, b.lat]] });
+          const fresh = year - e.open === 0;
+          if (fresh) gMetro.append("path").attr("d", d).attr("fill", "none")
+            .attr("stroke", L.color).attr("stroke-width", 9).attr("stroke-linecap", "round").attr("class", "pulse").attr("vector-effect", "non-scaling-stroke");
+          gMetro.append("path").attr("d", d).attr("fill", "none")
+            .attr("stroke", L.color).attr("stroke-width", 2.6).attr("stroke-linecap", "round").attr("stroke-linejoin", "round").attr("vector-effect", "non-scaling-stroke");
+        });
+      });
+      const open = metro.stations.filter(st => st.first <= year);
+      gMetro.selectAll("circle").data(open).join("circle")
+        .attr("cx", st => projection([st.lng, st.lat])[0]).attr("cy", st => projection([st.lng, st.lat])[1])
+        .attr("r", st => (Object.keys(st.opens).filter(l => st.opens[l] <= year).length > 1 ? 3.4 : 2.3) / k)
+        .attr("fill", "var(--paper)").attr("stroke", "var(--ink)").attr("stroke-width", 1).attr("vector-effect", "non-scaling-stroke")
+        .style("cursor", "pointer")
+        .on("click", (ev, st) => { ev.stopPropagation(); showStation(st); });
+    }
+
+    // bus: 해마다 거꾸로 맞춘 노선망(구간 굵기 = 지나는 노선 수)과 신설·폐선 노선
+    gBus.selectAll("*").remove();
+    if (layerOn.bus && bus) {
+      const net = netFor(year);
+      if (net) {
+        const N = nets[net];
+        const W = { 1: 0.7, 2: 1.3, 4: 2.2, 8: 3.3, 13: 4.6, 21: 6.2 };
+        corrFor(net, year).forEach(bk => {
+          gBus.append("path").datum({ type: "MultiLineString", coordinates: bk.lines }).attr("d", path).attr("fill", "none")
+            .attr("stroke", "var(--bus)").attr("stroke-width", W[bk.lo]).attr("stroke-opacity", bk.lo === 1 ? 0.55 : 0.85)
+            .attr("stroke-linecap", "round").attr("stroke-linejoin", "round").attr("vector-effect", "non-scaling-stroke")
+            .style("pointer-events", "none");
+        });
+        gBus.selectAll("circle.node").data(N.nodes.filter(n => n.r.some(i => isActive(net, i, year)))).join("circle").attr("class", "node")
+          .each(function (n) { n._p = projection([n.lng, n.lat]); })
+          .attr("cx", n => n._p[0]).attr("cy", n => n._p[1])
+          .attr("fill", "var(--bus)").attr("fill-opacity", 0.001).attr("stroke", "none")
+          .style("cursor", "pointer")
+          .on("click", (ev, n) => { ev.stopPropagation(); showBusNode(n, net); });
+      }
+      // 2004년 뒤 새로 생긴 노선과 없어진 노선(최근 3년): 노선 연도표에서
+      if (net === "new") {
+        bus2026.nums.forEach((n, k) => {
+          let age = null, gone = false;
+          if (n.dead) {
+            if (n.cy <= year + 0.5 && n.cy > year - 2.5) { age = Math.floor(year + 0.5 - n.cy); gone = true; }
+            else if (n.oy > 2004.6 && n.oy <= year + 0.5 && n.oy > year - 2.5) age = Math.floor(year + 0.5 - n.oy);
+          } else if (n.kind === "신설" && n.oy <= year && n.oy > year - 3) age = year - n.oy;
+          if (age == null) return;
+          const op = 1 - age * 0.3;
+          (byNum[k] || []).forEach(i => {
+            const rt = bus2026.routes[i];
+            gBus.append("path").datum({ type: "LineString", coordinates: rt.geom }).attr("d", path).attr("fill", "none")
+              .attr("stroke", gone ? "var(--ink-2)" : "var(--bus)").attr("stroke-width", gone ? 1.4 : 1.6).attr("stroke-opacity", op * 0.9)
+              .attr("stroke-dasharray", gone ? "5 4" : null)
+              .attr("stroke-linejoin", "round").attr("stroke-linecap", "round")
+              .attr("vector-effect", "non-scaling-stroke").style("pointer-events", "none");
+          });
+        });
+      }
+      // 최근 3년 안에 생기거나 없어진 노선: 선으로
+      const evs = bus.events.filter(e => e.y <= year && e.y > year - 3);
+      evs.forEach(e => {
+        if (net && (e.net || "old") !== net) return;
+        if (net === "new" && (e.t === "신설" || e.t === "폐선")) return;
+        const rt = routeOf(e.net || "old", e.ri);
+        if (!rt || !rt.geom) return;
+        const op = 1 - (year - e.y) * 0.3;
+        const col = e.t === "신설" ? "var(--bus)" : e.t === "폐선" ? "var(--ink-2)" : "var(--area-new)";
+        gBus.append("path").datum({ type: "LineString", coordinates: rt.geom }).attr("d", path).attr("fill", "none")
+          .attr("stroke", col).attr("stroke-width", net ? 1.6 : 2.2).attr("stroke-opacity", op * (net ? 0.9 : 0.85))
+          .attr("stroke-dasharray", e.t === "폐선" ? "5 4" : null).attr("stroke-linejoin", "round").attr("stroke-linecap", "round")
+          .attr("vector-effect", "non-scaling-stroke").style("pointer-events", "none");
+      });
+      const sr = selRoute ? routeOf(selRoute.net, selRoute.i) : null;
+      if (sr) {
+        const geo = { type: "LineString", coordinates: sr.geom || sr.pts };
+        gBus.append("path").datum(geo).attr("d", path).attr("fill", "none")
+          .attr("stroke", "var(--paper)").attr("stroke-width", 6.5).attr("stroke-linejoin", "round").attr("stroke-linecap", "round")
+          .attr("vector-effect", "non-scaling-stroke");
+        gBus.append("path").datum(geo).attr("d", path).attr("fill", "none")
+          .attr("stroke", "var(--ink)").attr("stroke-width", 3).attr("stroke-linejoin", "round").attr("stroke-linecap", "round")
+          .attr("vector-effect", "non-scaling-stroke");
+      }
+      gBus.selectAll("path.bev").data(evs.filter(e => e.lng)).join("path").attr("class", "bev")
+        .each(function (e) { e._p = projection([e.lng, e.lat]); })
+        .attr("d", e => busSym(e.t))
+        .attr("fill", e => e.t === "신설" ? "var(--bus)" : e.t === "폐선" ? "none" : "var(--area-new)")
+        .attr("stroke", e => e.t === "폐선" ? "var(--ink-2)" : "var(--paper)").attr("stroke-width", e => e.t === "폐선" ? 2 : 0.8)
+        .attr("vector-effect", "non-scaling-stroke")
+        .attr("opacity", e => 1 - (year - e.y) * 0.3).style("cursor", "pointer")
+        .on("click", (ev, e) => { ev.stopPropagation(); showBusEvent(e); });
+      sizeBus();
+    }
+
+    // ring year labels
+    if (layerOn.rings && er) {
+      DATA.eras.filter(e => e.year <= er.year && eraNew[e.year].coordinates.length && e.year !== 1973).forEach(e => {
+        const b = path.bounds(eraPoly[e.year]);
+        labels.push({ x: b[0][0] + 2, y: b[0][1] - 3, t: String(e.year), fs: 10, cls: "ring" });
+      });
+    }
+    gLabels.selectAll("text").data(labels.filter(d => isFinite(d.x) && isFinite(d.y))).join("text")
+      .attr("x", d => d.x).attr("y", d => d.y).text(d => d.t)
+      .attr("text-anchor", d => d.cls === "gu" ? "middle" : "start")
+      .attr("font-size", d => d.fs / kNow).attr("fill", d => d.cls === "ring" ? "var(--ring)" : "var(--ink-2)")
+      .attr("font-weight", d => d.cls === "ring" ? 600 : 500)
+      .attr("paint-order", "stroke").attr("stroke", "var(--paper-2)").attr("stroke-width", 3 / kNow)
+      .style("pointer-events", "none");
+
+    // plate
+    d3.select("#yLabel").text(year);
+    d3.select("#eraLabel").text(eraText(er, gp));
+    const active = trams.filter(t => t.open <= year && year < t.close);
+    const km = d3.sum(active, t => d3.geoLength(t.geo) * 6371);
+    const offArea = er ? er.official : null;
+    const bs = bus ? bus.stats.filter(x => x.routes && x.y <= year && year - x.y <= 4).pop() : null;
+    const drawn = layerOn.bus && DATA.busDrawn ? DATA.busDrawn[year] : null;
+    d3.select("#statLabel").html(
+      (drawn ? `버스 노선 ${drawn}개 그림${bs ? `(공식 ${bs.routes}개)` : ""} · ` : bs ? `버스 노선 ${bs.routes}개 · ` : "") + (offArea ? `시역 ${offArea}㎢` : "시역 —") + (active.length ? ` · 궤도 ${active.length}구간 ${km.toFixed(1)}km` : "") + (metro && year >= 1974 ? ` · 역 ${metro.stations.filter(st => st.first <= year).length}곳` : (year >= 1968 && !active.length ? " · 전차 폐지(1968)" : ""))
+    );
+
+    moveBusCursor && moveBusCursor();
+    // log highlight
+    d3.selectAll("#log .ev").attr("class", d => "ev " + (d.year === year ? "now" : d.year < year ? "past" : "future"));
+    d3.select("#ticks").select(".cursor").attr("x", tickX(year) - 1);
+
+    // camera
+    if (autoCam) {
+      const key = (er ? er.year : 0) + ":" + active.length + (er ? "" : ":" + (rail ? rail.segs.filter(sg => sg.open <= year).length : 0));
+      if (key !== lastEraYear) { lastEraYear = key; frameFor(er, active); }
+    }
+  }
+
+  function eraText(er, gp) {
+    if (!er) return "한성부 · 성저십리 포함 (1914년 이전 경계는 그리지 않음)";
+    const pre = year < 1946 ? "경성부" : year < 1949 ? "서울특별자유시" : "서울특별시";
+    return `${pre} · ${gp ? gp.label : "구 없음"}`;
+  }
+  function guPeriodOf(y) { let p = null; for (const g of DATA.guPeriods) if (g.from <= y) p = g; return p; }
+
+  // ---------- camera ----------
+  let autoCam = true;
+  function setAuto(v) { autoCam = v; d3.select("#autoCam").attr("aria-pressed", v ? "true" : "false"); }
+  function boundsOf(features) {
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    features.forEach(f => { const b = path.bounds(f); x0 = Math.min(x0, b[0][0]); y0 = Math.min(y0, b[0][1]); x1 = Math.max(x1, b[1][0]); y1 = Math.max(y1, b[1][1]); });
+    return [[x0, y0], [x1, y1]];
+  }
+  function zoomTo(b, dur = 750) {
+    const [[x0, y0], [x1, y1]] = b;
+    const padTop = Math.min(110, H * 0.22);
+    const k = Math.min(60, 0.9 / Math.max((x1 - x0) / W, (y1 - y0) / (H - padTop)));
+    const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+    const t = d3.zoomIdentity.translate(W / 2 - k * cx, (H + padTop) / 2 - k * cy).scale(k);
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    svg.transition().duration(reduce ? 0 : dur).call(zoom.transform, t);
+  }
+  function frameFor(er, active) {
+    const feats = [wallGeo, ...active.map(t => t.geo)];
+    if (er) feats.push(eraPoly[er.year]);
+    else if (rail && layerOn.rail) rail.segs.filter(sg => sg.open <= year && (!sg.close || year < sg.close)).forEach(sg => {
+      const a = rail.stations[sg.a], b = rail.stations[sg.b];
+      if (Math.abs(a.lng - 126.98) < 0.13 && Math.abs(b.lng - 126.98) < 0.13) feats.push({ type: "LineString", coordinates: [[a.lng, a.lat], [b.lng, b.lat]] });
+    });
+    zoomTo(boundsOf(feats));
+  }
+  d3.select("#autoCam").on("click", () => { setAuto(true); lastEraYear = null; render(); });
+  d3.select("#viewCore").on("click", () => { setAuto(false); zoomTo(boundsOf([wallGeo, ...trams.map(t => t.geo)])); });
+  d3.select("#viewAll").on("click", () => { setAuto(false); zoomTo(boundsOf([seoulNow])); });
+
+  // ---------- info ----------
+  function showInfo(html) { d3.select("#infoBody").html(html); d3.select("#info").attr("hidden", null); }
+  d3.select("#infoX").on("click", () => { d3.select("#info").attr("hidden", true); if (selRoute != null) { selRoute = null; render(); } });
+  function showTram(t) {
+    showInfo(`<b>${t.line}</b> · ${t.name}<div class="meta">${t.op} · 개통 ${t.openLabel} · ${t.closeLabel || (t.close === 1968 ? "1968.11.30 전면 폐지" : t.close)}</div><div class="meta">근거: ${t.conf}${t.note ? " · " + t.note : ""} · 선형은 현재 도로를 따라 그린 근사선</div>`);
+  }
+  function rtLink(i, net) { const rt = nets[net].routes[i]; return `<button type="button" class="rt" data-ri="${i}" data-net="${net}" title="${rt.name || rt.via || ""}">${rt.no}</button>`; }
+  function showBusNode(n, net) {
+    const seen = new Set(); const uniq = n.r.filter(i => { const k = nets[net].routes[i].no; if (seen.has(k) || !isActive(net, i, year)) return false; seen.add(k); return true; });
+    const list = uniq.map(i => rtLink(i, net)).join(" ");
+    const when = net === "new" ? (year >= 2026 ? "2026년 11월 기준(마을버스 제외)" : `${year}년 추정(2026년 노선 가운데 그때 있던 것)`) : (year >= 2003 ? "2004년 6월 기준" : `${year}년 추정(2004년 6월 노선에서 역산)`);
+    showInfo(`<b>${n.name}</b> <span class="meta">${when} 지나는 노선 ${uniq.length}개</span><div class="rts">${list}</div><div class="meta">번호를 누르면 그 노선을 굵게 보여 줍니다. 선형은 경유지 사이를 지금 도로망의 최단 경로로 이은 근사입니다.</div>`);
+  }
+  function showBusEvent(e) {
+    selRoute = e.ri != null ? { net: e.net || "old", i: e.ri } : null;
+    const src = /^https?:/.test(e.src || "") ? `<a href="${e.src.split(/\s|;/)[0]}" target="_blank" rel="noopener">출처</a>` : (e.src || "");
+    const conf = e.conf === "low" ? "자동 추출, 확인 필요" : e.conf === "high" ? "출처 두 곳 이상 일치" : "출처 한 곳";
+    showInfo(`<b>${e.no && e.no !== "일괄" ? e.no + "번 " : ""}${e.t}</b> <span class="meta">${e.d}${e.approx ? "(어림)" : ""}</span>${e.ends ? `<div class="meta">${e.ends}</div>` : ""}${e.place ? `<div class="meta">${e.place}</div>` : ""}${e.txt ? `<div style="margin-top:4px">${e.txt.slice(0, 260)}</div>` : ""}<div class="meta" style="margin-top:4px">${src} · ${conf}${e.ri != null ? (e.net === "new" ? ((routeOf("new", e.ri) || {}).dead ? " · 굵은 선은 나무위키 폐선 문서의 운행 구간을 이은 경로(근사)" : " · 굵은 선은 그 노선의 2026년 경로") : " · 굵은 선은 그 노선의 마지막 경로(근사)") : ""}</div>`);
+    render();
+  }
+  d3.select("#infoBody").on("click", (ev) => { const t = ev.target.closest("[data-ri]"); if (t) { selRoute = { net: t.dataset.net || "old", i: +t.dataset.ri }; render(); } });
+  function showStation(st) {
+    const rows = Object.entries(st.opens).sort((a, b) => a[1] - b[1]).map(([l, y]) => `<span style="color:${(metro.lines.find(L => L.name === l) || {}).color}">●</span> ${l} ${st.dates[l] || y}`).join("<br>");
+    showInfo(`<b>${st.name}역</b><div class="meta">${rows}</div>${st.note ? `<div class="meta">${st.note}</div>` : ""}`);
+  }
+  function showDong(d) {
+    const p = d.properties, y = p.y;
+    const yt = y <= 1914 ? "1914년 경성부 안" : `${y}년 편입`;
+    const gp = guPeriodOf(year), k = dongFeatures.indexOf(d);
+    const then = gp && y <= year ? ` · ${year}년엔 ${gp.names[gp.idx[k]]}` : (y > year ? ` · ${year}년엔 아직 시역 밖` : "");
+    showInfo(`<b>${p.nm}</b> <span class="meta">(현 ${guName[p.gu] || ""}${then})</span><div class="meta">${yt}${p.yn ? " · " + p.yn : ""}${p.yc ? " · 근거 확인 정도: " + p.yc : ""}</div>`);
+  }
+
+  // ---------- log ----------
+  const evs = DATA.events.slice().sort((a, b) => a.year - b.year || (a.sort || 0) - (b.sort || 0));
+  const li = d3.select("#log").selectAll("li").data(evs).join("li").attr("class", "ev").attr("tabindex", 0)
+    .on("click", (ev, d) => setYear(d.year, true))
+    .on("keydown", (ev, d) => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); setYear(d.year, true); } });
+  li.append("span").attr("class", "d").text(d => d.date || d.year);
+  li.append("span").append("i").attr("class", d => "k " + d.kind).style("background", d => d.color || null);
+  li.append("span").html(d => d.text + (d.conf ? ` <span class="c">(${d.conf})</span>` : ""));
+
+  // ---------- area table ----------
+  d3.select("#areaRows").selectAll("tr").data(DATA.eras).join("tr").html(e => {
+    const a = d3.geoArea(eraPoly[e.year]) * 6371.0088 * 6371.0088;
+    return `<td>${e.label}</td><td class="n">${e.official ?? "—"}</td><td class="n">${a.toFixed(1)}</td>`;
+  });
+  d3.select("#method").html(DATA.methodHtml);
+
+  // 버스 규모 차트(노선 수, 운행 대수) — 두 줄을 따로 그린 작은 표
+  let busCursor = null;
+  function drawBusChart() {
+    if (!bus) return;
+    const svgc = d3.select("#busChart"); svgc.selectAll("*").remove();
+    const w = svgc.node().getBoundingClientRect().width, h = 150;
+    svgc.attr("viewBox", `0 0 ${w} ${h}`);
+    const x = d3.scaleLinear().domain([1950, 2026]).range([44, w - 10]);
+    const rows = [{ key: "routes", label: "노선 수", y0: 8 }, { key: "buses", label: "운행 대수", y0: 78 }];
+    const dr = DATA.busDrawn ? Object.entries(DATA.busDrawn).map(([y, v]) => ({ y: +y, v })).sort((a, b) => a.y - b.y) : [];
+    rows.forEach(rw => {
+      const pts = bus.stats.filter(d => d[rw.key] != null && d.y >= 1950);
+      const y = d3.scaleLinear().domain([0, d3.max(pts, d => d[rw.key]) * 1.08]).range([rw.y0 + 52, rw.y0]);
+      if (rw.key === "routes" && dr.length) {
+        // 지도에 그린 노선 수(점선): 공식 집계와의 차이가 그림에서 빠진 노선
+        const gl = d3.line().x(d => x(d.y)).y(d => y(d.v));
+        [dr.filter(d => d.y < 2004), dr.filter(d => d.y >= 2004)].forEach(part => part.length && svgc.append("path").datum(part).attr("d", gl)
+          .attr("fill", "none").attr("stroke", "var(--ink-2)").attr("stroke-width", 1.3).attr("stroke-dasharray", "3 2"));
+      }
+      const g = svgc.append("g");
+      g.append("line").attr("x1", x(1950)).attr("x2", x(2026)).attr("y1", y(0)).attr("y2", y(0)).attr("stroke", "var(--rule)");
+      g.append("text").attr("x", 0).attr("y", rw.y0 + 10).text(rw.label).attr("font-size", 11).attr("fill", "var(--ink-2)");
+      const mx = d3.max(pts, d => d[rw.key]);
+      g.append("text").attr("x", 0).attr("y", rw.y0 + 24).text(d3.format(",")(mx)).attr("font-size", 10.5).attr("fill", "var(--ink-2)").style("font-family", "var(--mono)");
+      // 이어진 해끼리만 선으로(5년 넘게 비면 끊음)
+      const line = d3.line().defined((d, i, a) => true).x(d => x(d.y)).y(d => y(d[rw.key]));
+      let seg = [];
+      pts.forEach((d, i) => { if (i && d.y - pts[i - 1].y > 5) { g.append("path").datum(seg).attr("d", line).attr("fill", "none").attr("stroke", "var(--bus)").attr("stroke-width", 1.6); seg = []; } seg.push(d); });
+      g.append("path").datum(seg).attr("d", line).attr("fill", "none").attr("stroke", "var(--bus)").attr("stroke-width", 1.6);
+      g.selectAll("circle").data(pts).join("circle").attr("cx", d => x(d.y)).attr("cy", d => y(d[rw.key])).attr("r", 1.8).attr("fill", "var(--bus)")
+        .append("title").text(d => `${d.y}년 ${rw.label} ${d3.format(",")(d[rw.key])}`);
+    });
+    [1960, 1980, 2000, 2020].forEach(t => svgc.append("text").attr("x", x(t)).attr("y", h - 2).attr("text-anchor", "middle").text(t).attr("font-size", 10).attr("fill", "var(--ink-2)").style("font-family", "var(--mono)"));
+    busCursor = svgc.append("line").attr("y1", 4).attr("y2", h - 14).attr("stroke", "var(--ink)").attr("stroke-width", 1).attr("stroke-dasharray", "2 2");
+    busCursor.attr("data-x0", 0);
+    busCursor._x = x;
+    moveBusCursor();
+  }
+  function moveBusCursor() { if (busCursor) { const xx = busCursor._x(Math.max(1950, year)); busCursor.attr("x1", xx).attr("x2", xx); } }
+
+  // ---------- ticks ----------
+  const tickSvg = d3.select("#ticks");
+  function tickX(y) { const w = tickSvg.node().getBoundingClientRect().width; const pad = 8; return pad + (y - 1899) / (2026 - 1899) * (w - pad * 2); }
+  function drawTicks() {
+    tickSvg.selectAll("*").remove();
+    evs.forEach(e => {
+      tickSvg.append("line").attr("x1", tickX(e.year)).attr("x2", tickX(e.year)).attr("y1", e.kind === "area" ? 2 : e.kind === "metro" ? 5 : 8).attr("y2", 17)
+        .attr("stroke", e.color || (e.kind === "tram" ? "var(--tram)" : e.kind === "kido" ? "var(--kido)" : e.kind === "area" ? "var(--area-new)" : e.kind === "rail" ? "var(--rail)" : e.kind === "bus" ? "var(--bus)" : "var(--gu)"))
+        .attr("stroke-width", e.kind === "area" ? 2.5 : 1.2);
+    });
+    d3.selectAll("#scale span").style("left", function () { return tickX(+this.dataset.y) + "px"; })
+      .style("transform", function () { const y = +this.dataset.y; return y === 1899 ? "translateX(-8px)" : y === 2026 ? "translateX(calc(-100% + 8px))" : "translateX(-50%)"; });
+    tickSvg.append("rect").attr("class", "cursor").attr("x", tickX(year) - 1).attr("y", 0).attr("width", 2).attr("height", 18).attr("fill", "var(--ink)");
+  }
+
+  // ---------- controls ----------
+  const slider = document.getElementById("year");
+  function setYear(y, fromLog) {
+    year = Math.max(1899, Math.min(2026, y)); slider.value = year;
+    if (fromLog) { d3.select("#info").attr("hidden", true); }
+    render();
+  }
+  slider.addEventListener("input", () => setYear(+slider.value));
+  let timer = null, speed = 1;
+  const evYears = new Set(evs.map(e => e.year));
+  function step() {
+    if (year >= 2026) { stop(); return; }
+    setYear(year + 1);
+    // 사건이 있는 해는 오래, 2000년대부터는 버스 노선이 해마다 바뀌어 조금 더 머문다
+    const base = evYears.has(year) ? 900 : year >= 2004 ? 420 : year > 1995 ? 160 : year > 1968 && year < 1973 ? 120 : 220;
+    timer = setTimeout(step, base / speed);
+  }
+  d3.selectAll(".speed button").on("click", function () {
+    speed = +this.dataset.speed;
+    d3.selectAll(".speed button").attr("aria-pressed", function () { return +this.dataset.speed === speed ? "true" : "false"; });
+  });
+  function stop() { clearTimeout(timer); timer = null; d3.select("#playIcon").html('<path d="M4 2l10 6-10 6z"/>'); d3.select("#play").attr("aria-label", "재생"); }
+  d3.select("#play").on("click", () => {
+    if (timer) { stop(); return; }
+    if (year >= 2026) setYear(1899);
+    d3.select("#playIcon").html('<path d="M3 2h4v12H3zM9 2h4v12H9z"/>'); d3.select("#play").attr("aria-label", "일시정지");
+    setAuto(true); lastEraYear = null;
+    timer = setTimeout(step, 300);
+  });
+  d3.selectAll(".chip").on("click", function () {
+    const k = this.dataset.layer; layerOn[k] = !layerOn[k];
+    this.setAttribute("aria-pressed", layerOn[k] ? "true" : "false"); render();
+  });
+
+  // ---------- boot ----------
+  function boot() { fit(); drawStatic(); drawTicks(); drawBusChart(); lastEraYear = null; render(); }
+  let rt = null;
+  window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { const keep = autoCam; boot(); if (!keep) setAuto(false); }, 200); });
+  boot();
+  // 첫 화면: 1914년 경계와 초기 노선이 함께 보이도록 1920년에서 시작
+  setYear(DATA.startYear || 1920);
+})();
+</script>
