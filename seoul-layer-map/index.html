@@ -249,13 +249,15 @@ svg text { font-family: var(--body); }
   input[type=range] { height: 18px; }
   .scale { height: 13px; font-size: 10.5px; }
 }
-/* 높이가 낮은 데스크톱(노트북 1366×768 등): 오른쪽 판이 넘치지 않게 범례를 접고 「범례 보기」로 펼친다(v1.5.2, 시안 2).
-   높이 500px 이하 가로 화면은 위의 「레이어·범례」 팝오버가 맡으므로 빼고, 큰 화면은 그대로 */
+/* 오른쪽 판에 칩과 범례가 다 들어가지 않으면(노트북, 새 건물 범례를 켠 1920×1080 등) 범례를 접고 「범례 보기」로 펼친다.
+   접을지는 fitLegends()가 판의 실제 높이로 정한다(v1.5.2에서 높이 800px 기준으로 시작, v1.6에서 넘칠 때만으로 바꿈, 시안 B).
+   높이 500px 이하 가로 화면은 위의 「레이어·범례」 팝오버가 맡으므로 빼고, 폭 900px 이하는 따로 범례 단추가 있다 */
 .lgfold { display: none; }
-@media (min-width: 901px) and (min-height: 501px) and (max-height: 800px) {
-  .lgfold { display: block; width: 100%; margin-top: 10px; font: 500 12.5px var(--body); color: var(--ink); background: none; border: 1px solid var(--ink); border-radius: 4px; padding: 5px 8px; cursor: pointer; text-align: left; }
-  .lgfold:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-  .side:not(.lgshow) .legends { display: none; }
+@media (min-width: 901px) and (min-height: 501px) {
+  .side.lgauto .lgfold { display: block; width: 100%; margin-top: 10px; font: 500 12.5px var(--body); color: var(--ink); background: none; border: 1px solid var(--ink); border-radius: 4px; padding: 5px 8px; cursor: pointer; text-align: left; }
+  .side.lgauto .lgfold:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  .side.lgauto:not(.lgshow) .legends { display: none; }
+}
 }
 @media (prefers-reduced-motion: reduce) { .pulse { animation: none !important; } }
 @keyframes pulse { 0% { stroke-opacity: .9 } 100% { stroke-opacity: 0 } }
@@ -814,6 +816,7 @@ const DATA = {"topo":{"type":"Topology","arcs":[[[40031,31959],[49,-342],[356,-3
     renderLegends();
     const bldOn = !!(layerOn.bld && bld), bldShown = bldOn && year >= bld.from;
     renderBuild(bldOn, bldShown, landShown);
+    fitLegends();
     const fillOff = landShown || bldShown;   // 땅값과 새 건물이 같이 켜지면 땅값 = 면, 새 건물 = 원
     // area + new area
     gArea.selectAll("*").remove(); gNew.selectAll("*").remove(); gRings.selectAll("*").remove();
@@ -1053,6 +1056,13 @@ const DATA = {"topo":{"type":"Topology","arcs":[[[40031,31959],[49,-342],[356,-3
   }
 
   // 범례: 켠 레이어의 범례만 보인다. 마을버스는 자료가 있는 해(2015–)에만
+  // 오른쪽 판에 범례까지 다 들어가지 않을 때만 범례를 접는다. 펼쳐 둔 것(.lgshow)과 판이 숨어 있을 때(다른 탭)는 그대로 둔다
+  function fitLegends() {
+    const sd = document.getElementById("side");
+    if (sd.classList.contains("lgshow") || !sd.clientHeight) return;
+    sd.classList.remove("lgauto");
+    if (sd.scrollHeight > sd.clientHeight + 2) sd.classList.add("lgauto");
+  }
   function renderLegends() {
     d3.select("#busLegend").attr("hidden", layerOn.bus && bus ? null : true);
     d3.select("#villageLegend").attr("hidden", layerOn.village && villageYear(year) ? null : true);
@@ -1552,7 +1562,7 @@ const DATA = {"topo":{"type":"Topology","arcs":[[[40031,31959],[49,-342],[356,-3
   // 좁은 화면: 범례는 단추를 눌러 지도 위에 펼친다
   d3.select("#layBtn").on("click", function () { const open = document.getElementById("side").classList.toggle("chipsopen"); this.setAttribute("aria-expanded", open ? "true" : "false"); });
   document.addEventListener("keydown", (ev) => { if (ev.key === "Escape" && document.getElementById("side").classList.contains("chipsopen")) { document.getElementById("side").classList.remove("chipsopen"); const b = document.getElementById("layBtn"); b.setAttribute("aria-expanded", "false"); b.focus(); } });
-  d3.select("#lgFold").on("click", function () { const open = document.getElementById("side").classList.toggle("lgshow"); this.setAttribute("aria-expanded", open ? "true" : "false"); this.textContent = open ? "범례 접기" : "범례 보기"; });
+  d3.select("#lgFold").on("click", function () { const open = document.getElementById("side").classList.toggle("lgshow"); this.setAttribute("aria-expanded", open ? "true" : "false"); this.textContent = open ? "범례 접기" : "범례 보기"; if (!open) fitLegends(); });
   d3.select("#legBtn").on("click", function () { const open = document.getElementById("side").classList.toggle("legopen"); this.setAttribute("aria-expanded", open ? "true" : "false"); });
 
   // ---------- 땅값과 건물 탭 ----------
@@ -1764,7 +1774,7 @@ const DATA = {"topo":{"type":"Topology","arcs":[[[40031,31959],[49,-342],[356,-3
     else drawTicks();
   }
   let rt = null;
-  const onResize = () => { clearTimeout(rt); rt = setTimeout(() => { if (tab === "map") refit(); if (tab === "data") drawBusChart(); }, 150); };
+  const onResize = () => { clearTimeout(rt); rt = setTimeout(() => { if (tab === "map") { refit(); fitLegends(); } if (tab === "data") drawBusChart(); }, 150); };
   if (window.ResizeObserver) new ResizeObserver(onResize).observe(document.querySelector(".stage"));
   window.addEventListener("resize", onResize);
   document.body.dataset.tab = "map";
