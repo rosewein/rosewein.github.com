@@ -279,6 +279,13 @@ svg text { font-family: var(--body); }
 .bseg button { font: 500 12px var(--body); color: var(--ink-2); background: transparent; border: 1px solid var(--rule); border-radius: 999px; padding: 2px 9px; min-height: 26px; cursor: pointer; }
 .bseg button[aria-pressed="true"] { color: var(--paper); background: var(--ink); border-color: var(--ink); }
 .bseg button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+/* 새 건물 용도 단추: 데스크톱 오른쪽 판에서는 범례 밖(칩 바로 아래)에 두어 범례를 접어도 보이게 한다(v1.6.1, 시안 B′).
+   휴대폰·낮은 가로 화면은 범례가 따로 열리므로 범례 안의 단추를 그대로 쓴다. 두 벌은 같은 값(bldUse)을 가리킨다 */
+.side .bldUse { display: none; }
+@media (min-width: 901px) and (min-height: 501px) {
+  .side .bldUse:not([hidden]) { display: flex; margin: 10px 0 0; }
+  #bldLegend .bseg { display: none; }
+}
 .bspark { height: 86px; }
 .bbig { margin: 4px 0 0; padding: 0; list-style: none; font-size: 12.5px; }
 .bbig li { margin: 1px 0; }
@@ -367,6 +374,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     <button class="chip" type="button" data-layer="dong" aria-pressed="false"><i style="color:var(--rule);border-top-width:1px"></i>현재 법정동</button>
   </div>
   </div>
+  <div class="bseg bldUse" id="bldUse" role="group" aria-label="새 건물 용도" hidden><span>새 건물 용도</span><button type="button" data-use="all" aria-pressed="true">전체</button><button type="button" data-use="r" aria-pressed="false">주거</button><button type="button" data-use="c" aria-pressed="false">상업·업무</button></div>
   <button type="button" class="legbtn" id="legBtn" aria-expanded="false" aria-controls="legends">범례</button>
   <button class="lgfold" id="lgFold" type="button" aria-expanded="false" aria-controls="legends">범례 보기</button>
   <div class="legends" id="legends">
@@ -789,6 +797,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
       .attr("display", d => d.properties.y <= year ? null : "none")
       .attr("fill", d => { const k = bldClass(bldDens(d.properties.cd, year) || 0); return k ? `var(--bld-${k})` : "transparent"; });
     d3.select("#bldLegend").attr("hidden", on ? null : true);
+    d3.select("#bldUse").attr("hidden", on ? null : true);
   }
 
   function render() {
@@ -1533,9 +1542,9 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     if (selDong && !document.getElementById("info").hidden) showDong(selDong);
   });
   // 새 건물 용도 고르기
-  d3.selectAll("#bldLegend .bseg button").on("click", function () {
+  d3.selectAll("#bldLegend .bseg button, #bldUse button").on("click", function () {
     bldUse = this.dataset.use;
-    d3.selectAll("#bldLegend .bseg button").attr("aria-pressed", function () { return this.dataset.use === bldUse ? "true" : "false"; });
+    d3.selectAll("#bldLegend .bseg button, #bldUse button").attr("aria-pressed", function () { return this.dataset.use === bldUse ? "true" : "false"; });
     render();
   });
   // 전체 켜기·끄기: 자료가 있어 보이는 칩만
