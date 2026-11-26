@@ -1885,9 +1885,9 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   window.addEventListener("resize", onResize);
   document.body.dataset.tab = "map";
   boot();
-  // 첫 화면: 주소에 연도나 탭이 있으면 그것을, 없으면 처음(1899년)부터. 주소에 연도가 없던 첫 방문은 주소를 그대로 둔다
+  // 첫 화면: 주소에 연도나 탭이 있으면 그것을, 없으면 처음(조선 후기 단계, 없으면 1899년)부터. 주소에 연도가 없던 첫 방문은 주소를 그대로 둔다
   const h0 = readHash(), bare = !location.hash;
-  setYear(h0.year || DATA.startYear || 1899);
+  setYear(h0.year || (joseon ? Y0 : DATA.startYear) || 1899);   // 처음부터 보게: 조선 후기 단계가 있으면 그 칸(Y0)에서 시작(v1.7.1, 이지가 정함)
   if (h0.tab !== "map") { showTab(h0.tab, true); syncHash(); }   // setYear가 주소를 #연도로 바꿔 놓으므로 탭 주소(#data 등)를 되돌린다
   if (bare) { try { history.replaceState(null, "", location.pathname + location.search); } catch (e) { /* 주소를 못 바꾸는 곳 */ } }
 })();
