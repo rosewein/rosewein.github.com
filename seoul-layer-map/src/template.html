@@ -1,9 +1,17 @@
 <title>서울 도시 연대지도</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hahmlet:wght@300;500;700&family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<!--__FONTLINKS__-->
 <style>
+/* 글꼴: 저장소 fonts/에 페이지에 쓰는 글자만 담아 둔다(src/fonts.py가 빌드 때 만듦). IBM Plex는 'Plex'가 예약된 이름이라
+   글자를 덜어 낸 것은 SLM Sans KR·SLM Mono로 이름을 바꿨다. 제목 글꼴(Hahmlet)은 h1·h2·연표 시기 제목·연도 숫자 글자만 담으므로,
+   var(--display)를 다른 곳에 새로 쓰면 build.py의 display_text()에 그 글자를 더해야 한다 */
+@font-face { font-family: "Hahmlet"; src: url("fonts/hahmlet-500.woff2?v=__FV__") format("woff2"); font-weight: 500; font-display: swap; }
+@font-face { font-family: "Hahmlet"; src: url("fonts/hahmlet-700.woff2?v=__FV__") format("woff2"); font-weight: 700; font-display: swap; }
+@font-face { font-family: "SLM Sans KR"; src: url("fonts/slm-sans-kr-400.woff2?v=__FV__") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "SLM Sans KR"; src: url("fonts/slm-sans-kr-500.woff2?v=__FV__") format("woff2"); font-weight: 500; font-display: swap; }
+@font-face { font-family: "SLM Sans KR"; src: url("fonts/slm-sans-kr-600.woff2?v=__FV__") format("woff2"); font-weight: 600; font-display: swap; }
+@font-face { font-family: "SLM Mono"; src: url("fonts/slm-mono-400.woff2?v=__FV__") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "SLM Mono"; src: url("fonts/slm-mono-500.woff2?v=__FV__") format("woff2"); font-weight: 500; font-display: swap; }
 /* Layout: 지도가 화면 대부분을 차지하는 무대, 그 아래 고정 연도 띠(슬라이더), 그 아래 연표·메모. 옛 측량도의 종이·먹·철도 붉은선을 차용 */
 :root {
   --paper: #e8ebe4;
@@ -24,23 +32,27 @@
   --village: #9cb81a;
   --village-dot: #5f7a00;
   --rail: #2a2f2c;
+  --joseon: #2a6f68; --joseon-2: #134640; --oldmap-op: .92;
   /* 땅값: 한 색상(흙색) 9단계, 밝음→어두움 = 쌈→비쌈. 어두운 화면은 반대로(싼 곳이 바탕에 묻힘) */
   --land-0: #fae8d9; --land-1: #f3c9a6; --land-2: #e4ad7d; --land-3: #d1935a; --land-4: #ba7a3e; --land-5: #9f652b; --land-6: #825122; --land-7: #634121; --land-8: #403227;
+  /* 새 건물: 한 색상(남색) 8단계, 밝음→어두움 = 적음→많음(1% 미만은 칠하지 않음). 어두운 화면은 반대. validate_palette.js --ordinal 통과(밝은 끝 대비 2:1 이상) */
+  --bld-1: #8f9fbb; --bld-2: #738cb9; --bld-3: #5878b2; --bld-4: #4265a6; --bld-5: #305294; --bld-6: #23417c; --bld-7: #193160; --bld-8: #122343;
   --display: "Hahmlet", "Noto Serif KR", "AppleMyungjo", serif;
-  --body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
-  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --body: "SLM Sans KR", "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  /* 숫자용 글꼴에는 한글이 없으므로 한글은 본문 글꼴로(전에는 운영체제 글꼴로 찍혔음) */
+  --mono: "SLM Mono", "IBM Plex Mono", "SLM Sans KR", "IBM Plex Sans KR", ui-monospace, "SFMono-Regular", Menlo, monospace;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --paper: #111714; --paper-2: #18201c; --ink: #e2e7e1; --ink-2: #a2ada5; --rule: #334039;
     --river: #2b475a; --tram: #ff6a5c; --kido: #b796e6; --area: #7d6f3c; --area-new: #d0a648;
-    --ring: #9a9880; --wall: #c3ccc4; --gu: #8e9a91; --focus: #6fb2ec; --bus: #ff5cb8; --rail: #c9d1ca; --village: #9fbf2a; --village-dot: #c8e05a; --land-0: #3b2a1b; --land-1: #5a3817; --land-2: #784919; --land-3: #935c24; --land-4: #ad7138; --land-5: #c38853; --land-6: #d7a273; --land-7: #e6bd99; --land-8: #f0d9c7; color-scheme: dark;
+    --ring: #9a9880; --wall: #c3ccc4; --gu: #8e9a91; --focus: #6fb2ec; --bus: #ff5cb8; --rail: #c9d1ca; --village: #9fbf2a; --village-dot: #c8e05a; --land-0: #3b2a1b; --land-1: #5a3817; --land-2: #784919; --land-3: #935c24; --land-4: #ad7138; --land-5: #c38853; --land-6: #d7a273; --land-7: #e6bd99; --land-8: #f0d9c7; --bld-1: #41506c; --bld-2: #4a628e; --bld-3: #5675af; --bld-4: #6589cb; --bld-5: #799ee2; --bld-6: #91b3f1; --bld-7: #adc9fb; --bld-8: #d3dff3; --joseon: #6cc3b6; --joseon-2: #a8e6dc; --oldmap-op: .62; color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --paper: #111714; --paper-2: #18201c; --ink: #e2e7e1; --ink-2: #a2ada5; --rule: #334039;
   --river: #2b475a; --tram: #ff6a5c; --kido: #b796e6; --area: #7d6f3c; --area-new: #d0a648;
-  --ring: #9a9880; --wall: #c3ccc4; --gu: #8e9a91; --focus: #6fb2ec; --bus: #ff5cb8; --rail: #c9d1ca; --village: #9fbf2a; --village-dot: #c8e05a; --land-0: #3b2a1b; --land-1: #5a3817; --land-2: #784919; --land-3: #935c24; --land-4: #ad7138; --land-5: #c38853; --land-6: #d7a273; --land-7: #e6bd99; --land-8: #f0d9c7; color-scheme: dark;
+  --ring: #9a9880; --wall: #c3ccc4; --gu: #8e9a91; --focus: #6fb2ec; --bus: #ff5cb8; --rail: #c9d1ca; --village: #9fbf2a; --village-dot: #c8e05a; --land-0: #3b2a1b; --land-1: #5a3817; --land-2: #784919; --land-3: #935c24; --land-4: #ad7138; --land-5: #c38853; --land-6: #d7a273; --land-7: #e6bd99; --land-8: #f0d9c7; --bld-1: #41506c; --bld-2: #4a628e; --bld-3: #5675af; --bld-4: #6589cb; --bld-5: #799ee2; --bld-6: #91b3f1; --bld-7: #adc9fb; --bld-8: #d3dff3; --joseon: #6cc3b6; --joseon-2: #a8e6dc; --oldmap-op: .62; color-scheme: dark;
 }
 * { box-sizing: border-box; }
 body { background: var(--paper); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.55; }
@@ -103,6 +115,9 @@ input[type=range] { width: 100%; margin: 0; accent-color: var(--tram); height: 2
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .chip { font: 500 13px var(--body); color: var(--ink-2); background: transparent; border: 1px solid var(--rule); border-radius: 999px; padding: 5px 12px 5px 9px; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; }
 .chip[hidden] { display: none; }
+.oldop { display: block; font: 500 12.5px var(--body); color: var(--ink-2); margin: 0 0 6px; }
+.oldop span { display: flex; justify-content: space-between; }
+.oldop b { font: 500 12px var(--mono); color: var(--ink); }
 .chip[aria-pressed="true"] { color: var(--ink); border-color: var(--ink); background: var(--paper-2); }
 .chip i { width: 14px; height: 0; border-top: 3px solid; display: inline-block; flex: none; }
 .chip i.fill { height: 10px; border: 1px solid var(--ring); border-top-width: 1px; }
@@ -121,6 +136,7 @@ input[type=range] { width: 100%; margin: 0; accent-color: var(--tram); height: 2
 .side .legend-land .tk span { font-size: 10px; }
 .attrib { position: absolute; right: 4px; bottom: 3px; font-size: 10.5px; color: var(--ink-2); background: var(--paper-2); background: color-mix(in srgb, var(--paper-2) 80%, transparent); padding: 1px 5px; border-radius: 3px; pointer-events: auto; }
 .attrib a { color: inherit; }
+#oldAttrib, #verLabel { white-space: nowrap; }   /* 좁은 화면에서 줄이 바뀌어도 출처·버전 덩어리는 나뉘지 않게 */
 .statstrip { display: none; }
 /* 오른쪽 판은 폭이 넉넉할 때만. 태블릿 세로 화면처럼 좁으면 칩을 지도 위 한 줄로(서울은 가로가 길어 폭을 지도에 주는 편이 크게 보임) */
 @media (max-width: 900px) {
@@ -192,6 +208,51 @@ svg text { font-family: var(--body); }
 .legend-bus[hidden] { display: none; }   /* display: flex가 hidden 속성을 이기므로 따로 적는다 */
 .legend-bus svg { vertical-align: -2px; margin-right: 4px; }
 #busChart { display: block; width: 100%; height: 150px; }
+/* 낮은 가로 화면(휴대폰 가로 등): 지도와 재생 막대가 화면 높이 안에 다 들어오게 줄이고,
+   레이어 칩·범례(오른쪽 판이나 칩 줄)는 접어서 지도 오른쪽 위 「레이어·범례」 단추로 연다(v1.5.1, 시안 2) */
+.camera .laybtn { display: none; }
+@media (max-height: 500px) and (orientation: landscape) {
+  body[data-tab="map"] .app { min-height: 0; }
+  .mapwrap { min-height: 0; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
+  header.top { padding-top: 2px; gap: 0 14px; }
+  header.top h1 { font-size: 16px; padding-bottom: 3px; }
+  .tabs button { padding: 4px 8px 5px; font-size: 13px; }
+  .yearplate { top: 6px; }
+  .yearplate .y { font-size: clamp(30px, 10vh, 84px); }
+  .yearplate .era { margin-top: 2px; font-size: 12px; }
+  .yearplate .stat { font-size: 11px; }
+  .evpop { max-width: 300px; font-size: 12px; padding: 4px 8px; margin-top: 5px; }
+  .camera { top: 6px; gap: 4px; }
+  .camera button { padding: 3px 7px; font-size: 11.5px; }
+  .camera .laybtn { display: block; }
+  .side { position: absolute; z-index: 7; top: 6px; right: 96px; left: auto; width: min(460px, 60%); max-height: calc(100% - 12px); overflow-y: auto; display: none;
+    background: var(--paper); border: 1px solid var(--ink); border-radius: 4px; padding: 8px; order: 0; }
+  .side.chipsopen { display: block; }
+  .side .scroller { display: flex; flex-wrap: wrap; overflow: visible; gap: 6px; }
+  .side .all { display: flex; margin: 0 0 6px; }
+  .side .chips { display: flex; flex-direction: row; flex-wrap: wrap; gap: 4px; }
+  .side .chip { width: auto; flex: none; border-radius: 999px; padding: 2px 8px; }
+  .legbtn { display: none !important; }
+  .side .legends { display: block; position: static; border: 0; padding: 0; max-height: none; }
+  .timebar .wrap { padding-block: 3px; gap: 0 10px; grid-template-columns: auto 1fr auto; }
+  .timebar .speed { grid-column: 3; grid-row: 1 / span 2; }
+  .speed span { display: none; }
+  .speed button { min-height: 22px; padding: 1px 7px; }
+  .play { width: 32px; height: 32px; }
+  #ticks { height: 11px; }
+  input[type=range] { height: 18px; }
+  .scale { height: 13px; font-size: 10.5px; }
+}
+/* 오른쪽 판에 칩과 범례가 다 들어가지 않으면(노트북, 새 건물 범례를 켠 1920×1080 등) 범례를 접고 「범례 보기」로 펼친다.
+   접을지는 fitLegends()가 판의 실제 높이로 정한다(v1.5.2에서 높이 800px 기준으로 시작, v1.6에서 넘칠 때만으로 바꿈, 시안 B).
+   높이 500px 이하 가로 화면은 위의 「레이어·범례」 팝오버가 맡으므로 빼고, 폭 900px 이하는 따로 범례 단추가 있다 */
+.lgfold { display: none; }
+@media (min-width: 901px) and (min-height: 501px) {
+  .side.lgauto .lgfold { display: block; width: 100%; margin-top: 10px; font: 500 12.5px var(--body); color: var(--ink); background: none; border: 1px solid var(--ink); border-radius: 4px; padding: 5px 8px; cursor: pointer; text-align: left; }
+  .side.lgauto .lgfold:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  .side.lgauto:not(.lgshow) .legends { display: none; }
+}
+}
 @media (prefers-reduced-motion: reduce) { .pulse { animation: none !important; } }
 @keyframes pulse { 0% { stroke-opacity: .9 } 100% { stroke-opacity: 0 } }
 .pulse { animation: pulse 1.6s ease-out infinite; }
@@ -219,6 +280,20 @@ svg text { font-family: var(--body); }
 .legend-land .tk span.mid { color: var(--ink); font-weight: 500; }
 .legend-land p { margin: 2px 0 0; }
 .spark { display: block; width: 100%; max-width: 380px; height: 74px; margin-top: 6px; }
+.bseg { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 0 0 4px; font-size: 12px; color: var(--ink-2); }
+.bseg button { font: 500 12px var(--body); color: var(--ink-2); background: transparent; border: 1px solid var(--rule); border-radius: 999px; padding: 2px 9px; min-height: 26px; cursor: pointer; }
+.bseg button[aria-pressed="true"] { color: var(--paper); background: var(--ink); border-color: var(--ink); }
+.bseg button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+/* 새 건물 용도 단추: 데스크톱 오른쪽 판에서는 범례 밖(칩 바로 아래)에 두어 범례를 접어도 보이게 한다(v1.6.1, 시안 B′).
+   휴대폰·낮은 가로 화면은 범례가 따로 열리므로 범례 안의 단추를 그대로 쓴다. 두 벌은 같은 값(bldUse)을 가리킨다 */
+.side .bldUse { display: none; }
+@media (min-width: 901px) and (min-height: 501px) {
+  .side .bldUse:not([hidden]) { display: flex; margin: 10px 0 0; }
+  #bldLegend .bseg { display: none; }
+}
+.bspark { height: 86px; }
+.bbig { margin: 4px 0 0; padding: 0; list-style: none; font-size: 12.5px; }
+.bbig li { margin: 1px 0; }
 details.landtab { margin: 0 0 18px; }
 details.landtab summary { cursor: pointer; font-size: 13.5px; color: var(--ink); }
 details.landtab .scroll { max-height: 340px; overflow-y: auto; margin-top: 6px; border-top: 1px solid var(--rule); }
@@ -238,6 +313,30 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --gb: #8fbf7f; } }
 :root[data-theme="dark"] { --gb: #8fbf7f; }
 .legend-land i.gbsw { display: inline-block; width: 18px; height: 10px; border-radius: 2px; vertical-align: -1px; margin: 0 4px 0 0; background: repeating-linear-gradient(45deg, transparent 0 3px, var(--gb) 3px 4.5px); border: 1px solid var(--gb); }
+/* 땅값과 건물 탭 */
+#pane-dev { max-width: 1060px; }
+.devbar { display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: center; margin: 0 0 4px; }
+.devwin { display: flex; align-items: center; gap: 8px; flex: 0 1 auto; min-width: 0; }
+.devwin b { font: 500 15px var(--mono); font-variant-numeric: tabular-nums; min-width: 8.6em; text-align: center; }
+.devwin button { white-space: nowrap; font: 500 15px var(--body); color: var(--ink); background: var(--paper); border: 1px solid var(--rule); border-radius: 4px; min-width: 30px; height: 28px; cursor: pointer; }
+.devwin button:disabled { opacity: .35; cursor: default; }
+.devwin input[type=range] { width: 150px; min-width: 60px; flex: 0 1 150px; accent-color: var(--ink); }
+@media (max-width: 560px) { .devwin b { min-width: 0; font-size: 14px; } }
+.devchart { position: relative; max-width: 780px; }
+#devSvg { display: block; width: 100%; height: auto; touch-action: manipulation; }
+.devtip { position: absolute; pointer-events: none; background: var(--paper); border: 1px solid var(--ink); padding: 5px 8px; font-size: 12.5px; line-height: 1.45; width: max-content; max-width: 250px; z-index: 2; }
+.devtip[hidden] { display: none; }
+.devkey { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 12.5px; color: var(--ink-2); margin: 4px 0 20px; max-width: 780px; }
+.devkey svg { vertical-align: -2px; margin-right: 4px; }
+.devt { margin-bottom: 8px; }
+.devt td.n, .devt th.n { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.devt td .meta { color: var(--ink-2); font-size: 12px; }
+.lk { font: inherit; color: var(--ink); background: none; border: 0; padding: 0; text-decoration: underline; text-decoration-color: var(--rule); text-underline-offset: 3px; cursor: pointer; text-align: left; }
+.lk:hover { text-decoration-color: var(--ink); }
+.lk:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+#pane-dev .legend-notes { max-width: 72ch; }
+#pane-dev a { color: var(--ink); }
+.devt th.n { font-family: var(--body); }
 </style>
 
 <div class="app">
@@ -247,6 +346,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     <button type="button" role="tab" id="tab-map" data-tab="map" aria-controls="pane-map" aria-selected="true">지도</button>
     <button type="button" role="tab" id="tab-log" data-tab="log" aria-controls="pane-log" aria-selected="false" tabindex="-1">연표</button>
     <button type="button" role="tab" id="tab-data" data-tab="data" aria-controls="pane-data" aria-selected="false" tabindex="-1">표·자료</button>
+    <button type="button" role="tab" id="tab-dev" data-tab="dev" aria-controls="pane-dev" aria-selected="false" tabindex="-1" hidden>땅값과 건물</button>
     <button type="button" role="tab" id="tab-read" data-tab="read" aria-controls="pane-read" aria-selected="false" tabindex="-1">읽는 법</button>
   </nav>
 </header>
@@ -266,9 +366,10 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     <button id="viewCore" type="button" title="도성 일대로 확대">도심</button>
     <button id="viewAll" type="button" title="현재 서울 전체">서울 전체</button>
     <button id="evToggle" type="button" aria-pressed="true" title="그 해에 일어난 일을 연도 아래에 띄움">그 해 사건</button>
+    <button id="layBtn" class="laybtn" type="button" aria-expanded="false" aria-controls="side">레이어·범례</button>
   </div>
   <div class="info" id="info" hidden><button class="x" id="infoX" type="button" aria-label="닫기">×</button><div id="infoBody"></div></div>
-  <div class="attrib" id="attrib">선로 형상 © OpenStreetMap contributors<span id="verLabel"></span></div>
+  <div class="attrib" id="attrib">선로·물길 형상 © OpenStreetMap contributors<span id="oldAttrib" hidden></span><span id="verLabel"></span></div>
 </div>
 <aside class="side" id="side" aria-label="레이어">
   <div class="scroller">
@@ -279,18 +380,23 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     <button class="chip" type="button" data-layer="tram" aria-pressed="true"><i style="color:var(--tram)"></i>전차</button>
     <button class="chip" type="button" data-layer="kido" aria-pressed="true"><i style="color:var(--kido)"></i>경성궤도 기동차</button>
     <button class="chip" type="button" data-layer="land" aria-pressed="false" id="landChip" hidden><i class="fill" style="background:linear-gradient(90deg,var(--land-1),var(--land-4),var(--land-7))"></i>땅값(공시지가)</button>
+    <button class="chip" type="button" data-layer="bld" aria-pressed="false" id="bldChip" hidden><i class="fill" style="background:linear-gradient(90deg,var(--bld-2),var(--bld-5),var(--bld-8))"></i>새 건물(5년)</button>
     <button class="chip" type="button" data-layer="stland" aria-pressed="false" id="stLandChip" hidden><i class="fill" style="background:linear-gradient(90deg,var(--stl-1),var(--stl-3))"></i>역 둘레 땅값(개통 전후)</button>
     <button class="chip" type="button" data-layer="gb" aria-pressed="false" id="gbChip" hidden><i class="fill" style="background:repeating-linear-gradient(45deg,transparent 0 3px,var(--gb) 3px 4.5px);border-color:var(--gb)"></i>그린벨트(지금 경계)</button>
     <button class="chip" type="button" data-layer="area" aria-pressed="true"><i class="fill" style="background:var(--area)"></i>시역</button>
     <button class="chip" type="button" data-layer="rings" aria-pressed="true"><i style="color:var(--ring);border-top-style:dashed;border-top-width:2px"></i>이전 경계</button>
     <button class="chip" type="button" data-layer="gu" aria-pressed="true"><i style="color:var(--gu);border-top-width:1px"></i>구 경계</button>
     <button class="chip" type="button" data-layer="wall" aria-pressed="true"><i style="color:var(--wall);border-top-style:dotted"></i>한양도성</button>
+    <button class="chip" type="button" data-layer="joseon" aria-pressed="true" id="joseonChip" hidden><i style="color:var(--joseon);border-top-width:2px"></i>조선 후기 대로·역·원·나루</button>
+    <button class="chip" type="button" data-layer="oldmap" aria-pressed="true" id="oldmapChip" hidden><i class="fill" style="background:#e6d2ad"></i>옛 지도(1914–1935)</button>
     <button class="chip" type="button" data-layer="bus" aria-pressed="true" id="busChip" hidden><i style="color:var(--bus);border-top-width:2px"></i>버스</button>
     <button class="chip" type="button" data-layer="village" aria-pressed="true" id="villageChip" hidden><i class="fill" style="background:var(--village)"></i>마을버스(2015–)</button>
     <button class="chip" type="button" data-layer="dong" aria-pressed="false"><i style="color:var(--rule);border-top-width:1px"></i>현재 법정동</button>
   </div>
   </div>
+  <div class="bseg bldUse" id="bldUse" role="group" aria-label="새 건물 용도" hidden><span>새 건물 용도</span><button type="button" data-use="all" aria-pressed="true">전체</button><button type="button" data-use="r" aria-pressed="false">주거</button><button type="button" data-use="c" aria-pressed="false">상업·업무</button></div>
   <button type="button" class="legbtn" id="legBtn" aria-expanded="false" aria-controls="legends">범례</button>
+  <button class="lgfold" id="lgFold" type="button" aria-expanded="false" aria-controls="legends">범례 보기</button>
   <div class="legends" id="legends">
   <h3>범례</h3>
   <div class="legend-bus" id="busLegend" hidden>
@@ -302,10 +408,26 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   <div class="legend-bus" id="villageLegend" hidden>
     <span><svg width="20" height="12" viewBox="0 0 20 12"><rect x="1" y="2" width="12" height="8" fill="var(--village)" fill-opacity=".5"/><circle cx="17" cy="6" r="1.6" fill="var(--village-dot)"/></svg>마을버스 정류장(점)과 마을버스로만 닿는 땅(칠한 곳)</span>
   </div>
+  <div class="legend-bus" id="oldmapLegend" hidden>
+    <label class="oldop" for="oldOp"><span>옛 지도 진하기 <b id="oldOpVal"></b></span><input type="range" id="oldOp" min="0" max="100" step="5" aria-label="옛 지도 진하기"></label>
+    <span id="oldmapNote"></span>
+  </div>
+  <div class="legend-bus" id="joseonLegend" hidden>
+    <span><svg width="20" height="12" viewBox="0 0 20 12"><path d="M1,6H19" stroke="var(--joseon)" stroke-width="2.4"/></svg>조선 후기 대로(지금 길을 따라 그린 근사선, 점선은 근거가 약한 구간)</span>
+    <span><svg width="20" height="12" viewBox="0 0 20 12"><path d="M1,6H19" stroke="var(--joseon)" stroke-width="1.6" stroke-dasharray="4 4"/></svg>나룻배로 건너는 곳</span>
+    <span><svg width="46" height="12" viewBox="0 0 46 12"><rect x="2" y="2" width="8" height="8" fill="var(--joseon-2)"/><circle cx="22" cy="6" r="4" fill="var(--paper)" stroke="var(--joseon-2)" stroke-width="1.6"/><path d="M34,10L38,2L42,10Z" fill="var(--joseon)" stroke="var(--joseon-2)" stroke-width=".8"/></svg>역 · 원 · 나루</span>
+  </div>
   <div class="legend-land" id="landLegend" hidden>
     <div class="bar" id="landBar"></div>
     <div class="tk" id="landTicks"></div>
     <p>땅값: 서울 필지 중앙값의 몇 배인지. 칸마다 두 배, 굵은 1이 서울 중앙값 · <i class="na"></i>자료 없음</p>
+  </div>
+  <div class="legend-land" id="bldLegend" hidden>
+    <div class="bseg" role="group" aria-label="새 건물 용도"><span>용도</span><button type="button" data-use="all" aria-pressed="true">전체</button><button type="button" data-use="r" aria-pressed="false">주거</button><button type="button" data-use="c" aria-pressed="false">상업·업무</button></div>
+    <div class="bar" id="bldBar"></div>
+    <div class="tk" id="bldTicks"></div>
+    <div id="bldDotKey" hidden style="margin:4px 0 2px"><svg id="bldDotSvg" width="210" height="44" role="img" aria-label="원 크기 보기"></svg></div>
+    <p id="bldNote">새 건물: 그 해까지 5년 동안 사용승인된 건물 연면적을 법정동 면적으로 나눈 값(%)입니다. 칸 하나가 두 배씩(로그 눈금)이고, 1% 미만은 칠하지 않았습니다. 지금 건축물대장에 헐려서 말소된 건물을 더한 값입니다.</p>
   </div>
   <div class="legend-land" id="stLandLegend" hidden>
     <div class="bar stl"><i style="background:var(--stl-low)"></i><i style="background:var(--stl-0)"></i><i style="background:var(--stl-1)"></i><i style="background:var(--stl-2)"></i><i style="background:var(--stl-3)"></i><i style="background:var(--stl-4)"></i></div>
@@ -314,6 +436,9 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   </div>
   <div class="legend-land" id="gbLegend" hidden>
     <p><i class="gbsw"></i><span id="gbLegendText">그린벨트(개발제한구역)</span></p>
+  </div>
+  <div class="legend-bus" id="waterLegend">
+    <span><svg width="20" height="12" viewBox="0 0 20 12"><rect x="1" y="2" width="9" height="8" fill="var(--river)"/><path d="M12,6H19" stroke="var(--river)" stroke-width="1.8"/></svg>물길(한강 수면·하천): 지금 모습</span>
   </div>
   <p class="small" style="margin:10px 0 0">자세한 풀이는 「읽는 법」 탭에 있습니다.</p>
   </div>
@@ -362,13 +487,63 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   </div>
 </section>
 
+<section class="pane pane-text wrap" id="pane-dev" role="tabpanel" aria-labelledby="tab-dev" hidden>
+  <h2>법정동별 땅값 변화와 새 건물</h2>
+  <p class="lead" style="max-width:72ch">점 하나가 법정동 하나입니다. 가로는 5년 동안 사용승인된 건물 연면적을 동 면적으로 나눈 값(신축 밀도), 세로는 같은 5년 동안 그 동의 땅값이 서울 중앙값에 견주어 몇 배로 바뀌었는지입니다. 둘 다 로그 눈금이고, 세로 ×1 위쪽은 서울 전체보다 더 오른 동입니다. 연도는 지도 탭과 같이 움직입니다. 점이나 표의 동 이름을 누르면 지도 탭에서 땅값과 새 건물을 켜고 그 해, 그 동을 엽니다.</p>
+  <div class="devbar">
+    <div class="devwin" role="group" aria-label="5년 창 고르기">
+      <button type="button" id="devPrev" aria-label="5년 앞 창">‹ 5년</button>
+      <b id="devWin" aria-live="polite"></b>
+      <button type="button" id="devNext" aria-label="5년 뒤 창">5년 ›</button>
+      <input type="range" id="devRange" step="1" aria-label="끝 해">
+    </div>
+    <div class="bseg" id="devCol" role="group" aria-label="점 색"><span>점 색</span><button type="button" data-col="r" aria-pressed="true">주거 비율</button><button type="button" data-col="c" aria-pressed="false">상업·업무 비율</button><button type="button" data-col="none" aria-pressed="false">없음</button></div>
+  </div>
+  <p class="small" id="devNote" style="margin:0 0 6px"></p>
+  <div class="devchart" id="devChart"><svg id="devSvg" role="img" aria-label="법정동별 신축 밀도와 땅값 변화"></svg><div class="devtip" id="devTip" hidden></div></div>
+  <div class="devkey" id="devKey"></div>
+  <div class="cols">
+    <div class="prose">
+      <h2>역 신설과 신축 밀도로 나눈 땅값 변화</h2>
+      <table class="areas devt" id="devT1"></table>
+      <h2>신축이 많은 동의 용도별 땅값 변화</h2>
+      <table class="areas devt" id="devT2"></table>
+      <p class="small">두 표 모두 땅값 배수 5년 변화의 중앙값과 동 수입니다. 같은 5년 안에 함께 나타난 것을 요약한 것이라, 신축이나 역 개통이 땅값을 올렸다는 뜻으로 읽을 수는 없습니다.</p>
+    </div>
+    <div class="prose">
+      <h2>신축 밀도가 높은 동</h2>
+      <div class="bseg" id="devSort" role="group" aria-label="목록 정렬"><span>정렬</span><button type="button" data-sort="dens" aria-pressed="true">신축 밀도순</button><button type="button" data-sort="chg" aria-pressed="false">땅값 변화순</button></div>
+      <table class="areas devt" id="devT3"></table>
+    </div>
+  </div>
+  <h2>읽을 때 주의할 점</h2>
+  <ul class="legend-notes">
+    <li>세로축은 서울 중앙값에 견준 배수가 5년 동안 바뀐 비율입니다. ×1은 그 동 땅값이 서울 전체와 같은 비율로 움직였다는 뜻이고, 땅값이 그대로였다는 뜻이 아닙니다.</li>
+    <li>새 건물은 끝 해를 포함한 다섯 해(예: 2008년이면 2004~2008년)에 사용승인된 연면적이고, 땅값은 다섯 해 전(2003년)과 끝 해(2008년)를 견줍니다. 지도의 새 건물 색과 같은 창입니다.</li>
+    <li>사용승인일은 공사가 끝난 날입니다. 재건축 결정이나 분양처럼 땅값이 먼저 움직일 수 있는 일은 그보다 몇 해 앞서므로, 같은 5년 창 안에서 신축과 땅값 변화가 어긋나 보일 수 있습니다. 앞뒤 창을 넘겨 보며 같은 동이 어디로 움직이는지 보는 편이 낫습니다.</li>
+    <li>땅값은 동 안 모든 필지의 중앙값입니다. 역 둘레 몇백 미터처럼 좁은 곳에서 일어난 변화는 동 전체 중앙값에 묻혀 드러나지 않을 수 있고, 재건축으로 필지가 합쳐지면 필지 수가 줄어 중앙값이 튈 수 있습니다.</li>
+    <li>역은 지하철·광역철도 역(국철 역은 뺌) 가운데 그 5년 사이 처음 열린 역이 지금 법정동 경계 안에 있는 경우입니다.</li>
+    <li>새 건물 값에는 헐려서 대장이 말소된 건물이 더해져 있지만, 2000년 전에 헐린 건물은 거의 빠져 있습니다. 1990년대 창의 신축 밀도는 실제보다 작게 나올 수 있습니다.</li>
+  </ul>
+  <h2>관련 문서</h2>
+  <ul class="legend-notes" id="devDocs">
+    <li><button type="button" class="lk" data-go="read">「읽는 법」 탭의 새 건물 설명</button>: 신축 밀도를 셈한 방법, 헐린 건물(폐쇄말소대장의 '말소')을 더한 이유와 그래도 남는 빈틈</li>
+    <li><button type="button" class="lk" data-go="data">「표·자료」 탭의 법정동별 땅값 표</button>: 그 해 동마다 서울 중앙값 대비 배수와 ㎡당 중앙값</li>
+    <li>지도에서 보기: <button type="button" class="lk" data-cd="11710101" data-y="2008">잠실동 2004~2008년</button>(잠실주공 1~4단지를 재건축한 엘스·리센츠·트리지움·레이크팰리스 사용승인) · <button type="button" class="lk" data-cd="11710101" data-y="1978">잠실동 1974~1978년</button>(잠실주공 5단지 사용승인)</li>
+    <li>자료 원문: 서울 열린데이터광장 <a href="https://data.seoul.go.kr/dataList/OA-22424/S/1/datasetView.do" target="_blank" rel="noopener">「서울시 건축물대장 표제부」(OA-22424)</a>, <a href="https://data.seoul.go.kr/dataList/OA-22432/S/1/datasetView.do" target="_blank" rel="noopener">「서울시 폐쇄말소대장 표제부」(OA-22432)</a>, <a href="https://data.seoul.go.kr/dataList/OA-1180/S/1/datasetView.do" target="_blank" rel="noopener">「서울시 개별공시지가 정보」(OA-1180)</a></li>
+    <li>말소와 폐쇄의 구분: 국가법령정보센터 <a href="https://www.law.go.kr/법령/건축물대장의기재및관리등에관한규칙" target="_blank" rel="noopener">「건축물대장의 기재 및 관리 등에 관한 규칙」</a> 제2조</li>
+  </ul>
+</section>
+
 <section class="pane pane-text wrap prose" id="pane-read" role="tabpanel" aria-labelledby="tab-read" hidden>
-  <p class="lead">1899년 경인선과 전차부터 지하철·버스, 1990년 이후 땅값까지, 교통·시역·땅값을 해마다 겹쳐 본 지도입니다. 연도 띠를 움직이거나 재생 단추를 누르면 해마다 바뀐 모습이 나오고, 지도를 확대하면 역 이름이 나옵니다.</p>
+  <p class="lead">1899년 경인선과 전차부터 지하철·버스, 1990년 이후 땅값과 1960년 이후 새 건물까지, 교통·시역·땅값·건물을 해마다 겹쳐 본 지도입니다. 연도 띠를 움직이거나 재생 단추를 누르면 해마다 바뀐 모습이 나오고, 지도를 확대하면 역 이름이 나옵니다.</p>
   <h2>범례 풀이</h2>
   <ul class="legend-notes">
     <li>버스 노선망(마을버스 제외): 1998–2003년은 2004년 6월 노선에서 거꾸로 맞췄습니다. 2004년부터는 2026년 11월 노선에 그 사이 없어진 노선 219개를 되살려 해마다 맞췄습니다. 굵을수록 그 구간을 지나는 노선이 많습니다.</li>
-    <li>마을버스: 점은 마을버스 정류장, 칠한 곳은 마을버스로만 닿는 땅(시내버스 정류장 300m 밖, 마을버스 정류장 300m 안)입니다. 2015년부터, 그 해 11월 셋째 수요일 승하차 기록으로 그렸습니다. 땅값을 함께 켜면 칠한 곳을 옅게 하고 테두리를 두릅니다.</li>
+    <li>마을버스: 점은 마을버스 정류장, 칠한 곳은 마을버스로만 닿는 땅(시내버스 정류장 300m 밖, 마을버스 정류장 300m 안)입니다. 2015년부터, 그 해 11월 셋째 수요일 승하차 기록으로 그렸습니다. 땅값이나 새 건물을 함께 켜면 칠한 곳을 옅게 하고 테두리를 두릅니다.</li>
     <li>땅값: 법정동마다 ㎡당 개별공시지가의 중앙값을 그 해 서울 전체 필지 중앙값으로 나눈 배수입니다. 칸 하나가 두 배씩(로그 눈금)이고, 굵은 1이 서울 중앙값입니다. 1990년부터 있고, 빗금은 그 해 자료가 없는 동입니다.</li>
+    <li>새 건물: 법정동마다 그 해까지 5년 동안 사용승인된 건물 연면적을 동 면적으로 나눈 값(신축 밀도, %)입니다. 칸 하나가 두 배씩(로그 눈금)이고 1% 미만은 칠하지 않았습니다. 1960년부터 있고, 범례에서 주거나 상업·업무만 골라 볼 수 있습니다. 땅값과 함께 켜면 땅값이 면을 칠하고, 새 건물은 동마다 원(넓이 = 5년 연면적)으로 바뀝니다. 땅값 변화와 견준 그림은 「땅값과 건물」 탭에 있습니다.</li>
+    <li>물길: 한강 수면과 이름 있는 하천 28개를 OpenStreetMap(2026년 11월 추출본)에서 그렸습니다. 지금 모습이라 옛 해를 볼 때도 같게 나옵니다. 잠실·여의도 둘레의 한강처럼 그 사이 크게 바뀐 곳은 그때와 다르고, 청계천은 덮여 있던 시기에도 선이 보입니다. 지금 덮여 있는(복개된) 구간은 그리지 않았습니다.</li>
   </ul>
   <h2>이 지도를 읽는 법</h2>
   <div id="method"></div>
@@ -425,6 +600,29 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   function fmtRatio(r) { return r == null ? "—" : r >= 10 ? `×${Math.round(r)}` : r >= 1 ? `×${r.toFixed(1)}` : `×${r.toPrecision(2)}`; }
   const dongName = (p) => `${p.nm} (${guName[p.gu] || ""})`;
 
+  // 새 건물(건축물대장 표제부 + 폐쇄말소대장 가운데 '말소'): 법정동마다 그 해까지 BLD_WIN년 동안 사용승인된 연면적 ÷ 동 면적(%).
+  // 칸마다 두 배(로그 눈금), 1% 미만은 칠하지 않는다. 자료 단위는 10㎡(building.py → build.py)
+  const bld = DATA.bld || null;
+  const BLD_EDGES = [1, 2, 4, 8, 16, 32, 64, 128];
+  const BLD_TICKS = ["1%", "2", "4", "8", "16", "32", "64", "128%"];
+  const BLD_WIN = bld ? bld.win : 5;
+  const BLD_USE = { all: ["r", "c", "o"], r: ["r"], c: ["c"] };
+  const BLD_USE_NM = { all: "전체", r: "주거", c: "상업·업무" };
+  let bldUse = "all";
+  const dongArea = {};   // ㎡ — 시역 면적 표와 같은 d3.geoArea
+  dongFeatures.forEach(f => { dongArea[f.properties.cd] = d3.geoArea(f) * 6371008.8 * 6371008.8; });
+  function bldFlow(cd, y, keys) {   // y년 한 해 사용승인 연면적(㎡)
+    const a = bld && bld.d[cd], i = bld ? y - bld.y0 : -1;
+    if (!a || i < 0) return 0;
+    let v = 0; for (const k of keys) if (a[k] && i < a[k].length) v += a[k][i];
+    return v * bld.unit;
+  }
+  function bldWin(cd, y, keys) { let v = 0; for (let t = y - BLD_WIN + 1; t <= y; t++) v += bldFlow(cd, t, keys); return v; }
+  function bldDens(cd, y) { return dongArea[cd] ? bldWin(cd, y, BLD_USE[bldUse]) / dongArea[cd] * 100 : null; }
+  function bldClass(v) { let k = 0; while (k < BLD_EDGES.length && v >= BLD_EDGES[k]) k++; return k; }
+  function fmtArea(v) { return v >= 1e4 ? `${(v / 1e4).toLocaleString("ko-KR", { maximumFractionDigits: v >= 1e5 ? 0 : 1 })}만㎡` : `${Math.round(v).toLocaleString("ko-KR")}㎡`; }
+  function fmtPct(v) { return v == null ? "—" : v >= 10 ? `${Math.round(v)}%` : v >= 1 ? `${v.toFixed(1)}%` : `${v.toPrecision(2)}%`; }
+
   const trams = DATA.trams.lines.map(l => ({ ...l, geo: { type: "LineString", coordinates: l.coords } }));
   const wallGeo = { type: "LineString", coordinates: DATA.trams.wall };
 
@@ -438,12 +636,20 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   const root = svg.append("g");
   // 땅값은 면이라 맨 아래(시역 채움보다도 아래). 켜면 시역 채움은 투명하게 하고 테두리만 남긴다
   const gLand = root.append("g");
+  // 새 건물도 법정동 면이라 땅값 바로 위. 땅값이 켜져 있으면 면 대신 원(gBuildDot)으로 그린다
+  const gBuild = root.append("g");
+  // 옛 지도(gOld)는 시역 아래에 깔고, 켜면 시역 채움을 비워 테두리만 지도 위에 보이게 한다
+  const gOld = root.append("g");
   const gArea = root.append("g"), gNew = root.append("g"), gRings = root.append("g"), gDong = root.append("g"),
         gGu = root.append("g"), gRiver = root.append("g"), gWall = root.append("g"), gVillage = root.append("g");
   // 교통 순서(v1.4.1): 버스 노선망을 바탕으로 깔고 그 위에 전차·철도·지하철을 그린다(버스가 큰길을 거의 다 덮어 지하철 선과 역이 묻혔음).
   // 눌러서 굵게 보이는 버스 노선과 신설·폐선 표시는 gBusTop에 따로 두어 맨 위에 그린다
   // 동 누르기 영역(gHit)은 면 레이어 위, 선·점 레이어 아래에 둔다. 맨 위에 두면 투명한 동 면이 역·노선·정류장 누르기를 모두 가로챈다(v1.4까지 그랬음)
   const gHit = root.append("g");
+  // 땅값과 새 건물을 함께 켜면 땅값은 면, 새 건물은 동마다 원(넓이 = 5년 연면적). 원은 클릭 면 아래에 두어 동 누르기를 막지 않는다
+  const gBuildDot = root.insert("g", () => gHit.node());
+  // 조선 후기 선·점은 동 누르기 영역 위(눌러서 근거를 봄), 버스·전차 아래
+  const gJoseon = root.append("g");
   const gBus = root.append("g"), gTram = root.append("g"), gRail = root.append("g"), gMetro = root.append("g"), gBusTop = root.append("g"),
         gRingLab = root.append("g"), gStLab = root.append("g"), gLabels = root.append("g");
   // 역 둘레 땅값 고리: 버스 노선망 위, 전차·철도·지하철 아래(역 점과 선이 고리 위에 보이게)
@@ -464,6 +670,13 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   if (greenbelt) document.getElementById("gbChip").hidden = false;
   const village = DATA.village || null;
   if (village) document.getElementById("villageChip").hidden = false;
+  // 조선 후기 대로·역·원·나루: 자료가 있으면 연도 띠가 1899년 한 칸 앞(Y0=1898)에서 시작한다. 1898은 '조선 후기' 단계를 뜻하고 실제 1898년이 아니다
+  const joseon = DATA.joseon || null;
+  const oldmap = DATA.oldmap || null;   // 1914 경성부시가강계도: 웹 메르카토르로 다시 그린 이미지(img/). 처음 보일 때 불러온다
+  if (oldmap) document.getElementById("oldmapChip").hidden = false;
+  if (joseon) document.getElementById("joseonChip").hidden = false;
+  const Y0 = joseon ? 1898 : 1899;
+  const yearText = y => y < 1899 ? "조선 후기" : String(y);
   // 그 해 자료가 없으면(2023–2025) 그 앞의 가장 가까운 해를 쓴다
   function villageYear(y) {
     if (!village || y < 2015) return null;
@@ -487,8 +700,80 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
       .attr("cx", d => projection(d)[0]).attr("cy", d => projection(d)[1]).attr("r", 1.1 / kNow)
       .attr("fill", "var(--village-dot)").attr("fill-opacity", 0.75).style("pointer-events", "none");
   }
+  // 옛 지도: 1914년 6월 「경성부시가강계도」를 1914–1935년에 깐다. 웹 메르카토르 격자라 두 모서리만 투영하면 된다
+  // 진하기: 띠를 건드리기 전에는 화면 색에 맞춘 기본값(--oldmap-op), 건드리면 그 값
+  let oldOpUser = null;
+  const oldOpInput = document.getElementById("oldOp");
+  function oldOpNow() { return oldOpUser != null ? oldOpUser : parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--oldmap-op")) || 0.9; }
+  function syncOldOp() { const v = Math.round(oldOpNow() * 100); oldOpInput.value = v; d3.select("#oldOpVal").text(v + "%"); }
+  oldOpInput.addEventListener("input", () => { oldOpUser = +oldOpInput.value / 100; gOld.selectAll("image").style("opacity", oldOpUser); syncOldOp(); });
+  function oldShownAt(y) { return !!(oldmap && layerOn.oldmap && y >= oldmap.from && y <= oldmap.to); }
+  function drawOld() {
+    const on = oldShownAt(year);
+    gOld.style("display", on ? null : "none");
+    gRiver.style("opacity", on ? 0.35 : null);   // 지금 한강 선이 옛 지도의 강을 덮지 않게
+    // 공공누리 제1유형: 옛 지도가 보이는 동안 출처(기관명·링크)를 지도 출처 줄에 함께 적는다
+    d3.select("#oldAttrib").property("hidden", !on)
+      .html(on ? ` · 옛 지도 <a href="${oldmap.url}" target="_blank" rel="noopener">${oldmap.credit}</a>(공공누리 제1유형)` : "");
+    if (!on) return;
+    // 본문과 창신·숭인동 덧그림을 따로 맞춘 이미지 두 장
+    const img = gOld.selectAll("image").data(oldmap.imgs).join(en => en.append("image").attr("href", d => d.src)
+      .attr("preserveAspectRatio", "none").style("pointer-events", "none"));
+    img.style("opacity", oldOpUser != null ? oldOpUser : "var(--oldmap-op)");
+    syncOldOp();
+    img.each(function (d) { const a = projection(d.nw), b = projection(d.se);
+      d3.select(this).attr("x", a[0]).attr("y", a[1]).attr("width", b[0] - a[0]).attr("height", b[1] - a[1]); });
+    d3.select("#oldmapNote").html(`${oldmap.title}, ${oldmap.date}. ${oldmap.src}. ${oldmap.fit}. ${oldmap.insetFit || ""}`);
+  }
+  // 조선 후기 대로·역·원·나루: 1899년 앞 단계에서는 진하게(이름까지), 그 뒤로는 옅게 깔아 옛 길이 뒤의 교통망과 어떻게 겹치는지만 보인다
+  const JSYM = { "역": d3.symbolSquare, "원": d3.symbolCircle, "나루": d3.symbolTriangle, "문": d3.symbolDiamond };
+  function drawJoseon() {
+    gJoseon.selectAll("*").remove();
+    if (!joseon || !layerOn.joseon) return;
+    const full = year < 1899;
+    joseon.roads.forEach(r => r.segs.forEach(sg => {
+      const geo = { type: "LineString", coordinates: sg.p };
+      gJoseon.append("path").datum(geo).attr("d", path).attr("fill", "none").attr("stroke", "var(--joseon)")
+        .attr("stroke-width", full ? (r.conf === "낮음" ? 1.6 : 2.4) : 1.2).attr("stroke-opacity", full ? 0.9 : 0.4)
+        .attr("stroke-dasharray", sg.ferry ? "4 4" : r.conf === "낮음" ? "9 3" : null)
+        .attr("stroke-linecap", "round").attr("stroke-linejoin", "round").attr("vector-effect", "non-scaling-stroke").style("pointer-events", "none");
+      if (full) gJoseon.append("path").datum(geo).attr("d", path).attr("fill", "none").attr("stroke", "transparent").attr("stroke-width", 12)
+        .attr("vector-effect", "non-scaling-stroke").style("cursor", "pointer")
+        .on("click", (ev) => { ev.stopPropagation(); showInfo(`<b>${r.name}</b> · ${r.no}<div class="meta">${r.via.join(" – ")}</div><div class="meta">근거: ${r.src}. 확인 정도 ${r.conf}. 지금 도로를 따라 그린 근사선</div>`); });
+    }));
+    const pts = joseon.points.filter(p => full || p.kind !== "문");
+    gJoseon.selectAll("path.jp").data(pts).join("path").attr("class", "jp")
+      .each(function (p) { p._p = projection([p.lng, p.lat]); })
+      .attr("fill", p => p.kind === "원" || p.kind === "문" ? "var(--paper)" : p.kind === "역" ? "var(--joseon-2)" : "var(--joseon)")
+      .attr("stroke", p => p.kind === "문" ? "var(--wall)" : "var(--joseon-2)").attr("stroke-width", p => p.kind === "원" ? 1.6 : 0.8)
+      .attr("vector-effect", "non-scaling-stroke").attr("opacity", full ? 1 : 0.5).style("cursor", p => p.kind === "문" ? null : "pointer")
+      .on("click", (ev, p) => { if (p.kind === "문") return; ev.stopPropagation(); showInfo(`<b>${p.name}</b> ${p.hanja || ""} · ${p.kind}<div class="meta">${p.src}</div><div class="meta">위치: ${p.pos}. 확인 정도 ${p.conf}</div>`); });
+    if (full) {
+      gJoseon.selectAll("text.jl").data(pts).join("text").attr("class", "jl").text(p => p.name)
+        .attr("fill", p => p.kind === "문" ? "var(--ink-2)" : "var(--joseon-2)").attr("font-weight", p => p.kind === "문" ? 500 : 600)
+        .attr("paint-order", "stroke").attr("stroke", "var(--paper-2)").style("pointer-events", "none");
+      // 대로 이름(6대로만): 선의 6할쯤 되는 곳
+      const rl = joseon.roads.filter(r => /^r\d$/.test(r.id)).map(r => {
+        const land = r.segs.filter(sg => !sg.ferry), sg = land[r.lab != null ? r.lab : Math.min(land.length - 1, Math.floor(land.length * 0.6))];
+        const q = sg.p[Math.floor(sg.p.length / 2)]; return { t: `${r.no} ${r.name}`, q, _p: projection(q) };
+      });
+      gJoseon.selectAll("text.jr").data(rl).join("text").attr("class", "jr").text(d => d.t)
+        .attr("fill", "var(--joseon)").attr("font-style", "italic").attr("text-anchor", "middle")
+        .attr("paint-order", "stroke").attr("stroke", "var(--paper-2)").style("pointer-events", "none");
+    }
+    sizeJoseon();
+  }
+  function sizeJoseon() {
+    const full = year < 1899, k2 = kNow * kNow;
+    gJoseon.selectAll("path.jp").attr("d", p => d3.symbol(JSYM[p.kind], (p.kind === "문" ? 36 : full ? 64 : 26) / k2)())
+      .attr("transform", p => `translate(${p._p[0]},${p._p[1]})`);
+    gJoseon.selectAll("text.jl").attr("x", p => p._p[0] + 6 / kNow).attr("y", p => p._p[1] + 4 / kNow)
+      .attr("font-size", p => (p.kind === "문" ? 9.5 : 11) / kNow).attr("stroke-width", 3 / kNow);
+    gJoseon.selectAll("text.jr").attr("x", d => d._p[0]).attr("y", d => d._p[1] - 6 / kNow).attr("font-size", 10.5 / kNow).attr("stroke-width", 3 / kNow);
+  }
   if (bus) { document.getElementById("busChip").hidden = false; document.getElementById("busBlock").hidden = false; }
   if (land) { document.getElementById("landChip").hidden = false; document.getElementById("landBlock").hidden = false; }
+  if (bld) document.getElementById("bldChip").hidden = false;
   let selRoute = null;  // {net: "old"|"new", i}
   let selDong = null;   // 땅값 정보창을 연도에 맞춰 다시 쓰려고 기억
   const bus2026 = DATA.bus2026 || null;
@@ -534,8 +819,9 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   const busSym = (t) => d3.symbol().type(SYM[t] || d3.symbolDiamond).size(t === "신설" || t === "폐선" ? 70 : 46)();
   let W = 0, H = 0, projection = d3.geoMercator(), path = d3.geoPath(projection), kNow = 1;
 
-  const layerOn = { rail: true, metro: true, tram: true, kido: true, area: true, rings: true, gu: true, wall: true, dong: false, bus: true, village: true, land: false };
+  const layerOn = { rail: true, metro: true, tram: true, kido: true, area: true, rings: true, gu: true, wall: true, dong: false, bus: true, village: true, land: false, bld: false, joseon: true, oldmap: true };
   layerOn.stland = false; layerOn.gb = false;
+  const GB_FROM = 1971;   // 그린벨트 첫 지정(1971-07-30, 국가기록원 「기록으로 보는 한국」)
 
   function fit() {
     const r = svg.node().getBoundingClientRect();
@@ -551,9 +837,11 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     gLabels.selectAll("text").attr("font-size", d => (d.fs || 11) / kNow).attr("stroke-width", 3 / kNow);
     gRail.selectAll("rect").call(sizeRail);
     sizeBus();
+    sizeJoseon();
     gVillage.selectAll("circle").attr("r", 1.1 / kNow);
     gStLand.selectAll("circle").attr("r", 3.2 / kNow);
     gbPat.attr("width", 7 / kNow).attr("height", 7 / kNow); gbPatLine.attr("width", 1.3 / kNow).attr("height", 7 / kNow);
+    gBuildDot.selectAll("circle").attr("r", q => bldR(q.v));
     landPat.attr("width", 6 / kNow).attr("height", 6 / kNow); landPatBg.attr("width", 6 / kNow).attr("height", 6 / kNow);
     landPatLine.attr("width", 1.2 / kNow).attr("height", 6 / kNow);
     gMetro.selectAll("circle").attr("r", st => (Object.keys(st.opens).filter(l => st.opens[l] <= year).length > 1 ? 3.4 : 2.3) / kNow);
@@ -575,11 +863,24 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     return Math.abs(a[1] - b[1]);
   }
 
+  // 물길(지금 기준): OSM 수면 면과 이름 있는 하천 선(data/water.json, src/water.py). 자료가 없으면 예전처럼 강북·강남 구 경계를 굵게
+  function drawWater() {
+    const W8 = DATA.water;
+    if (!W8) {
+      gRiver.append("path").datum(river).attr("d", path).attr("fill", "none")
+        .attr("stroke", "var(--river)").attr("stroke-width", 0.9 * pxPerKm()).attr("stroke-linecap", "round").attr("stroke-linejoin", "round");
+      return;
+    }
+    gRiver.append("path").datum(W8.area).attr("d", path).attr("fill", "var(--river)").attr("stroke", "none");
+    gRiver.selectAll("path.wl").data(W8.lines).join("path").attr("class", "wl").attr("d", l => path(l.geom)).attr("fill", "none")
+      .attr("stroke", "var(--river)").attr("stroke-width", l => l.cls === "r" ? 1.8 : 1.1).attr("stroke-linecap", "round").attr("stroke-linejoin", "round")
+      .attr("vector-effect", "non-scaling-stroke");
+  }
+
   // ---------- static layers ----------
   function drawStatic() {
     gRiver.selectAll("*").remove();
-    gRiver.append("path").datum(river).attr("d", path).attr("fill", "none")
-      .attr("stroke", "var(--river)").attr("stroke-width", 0.9 * pxPerKm()).attr("stroke-linecap", "round").attr("stroke-linejoin", "round");
+    drawWater();
     gRiver.append("path").datum(seoulNow).attr("d", path).attr("fill", "none")
       .attr("stroke", "var(--rule)").attr("stroke-width", 1).attr("vector-effect", "non-scaling-stroke").attr("stroke-dasharray", "2 3");
     gWall.selectAll("*").remove();
@@ -587,6 +888,15 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
       .attr("stroke-width", 1.4).attr("stroke-dasharray", "1.5 2.5").attr("stroke-linecap", "round").attr("vector-effect", "non-scaling-stroke");
     gLand.selectAll("*").remove();
     if (land) gLand.selectAll("path").data(dongFeatures).join("path").attr("d", path)
+      .attr("stroke", "var(--paper-2)").attr("stroke-width", 0.6).attr("stroke-linejoin", "round")
+      .attr("vector-effect", "non-scaling-stroke").style("pointer-events", "none");
+    if (bld) dongFeatures.forEach(f => {
+      let best = f.geometry, ba = -1;
+      if (f.geometry.type === "MultiPolygon") f.geometry.coordinates.forEach(c => { const g = { type: "Polygon", coordinates: c }, a = d3.geoArea(g); if (a > ba) { ba = a; best = g; } });
+      f._c = path.centroid(best);
+    });
+    gBuild.selectAll("*").remove();
+    if (bld) gBuild.selectAll("path").data(dongFeatures).join("path").attr("d", path)
       .attr("stroke", "var(--paper-2)").attr("stroke-width", 0.6).attr("stroke-linejoin", "round")
       .attr("vector-effect", "non-scaling-stroke").style("pointer-events", "none");
     gDong.selectAll("*").remove();
@@ -601,6 +911,29 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   // ---------- dynamic render ----------
   let year = 1899, lastEraYear = null, lastGuKey = null;
 
+  // 새 건물 면 칠하기(render에서 부름). 동마다 bldDens → 8칸, 1% 미만은 투명
+  const BLD_DOT_MIN = 1e4;   // 5년 연면적 1만㎡ 미만은 원을 그리지 않음
+  // 넓이 비례: 처음 배율에서 100만㎡ = 반지름 0.6km. 확대하면 배율의 제곱근만큼만 커진다(땅만큼 커지면 동 몇 곳만 봐도 원이 이웃 동을 덮음)
+  const bldR = (v) => Math.sqrt(v / 1e6) * 0.6 * pxPerKm() / Math.sqrt(kNow);
+  function renderBuild(on, shown, asDots) {
+    gBuild.style("display", shown && !asDots ? null : "none");
+    gBuildDot.style("display", shown && asDots ? null : "none");
+    d3.select("#bldDotKey").attr("hidden", on && asDots ? null : true);
+    d3.selectAll("#bldBar, #bldTicks").style("display", asDots ? "none" : null);   // 원으로 그릴 때는 색 띠 대신 원 크기 보기만
+    if (shown && asDots) {
+      const pts = dongFeatures.filter(f => f.properties.y <= year && isFinite(f._c[0])).map(f => ({ f, v: bldWin(f.properties.cd, year, BLD_USE[bldUse]) })).filter(q => q.v >= BLD_DOT_MIN).sort((a, b) => b.v - a.v);
+      gBuildDot.selectAll("circle").data(pts, q => q.f.properties.cd).join("circle")
+        .attr("cx", q => q.f._c[0]).attr("cy", q => q.f._c[1]).attr("r", q => bldR(q.v))
+        .attr("fill", "var(--bld-6)").attr("fill-opacity", 0.55).attr("stroke", "var(--paper)").attr("stroke-width", 1)
+        .attr("vector-effect", "non-scaling-stroke").style("pointer-events", "none");
+    }
+    if (shown && !asDots) gBuild.selectAll("path")
+      .attr("display", d => d.properties.y <= year ? null : "none")
+      .attr("fill", d => { const k = bldClass(bldDens(d.properties.cd, year) || 0); return k ? `var(--bld-${k})` : "transparent"; });
+    d3.select("#bldLegend").attr("hidden", on ? null : true);
+    d3.select("#bldUse").attr("hidden", on ? null : true);
+  }
+
   function render() {
     const er = eraOf(year);
     // land price
@@ -612,12 +945,19 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     renderLegends();
     drawStationLand();
     drawGreenbelt();
+    const bldOn = !!(layerOn.bld && bld), bldShown = bldOn && year >= bld.from;
+    renderBuild(bldOn, bldShown, landShown);
+    fitLegends();
+    const fillOff = landShown || bldShown;   // 땅값과 새 건물이 같이 켜지면 땅값 = 면, 새 건물 = 원
     // area + new area
     gArea.selectAll("*").remove(); gNew.selectAll("*").remove(); gRings.selectAll("*").remove();
     if (er) {
-      gArea.append("path").datum(eraPoly[er.year]).attr("d", path).attr("fill", "var(--area)").attr("fill-opacity", landShown ? 0 : 0.32)
+      // 옛 지도 위에서는 시역 테두리 밑에 바탕색 테를 둘러 지도 선과 구별되게 한다
+      if (oldShownAt(year)) gArea.append("path").datum(eraPoly[er.year]).attr("d", path).attr("fill", "none").attr("stroke", "var(--paper)")
+        .attr("stroke-width", 5).attr("stroke-opacity", 0.85).attr("stroke-linejoin", "round").attr("vector-effect", "non-scaling-stroke");
+      gArea.append("path").datum(eraPoly[er.year]).attr("d", path).attr("fill", "var(--area)").attr("fill-opacity", fillOff || oldShownAt(year) ? 0 : 0.32)
         .attr("stroke", "var(--ink)").attr("stroke-width", 1.6).attr("vector-effect", "non-scaling-stroke");
-      if (!landShown && (er.year !== DATA.eras[0].year || year - er.year < 3)) {
+      if (!fillOff && !oldShownAt(year) && (er.year !== DATA.eras[0].year || year - er.year < 3)) {
         gNew.append("path").datum(eraNew[er.year]).attr("d", path).attr("fill", "var(--area-new)")
           .attr("fill-opacity", Math.max(0.12, 0.42 - (year - er.year) * 0.012)).attr("stroke", "none");
       }
@@ -672,7 +1012,9 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     });
     gWall.style("display", layerOn.wall ? null : "none");
 
-    drawVillage(landShown);
+    drawVillage(fillOff);   // 땅값이나 새 건물 면 위에서는 마을버스 땅을 옅게
+    drawJoseon();
+    drawOld();
     gDong.style("display", layerOn.dong ? null : "none");
 
     // rail (국철): 검은 선 위에 바탕색 점선을 얹은 옛 지도식 철도 기호
@@ -812,7 +1154,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
       .style("pointer-events", "none");
 
     // plate
-    d3.select("#yLabel").text(year);
+    d3.select("#yLabel").text(yearText(year));
     d3.select("#eraLabel").text(eraText(er, gp));
     const active = trams.filter(t => t.open <= year && year < t.close);
     const km = d3.sum(active, t => d3.geoLength(t.geo) * 6371);
@@ -822,12 +1164,14 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     const vyy = layerOn.village ? villageYear(year) : null;
     // 수치: 항목별로 모아 데스크톱은 연도 판에 한 줄로, 좁은 화면은 지도 아래 띠(항목마다 한 칸)로
     const stats = [];
+    if (bldOn) stats.push(bldShown ? `서울 ${year - BLD_WIN + 1}–${year}년 새 건물 ${fmtArea(d3.sum(dongFeatures, f => bldWin(f.properties.cd, year, BLD_USE[bldUse])))}${bldUse !== "all" ? "(" + BLD_USE_NM[bldUse] + ")" : ""}${year === bld.y1 ? `(${bld.y1}년은 ${bld.asof}까지)` : ""}` : `새 건물은 ${bld.from}년부터`);
     if (landOn) stats.push(landShown ? `서울 필지 중앙값 ㎡당 ${fmtWon(land.seoul[li])}${landPartial(year) ? "(" + landPartial(year) + ")" : ""}` : `땅값 자료는 ${land.years[0]}–${land.years[land.years.length - 1]}년`);
     if (vyy) stats.push(`마을버스 ${village.years[vyy].routes}개 노선${vyy !== year ? `(${vyy}년 자료)` : ""}, 마을버스로만 닿는 땅 ${village.years[vyy].only_km2}㎢`);
     if (drawn) stats.push(`버스 노선 ${drawn}개 그림${bs ? `(공식 ${bs.routes}개)` : ""}`); else if (bs) stats.push(`버스 노선 ${bs.routes}개`);
     stats.push(offArea ? `시역 ${offArea}㎢` : "시역 —");
     if (active.length) stats.push(`궤도 ${active.length}구간 ${km.toFixed(1)}km`);
     if (metro && year >= 1974) stats.push(`역 ${metro.stations.filter(st => st.first <= year).length}곳`); else if (year >= 1968 && !active.length) stats.push("전차 폐지(1968)");
+    if (year < 1899 && joseon) { const n = k => joseon.points.filter(p => p.kind === k).length; stats.splice(0, stats.length, `대로 ${joseon.roads.filter(r => /^r\d$/.test(r.id)).length}갈래 · 역 ${n("역")} · 원 ${n("원")} · 나루 ${n("나루")}`); }
     d3.select("#statLabel").html(stats.join(" · "));
     d3.select("#statStrip").selectAll("span").data(stats).join("span").text(d => d);
 
@@ -843,21 +1187,31 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
 
     // camera
     if (autoCam) {
-      const key = (er ? er.year : 0) + ":" + active.length + (er ? "" : ":" + (rail ? rail.segs.filter(sg => sg.open <= year).length : 0));
+      const key = (er ? er.year : 0) + ":" + active.length + (er ? "" : ":" + (rail ? rail.segs.filter(sg => sg.open <= year).length : 0)) + (year < 1899 ? ":j" : "");
       if (key !== lastEraYear) { lastEraYear = key; frameFor(er, active); }
     }
   }
 
   // 범례: 켠 레이어의 범례만 보인다. 마을버스는 자료가 있는 해(2015–)에만
+  // 오른쪽 판에 범례까지 다 들어가지 않을 때만 범례를 접는다. 펼쳐 둔 것(.lgshow)과 판이 숨어 있을 때(다른 탭)는 그대로 둔다
+  function fitLegends() {
+    const sd = document.getElementById("side");
+    if (sd.classList.contains("lgshow") || !sd.clientHeight) return;
+    sd.classList.remove("lgauto");
+    if (sd.scrollHeight > sd.clientHeight + 2) sd.classList.add("lgauto");
+  }
   function renderLegends() {
     d3.select("#busLegend").attr("hidden", layerOn.bus && bus ? null : true);
     d3.select("#villageLegend").attr("hidden", layerOn.village && villageYear(year) ? null : true);
     d3.select("#landLegend").attr("hidden", layerOn.land && land ? null : true);
+    d3.select("#joseonLegend").attr("hidden", layerOn.joseon && joseon ? null : true);
+    d3.select("#oldmapLegend").attr("hidden", oldShownAt(year) ? null : true);
     d3.select("#stLandLegend").attr("hidden", layerOn.stland && stLand ? null : true);
-    d3.select("#gbLegend").attr("hidden", layerOn.gb && greenbelt ? null : true);
+    d3.select("#gbLegend").attr("hidden", layerOn.gb && greenbelt && year >= GB_FROM ? null : true);
   }
 
   function eraText(er, gp) {
+    if (!er && year < 1899) return "한성부 · 도성에서 나가는 대로와 역·원·나루 (위치·경로는 근사)";
     if (!er) return "한성부 · 성저십리 포함 (1914년 이전 경계는 그리지 않음)";
     const pre = year < 1946 ? "경성부" : year < 1949 ? "서울특별자유시" : "서울특별시";
     return `${pre} · ${gp ? gp.label : "구 없음"}`;
@@ -865,6 +1219,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   function guPeriodOf(y) { let p = null; for (const g of DATA.guPeriods) if (g.from <= y) p = g; return p; }
 
   // ---------- camera ----------
+  const LOWQ = window.matchMedia("(max-height: 500px) and (orientation: landscape)");   // 낮은 가로 화면(CSS의 같은 조건과 짝)
   let autoCam = true;
   function setAuto(v) { autoCam = v; d3.select("#autoCam").attr("aria-pressed", v ? "true" : "false"); }
   function boundsOf(features) {
@@ -875,7 +1230,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   function zoomTo(b, dur = 750) {
     const [[x0, y0], [x1, y1]] = b;
     // 위쪽 여백: 넓은 화면은 연도 판이 왼쪽에만 있어 조금만, 좁은 화면은 판이 폭을 다 차지하므로 판의 실제 높이만큼
-    const padTop = W < 560 ? Math.min(plateBottom() + 6, H * 0.45) : Math.min(110, H * 0.22);
+    const padTop = W < 560 ? Math.min(plateBottom() + 6, H * 0.45) : LOWQ.matches ? 10 : Math.min(110, H * 0.22);   // 낮은 가로 화면은 서울이 가운데에 작게 놓여 판과 덜 겹치므로 거의 비우지 않음
     const k = Math.min(60, 0.9 / Math.max((x1 - x0) / W, (y1 - y0) / (H - padTop)));
     const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
     const t = d3.zoomIdentity.translate(W / 2 - k * cx, (H + padTop) / 2 - k * cy).scale(k);
@@ -890,6 +1245,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   function frameFor(er, active) {
     const feats = [wallGeo, ...active.map(t => t.geo)];
     if (er) feats.push(eraPoly[er.year]);
+    else if (year < 1899 && joseon && layerOn.joseon) feats.push({ type: "MultiPoint", coordinates: joseon.points.map(p => [p.lng, p.lat]) });
     else if (rail && layerOn.rail) rail.segs.filter(sg => sg.open <= year && (!sg.close || year < sg.close)).forEach(sg => {
       const a = rail.stations[sg.a], b = rail.stations[sg.b];
       if (Math.abs(a.lng - 126.98) < 0.13 && Math.abs(b.lng - 126.98) < 0.13) feats.push({ type: "LineString", coordinates: [[a.lng, a.lat], [b.lng, b.lat]] });
@@ -907,7 +1263,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     const box = document.getElementById("evPop");
     const list = evOn ? evs.filter(e => e.year === year) : [];   // evs가 이미 날짜순
     if (!list.length) { box.hidden = true; box.innerHTML = ""; lastEvYear = null; return; }
-    const maxN = W < 560 ? 1 : 4, more = list.length - maxN;   // 좁은 화면은 한 건만(판이 지도를 덜 가리게)
+    const maxN = (W < 560 || LOWQ.matches) ? 1 : 4, more = list.length - maxN;   // 좁은 화면은 한 건만(판이 지도를 덜 가리게)
     box.innerHTML = `<ul>${list.slice(0, maxN).map(e => `<li><i class="k" style="background:${e.color || KIND_COLOR[e.kind] || "var(--gu)"}"></i><span><span class="d">${e.date || e.year}</span>${e.text}${e.conf ? ` <span class="c">(${e.conf})</span>` : ""}</span></li>`).join("")}</ul>` +
       (more > 0 ? `<button type="button" class="more" data-more="1">외 ${more}건 · 연표에서 보기</button>` : "");
     box.hidden = false;
@@ -1057,9 +1413,69 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
         : `<div style="margin-top:4px">${year}년 ㎡당 공시지가 중앙값 <b>${fmtWon(land.dong[p.cd][i])}</b> · 서울 중앙값의 <b>${fmtRatio(r)}</b><span class="meta"> · 필지 ${land.n[p.cd][i].toLocaleString("ko-KR")}개</span></div>${landPartial(year) ? `<div class="meta">${landPartial(year)}</div>` : ""}`;
       landHtml += `<svg class="spark" id="spark" role="img" aria-label="${p.nm} 서울 중앙값 대비 배수 변화"></svg>`;
     }
-    showInfo(`<b>${p.nm}</b> <span class="meta">(현 ${guName[p.gu] || ""}${then})</span><div class="meta">${yt}${p.yn ? " · " + p.yn : ""}${p.yc ? " · 근거 확인 정도: " + p.yc : ""}</div>${landHtml}`);
+    const bldHtml = bldInfoHtml(p);
+    showInfo(`<b>${p.nm}</b> <span class="meta">(현 ${guName[p.gu] || ""}${then})</span><div class="meta">${yt}${p.yn ? " · " + p.yn : ""}${p.yc ? " · 근거 확인 정도: " + p.yc : ""}</div>${landHtml}${bldHtml}`);
     selDong = d;
     if (land && land.dong[p.cd]) drawSpark(d);
+    if (bldHtml && year >= bld.from) drawBldSpark(d);
+  }
+
+  // 정보창의 작은 그림들이 같은 가로축을 쓰도록: 새 건물 자료가 있으면 그 시작 해부터
+  function sparkX0() { return bld ? Math.min(bld.from, land ? land.years[0] : bld.from) : land.years[0]; }
+  function sparkTicks(x0) { return [...new Set([x0, x0 < 1980 ? 1980 : null, 2000, 2020].filter(t => t && t >= x0))]; }
+
+  // 정보창: 그 해까지 BLD_WIN년 동안 사용승인된 연면적(용도별), 공동주택 세대수, 큰 개발 이름
+  function bldInfoHtml(p) {
+    if (!bld || !bld.d[p.cd]) return "";
+    if (year < bld.from) return `<div class="meta" style="margin-top:6px">새 건물 자료는 ${bld.from}년부터</div>`;
+    const y0 = year - BLD_WIN + 1, r = bldWin(p.cd, year, ["r"]), c = bldWin(p.cd, year, ["c"]), o = bldWin(p.cd, year, ["o"]), g = bldWin(p.cd, year, ["g"]);
+    const hh = d3.sum(d3.range(y0, year + 1), t => { const a = bld.d[p.cd].h, i = t - bld.y0; return a && i >= 0 && i < a.length ? a[i] : 0; });
+    const big = bld.big.filter(b => b.cd === p.cd && b.y >= y0 && b.y <= year).sort((a, b) => b.a - a.a).slice(0, 4);
+    return `<div style="margin-top:8px">${y0}–${year}년 사용승인 연면적 <b>${fmtArea(r + c + o)}</b> · 동 면적의 <b>${fmtPct((r + c + o) / dongArea[p.cd] * 100)}</b></div>`
+      + `<div class="meta">주거 ${fmtArea(r)} · 상업·업무 ${fmtArea(c)} · 그 밖 ${fmtArea(o)}${hh ? ` · 공동주택 ${hh.toLocaleString("ko-KR")}세대` : ""}${g ? ` · 이 가운데 그 뒤 헐린 것 ${fmtArea(g)}` : ""}</div>`
+      + (big.length ? `<ul class="bbig">${big.map(b => `<li>${b.nm || `${p.nm} ${b.jb}번지`} <span class="meta">${b.y} · ${fmtArea(b.a)}${b.hh ? ` · ${b.hh.toLocaleString("ko-KR")}세대` : ""}${b.g ? " · 지금은 헐림" : ""}</span></li>`).join("")}</ul>` : "")
+      + `<svg class="spark bspark" id="bspark" role="img" aria-label="${p.nm} 해마다 사용승인된 연면적과 헐린 연면적"></svg>`
+      + `<div class="meta">막대: 해마다 사용승인된 연면적(진한 칸 = 지금도 있음, 연한 칸 = 그 뒤 헐림). 아래로 난 회색 막대 = 그 해 헐린(말소된) 연면적. 옅은 띠 = 지도에 칠한 ${BLD_WIN}년</div>`;
+  }
+  // 동 하나의 해마다 사용승인 연면적 막대(위)와 말소된 연면적(아래). 가로축은 땅값 선과 같다
+  function drawBldSpark(d) {
+    const p = d.properties, svgs = d3.select("#bspark"); if (svgs.empty()) return;
+    const w = svgs.node().getBoundingClientRect().width || 300, h = 86, padL = 34, padR = 8, padT = 8, padB = 18;
+    svgs.attr("viewBox", `0 0 ${w} ${h}`);
+    const X0 = sparkX0(), ys = d3.range(X0, bld.y1 + 1);
+    const pts = ys.map(t => { const all = bldFlow(p.cd, t, ["r", "c", "o"]), g = Math.min(all, bldFlow(p.cd, t, ["g"])), x = bldFlow(p.cd, t, ["x"]); return { t, all, g, x }; });
+    const up = d3.max(pts, q => q.all) || 1, dn = d3.max(pts, q => q.x) || 0;
+    const x = d3.scaleBand().domain(ys).range([padL, w - padR]).paddingInner(0.15);
+    const xl = d3.scaleLinear().domain([X0, bld.y1]).range([padL + x.bandwidth() / 2, w - padR - x.bandwidth() / 2]);
+    const base = padT + (h - padT - padB) * up / (up + dn * 0.6 || 1);
+    const yy = d3.scaleLinear().domain([0, up]).range([base, padT]);
+    const yd = d3.scaleLinear().domain([0, dn || 1]).range([base, h - padB]);
+    // 지도에 칠한 창(그 해까지 BLD_WIN년)
+    svgs.append("rect").attr("x", x(Math.max(X0, year - BLD_WIN + 1))).attr("width", x(Math.min(year, bld.y1)) + x.bandwidth() - x(Math.max(X0, year - BLD_WIN + 1)))
+      .attr("y", padT).attr("height", h - padT - padB).attr("fill", "var(--ink)").attr("fill-opacity", 0.07);
+    svgs.append("line").attr("x1", padL).attr("x2", w - padR).attr("y1", base).attr("y2", base).attr("stroke", "var(--rule)");
+    svgs.append("text").attr("x", padL - 4).attr("y", padT + 8).attr("text-anchor", "end").text(fmtArea(up).replace("㎡", "")).attr("font-size", 9.5).attr("fill", "var(--ink-2)").style("font-family", "var(--mono)");
+    svgs.append("text").attr("x", padL - 4).attr("y", base + 3.5).attr("text-anchor", "end").text("0").attr("font-size", 9.5).attr("fill", "var(--ink-2)").style("font-family", "var(--mono)");
+    const bw = Math.max(1, x.bandwidth());
+    svgs.selectAll("rect.s").data(pts.filter(q => q.all - q.g > 0)).join("rect").attr("class", "s").attr("x", q => x(q.t)).attr("width", bw)
+      .attr("y", q => yy(q.all - q.g)).attr("height", q => base - yy(q.all - q.g)).attr("fill", "var(--bld-6)");
+    svgs.selectAll("rect.g").data(pts.filter(q => q.g > 0)).join("rect").attr("class", "g").attr("x", q => x(q.t)).attr("width", bw)
+      .attr("y", q => yy(q.all)).attr("height", q => yy(q.all - q.g) - yy(q.all)).attr("fill", "var(--bld-2)");
+    svgs.selectAll("rect.x").data(pts.filter(q => q.x > 0)).join("rect").attr("class", "x").attr("x", q => x(q.t)).attr("width", bw)
+      .attr("y", base).attr("height", q => yd(q.x) - base).attr("fill", "var(--ink-2)").attr("fill-opacity", 0.55);
+    sparkTicks(X0).forEach(t => svgs.append("text").attr("x", xl(t)).attr("y", h - 3).attr("text-anchor", "middle").text(t).attr("font-size", 10).attr("fill", "var(--ink-2)").style("font-family", "var(--mono)"));
+    const sts = metro ? metro.stations.filter(st => st.first >= X0 && d3.geoContains(d, [st.lng, st.lat])) : [];
+    sts.forEach(st => svgs.append("line").attr("x1", xl(st.first)).attr("x2", xl(st.first)).attr("y1", padT).attr("y2", h - padB).attr("stroke", "var(--ink-2)").attr("stroke-width", 1).attr("stroke-opacity", 0.5).append("title").text(`${st.name}역 ${st.first}년 개통`));
+    const lab = svgs.append("text").attr("font-size", 10.5).attr("fill", "var(--ink)").style("font-family", "var(--mono)").attr("paint-order", "stroke").attr("stroke", "var(--paper)").attr("stroke-width", 3).attr("y", padT + 8);
+    function mark(q) {
+      if (!q) { lab.text(""); return; }
+      const right = xl(q.t) > w - 150;
+      lab.attr("x", xl(q.t) + (right ? -6 : 6)).attr("text-anchor", right ? "end" : "start")
+        .text(`${q.t} ${fmtArea(q.all)}${q.g ? `(헐림 ${fmtArea(q.g)})` : ""}${q.x ? ` · 말소 ${fmtArea(q.x)}` : ""}`);
+    }
+    svgs.append("rect").attr("x", padL).attr("y", 0).attr("width", w - padL - padR).attr("height", h).attr("fill", "transparent")
+      .on("pointermove", (ev) => { const t = Math.round(xl.invert(d3.pointer(ev)[0])); mark(pts.find(q => q.t === t) || null); })
+      .on("pointerleave", () => mark(null));
   }
 
   // 동 하나의 '서울 중앙값 대비 배수'를 해마다 이은 작은 선(로그 눈금). 아래 눈금은 그 동 안 지하철역이 처음 열린 해
@@ -1070,7 +1486,8 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     const pts = land.years.map((y, i) => ({ y, r: landRatio(p.cd, y) })).filter(q => q.r != null);
     if (!pts.length) return;
     const lo = Math.min(0.5, d3.min(pts, q => q.r) / 1.2), hi = Math.max(2, d3.max(pts, q => q.r) * 1.2);
-    const x = d3.scaleLinear().domain([land.years[0], land.years[land.years.length - 1]]).range([padL, w - padR]);
+    const X0 = sparkX0();
+    const x = d3.scaleLinear().domain([X0, land.years[land.years.length - 1]]).range([padL, w - padR]);
     const yy = d3.scaleLog().domain([lo, hi]).range([h - padB, padT]);
     // 가로 눈금: 두 배 간격(1/8 … 16) 가운데 범위 안의 것만, 1은 점선으로 조금 진하게
     LAND_EDGES.filter(v => v >= lo && v <= hi).forEach((v, k, a) => {
@@ -1081,9 +1498,9 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
         svgs.append("text").attr("x", padL - 4).attr("y", yy(v) + 3.5).attr("text-anchor", "end").text("×" + LAND_TICKS[LAND_EDGES.indexOf(v)])
           .attr("font-size", 10).attr("fill", one ? "var(--ink)" : "var(--ink-2)").style("font-family", "var(--mono)");
     });
-    [land.years[0], 2000, 2010, 2020].filter(t => t >= land.years[0]).forEach(t => svgs.append("text").attr("x", x(t)).attr("y", h - 3).attr("text-anchor", "middle").text(t).attr("font-size", 10).attr("fill", "var(--ink-2)").style("font-family", "var(--mono)"));
+    sparkTicks(X0).forEach(t => svgs.append("text").attr("x", x(t)).attr("y", h - 3).attr("text-anchor", "middle").text(t).attr("font-size", 10).attr("fill", "var(--ink-2)").style("font-family", "var(--mono)"));
     // 그 동 안 지하철역(처음 열린 해)
-    const sts = metro ? metro.stations.filter(st => st.first >= land.years[0] && d3.geoContains(d, [st.lng, st.lat])) : [];
+    const sts = metro ? metro.stations.filter(st => st.first >= X0 && d3.geoContains(d, [st.lng, st.lat])) : [];
     if (sts.length) d3.select("#infoBody").append("div").attr("class", "meta")
       .text("세로선: 이 동 안 지하철역이 처음 열린 해 — " + sts.slice().sort((a, b) => a.first - b.first).map(st => `${st.name} ${st.first}`).join(", "));
     sts.forEach(st => {
@@ -1114,7 +1531,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   const ST_EDGES = [-5, 5, 10, 20, 40];
   function stClass(v) { if (v == null) return null; if (v < ST_EDGES[0]) return "low"; let k = 0; while (k < 4 && v >= ST_EDGES[k + 1]) k++; return k; }
   const stFill = (v) => { const c = stClass(v); return c == null ? "url(#landNA)" : `var(--stl-${c})`; };
-  const fmtPct = (v) => v == null ? "—" : `${v > 0 ? "+" : v < 0 ? "−" : "±"}${Math.abs(v).toFixed(1)}%`;
+  const fmtStPct = (v) => v == null ? "—" : `${v > 0 ? "+" : v < 0 ? "−" : "±"}${Math.abs(v).toFixed(1)}%`;
   const RING_LAB = ["250m 안", "250–500m", "500m–1km"];
   function drawStationLand() {
     gStLand.selectAll("*").remove();
@@ -1126,7 +1543,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     vis.forEach(s => {
       const rel = Math.min(year - s.T, 5), after = year - s.T > 5;
       const g = gStLand.append("g").style("cursor", "pointer").on("click", (ev) => { ev.stopPropagation(); showStLand(s); });
-      g.append("title").text(`${s.name}역 ${s.T}년 개통 · ${after ? "개통 5년 뒤" : rel === 0 ? "개통 해" : rel < 0 ? `개통 ${-rel}년 전` : `개통 ${rel}년 뒤`} 250m 안 ${fmtPct(s.v[0][rel + 5])}`);
+      g.append("title").text(`${s.name}역 ${s.T}년 개통 · ${after ? "개통 5년 뒤" : rel === 0 ? "개통 해" : rel < 0 ? `개통 ${-rel}년 전` : `개통 ${rel}년 뒤`} 250m 안 ${fmtStPct(s.v[0][rel + 5])}`);
       [2, 1, 0].forEach(k => {
         if (!s.geo[k]) return;
         const v = s.v[k][rel + 5];
@@ -1142,26 +1559,26 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     });
     if (document.getElementById("stSpark") && selSt && !document.getElementById("info").hidden) showStLand(selSt);
   }
-  // 그린벨트(개발제한구역) 지금 경계. 1971년 지정 때 경계와 2015년 전 해제 이력은 자료가 없어, 어느 해에나 지금 경계를 보인다
+  // 그린벨트(개발제한구역) 지금 경계. 지정 때 경계와 2015년 전 해제 이력은 자료가 없어, 첫 지정 해(GB_FROM)부터 지금 경계를 보인다
   function drawGreenbelt() {
     gGB.selectAll("*").remove();
-    if (!(layerOn.gb && greenbelt)) return;
+    if (!(layerOn.gb && greenbelt) || year < GB_FROM) return;   // 1971년 7월 30일 첫 지정 전에는 그리지 않음
     gGB.append("path").attr("d", path({ type: "MultiPolygon", coordinates: greenbelt.geo })).attr("fill", "url(#gbHatch)")
       .attr("stroke", "var(--gb)").attr("stroke-width", 1.2).attr("vector-effect", "non-scaling-stroke").style("pointer-events", "none");
     const o = greenbelt.old, d = greenbelt.date.replace(/-/g, ".");
-    d3.select("#gbLegendText").text(`그린벨트(개발제한구역) ${d} 경계, ${greenbelt.area_km2}㎢. 1971년 지정 때와 2015년 전 해제 경계는 자료가 없어 어느 해에나 지금 경계를 보임` + (o ? ` · ${o.date.slice(0, 4)}–${greenbelt.date.slice(0, 4)}년에 풀린 땅 ${o.released_km2}㎢` : ""));
+    d3.select("#gbLegendText").text(`그린벨트(개발제한구역) ${d} 경계, ${greenbelt.area_km2}㎢. 1971년 처음 지정됨. 지정 때 경계와 2015년 전에 풀린 땅은 자료가 없어 1971년부터 지금 경계를 보임` + (o ? ` · ${o.date.slice(0, 4)}–${greenbelt.date.slice(0, 4)}년에 풀린 땅 ${o.released_km2}㎢` : ""));
   }
   let selSt = null;
   function showStLand(s) {
     const rel = year - s.T, inWin = rel >= -5 && rel <= 5, k = Math.max(-5, Math.min(5, rel)) + 5;
     const when = rel < -5 ? `${s.T - 5}년부터 보입니다` : rel > 5 ? `개통 5년 뒤(${s.T + 5}년)` : rel === 0 ? `${year}년(개통 해)` : `${year}년(개통 ${Math.abs(rel)}년 ${rel < 0 ? "전" : "뒤"})`;
-    const vals = rel < -5 ? "" : `<div style="margin-top:4px">${when}: ` + [0, 1, 2].map(i => `${RING_LAB[i]} <b>${fmtPct(s.v[i][k])}</b>`).join(" · ") + `</div>`;
+    const vals = rel < -5 ? "" : `<div style="margin-top:4px">${when}: ` + [0, 1, 2].map(i => `${RING_LAB[i]} <b>${fmtStPct(s.v[i][k])}</b>`).join(" · ") + `</div>`;
     const dev = (s.dev == null ? "" : ` · 개통 10년 사이 500m 안 필지의 ${Math.round(s.dev * 100)}%가 사라짐(재개발·택지 등으로 지번이 바뀜)`)
       + (s.gb ? ` · 500m 안 필지의 ${Math.round(s.gb * 100)}%가 지금 그린벨트 안` : "");
     showInfo(`<b>${s.name}역 둘레 땅값</b> <span class="meta">${s.lines.join("·")} · ${s.date} 개통</span>${vals}`
       + `<div class="meta">개통 5년 전(${s.T - 5}년)보다, 같은 구에서 값대가 같고 역에서 1km 넘게 떨어진 땅에 견줘 더 오른 정도(같은 필지끼리 견줌)</div>`
       + `<svg class="stspark" id="stSpark" role="img" aria-label="${s.name}역 둘레 고리별 땅값 변화"></svg>`
-      + `<div class="meta">서울 전체와 견주면 ${RING_LAB[0]} ${fmtPct(s.s[0][k])} · 필지 ${s.n.map(n => n == null ? "—" : n.toLocaleString("ko-KR")).join(" / ")}개(위치를 코드·이력으로 정확히 찾은 것)${dev}</div>`);
+      + `<div class="meta">서울 전체와 견주면 ${RING_LAB[0]} ${fmtStPct(s.s[0][k])} · 필지 ${s.n.map(n => n == null ? "—" : n.toLocaleString("ko-KR")).join(" / ")}개(위치를 코드·이력으로 정확히 찾은 것)${dev}</div>`);
     selSt = s;
     drawStSpark(s, inWin ? rel : null);
   }
@@ -1189,7 +1606,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
       const last = pts[pts.length - 1]; ends.push({ i, y: y(last.v), v: last.v });
     });
     ends.sort((a, b) => a.y - b.y).forEach((e, j, a) => { if (j && e.y - a[j - 1].y < 11) e.y = a[j - 1].y + 11; });
-    ends.forEach(e => svgs.append("text").attr("x", w - padR + 4).attr("y", e.y + 3.5).text(`${["~250m", "~500m", "~1km"][e.i]} ${fmtPct(e.v)}`).attr("font-size", 10).attr("fill", "var(--ink)").style("font-family", "var(--mono)"));
+    ends.forEach(e => svgs.append("text").attr("x", w - padR + 4).attr("y", e.y + 3.5).text(`${["~250m", "~500m", "~1km"][e.i]} ${fmtStPct(e.v)}`).attr("font-size", 10).attr("fill", "var(--ink)").style("font-family", "var(--mono)"));
     if (rel != null) svgs.append("line").attr("x1", x(rel)).attr("x2", x(rel)).attr("y1", padT).attr("y2", h - padB).attr("stroke", "var(--ink)").attr("stroke-width", 1.5);
   }
 
@@ -1212,6 +1629,21 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
       .attr("title", k => k === 0 ? `서울 중앙값의 1/8 미만` : k === 8 ? `16배 이상` : `${LAND_TICKS[k - 1]}–${LAND_TICKS[k]}배`);
     d3.select("#landTicks").selectAll("span").data(LAND_TICKS).join("span").attr("class", t => t === "1" ? "mid" : null)
       .style("left", (t, k) => `${(k + 1) / 9 * 100}%`).text(t => t);
+  }
+
+  // 새 건물 범례: 1% 미만(칠하지 않음) + 8칸
+  if (bld) {
+    d3.select("#bldBar").selectAll("i").data(d3.range(9)).join("i")
+      .style("background", k => k ? `var(--bld-${k})` : "transparent").style("border", k => k ? null : "1px solid var(--rule)")
+      .attr("title", k => k === 0 ? "1% 미만(칠하지 않음)" : k === 8 ? "128% 이상" : `${BLD_EDGES[k - 1]}–${BLD_EDGES[k]}%`);
+    d3.select("#bldTicks").selectAll("span").data(BLD_TICKS).join("span").style("left", (t, k) => `${(k + 1) / 9 * 100}%`).text(t => t);
+    // 원 크기 보기(땅값과 함께 켤 때). 지도 배율이 1일 때의 크기
+    const ks = d3.select("#bldDotSvg").attr("width", 210).attr("height", 44); [10e4, 50e4, 200e4].forEach((v, k) => {   // 글자는 원 아래(옆 패널 폭이 좁음)
+      const r = Math.sqrt(v / 1e6) * 0.6 * 9, x = 28 + k * 70;
+      ks.append("circle").attr("cx", x).attr("cy", 26 - r).attr("r", r).attr("fill", "var(--bld-6)").attr("fill-opacity", 0.55).attr("stroke", "var(--ink-2)").attr("stroke-width", 0.8);
+      ks.append("text").attr("x", x).attr("y", 40).attr("text-anchor", "middle").text(`${v / 1e4}만㎡`).attr("font-size", 11).attr("fill", "var(--ink-2)").style("font-family", "var(--mono)");
+    });
+    d3.select("#bldNote").text(`새 건물: 그 해까지 ${BLD_WIN}년 동안 사용승인된 건물 연면적을 법정동 면적으로 나눈 값(%)입니다. 칸 하나가 두 배씩(로그 눈금)이고 1% 미만은 칠하지 않았습니다. ${bld.gone ? "지금 건축물대장에 헐려서 말소된 건물을 더했습니다." : "시험판: 아직 지금 건축물대장만 써서 그 사이 헐린 건물이 빠져 있습니다."} ${bld.from}년부터 · ${bld.y1}년은 ${bld.asof}까지. 땅값과 함께 켜면 땅값은 면, 새 건물은 원(넓이 = 5년 연면적, 처음 배율에서 100만㎡ = 반지름 약 0.6km)으로 바뀝니다. 확대하면 원은 지도보다 덜 커집니다.`);
   }
 
   // ---------- log ----------
@@ -1257,7 +1689,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     const svgc = d3.select("#busChart"); svgc.selectAll("*").remove();
     const w = svgc.node().getBoundingClientRect().width, h = 150;
     svgc.attr("viewBox", `0 0 ${w} ${h}`);
-    const x = d3.scaleLinear().domain([1950, 2026]).range([44, w - 10]);
+    const x = d3.scaleLinear().domain([1950, 2026]).range([62, w - 10]);   // 왼쪽 62px은 줄 이름(「운행 대수」)과 최댓값 자리
     const rows = [{ key: "routes", label: "노선 수", y0: 8 }, { key: "buses", label: "운행 대수", y0: 78 }];
     const dr = DATA.busDrawn ? Object.entries(DATA.busDrawn).map(([y, v]) => ({ y: +y, v })).sort((a, b) => a.y - b.y) : [];
     rows.forEach(rw => {
@@ -1292,7 +1724,8 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
 
   // ---------- ticks ----------
   const tickSvg = d3.select("#ticks");
-  function tickX(y) { const w = tickSvg.node().getBoundingClientRect().width; const pad = 8; return pad + (y - 1899) / (2026 - 1899) * (w - pad * 2); }
+  function tickX(y) { const w = tickSvg.node().getBoundingClientRect().width; const pad = 8; return pad + (y - Y0) / (2026 - Y0) * (w - pad * 2); }
+  if (joseon) { const s0 = document.querySelector("#scale span"); s0.dataset.y = Y0; s0.textContent = "조선 후기"; }
   function drawTicks() {
     tickSvg.selectAll("*").remove();
     evs.forEach(e => {
@@ -1301,17 +1734,19 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
         .attr("stroke-width", e.kind === "area" ? 2.5 : 1.2);
     });
     d3.selectAll("#scale span").style("left", function () { return tickX(+this.dataset.y) + "px"; })
-      .style("transform", function () { const y = +this.dataset.y; return y === 1899 ? "translateX(-8px)" : y === 2026 ? "translateX(calc(-100% + 8px))" : "translateX(-50%)"; });
+      .style("transform", function () { const y = +this.dataset.y; return y === Y0 ? "translateX(-8px)" : y === 2026 ? "translateX(calc(-100% + 8px))" : "translateX(-50%)"; });
     tickSvg.append("rect").attr("class", "cursor").attr("x", tickX(year) - 1).attr("y", 0).attr("width", 2).attr("height", 18).attr("fill", "var(--ink)");
   }
 
   // ---------- controls ----------
   const slider = document.getElementById("year");
+  slider.min = Y0;
   function setYear(y, fromLog) {
-    year = Math.max(1899, Math.min(2026, y)); slider.value = year;
+    year = Math.max(Y0, Math.min(2026, y)); slider.value = year;
     if (fromLog) { selDong = null; d3.select("#info").attr("hidden", true); }
     render();
     if (selDong && !document.getElementById("info").hidden) showDong(selDong);
+    if (document.body.dataset.tab === "dev") drawDev();
     syncHash(false);
   }
   slider.addEventListener("input", () => setYear(+slider.value));
@@ -1331,14 +1766,22 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   function stop() { clearTimeout(timer); timer = null; d3.select("#playIcon").html('<path d="M4 2l10 6-10 6z"/>'); d3.select("#play").attr("aria-label", "재생"); }
   d3.select("#play").on("click", () => {
     if (timer) { stop(); return; }
-    if (year >= 2026) setYear(1899);
+    if (year >= 2026) setYear(Y0);
     d3.select("#playIcon").html('<path d="M3 2h4v12H3zM9 2h4v12H9z"/>'); d3.select("#play").attr("aria-label", "일시정지");
     setAuto(true); lastEraYear = null;
     timer = setTimeout(step, 300);
   });
   d3.selectAll(".chip").on("click", function () {
     const k = this.dataset.layer; layerOn[k] = !layerOn[k];
-    this.setAttribute("aria-pressed", layerOn[k] ? "true" : "false"); render();
+    this.setAttribute("aria-pressed", layerOn[k] ? "true" : "false");
+    render();
+    if (selDong && !document.getElementById("info").hidden) showDong(selDong);
+  });
+  // 새 건물 용도 고르기
+  d3.selectAll("#bldLegend .bseg button, #bldUse button").on("click", function () {
+    bldUse = this.dataset.use;
+    d3.selectAll("#bldLegend .bseg button, #bldUse button").attr("aria-pressed", function () { return this.dataset.use === bldUse ? "true" : "false"; });
+    render();
   });
   // 전체 켜기·끄기: 자료가 있어 보이는 칩만
   function setAll(on) {
@@ -1348,11 +1791,179 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   d3.select("#allOn").on("click", () => setAll(true));
   d3.select("#allOff").on("click", () => setAll(false));
   // 좁은 화면: 범례는 단추를 눌러 지도 위에 펼친다
+  d3.select("#layBtn").on("click", function () { const open = document.getElementById("side").classList.toggle("chipsopen"); this.setAttribute("aria-expanded", open ? "true" : "false"); });
+  document.addEventListener("keydown", (ev) => { if (ev.key === "Escape" && document.getElementById("side").classList.contains("chipsopen")) { document.getElementById("side").classList.remove("chipsopen"); const b = document.getElementById("layBtn"); b.setAttribute("aria-expanded", "false"); b.focus(); } });
+  d3.select("#lgFold").on("click", function () { const open = document.getElementById("side").classList.toggle("lgshow"); this.setAttribute("aria-expanded", open ? "true" : "false"); this.textContent = open ? "범례 접기" : "범례 보기"; if (!open) fitLegends(); });
   d3.select("#legBtn").on("click", function () { const open = document.getElementById("side").classList.toggle("legopen"); this.setAttribute("aria-expanded", open ? "true" : "false"); });
+
+  // ---------- 땅값과 건물 탭 ----------
+  // 법정동마다 가로 = 끝 해까지 BLD_WIN년 신축 밀도(전체 용도), 세로 = 땅값 배수(서울 중앙값 대비)가 BLD_WIN년 전보다 몇 배가 됐는지
+  const DEV_SPLIT = 16;    // 신축 밀도 16% = 지도 색 다섯째 칸 경계
+  const DEV_MAJOR = 0.6;   // 한 용도가 60% 이상이면 '위주'
+  const DEV_SHARE = [0.2, 0.4, 0.6, 0.8], DEV_SHARE_K = [1, 3, 5, 6, 8];   // 비율 다섯 칸 → 새 건물 색의 단계
+  const devOK = !!(land && bld && metro);
+  if (devOK) document.getElementById("tab-dev").hidden = false;
+  let devCol = "r", devSort = "dens", devStDong = null, devPts = [], devDel = null, devSx = null, devSy = null;
+  const devY0 = land ? land.years[0] + BLD_WIN : 0, devY1 = land ? land.years[land.years.length - 1] : 0;
+  const devYear = () => Math.max(devY0, Math.min(devY1, year));
+  const fmtChg = (v) => v == null ? "—" : v >= 2 ? `×${v.toFixed(1)}` : `×${v.toFixed(2)}`;
+  const fmtShare = (v) => v == null ? "—" : `${Math.round(v * 100)}%`;
+  function devStations() {   // 지하철·광역철도 역 → 역이 들어 있는 지금 법정동(처음 한 번만 셈)
+    if (devStDong) return devStDong;
+    devStDong = {};
+    const bb = dongFeatures.map(f => d3.geoBounds(f));
+    for (const st of metro.stations) {
+      if (!isFinite(st.lng) || !isFinite(st.lat)) continue;
+      for (let i = 0; i < dongFeatures.length; i++) {
+        const b = bb[i];
+        if (st.lng < b[0][0] || st.lng > b[1][0] || st.lat < b[0][1] || st.lat > b[1][1]) continue;
+        if (d3.geoContains(dongFeatures[i], [st.lng, st.lat])) { (devStDong[dongFeatures[i].properties.cd] ||= []).push(st); break; }
+      }
+    }
+    return devStDong;
+  }
+  function devRows(Y) {
+    const sd = devStations(), out = [];
+    for (const f of dongFeatures) {
+      const p = f.properties, a = landRatio(p.cd, Y - BLD_WIN), b = landRatio(p.cd, Y);
+      if (a == null || b == null || !dongArea[p.cd]) continue;
+      const all = bldWin(p.cd, Y, BLD_USE.all), r = bldWin(p.cd, Y, ["r"]), c = bldWin(p.cd, Y, ["c"]);
+      const dens = all / dongArea[p.cd] * 100;
+      const st = (sd[p.cd] || []).filter(x => x.first > Y - BLD_WIN && x.first <= Y);
+      out.push({ f, cd: p.cd, nm: p.nm, gu: guName[p.gu] || "", dens, all, rs: dens >= 1 ? r / all : null, cs: dens >= 1 ? c / all : null, chg: b / a, st });
+    }
+    return out;
+  }
+  function devShareK(v) { if (v == null) return 0; let k = 0; while (k < DEV_SHARE.length && v >= DEV_SHARE[k]) k++; return DEV_SHARE_K[k]; }
+  function devFill(q) { const v = devCol === "r" ? q.rs : devCol === "c" ? q.cs : null; return devCol === "none" || v == null ? "var(--ink-2)" : `var(--bld-${devShareK(v)})`; }
+  function goMapDong(cd, y) {
+    const f = dongFeatures.find(g => g.properties.cd === cd); if (!f) return;
+    ["land", "bld"].forEach(k => { if (DATA[k] && !layerOn[k]) { layerOn[k] = true; const c = document.querySelector(`.chip[data-layer="${k}"]`); if (c) c.setAttribute("aria-pressed", "true"); } });
+    setAuto(false);
+    goMap(y);
+    const b = path.bounds(f), cx = (b[0][0] + b[1][0]) / 2, cy = (b[0][1] + b[1][1]) / 2;
+    const h = Math.max(b[1][0] - b[0][0], b[1][1] - b[0][1], W / 7) * 1.5;   // 동 하나만 꽉 차지 않게 둘레도 조금 보이도록
+    zoomTo([[cx - h / 2, cy - h / 2], [cx + h / 2, cy + h / 2]]);
+    showDong(f);
+  }
+  function drawDev() {
+    if (!devOK || document.getElementById("pane-dev").hidden) return;
+    const Y = devYear(), data = devRows(Y);
+    // 고르는 곳
+    d3.select("#devWin").text(`${Y - BLD_WIN}→${Y}년`);
+    d3.select("#devPrev").property("disabled", Y <= devY0); d3.select("#devNext").property("disabled", Y >= devY1);
+    d3.select("#devRange").attr("min", devY0).attr("max", devY1).property("value", Y);
+    const withSt = data.filter(q => q.st.length), notes = [];
+    notes.push(`새 건물은 ${Y - BLD_WIN + 1}~${Y}년 사용승인, 땅값은 ${Y - BLD_WIN}년과 ${Y}년을 견줌 · 법정동 ${data.length}곳 · 그 사이 역이 처음 열린 동 ${withSt.length}곳`);
+    if (year < devY0) notes.push(`지도 연도(${year}년)가 땅값 자료보다 일러 가장 이른 창을 보여 줍니다`);
+    if (Y === bld.y1) notes.push(`${Y}년 새 건물은 ${bld.asof}까지`);
+    [Y - BLD_WIN, Y].forEach(t => { const w = landPartial(t); if (w) notes.push(w); });
+    d3.select("#devNote").text(notes.join(" · "));
+    // 그림
+    // 그림 폭은 화면 폭에 맞춘다(글자가 늘 같은 크기로 보이도록 viewBox를 실제 폭과 같게)
+    const Wd = Math.round(Math.max(330, Math.min(780, document.getElementById("devChart").clientWidth || 780))), Hd = Math.round(Math.max(320, Wd * 0.56)), m = { l: 50, r: 14, t: 14, b: 44 };
+    const svg = d3.select("#devSvg").attr("viewBox", `0 0 ${Wd} ${Hd}`);
+    svg.selectAll("*").remove();
+    const x = devSx = d3.scaleLog().domain([0.3, 700]).range([m.l, Wd - m.r]).clamp(true);
+    const y = devSy = d3.scaleLog().base(2).domain([0.3, 4.2]).range([Hd - m.b, m.t]).clamp(true);
+    svg.append("rect").attr("x", x(0.3)).attr("y", m.t).attr("width", x(1) - x(0.3)).attr("height", Hd - m.b - m.t).attr("fill", "var(--paper-2)");
+    svg.append("text").attr("x", (x(0.3) + x(1)) / 2).attr("y", m.t + 13).attr("text-anchor", "middle").attr("font-size", 11).attr("fill", "var(--ink-2)").text("1% 미만");
+    (Wd < 560 ? [1, 4, DEV_SPLIT, 64, 256].filter(t => t !== 4 && t !== 64).concat([4, 64].map(t => -t)) : [1, 4, DEV_SPLIT, 64, 256]).forEach(t0 => {
+      const t = Math.abs(t0), lbl = t0 > 0;   // 좁은 화면은 4%·64% 글자를 빼고 선만
+      const sp = t === DEV_SPLIT;
+      svg.append("line").attr("x1", x(t)).attr("x2", x(t)).attr("y1", m.t).attr("y2", Hd - m.b).attr("stroke", sp ? "var(--ink-2)" : "var(--rule)").attr("stroke-dasharray", sp ? "1.5 2.5" : null);
+      if (lbl) svg.append("text").attr("x", x(t)).attr("y", Hd - m.b + 15).attr("text-anchor", "middle").attr("font-size", 11).attr("fill", "var(--ink-2)").style("font-family", "var(--mono)").text(t + "%");
+    });
+    [[0.5, "×½"], [0.71, "×0.7"], [1, "×1"], [1.41, "×1.4"], [2, "×2"], [4, "×4"]].forEach(([t, lb]) => {
+      const one = t === 1;
+      svg.append("line").attr("x1", m.l).attr("x2", Wd - m.r).attr("y1", y(t)).attr("y2", y(t)).attr("stroke", one ? "var(--ink-2)" : "var(--rule)").attr("stroke-dasharray", one ? "3 3" : null);
+      svg.append("text").attr("x", m.l - 6).attr("y", y(t) + 4).attr("text-anchor", "end").attr("font-size", 11).attr("fill", one ? "var(--ink)" : "var(--ink-2)").style("font-family", "var(--mono)").text(lb);
+    });
+    svg.append("text").attr("x", (m.l + Wd - m.r) / 2).attr("y", Hd - 8).attr("text-anchor", "middle").attr("font-size", 12).attr("fill", "var(--ink-2)").text(Wd < 560 ? `${BLD_WIN}년 신축 밀도(로그 눈금)` : `${BLD_WIN}년 신축 밀도(사용승인 연면적 ÷ 동 면적, 로그 눈금)`);
+    svg.append("text").attr("transform", `translate(13,${(m.t + Hd - m.b) / 2}) rotate(-90)`).attr("text-anchor", "middle").attr("font-size", 12).attr("fill", "var(--ink-2)").text("땅값 배수의 5년 변화");
+    // 1% 미만 동은 띠 안에 흩어 놓는다(동 번호로 정해 해마다 같은 자리)
+    const px = q => q.dens < 1 ? x(0.3) + 5 + ((parseInt(q.cd.slice(-3), 10) * 37) % 100) / 100 * (x(1) - x(0.3) - 10) : x(q.dens);
+    devPts = data.map(q => ({ q, x: px(q), y: y(q.chg) }));
+    const plain = devPts.filter(d => !d.q.st.length), tri = devPts.filter(d => d.q.st.length);
+    svg.append("g").selectAll("circle").data(plain).join("circle").attr("cx", d => d.x).attr("cy", d => d.y).attr("r", 4)
+      .attr("fill", d => devFill(d.q)).attr("fill-opacity", d => devCol === "none" || d.q.rs == null ? 0.45 : 0.9).attr("stroke", "var(--paper)").attr("stroke-width", 1);
+    svg.append("g").selectAll("path").data(tri).join("path").attr("d", d3.symbol().type(d3.symbolTriangle).size(80)())
+      .attr("transform", d => `translate(${d.x},${d.y})`).attr("fill", d => devCol === "none" ? "var(--ink)" : devFill(d.q)).attr("stroke", "var(--ink)").attr("stroke-width", 1.4);
+    // 이름은 몇 곳만: 가장 많이 오른 2곳, 가장 많이 지은 2곳, 역이 열린 동 가운데 가장 많이 오른 1곳
+    const lab = new Map();
+    [...devPts].sort((a, b) => b.q.chg - a.q.chg).slice(0, 2).forEach(d => lab.set(d.q.cd, d));
+    [...devPts].sort((a, b) => b.q.dens - a.q.dens).slice(0, 2).forEach(d => lab.set(d.q.cd, d));
+    [...tri].sort((a, b) => b.q.chg - a.q.chg).slice(0, 1).forEach(d => lab.set(d.q.cd, d));
+    [...lab.values()].forEach(d => {
+      const right = d.x > Wd - 110;
+      svg.append("text").attr("x", d.x + (right ? -8 : 8)).attr("y", d.y - 6).attr("text-anchor", right ? "end" : "start").attr("font-size", 12).attr("fill", "var(--ink)")
+        .attr("paint-order", "stroke").attr("stroke", "var(--paper)").attr("stroke-width", 3).text(d.q.nm);
+    });
+    const ring = svg.append("circle").attr("r", 8).attr("fill", "none").attr("stroke", "var(--ink)").attr("stroke-width", 1.5).attr("display", "none");
+    devDel = d3.Delaunay.from(devPts, d => d.x, d => d.y);
+    const near = (ev) => {
+      if (!devPts.length) return null;
+      const [mx, my] = d3.pointer(ev, svg.node()), d = devPts[devDel.find(mx, my)];
+      return Math.hypot(d.x - mx, d.y - my) < 18 ? d : null;
+    };
+    const tip = d3.select("#devTip");
+    svg.on("pointermove", (ev) => {
+      const d = near(ev);
+      if (!d) { ring.attr("display", "none"); tip.attr("hidden", true); svg.style("cursor", null); return; }
+      const q = d.q, k = svg.node().clientWidth / Wd;
+      ring.attr("display", null).attr("cx", d.x).attr("cy", d.y);
+      svg.style("cursor", "pointer");
+      tip.attr("hidden", null).html(`<b>${q.nm}</b> <span class="meta">(${q.gu})</span><br>신축 밀도 ${fmtPct(q.dens)} · ${fmtArea(q.all)}<br>주거 ${fmtShare(q.rs)} · 상업·업무 ${fmtShare(q.cs)}<br>땅값 배수 ${fmtRatio(landRatio(q.cd, Y - BLD_WIN))} → ${fmtRatio(landRatio(q.cd, Y))} (${fmtChg(q.chg)})${q.st.length ? `<br>역 개통: ${q.st.map(s => `${s.name}(${s.first})`).join(", ")}` : ""}<br><span class="meta">누르면 지도에서 보기</span>`);
+      const tw = tip.node().offsetWidth, cw = svg.node().clientWidth;
+      const lx = d.x * k + 14 + tw <= cw ? d.x * k + 14 : Math.max(0, d.x * k - 14 - tw);   // 오른쪽에 자리가 없으면 점 왼쪽에
+      tip.style("left", `${lx}px`).style("top", `${Math.max(0, d.y * k - 14)}px`);
+    }).on("pointerleave", () => { ring.attr("display", "none"); tip.attr("hidden", true); })
+      .on("click", (ev) => { const d = near(ev); if (d) goMapDong(d.q.cd, Y); });
+    svg.attr("aria-label", `${Y - BLD_WIN}→${Y}년 법정동 ${data.length}곳의 신축 밀도와 땅값 배수 변화. 같은 내용이 아래 표에 있습니다.`);
+    // 범례
+    const shareNm = devCol === "r" ? "주거" : "상업·업무";
+    let key = `<span><svg width="12" height="12"><circle cx="6" cy="6" r="4" fill="var(--ink-2)" fill-opacity=".45" stroke="var(--paper)"/></svg>역이 새로 열리지 않은 동</span>`
+      + `<span><svg width="14" height="12"><path d="M7,1L13,11H1Z" fill="var(--ink)" stroke="var(--ink)"/></svg>5년 사이 역이 처음 열린 동</span>`
+      + `<span><svg width="22" height="12"><path d="M1,6H21" stroke="var(--ink-2)" stroke-dasharray="3 3"/></svg>서울 전체와 같이 움직임(×1)</span>`
+      + `<span><svg width="12" height="14"><path d="M6,1V13" stroke="var(--ink-2)" stroke-dasharray="1.5 2.5"/></svg>신축 밀도 ${DEV_SPLIT}%</span>`;
+    if (devCol !== "none") key += `<span>${shareNm} 비율 ` + ["0", "20", "40", "60", "80"].map((t, i) => `<svg width="12" height="12" style="margin:0 1px 0 6px"><circle cx="6" cy="6" r="5" fill="var(--bld-${DEV_SHARE_K[i]})"/></svg>${t}`).join("") + `–100% · 신축 1% 미만은 회색</span>`;
+    d3.select("#devKey").html(key);
+    // 표 1: 역 신설 × 신축 밀도
+    const med = (a) => a.length ? d3.median(a) : null;
+    const cell = (s, hi) => { const a = data.filter(q => (q.st.length > 0) === s && (q.dens >= DEV_SPLIT) === hi).map(q => q.chg); return a.length ? `${fmtChg(med(a))} <span class="meta">(${a.length})</span>` : "—"; };
+    d3.select("#devT1").html(`<thead><tr><th></th><th class="n">신축 ${DEV_SPLIT}% 미만</th><th class="n">${DEV_SPLIT}% 이상</th></tr></thead><tbody>
+      <tr><td>역이 새로 열리지 않음</td><td class="n">${cell(false, false)}</td><td class="n">${cell(false, true)}</td></tr>
+      <tr><td>5년 사이 역이 열림</td><td class="n">${cell(true, false)}</td><td class="n">${cell(true, true)}</td></tr></tbody>`);
+    // 표 2: 신축이 많은 동을 용도로 나눔
+    const hi = data.filter(q => q.dens >= DEV_SPLIT), lo = data.filter(q => q.dens < DEV_SPLIT);
+    const grp = [[`주거 위주(주거 ${DEV_MAJOR * 100}% 이상)`, hi.filter(q => q.rs >= DEV_MAJOR)], [`상업·업무 위주(${DEV_MAJOR * 100}% 이상)`, hi.filter(q => q.cs >= DEV_MAJOR)],
+      ["섞임·그 밖", hi.filter(q => q.rs < DEV_MAJOR && q.cs < DEV_MAJOR)], [`견줌: 신축 ${DEV_SPLIT}% 미만`, lo]];
+    d3.select("#devT2").html(`<thead><tr><th>신축 ${DEV_SPLIT}% 이상인 동</th><th class="n">동 수</th><th class="n">땅값 변화</th></tr></thead><tbody>` +
+      grp.map(([k, a], i) => `<tr${i === 3 ? ' style="color:var(--ink-2)"' : ""}><td>${k}</td><td class="n">${a.length}</td><td class="n">${fmtChg(med(a.map(q => q.chg)))}</td></tr>`).join("") + "</tbody>");
+    // 표 3: 동 목록(누르면 지도)
+    const top = [...data].sort((a, b) => devSort === "chg" ? b.chg - a.chg : b.dens - a.dens).slice(0, 15);
+    const t3 = d3.select("#devT3").html(`<thead><tr><th>법정동</th><th class="n">신축 밀도</th><th class="n">주거·상업</th><th class="n">땅값 변화</th></tr></thead><tbody></tbody>`);
+    t3.select("tbody").selectAll("tr").data(top).join("tr").html(q => `<td><button type="button" class="lk">${q.nm}</button> <span class="meta">${q.gu}${q.st.length ? " · 역 " + q.st.map(s => s.name).join("·") : ""}</span></td><td class="n">${fmtPct(q.dens)}</td><td class="n">${fmtShare(q.rs)}·${fmtShare(q.cs)}</td><td class="n">${fmtChg(q.chg)}</td>`)
+      .select("button").attr("aria-label", q => `${q.nm} ${Y}년 지도에서 보기`).on("click", (ev, q) => goMapDong(q.cd, Y));
+  }
+  if (devOK) {
+    window.addEventListener("resize", () => { if (document.body.dataset.tab === "dev") drawDev(); });
+    d3.select("#devPrev").on("click", () => setYear(Math.max(devY0, devYear() - BLD_WIN)));
+    d3.select("#devNext").on("click", () => setYear(Math.min(devY1, devYear() + BLD_WIN)));
+    d3.select("#devRange").on("input", function () { setYear(+this.value); });
+    d3.selectAll("#devCol button").on("click", function () { devCol = this.dataset.col; d3.selectAll("#devCol button").attr("aria-pressed", function () { return this.dataset.col === devCol ? "true" : "false"; }); drawDev(); });
+    d3.selectAll("#devSort button").on("click", function () { devSort = this.dataset.sort; d3.selectAll("#devSort button").attr("aria-pressed", function () { return this.dataset.sort === devSort ? "true" : "false"; }); drawDev(); });
+    d3.selectAll("#devDocs button[data-cd]").on("click", function () { goMapDong(this.dataset.cd, +this.dataset.y); });
+    d3.selectAll("#devDocs button[data-go]").on("click", function () {
+      showTab(this.dataset.go);
+      const el = this.dataset.go === "read" ? document.getElementById("method-bld") : document.getElementById("landBlock");
+      if (el) el.scrollIntoView({ block: "start" });
+    });
+  }
 
   // ---------- 탭과 주소 ----------
   // 주소 끝에 지도 탭은 연도(#1965), 다른 탭은 이름(#log·#data·#read)을 남겨 뒤로 가기와 공유에도 그 화면이 열린다
-  const TABS = ["map", "log", "data", "read"];
+  const TABS = ["map", "log", "data", "dev", "read"];
   let tab = "map";
   function showTab(t, fromHistory) {
     if (!TABS.includes(t)) t = "map";
@@ -1364,6 +1975,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     });
     document.documentElement.style.setProperty("--hdr", document.querySelector("header.top").offsetHeight + "px");
     if (t === "data") { drawBusChart(); renderLandTable(); }
+    if (t === "dev") drawDev();
     if (t === "log") {
       const el = document.querySelector("#log .ev.now") || [...document.querySelectorAll("#log .ev.past")].pop();
       if (el) el.scrollIntoView({ block: "center" }); else window.scrollTo(0, 0);
@@ -1379,7 +1991,8 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   d3.selectAll(".tabs button").on("click", function () { showTab(this.dataset.tab); })
     .on("keydown", function (ev) {
       const d = ev.key === "ArrowRight" ? 1 : ev.key === "ArrowLeft" ? -1 : 0; if (!d) return;
-      ev.preventDefault(); const t = TABS[(TABS.indexOf(this.dataset.tab) + d + TABS.length) % TABS.length]; showTab(t); document.getElementById("tab-" + t).focus();
+      ev.preventDefault(); const vis = TABS.filter(k => !document.getElementById("tab-" + k).hidden);   // 자료가 없어 숨긴 탭은 건너뛴다
+      const t = vis[(vis.indexOf(this.dataset.tab) + d + vis.length) % vis.length]; showTab(t); document.getElementById("tab-" + t).focus();
     });
 
   // ---------- boot ----------
@@ -1392,14 +2005,15 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     else drawTicks();
   }
   let rt = null;
-  const onResize = () => { clearTimeout(rt); rt = setTimeout(() => { if (tab === "map") refit(); if (tab === "data") drawBusChart(); }, 150); };
+  const onResize = () => { clearTimeout(rt); rt = setTimeout(() => { if (tab === "map") { refit(); fitLegends(); } if (tab === "data") drawBusChart(); }, 150); };
   if (window.ResizeObserver) new ResizeObserver(onResize).observe(document.querySelector(".stage"));
   window.addEventListener("resize", onResize);
   document.body.dataset.tab = "map";
   boot();
-  // 첫 화면: 주소에 연도나 탭이 있으면 그것을, 없으면 1914년 경계와 초기 노선이 함께 보이도록 1920년에서 시작
-  const h0 = readHash();
-  setYear(h0.year || DATA.startYear || 1920);
-  if (h0.tab !== "map") showTab(h0.tab, true);
+  // 첫 화면: 주소에 연도나 탭이 있으면 그것을, 없으면 처음(조선 후기 단계, 없으면 1899년)부터. 주소에 연도가 없던 첫 방문은 주소를 그대로 둔다
+  const h0 = readHash(), bare = !location.hash;
+  setYear(h0.year || (joseon ? Y0 : DATA.startYear) || 1899);   // 처음부터 보게: 조선 후기 단계가 있으면 그 칸(Y0)에서 시작(v1.7.1, 이지가 정함)
+  if (h0.tab !== "map") { showTab(h0.tab, true); syncHash(); }   // setYear가 주소를 #연도로 바꿔 놓으므로 탭 주소(#data 등)를 되돌린다
+  if (bare) { try { history.replaceState(null, "", location.pathname + location.search); } catch (e) { /* 주소를 못 바꾸는 곳 */ } }
 })();
 </script>

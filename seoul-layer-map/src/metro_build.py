@@ -55,8 +55,11 @@ stations = []
 def sid(s):
     for i, t in enumerate(stations):
         if t["name"] == s["name"] and dist(t, s) < 0.45:
+            if t.pop("_nodot", False):   # 먼저 만든 노선이 점 자리를 넘긴 역(metro_extra의 "nodot")
+                t["lat"], t["lng"] = s["lat"], s["lng"]
             return i
     stations.append({"name": s["name"], "lat": s["lat"], "lng": s["lng"], "opens": {}, "dates": {}})
+    if s.get("nodot"): stations[-1]["_nodot"] = True
     return len(stations) - 1
 
 def year(d):
@@ -91,13 +94,33 @@ for ln, seqs in SEQS.items():
             b = dts[k + 1] if not inf[k + 1] else anchor(k + 1, 1)
             cand = [x for x in (a, b) if x is not None]
             e = {"a": ids[k], "b": ids[k + 1], "open": max(cand) if cand else max(dts[k], dts[k + 1])}
-            gp = geom.find([ln], sq[k]["name"], sq[k + 1]["name"])
+            A, Bq = [sq[k]["lng"], sq[k]["lat"]], [sq[k + 1]["lng"], sq[k + 1]["lat"]]
+            gp = geom.find_snap([ln], sq[k]["name"], sq[k + 1]["name"], A, Bq)
             if gp:
-                gp = [[sq[k]["lng"], sq[k]["lat"]]] + gp[1:-1] + [[sq[k + 1]["lng"], sq[k + 1]["lat"]]]
-                e["p"] = geom.rnd(gp)
+                e["p"], e["_ends"] = gp, (A, Bq)   # 역 점까지 잇는 선은 아래 「역 점 잇기」에서
             else: nostraight.append(f"{ln}:{sq[k]['name']}-{sq[k+1]['name']}")
             edges.append(e)
     lines.append({"name": ln, "color": COLORS.get(ln, "#888"), "edges": edges})
+# 역 점 잇기: 선은 OSM 선로를 따라가고(geom.find_snap), 그 노선의 역 좌표가 지도에 찍히는 역 점일 때만
+# 선로 위 자리에서 역 점까지 짧은 선을 잇는다. 환승역에서 점이 다른 노선 자리에 있으면 잇지 않는다(승강장이 따로 있음).
+STUB = []
+for L in lines:
+    for e in L["edges"]:
+        ends = e.pop("_ends", None)
+        if not ends: continue
+        p = e["p"]
+        for side, idx, X in ((0, e["a"], ends[0]), (-1, e["b"], ends[1])):
+            st = stations[idx]
+            if [st["lng"], st["lat"]] != X: continue
+            gap = geom._m(p[side], X)
+            if gap <= 3: p[side] = X
+            elif side == 0: p.insert(0, X)
+            else: p.append(X)
+            if gap > 40: STUB.append(f"{L['name']}:{st['name']} {gap:.0f}m")
+        e["p"] = geom.rnd(p)
+print("역 점까지 이은 선(40m 넘는 것):", sorted(set(STUB)), file=sys.stderr)
+for st in stations:
+    st.pop("_nodot", None)
 for st in stations:
     st["first"] = min(st["opens"].values())
     if st.get("notes"): st["note"] = " / ".join(st.pop("notes"))

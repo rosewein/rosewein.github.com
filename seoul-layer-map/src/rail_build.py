@@ -3,8 +3,10 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import geom
 from paths import CODE, DATA, RAW, WORK
 B = DATA
-ST = json.load(open(f"{RAW}/subway/stations_seoul.json"))
-ALL = json.load(open(f"{RAW}/subway/raw/sudo.json"))["DATA"]
+# --resnap: 원자료(rail_parts) 없이 지금 data/rail.json의 선형만 선로에 다시 맞춘다(아래 resnap()).
+RESNAP = "--resnap" in sys.argv
+ST = [] if RESNAP else json.load(open(f"{RAW}/subway/stations_seoul.json"))
+ALL = [] if RESNAP else json.load(open(f"{RAW}/subway/raw/sudo.json"))["DATA"]
 PREF = ["1호선", "경의중앙선", "경춘선", "공항철도", "서해선", "수인분당선", "4호선", "2호선", "3호선", "5호선", "6호선", "7호선", "8호선", "9호선"]
 coord = {}
 for ln in PREF[::-1]:
@@ -49,6 +51,36 @@ NETLINES = {"경인선": ["1호선"], "경부선": ["1호선"], "경부고속철
 def netlines(line):
     if line.startswith("경의선") or line.startswith("용산선"): return ["경의중앙선", "공항철도"]
     return NETLINES.get(line, [])
+
+def resnap():
+    """data/rail.json의 선형을 지금 방식(geom.via_paths의 snap)으로 다시 그린다. 원자료(rail_parts) 없이 선형만 고칠 때 쓴다.
+    선로 자료에 없는 역(옛 역)이 사이에 낀 구간은 앞뒤로 이어진 구간을 묶어 한꺼번에 다시 자른다.
+    v1.7.2에서 썼다. rail_build.py를 처음부터 돌려도 같은 선형이 나온다."""
+    R = json.load(open(f"{B}/rail.json"))
+    S, segs, n, i = R["stations"], R["segs"], 0, 0
+    nm = lambda k: S[k]["name"]
+    while i < len(segs):
+        e, L = segs[i], netlines(segs[i]["line"])
+        if not (e.get("p") and L and geom.known(L, nm(e["a"]))):
+            i += 1; continue
+        grp = [i]
+        while grp and not geom.known(L, nm(segs[grp[-1]]["b"])):
+            x = grp[-1] + 1
+            ok = x < len(segs) and segs[x]["line"] == e["line"] and segs[x]["a"] == segs[grp[-1]]["b"] and segs[x].get("p")
+            grp = grp + [x] if ok else None
+        if not grp:
+            i += 1; continue
+        names = [nm(e["a"])] + [nm(segs[g]["b"]) for g in grp]
+        coords = {nm(k): (S[k]["lng"], S[k]["lat"]) for k in [e["a"]] + [segs[g]["b"] for g in grp]}
+        for g, pp in zip(grp, geom.via_paths(L, names, coords, snap=True)):
+            if pp:
+                segs[g]["p"] = geom.rnd(pp); n += 1
+        i = grp[-1] + 1
+    json.dump(R, open(f"{B}/rail.json", "w"), ensure_ascii=False, separators=(",", ":"))
+    print("resnap:", n, "segs", file=sys.stderr)
+
+if RESNAP:
+    resnap(); sys.exit()
 segs = []
 straight = []
 for sg in segs_in:
@@ -56,14 +88,13 @@ for sg in segs_in:
     ids = [sid(n, sg["line"]) for n in via]
     names = [ALIAS.get(n, n) for n in via]
     coords = {ALIAS.get(n, n): ((stations[i]["lng"], stations[i]["lat"]) if i is not None else None) for n, i in zip(via, ids)}
-    paths = geom.via_paths(netlines(sg["line"]), names, coords) if netlines(sg["line"]) else [None] * (len(via) - 1)
+    paths = geom.via_paths(netlines(sg["line"]), names, coords, snap=True) if netlines(sg["line"]) else [None] * (len(via) - 1)
     for k in range(len(ids) - 1):
         if ids[k] is None or ids[k + 1] is None: continue
         e = {"line": sg["line"], "a": ids[k], "b": ids[k + 1], "open": y(sg["open"]), "openLabel": sg["open"].replace("-", "."),
              "close": y(sg.get("close")), "closeLabel": (sg.get("close") or "").replace("-", "."), "note": sg.get("note", "")}
         if paths[k]:
-            A, Bs = stations[ids[k]], stations[ids[k + 1]]
-            e["p"] = geom.rnd([[A["lng"], A["lat"]]] + paths[k][1:-1] + [[Bs["lng"], Bs["lat"]]])
+            e["p"] = geom.rnd(paths[k])   # 끝은 via_paths(snap=True)가 역 좌표로 맞춤
         else: straight.append(f'{sg["line"]}:{via[k]}-{via[k+1]}')
         segs.append(e)
 print("straight rail:", straight, file=sys.stderr)

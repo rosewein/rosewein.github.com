@@ -1,0 +1,17 @@
+{
+ "key": "e07c16f00b",
+ "source": "google/fonts@6ebe737e44fd64ee736bbc6feed6136a6dbfd222",
+ "chars": {
+  "page": 1064,
+  "display": 174
+ },
+ "bytes": {
+  "hahmlet-500.woff2": 28348,
+  "hahmlet-700.woff2": 29184,
+  "slm-sans-kr-400.woff2": 100244,
+  "slm-sans-kr-500.woff2": 112560,
+  "slm-sans-kr-600.woff2": 111640,
+  "slm-mono-400.woff2": 11020,
+  "slm-mono-500.woff2": 11172
+ }
+}

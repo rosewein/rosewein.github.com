@@ -1,5 +1,7 @@
 """지도 화면 찍기(작업 공간용): python3 src/shot.py <index.html 폴더> <장면 json> <출력 폴더>
 
+v1.4.4부터 글꼴은 index.html 옆 fonts/에서 읽으므로 그대로 쓰인다. 아래 fontsource는 구글 폰트를 부르던 v1.4.3까지의 빌드를 찍을 때만 필요하다.
+
 작업 공간은 cdnjs·구글 폰트에 접속하지 못하므로, npm으로 받은 d3·topojson과 지도 글꼴(fontsource)을 가로채 넣는다.
 준비: mkdir -p $SLM_VENDOR && cd $SLM_VENDOR && npm i d3@7.8.5 topojson@3.0.2 @fontsource/hahmlet @fontsource/ibm-plex-sans-kr @fontsource/ibm-plex-mono
       (SLM_VENDOR 기본값 /home/claude/vendor, 브라우저는 /usr/bin/google-chrome, 파이썬 playwright 필요)
@@ -19,6 +21,7 @@ os.makedirs(OUT, exist_ok=True)
 with open(FONT_CSS, "w") as fo:
     for pkg, ws in {"hahmlet": [300, 500, 700], "ibm-plex-sans-kr": [400, 500, 600], "ibm-plex-mono": [400, 500]}.items():
         for w in ws:
+            if not os.path.exists(f"{FONTS}/{pkg}/{w}.css"): continue   # fontsource가 없으면(v1.4.4부터는 필요 없음) 건너뜀
             fo.write(open(f"{FONTS}/{pkg}/{w}.css").read().replace("url(./files/", f"url(http://127.0.0.1:8765/__fonts/{pkg}/files/") + "\n")
 
 class H(http.server.SimpleHTTPRequestHandler):
