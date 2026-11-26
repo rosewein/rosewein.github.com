@@ -45,15 +45,33 @@
 * { box-sizing: border-box; }
 body { background: var(--paper); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.55; }
 .wrap { max-width: 1080px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
-header.top { padding-block: 18px 10px; display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 6px 20px; }
-h1 { font-family: var(--display); font-weight: 500; font-size: clamp(20px, 4.6vw, 28px); line-height: 1.2; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+body { margin: 0; }
+/* 탭: 지도 탭은 화면 높이를 꽉 채우고(지도를 최대한 크게), 나머지 탭은 글을 읽는 보통 쪽 */
+.app { display: flex; flex-direction: column; min-height: 100vh; min-height: 100dvh; }
+body:not([data-tab]) .app, body[data-tab="map"] .app { height: 100vh; height: 100dvh; min-height: 520px; }
+.app > .wrap { width: 100%; }   /* 세로 flex 안에서 margin: auto가 폭을 글자만큼 줄이지 않게 */
+header.top { flex: none; display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 2px 28px; padding-top: 8px; border-bottom: 1px solid var(--rule); max-width: none; margin: 0; }
+@media (max-width: 560px) { header.top { gap: 0 6px; justify-content: space-between; padding-left: 10px; padding-right: 6px; } header.top h1 { font-size: 16px; } .tabs button { padding: 7px 6px 8px; font-size: 13px; } }
+/* 글 탭에서는 제목·탭 줄과 10년 단위 줄을 위에 붙여 둔다 */
+body[data-tab]:not([data-tab="map"]) header.top { position: sticky; top: 0; z-index: 10; background: var(--paper); }
+h1 { font-family: var(--display); font-weight: 500; font-size: clamp(19px, 3.4vw, 24px); line-height: 1.2; margin: 0; letter-spacing: -0.01em; text-wrap: balance; padding-bottom: 6px; }
 .sub { color: var(--ink-2); font-size: 13px; margin: 2px 0 0; }
+.tabs { display: flex; gap: 0; align-self: flex-end; }
+.tabs button { font: 500 14px var(--body); color: var(--ink-2); background: none; border: 0; border-bottom: 2px solid transparent; padding: 7px 12px 8px; margin-bottom: -1px; cursor: pointer; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--ink); }
+.tabs button:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.pane[hidden] { display: none !important; }
+.pane-map { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.mapwrap { flex: 1; min-height: 300px; display: grid; grid-template-columns: minmax(0, 1fr) 248px; position: relative; }
 
-.stage { position: relative; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); background: var(--paper-2); }
-#map { display: block; width: 100%; height: clamp(360px, 62vh, 700px); touch-action: none; cursor: grab; }
+.stage { position: relative; min-height: 0; background: var(--paper-2); }
+#map { position: absolute; inset: 0; display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
 #map:active { cursor: grabbing; }
 .yearplate { position: absolute; top: 10px; left: max(12px, env(safe-area-inset-left, 0px)); right: 96px; pointer-events: none; }
 .yearplate .y { font-family: var(--display); font-weight: 700; font-size: clamp(44px, 12vw, 84px); line-height: 0.9; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+/* 진한 땅값 색이나 선 위에서도 읽히도록 바탕색으로 글자 둘레를 살짝 띄운다 */
+.yearplate .y { text-shadow: 0 0 2px var(--paper-2), 0 0 4px var(--paper-2), 0 0 6px var(--paper-2); }
+.yearplate .era, .yearplate .stat { width: fit-content; max-width: 100%; padding: 0 4px; margin-left: -4px; border-radius: 2px; background: var(--paper-2); background: color-mix(in srgb, var(--paper-2) 80%, transparent); }
 .yearplate .era { font-size: 12.5px; color: var(--ink-2); margin-top: 6px; letter-spacing: 0.02em; }
 .yearplate .stat { font-family: var(--mono); font-size: 12px; color: var(--ink-2); margin-top: 2px; font-variant-numeric: tabular-nums; }
 .camera { position: absolute; right: max(10px, env(safe-area-inset-right, 0px)); top: 10px; display: flex; flex-direction: column; gap: 6px; }
@@ -66,8 +84,9 @@ h1 { font-family: var(--display); font-weight: 500; font-size: clamp(20px, 4.6vw
 .info .meta { color: var(--ink-2); font-size: 12.5px; }
 .info .x { position: absolute; top: 4px; right: 6px; background: none; border: 0; color: var(--ink-2); font-size: 18px; cursor: pointer; padding: 2px 6px; }
 
-.timebar { position: sticky; bottom: 0; z-index: 5; background: var(--paper); border-bottom: 1px solid var(--rule); padding-bottom: env(safe-area-inset-bottom, 0px); }
-.timebar .wrap { padding-block: 10px 12px; display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; align-items: center; }
+.timebar { flex: none; position: relative; z-index: 5; background: var(--paper); border-top: 1px solid var(--rule); padding-bottom: env(safe-area-inset-bottom, 0px); }
+.timebar .wrap { padding-block: 8px 8px; display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; align-items: center; max-width: none; }
+@media (min-width: 761px) { .timebar .wrap { grid-template-columns: auto 1fr auto; } .timebar .speed { grid-column: 3; grid-row: 1 / span 2; } }
 .play { width: 42px; height: 42px; border-radius: 50%; border: 1.5px solid var(--ink); background: var(--paper); color: var(--ink); cursor: pointer; display: grid; place-items: center; grid-row: span 2; }
 .play svg { width: 16px; height: 16px; fill: currentColor; }
 .speed { grid-column: 1 / -1; display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--ink-2); }
@@ -81,18 +100,73 @@ input[type=range] { width: 100%; margin: 0; accent-color: var(--tram); height: 2
 .scale { position: relative; height: 15px; font-family: var(--mono); font-size: 11px; color: var(--ink-2); grid-column: 2; min-width: 0; }
 .scale span { position: absolute; top: 0; transform: translateX(-50%); white-space: nowrap; }
 
-.chips { display: flex; flex-wrap: wrap; gap: 6px; padding-block: 12px 4px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .chip { font: 500 13px var(--body); color: var(--ink-2); background: transparent; border: 1px solid var(--rule); border-radius: 999px; padding: 5px 12px 5px 9px; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; }
+.chip[hidden] { display: none; }
 .chip[aria-pressed="true"] { color: var(--ink); border-color: var(--ink); background: var(--paper-2); }
-.chip i { width: 14px; height: 0; border-top: 3px solid; display: inline-block; }
+.chip i { width: 14px; height: 0; border-top: 3px solid; display: inline-block; flex: none; }
 .chip i.fill { height: 10px; border: 1px solid var(--ring); border-top-width: 1px; }
 
-main.notes { padding-block: 18px 40px; display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 28px; }
-@media (max-width: 760px) { main.notes { grid-template-columns: minmax(0, 1fr); } }
+/* 오른쪽 레이어 판: 전체 켜기·끄기, 레이어 칩, 켠 레이어의 범례 */
+.side { min-height: 0; overflow-y: auto; border-left: 1px solid var(--rule); background: var(--paper); padding: 10px 12px 12px; font-size: 12.5px; }
+.side .all { display: flex; gap: 6px; margin-bottom: 8px; }
+.side .all button, .legbtn { flex: 1; font: 500 12.5px var(--body); color: var(--ink-2); background: none; border: 1px solid var(--rule); border-radius: 4px; padding: 5px 8px; cursor: pointer; white-space: nowrap; }
+.side .all button:focus-visible, .legbtn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.side .chips { flex-direction: column; gap: 4px; }
+.side .chip { width: 100%; border-radius: 4px; padding: 4px 8px; font-size: 12.5px; }
+.legbtn { display: none; flex: none; color: var(--ink); border-color: var(--ink); }
+.legends h3 { font: 600 12px var(--body); color: var(--ink-2); margin: 14px 0 4px; letter-spacing: 0.02em; }
+.side .legend-bus { flex-direction: column; gap: 3px; font-size: 12px; margin-top: 4px; }
+.side .legend-land { font-size: 12px; }
+.side .legend-land .tk span { font-size: 10px; }
+.attrib { position: absolute; right: 4px; bottom: 3px; font-size: 10.5px; color: var(--ink-2); background: var(--paper-2); background: color-mix(in srgb, var(--paper-2) 80%, transparent); padding: 1px 5px; border-radius: 3px; pointer-events: auto; }
+.attrib a { color: inherit; }
+.statstrip { display: none; }
+/* 오른쪽 판은 폭이 넉넉할 때만. 태블릿 세로 화면처럼 좁으면 칩을 지도 위 한 줄로(서울은 가로가 길어 폭을 지도에 주는 편이 크게 보임) */
+@media (max-width: 900px) {
+  .mapwrap { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+  .side { order: -1; overflow: visible; border-left: 0; border-bottom: 1px solid var(--rule); padding: 6px 0 6px max(10px, env(safe-area-inset-left, 0px)); display: flex; align-items: center; gap: 6px; }
+  .side .scroller { flex: 1; min-width: 0; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+  .side .scroller::-webkit-scrollbar { display: none; }
+  .side .all { margin: 0; flex: none; }
+  .side .chips { flex-direction: row; flex-wrap: nowrap; }
+  .side .chip { width: auto; flex: none; border-radius: 999px; }
+  .legbtn { display: block; margin-right: max(10px, env(safe-area-inset-right, 0px)); }
+  .legends { display: none; position: absolute; left: 8px; right: 8px; bottom: 8px; z-index: 6; max-height: 50%; overflow-y: auto; background: var(--paper); border: 1px solid var(--ink); border-radius: 4px; padding: 2px 10px 10px; }
+  .side.legopen .legends { display: block; }
+}
+@media (max-width: 560px) {
+  #statLabel { display: none; }
+  .statstrip { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; flex: none; padding: 5px 10px; border-top: 1px solid var(--rule); background: var(--paper); font: 11.5px var(--mono); color: var(--ink-2); }
+  .statstrip::-webkit-scrollbar { display: none; }
+  .statstrip span { flex: none; white-space: nowrap; padding: 2px 7px; border: 1px solid var(--rule); border-radius: 999px; }
+  .attrib { font-size: 9.5px; }
+}
+
+/* 연표·표·자료·읽는 법 탭 */
+.pane-text { padding-block: 18px 48px; }
+.pane-text .lead { font-size: 14.5px; color: var(--ink); max-width: 62ch; margin: 0 0 18px; }
+.cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 28px; }
+@media (max-width: 760px) { .cols { grid-template-columns: minmax(0, 1fr); } }
+.decades { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 14px; position: sticky; top: var(--hdr, 46px); z-index: 4; background: var(--paper); padding-block: 6px; border-bottom: 1px solid var(--rule); }
+@media (max-width: 560px) { .decades { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; } .decades button { flex: none; } }
+.decades button { font: 500 12.5px var(--mono); color: var(--ink); background: var(--paper); border: 1px solid var(--rule); border-radius: 4px; padding: 4px 8px; cursor: pointer; }
+.decades button.cur { border-color: var(--ink); background: var(--paper-2); }
+.decades button:focus-visible, .era-h:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.log .era-h { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-top: 18px; padding: 8px 4px 6px; border-top: 2px solid var(--ink); border-bottom: 1px solid var(--rule); cursor: pointer; list-style: none; }
+.log .era-h:first-child { margin-top: 0; }
+.log .era-h b { font-family: var(--display); font-weight: 500; font-size: 17px; }
+.log .era-h span { font-size: 12.5px; color: var(--ink-2); white-space: nowrap; }
+.log .era-h:hover { background: var(--paper-2); }
+.log .era-h i.lbl { font-style: normal; }
+@media (max-width: 560px) { .log .era-h i.lbl { display: none; } }
+.legend-notes { margin: 0 0 14px; padding-left: 18px; font-size: 13.5px; max-width: 62ch; }
+.legend-notes li { margin-bottom: 4px; }
 h2 { font-family: var(--display); font-weight: 500; font-size: 19px; margin: 0 0 10px; }
 .log { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--rule); }
 .ev { display: grid; grid-template-columns: 74px 12px minmax(0, 1fr); gap: 0 8px; padding: 7px 4px; border-bottom: 1px solid var(--rule); cursor: pointer; font-size: 13.5px; align-items: baseline; }
 .ev:hover { background: var(--paper-2); }
+.ev > span:last-child, .evpop li > span { overflow-wrap: anywhere; }   /* 띄어쓰기 없이 긴 노선 번호 줄이 휴대폰 폭을 넘지 않게 */
 .ev .d { font-family: var(--mono); font-size: 12px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
 .ev .k { width: 9px; height: 9px; border-radius: 50%; display: inline-block; transform: translateY(1px); }
 .ev .k.tram { background: var(--tram); } .ev .k.kido { background: var(--kido); } .ev .k.area { background: var(--area-new); } .ev .k.gu { background: var(--gu); } .ev .k.bus { background: var(--bus); border-radius: 0; transform: translateY(1px) rotate(45deg) scale(.85); } .ev .k.rail { background: var(--rail); border-radius: 1px; }
@@ -152,13 +226,19 @@ details.landtab th { font-weight: 500; color: var(--ink-2); font-size: 12px; pos
 details.landtab td i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
 </style>
 
+<div class="app">
 <header class="top wrap">
-  <div>
-    <h1>서울 도시 연대지도</h1>
-    <p class="sub">1899년 경인선과 전차부터 지하철·버스, 1990년 이후 땅값까지, 교통·시역·땅값을 해마다 겹쳐 본 지도</p>
-  </div>
+  <h1>서울 도시 연대지도</h1>
+  <nav class="tabs" role="tablist" aria-label="보기">
+    <button type="button" role="tab" id="tab-map" data-tab="map" aria-controls="pane-map" aria-selected="true">지도</button>
+    <button type="button" role="tab" id="tab-log" data-tab="log" aria-controls="pane-log" aria-selected="false" tabindex="-1">연표</button>
+    <button type="button" role="tab" id="tab-data" data-tab="data" aria-controls="pane-data" aria-selected="false" tabindex="-1">표·자료</button>
+    <button type="button" role="tab" id="tab-read" data-tab="read" aria-controls="pane-read" aria-selected="false" tabindex="-1">읽는 법</button>
+  </nav>
 </header>
 
+<section class="pane pane-map" id="pane-map" role="tabpanel" aria-labelledby="tab-map">
+<div class="mapwrap">
 <div class="stage">
   <svg id="map" role="img" aria-label="서울 교통망·시역·땅값 변화 지도"></svg>
   <div class="yearplate" aria-live="polite">
@@ -174,21 +254,11 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     <button id="evToggle" type="button" aria-pressed="true" title="그 해에 일어난 일을 연도 아래에 띄움">그 해 사건</button>
   </div>
   <div class="info" id="info" hidden><button class="x" id="infoX" type="button" aria-label="닫기">×</button><div id="infoBody"></div></div>
+  <div class="attrib" id="attrib">선로 형상 © OpenStreetMap contributors<span id="verLabel"></span></div>
 </div>
-
-<div class="timebar">
-  <div class="wrap">
-    <button class="play" id="play" type="button" aria-label="재생"><svg viewBox="0 0 16 16" id="playIcon"><path d="M4 2l10 6-10 6z"/></svg></button>
-    <div class="track">
-      <svg id="ticks" aria-hidden="true"></svg>
-      <input type="range" id="year" min="1899" max="2026" step="1" value="1899" aria-label="연도">
-    </div>
-    <div class="scale" id="scale"><span data-y="1899">1899</span><span data-y="1936">1936</span><span data-y="1963">1963</span><span data-y="1995">1995</span><span data-y="2026">2026</span></div>
-    <div class="speed" role="group" aria-label="재생 속도"><span>재생 속도</span><button type="button" data-speed="0.5" aria-pressed="false">0.5×</button><button type="button" data-speed="1" aria-pressed="true">1×</button><button type="button" data-speed="2" aria-pressed="false">2×</button><button type="button" data-speed="4" aria-pressed="false">4×</button></div>
-  </div>
-</div>
-
-<div class="wrap">
+<aside class="side" id="side" aria-label="레이어">
+  <div class="scroller">
+  <div class="all"><button type="button" id="allOn">전체 켜기</button><button type="button" id="allOff">전체 끄기</button></div>
   <div class="chips" role="group" aria-label="레이어">
     <button class="chip" type="button" data-layer="rail" aria-pressed="true" id="railChip" hidden><i style="color:var(--rail);border-top-width:4px;border-top-style:double"></i>철도(국철)</button>
     <button class="chip" type="button" data-layer="metro" aria-pressed="true" id="metroChip" hidden><i style="color:#00A84D;border-top-width:4px"></i>지하철·광역철도</button>
@@ -203,48 +273,83 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     <button class="chip" type="button" data-layer="village" aria-pressed="true" id="villageChip" hidden><i class="fill" style="background:var(--village)"></i>마을버스(2015–)</button>
     <button class="chip" type="button" data-layer="dong" aria-pressed="false"><i style="color:var(--rule);border-top-width:1px"></i>현재 법정동</button>
   </div>
+  </div>
+  <button type="button" class="legbtn" id="legBtn" aria-expanded="false" aria-controls="legends">범례</button>
+  <div class="legends" id="legends">
+  <h3>범례</h3>
   <div class="legend-bus" id="busLegend" hidden>
-    <span><svg width="46" height="12" viewBox="0 0 46 12"><path d="M1,6H9" stroke="var(--bus)" stroke-width="1" stroke-opacity=".6"/><path d="M13,6H21" stroke="var(--bus)" stroke-width="2.2"/><path d="M25,6H33" stroke="var(--bus)" stroke-width="3.6"/><path d="M37,6H45" stroke="var(--bus)" stroke-width="6"/></svg>버스 노선망(마을버스 제외): 1998–2003년은 2004년 6월 노선에서 거꾸로 맞춤. 2004년부터는 2026년 11월 노선에 그 사이 없어진 노선 219개를 되살려 해마다 맞춤. 굵을수록 지나는 노선이 많음</span>
+    <span><svg width="46" height="12" viewBox="0 0 46 12"><path d="M1,6H9" stroke="var(--bus)" stroke-width="1" stroke-opacity=".6"/><path d="M13,6H21" stroke="var(--bus)" stroke-width="2.2"/><path d="M25,6H33" stroke="var(--bus)" stroke-width="3.6"/><path d="M37,6H45" stroke="var(--bus)" stroke-width="6"/></svg>버스 노선망(마을버스 제외). 굵을수록 지나는 노선이 많음</span>
     <span><svg width="20" height="12" viewBox="0 0 20 12"><path d="M1,6H19" stroke="var(--bus)" stroke-width="2.2"/></svg>새로 생긴 노선(3년 안)</span>
     <span><svg width="20" height="12" viewBox="0 0 20 12"><path d="M1,6H19" stroke="var(--ink-2)" stroke-width="2.2" stroke-dasharray="5 4"/></svg>없어진 노선(3년 안)</span>
     <span><svg width="20" height="12" viewBox="0 0 20 12"><path d="M1,6H19" stroke="var(--area-new)" stroke-width="2.2"/></svg>연장·단축·경로 변경(최근 3년)</span>
   </div>
   <div class="legend-bus" id="villageLegend" hidden>
-    <span><svg width="20" height="12" viewBox="0 0 20 12"><rect x="1" y="2" width="12" height="8" fill="var(--village)" fill-opacity=".5"/><circle cx="17" cy="6" r="1.6" fill="var(--village-dot)"/></svg>마을버스 정류장(점)과 마을버스로만 닿는 땅(칠한 곳: 시내버스 정류장 300m 밖, 마을버스 정류장 300m 안). 2015년부터, 그 해 11월 셋째 수요일 승하차 기록</span>
+    <span><svg width="20" height="12" viewBox="0 0 20 12"><rect x="1" y="2" width="12" height="8" fill="var(--village)" fill-opacity=".5"/><circle cx="17" cy="6" r="1.6" fill="var(--village-dot)"/></svg>마을버스 정류장(점)과 마을버스로만 닿는 땅(칠한 곳)</span>
   </div>
   <div class="legend-land" id="landLegend" hidden>
     <div class="bar" id="landBar"></div>
     <div class="tk" id="landTicks"></div>
-    <p>땅값: 법정동마다 ㎡당 개별공시지가의 중앙값을 그 해 서울 전체 필지 중앙값으로 나눈 배수. 칸 하나가 두 배씩(로그 눈금)이고, 굵은 1이 서울 중앙값입니다. 1990년부터 · <i class="na"></i>자료 없음</p>
+    <p>땅값: 서울 필지 중앙값의 몇 배인지. 칸마다 두 배, 굵은 1이 서울 중앙값 · <i class="na"></i>자료 없음</p>
   </div>
-  <p class="small" style="margin:2px 0 0">지도를 확대하면 역 이름이 나옵니다. 선로 형상 © OpenStreetMap contributors<span id="verLabel"></span></p>
+  <p class="small" style="margin:10px 0 0">자세한 풀이는 「읽는 법」 탭에 있습니다.</p>
+  </div>
+</aside>
 </div>
+<div class="statstrip" id="statStrip" aria-hidden="true"></div>
+<div class="timebar">
+  <div class="wrap">
+    <button class="play" id="play" type="button" aria-label="재생"><svg viewBox="0 0 16 16" id="playIcon"><path d="M4 2l10 6-10 6z"/></svg></button>
+    <div class="track">
+      <svg id="ticks" aria-hidden="true"></svg>
+      <input type="range" id="year" min="1899" max="2026" step="1" value="1899" aria-label="연도">
+    </div>
+    <div class="scale" id="scale"><span data-y="1899">1899</span><span data-y="1936">1936</span><span data-y="1963">1963</span><span data-y="1995">1995</span><span data-y="2026">2026</span></div>
+    <div class="speed" role="group" aria-label="재생 속도"><span>재생 속도</span><button type="button" data-speed="0.5" aria-pressed="false">0.5×</button><button type="button" data-speed="1" aria-pressed="true">1×</button><button type="button" data-speed="2" aria-pressed="false">2×</button><button type="button" data-speed="4" aria-pressed="false">4×</button></div>
+  </div>
+</div>
+</section>
 
-<main class="notes wrap">
-  <section>
-    <h2>연표</h2>
-    <p class="small" style="margin:0 0 8px">항목을 누르면 그 해로 이동합니다. 지도에서 선이나 땅을 누르면 개통일·편입 연도가 나옵니다.</p>
-    <ul class="log" id="log"></ul>
-  </section>
-  <section class="prose">
-    <div id="landBlock" hidden>
-      <h2>법정동별 땅값</h2>
-      <details class="landtab" id="landTab"><summary id="landTabSum">표로 보기</summary><div class="scroll"><table><thead><tr><th>법정동</th><th class="n">서울 중앙값 대비</th><th class="n">㎡당 중앙값</th><th class="n">필지</th></tr></thead><tbody id="landRows"></tbody></table></div></details>
+<section class="pane pane-text wrap" id="pane-log" role="tabpanel" aria-labelledby="tab-log" hidden>
+  <p class="small" style="margin:0 0 10px">시기 제목이나 항목, 10년 단위를 누르면 지도 탭으로 돌아가 그 해를 보여 줍니다. 지도에서 선이나 땅을 누르면 개통일·편입 연도가 나옵니다.</p>
+  <nav class="decades" id="decades" aria-label="10년 단위로 지도 보기"></nav>
+  <ul class="log" id="log"></ul>
+</section>
+
+<section class="pane pane-text wrap" id="pane-data" role="tabpanel" aria-labelledby="tab-data" hidden>
+  <div class="cols">
+    <div class="prose">
+      <div id="landBlock" hidden>
+        <h2>법정동별 땅값</h2>
+        <details class="landtab" id="landTab"><summary id="landTabSum">표로 보기</summary><div class="scroll"><table><thead><tr><th>법정동</th><th class="n">서울 중앙값 대비</th><th class="n">㎡당 중앙값</th><th class="n">필지</th></tr></thead><tbody id="landRows"></tbody></table></div></details>
+      </div>
+      <h2>시역 면적</h2>
+      <table class="areas">
+        <thead><tr><th>시점</th><th style="text-align:right">공식 면적</th><th style="text-align:right">지도 근사</th></tr></thead>
+        <tbody id="areaRows"></tbody>
+      </table>
     </div>
-    <h2>시역 면적</h2>
-    <table class="areas">
-      <thead><tr><th>시점</th><th style="text-align:right">공식 면적</th><th style="text-align:right">지도 근사</th></tr></thead>
-      <tbody id="areaRows"></tbody>
-    </table>
-    <div id="busBlock" hidden>
-      <h2>서울 시내버스 규모</h2>
-      <svg id="busChart" role="img" aria-label="연도별 서울 시내버스 노선 수와 운행 대수"></svg>
-      <p class="small" style="margin:4px 0 18px">분홍 선은 공식 집계입니다. 출처마다 집계 기준(좌석·지역순환·마을버스 포함 여부)이 달라 이어 붙인 값이고, 빈 해는 자료를 찾지 못한 해입니다. 회색 점선은 지도에 실제로 그린 노선 수입니다(그 해 7월 1일 기준). 2004년부터는 2026년 노선에 그 사이 없어진 노선을 되살려 더한 값이라 공식 집계와 거의 겹칩니다. 2003년 이전은 경로를 아는 노선만 그려서 공식 집계보다 적습니다.</p>
+    <div class="prose">
+      <div id="busBlock" hidden>
+        <h2>서울 시내버스 규모</h2>
+        <svg id="busChart" role="img" aria-label="연도별 서울 시내버스 노선 수와 운행 대수"></svg>
+        <p class="small" style="margin:4px 0 18px">분홍 선은 공식 집계입니다. 출처마다 집계 기준(좌석·지역순환·마을버스 포함 여부)이 달라 이어 붙인 값이고, 빈 해는 자료를 찾지 못한 해입니다. 회색 점선은 지도에 실제로 그린 노선 수입니다(그 해 7월 1일 기준). 2004년부터는 2026년 노선에 그 사이 없어진 노선을 되살려 더한 값이라 공식 집계와 거의 겹칩니다. 2003년 이전은 경로를 아는 노선만 그려서 공식 집계보다 적습니다.</p>
+      </div>
     </div>
-    <h2>이 지도를 읽는 법</h2>
-    <div id="method"></div>
-  </section>
-</main>
+  </div>
+</section>
+
+<section class="pane pane-text wrap prose" id="pane-read" role="tabpanel" aria-labelledby="tab-read" hidden>
+  <p class="lead">1899년 경인선과 전차부터 지하철·버스, 1990년 이후 땅값까지, 교통·시역·땅값을 해마다 겹쳐 본 지도입니다. 연도 띠를 움직이거나 재생 단추를 누르면 해마다 바뀐 모습이 나오고, 지도를 확대하면 역 이름이 나옵니다.</p>
+  <h2>범례 풀이</h2>
+  <ul class="legend-notes">
+    <li>버스 노선망(마을버스 제외): 1998–2003년은 2004년 6월 노선에서 거꾸로 맞췄습니다. 2004년부터는 2026년 11월 노선에 그 사이 없어진 노선 219개를 되살려 해마다 맞췄습니다. 굵을수록 그 구간을 지나는 노선이 많습니다.</li>
+    <li>마을버스: 점은 마을버스 정류장, 칠한 곳은 마을버스로만 닿는 땅(시내버스 정류장 300m 밖, 마을버스 정류장 300m 안)입니다. 2015년부터, 그 해 11월 셋째 수요일 승하차 기록으로 그렸습니다. 땅값을 함께 켜면 칠한 곳을 옅게 하고 테두리를 두릅니다.</li>
+    <li>땅값: 법정동마다 ㎡당 개별공시지가의 중앙값을 그 해 서울 전체 필지 중앙값으로 나눈 배수입니다. 칸 하나가 두 배씩(로그 눈금)이고, 굵은 1이 서울 중앙값입니다. 1990년부터 있고, 빗금은 그 해 자료가 없는 동입니다.</li>
+  </ul>
+  <h2>이 지도를 읽는 법</h2>
+  <div id="method"></div>
+</section>
+</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
@@ -677,11 +782,16 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     const bs = bus ? bus.stats.filter(x => x.routes && x.y <= year && year - x.y <= 4).pop() : null;
     const drawn = layerOn.bus && DATA.busDrawn ? DATA.busDrawn[year] : null;
     const vyy = layerOn.village ? villageYear(year) : null;
-    const vtxt = vyy ? `마을버스 ${village.years[vyy].routes}개 노선${vyy !== year ? `(${vyy}년 자료)` : ""}, 마을버스로만 닿는 땅 ${village.years[vyy].only_km2}㎢ · ` : "";
-    const landStat = landOn ? (landShown ? `서울 필지 중앙값 ㎡당 ${fmtWon(land.seoul[li])}${landPartial(year) ? "(" + landPartial(year) + ")" : ""} · ` : `땅값 자료는 ${land.years[0]}–${land.years[land.years.length - 1]}년 · `) : "";
-    d3.select("#statLabel").html(landStat + vtxt +
-      (drawn ? `버스 노선 ${drawn}개 그림${bs ? `(공식 ${bs.routes}개)` : ""} · ` : bs ? `버스 노선 ${bs.routes}개 · ` : "") + (offArea ? `시역 ${offArea}㎢` : "시역 —") + (active.length ? ` · 궤도 ${active.length}구간 ${km.toFixed(1)}km` : "") + (metro && year >= 1974 ? ` · 역 ${metro.stations.filter(st => st.first <= year).length}곳` : (year >= 1968 && !active.length ? " · 전차 폐지(1968)" : ""))
-    );
+    // 수치: 항목별로 모아 데스크톱은 연도 판에 한 줄로, 좁은 화면은 지도 아래 띠(항목마다 한 칸)로
+    const stats = [];
+    if (landOn) stats.push(landShown ? `서울 필지 중앙값 ㎡당 ${fmtWon(land.seoul[li])}${landPartial(year) ? "(" + landPartial(year) + ")" : ""}` : `땅값 자료는 ${land.years[0]}–${land.years[land.years.length - 1]}년`);
+    if (vyy) stats.push(`마을버스 ${village.years[vyy].routes}개 노선${vyy !== year ? `(${vyy}년 자료)` : ""}, 마을버스로만 닿는 땅 ${village.years[vyy].only_km2}㎢`);
+    if (drawn) stats.push(`버스 노선 ${drawn}개 그림${bs ? `(공식 ${bs.routes}개)` : ""}`); else if (bs) stats.push(`버스 노선 ${bs.routes}개`);
+    stats.push(offArea ? `시역 ${offArea}㎢` : "시역 —");
+    if (active.length) stats.push(`궤도 ${active.length}구간 ${km.toFixed(1)}km`);
+    if (metro && year >= 1974) stats.push(`역 ${metro.stations.filter(st => st.first <= year).length}곳`); else if (year >= 1968 && !active.length) stats.push("전차 폐지(1968)");
+    d3.select("#statLabel").html(stats.join(" · "));
+    d3.select("#statStrip").selectAll("span").data(stats).join("span").text(d => d);
 
     moveBusCursor && moveBusCursor();
     renderLandTable();
@@ -689,6 +799,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     drawStationLabels();
     // log highlight
     d3.selectAll("#log .ev").attr("class", d => "ev " + (d.year === year ? "now" : d.year < year ? "past" : "future"));
+    d3.selectAll("#decades button").classed("cur", d => Math.floor(year / 10) * 10 === d);
     d3.select("#ticks").select(".cursor").attr("x", tickX(year) - 1);
 
     // camera
@@ -722,12 +833,18 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   }
   function zoomTo(b, dur = 750) {
     const [[x0, y0], [x1, y1]] = b;
-    const padTop = Math.min(110, H * 0.22);
+    // 위쪽 여백: 넓은 화면은 연도 판이 왼쪽에만 있어 조금만, 좁은 화면은 판이 폭을 다 차지하므로 판의 실제 높이만큼
+    const padTop = W < 560 ? Math.min(plateBottom() + 6, H * 0.45) : Math.min(110, H * 0.22);
     const k = Math.min(60, 0.9 / Math.max((x1 - x0) / W, (y1 - y0) / (H - padTop)));
     const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
     const t = d3.zoomIdentity.translate(W / 2 - k * cx, (H + padTop) / 2 - k * cy).scale(k);
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     svg.transition().duration(reduce ? 0 : dur).call(zoom.transform, t);
+  }
+  function plateBottom() {
+    const sv = svg.node().getBoundingClientRect(); let b = 0;
+    document.querySelectorAll(".yearplate > *").forEach(el => { const r = el.getBoundingClientRect(); if (r.height) b = Math.max(b, r.bottom - sv.top); });
+    return b;
   }
   function frameFor(er, active) {
     const feats = [wallGeo, ...active.map(t => t.geo)];
@@ -749,7 +866,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     const box = document.getElementById("evPop");
     const list = evOn ? evs.filter(e => e.year === year) : [];   // evs가 이미 날짜순
     if (!list.length) { box.hidden = true; box.innerHTML = ""; lastEvYear = null; return; }
-    const maxN = W < 560 ? 2 : 4, more = list.length - maxN;
+    const maxN = W < 560 ? 1 : 4, more = list.length - maxN;   // 좁은 화면은 한 건만(판이 지도를 덜 가리게)
     box.innerHTML = `<ul>${list.slice(0, maxN).map(e => `<li><i class="k" style="background:${e.color || KIND_COLOR[e.kind] || "var(--gu)"}"></i><span><span class="d">${e.date || e.year}</span>${e.text}${e.conf ? ` <span class="c">(${e.conf})</span>` : ""}</span></li>`).join("")}</ul>` +
       (more > 0 ? `<button type="button" class="more" data-more="1">외 ${more}건 · 연표에서 보기</button>` : "");
     box.hidden = false;
@@ -757,8 +874,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   }
   d3.select("#evPop").on("click", (ev) => {
     if (!ev.target.closest("[data-more]")) return;
-    const li = document.querySelector("#log .ev.now");
-    if (li) { li.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "center" }); li.focus({ preventScroll: true }); }
+    showTab("log");   // 연표 탭을 열면 그 해 항목으로 내려간다
   });
   d3.select("#evToggle").on("click", function () { evOn = !evOn; this.setAttribute("aria-pressed", evOn ? "true" : "false"); renderEvPop(); drawStationLabels(); });
 
@@ -785,10 +901,13 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     const fs = 11, gap = 5, placed = [], out = [];
     const hit = (a) => placed.some(b => !(a[2] < b[0] || a[0] > b[2] || a[3] < b[1] || a[1] > b[3]));
     const sv = svg.node().getBoundingClientRect();
-    ["#yLabel", "#eraLabel", "#statLabel", "#evPop", ".camera"].forEach(sel => {
-      const el = document.querySelector(sel), r = el && el.getBoundingClientRect();
-      if (r && r.width) placed.push([r.left - sv.left - 4, r.top - sv.top - 2, r.right - sv.left + 4, r.bottom - sv.top + 2]);
+    const keep = (r) => { if (r && r.width) placed.push([r.left - sv.left - 4, r.top - sv.top - 2, r.right - sv.left + 4, r.bottom - sv.top + 2]); };
+    // 연도·시기·수치 글자는 글자가 차지한 폭만 비운다(상자째 잡으면 판 전체 폭이 막혀 지도 위쪽에 역 이름이 안 나옴)
+    ["#yLabel", "#eraLabel", "#statLabel"].forEach(sel => {
+      const el = document.querySelector(sel); if (!el || !el.firstChild) return;
+      const rg = document.createRange(); rg.selectNodeContents(el); for (const r of rg.getClientRects()) keep(r);
     });
+    ["#evPop", ".camera", "#attrib"].forEach(sel => { const el = document.querySelector(sel); if (el && !el.hidden) keep(el.getBoundingClientRect()); });
     if (layerOn.gu) guLabs.forEach(g => { const [gx, gy] = t.apply([g.x, g.y]), gw = g.t.length * 10.5 / 2 + 2; placed.push([gx - gw, gy - 11, gx + gw, gy + 3]); });
     for (const c of cand) {
       const [sx, sy] = t.apply(c.p);
@@ -925,12 +1044,26 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   const evs = DATA.events.map((e, i) => ({ e, i, k: dateKey(e) }))
     .sort((a, b) => a.e.year - b.e.year || a.k[0] - b.k[0] || a.k[1] - b.k[1] || a.k[2] - b.k[2] || (a.e.sort || 0) - (b.e.sort || 0) || a.i - b.i)
     .map(x => x.e);
+  // 연표 탭: 항목·시기 제목·10년 단위를 누르면 지도 탭으로 돌아가 그 해를 보여 준다
+  const onKey = (fn) => (ev) => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); fn(); } };
   const li = d3.select("#log").selectAll("li").data(evs).join("li").attr("class", "ev").attr("tabindex", 0)
-    .on("click", (ev, d) => setYear(d.year, true))
-    .on("keydown", (ev, d) => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); setYear(d.year, true); } });
+    .on("click", (ev, d) => goMap(d.year))
+    .on("keydown", (ev, d) => onKey(() => goMap(d.year))(ev));
   li.append("span").attr("class", "d").text(d => d.date || d.year);
   li.append("span").append("i").attr("class", d => "k " + d.kind).style("background", d => d.color || null);
   li.append("span").html(d => d.text + (d.conf ? ` <span class="c">(${d.conf})</span>` : ""));
+  // 시기 제목: 1914년 앞(한성부 시기)과 시역 시기(DATA.eras)마다
+  const periods = [{ from: 1899, name: "한성부 시기" }].concat(DATA.eras.map(e => ({ from: e.year, name: /^현재/.test(e.label) ? "현재 시역" : e.label.replace(/^\d{4}\s*/, "") })));
+  periods.forEach((p, k) => {
+    const to = k + 1 < periods.length ? periods[k + 1].from - 1 : 2026;
+    const h = document.createElement("li"); h.className = "era-h"; h.tabIndex = 0;
+    h.innerHTML = `<b>${p.from}–${to} · ${p.name}</b><span><i class="lbl">지도에서 보기 </i>→</span>`;
+    h.addEventListener("click", () => goMap(p.from)); h.addEventListener("keydown", onKey(() => goMap(p.from)));
+    const first = li.filter(d => d.year >= p.from).node();
+    if (first) first.before(h); else document.getElementById("log").appendChild(h);
+  });
+  d3.select("#decades").selectAll("button").data(d3.range(1890, 2030, 10)).join("button").attr("type", "button")
+    .text(d => `${d}년대`).attr("title", d => `${Math.max(1899, d)}년 지도 보기`).on("click", (ev, d) => goMap(Math.max(1899, d)));
 
   // ---------- area table ----------
   d3.select("#areaRows").selectAll("tr").data(DATA.eras).join("tr").html(e => {
@@ -1002,6 +1135,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     if (fromLog) { selDong = null; d3.select("#info").attr("hidden", true); }
     render();
     if (selDong && !document.getElementById("info").hidden) showDong(selDong);
+    syncHash(false);
   }
   slider.addEventListener("input", () => setYear(+slider.value));
   let timer = null, speed = 1;
@@ -1029,13 +1163,66 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     const k = this.dataset.layer; layerOn[k] = !layerOn[k];
     this.setAttribute("aria-pressed", layerOn[k] ? "true" : "false"); render();
   });
+  // 전체 켜기·끄기: 자료가 있어 보이는 칩만
+  function setAll(on) {
+    document.querySelectorAll(".chip").forEach(c => { if (c.hidden) return; layerOn[c.dataset.layer] = on; c.setAttribute("aria-pressed", on ? "true" : "false"); });
+    render();
+  }
+  d3.select("#allOn").on("click", () => setAll(true));
+  d3.select("#allOff").on("click", () => setAll(false));
+  // 좁은 화면: 범례는 단추를 눌러 지도 위에 펼친다
+  d3.select("#legBtn").on("click", function () { const open = document.getElementById("side").classList.toggle("legopen"); this.setAttribute("aria-expanded", open ? "true" : "false"); });
+
+  // ---------- 탭과 주소 ----------
+  // 주소 끝에 지도 탭은 연도(#1965), 다른 탭은 이름(#log·#data·#read)을 남겨 뒤로 가기와 공유에도 그 화면이 열린다
+  const TABS = ["map", "log", "data", "read"];
+  let tab = "map";
+  function showTab(t, fromHistory) {
+    if (!TABS.includes(t)) t = "map";
+    const changed = t !== tab; tab = t;
+    document.body.dataset.tab = t;
+    TABS.forEach(k => {
+      document.getElementById("pane-" + k).hidden = k !== t;
+      const b = document.getElementById("tab-" + k); b.setAttribute("aria-selected", k === t ? "true" : "false"); b.tabIndex = k === t ? 0 : -1;
+    });
+    document.documentElement.style.setProperty("--hdr", document.querySelector("header.top").offsetHeight + "px");
+    if (t === "data") { drawBusChart(); renderLandTable(); }
+    if (t === "log") {
+      const el = document.querySelector("#log .ev.now") || [...document.querySelectorAll("#log .ev.past")].pop();
+      if (el) el.scrollIntoView({ block: "center" }); else window.scrollTo(0, 0);
+      const cur = document.querySelector("#decades button.cur"); if (cur) cur.scrollIntoView({ block: "nearest", inline: "center" });   // 휴대폰에서 한 줄로 밀어 보는 10년 단위도 그 해 쪽으로
+    } else window.scrollTo(0, 0);
+    if (changed && !fromHistory) syncHash(true);
+  }
+  function hashNow() { return tab === "map" ? "#" + year : "#" + tab; }
+  function syncHash(push) { const h = hashNow(); if (location.hash === h) return; try { history[push ? "pushState" : "replaceState"](null, "", h); } catch (e) { /* 아티팩트 화면처럼 주소를 못 바꾸는 곳 */ } }
+  function readHash() { const h = decodeURIComponent(location.hash.slice(1)); return /^\d{4}$/.test(h) ? { tab: "map", year: +h } : { tab: TABS.includes(h) ? h : "map" }; }
+  function goMap(y) { setYear(y, true); showTab("map"); }
+  window.addEventListener("popstate", () => { const h = readHash(); showTab(h.tab, true); if (h.year) setYear(h.year); });
+  d3.selectAll(".tabs button").on("click", function () { showTab(this.dataset.tab); })
+    .on("keydown", function (ev) {
+      const d = ev.key === "ArrowRight" ? 1 : ev.key === "ArrowLeft" ? -1 : 0; if (!d) return;
+      ev.preventDefault(); const t = TABS[(TABS.indexOf(this.dataset.tab) + d + TABS.length) % TABS.length]; showTab(t); document.getElementById("tab-" + t).focus();
+    });
 
   // ---------- boot ----------
-  function boot() { fit(); drawStatic(); drawTicks(); drawBusChart(); lastEraYear = null; render(); }
+  function boot() { fit(); drawStatic(); drawTicks(); lastEraYear = null; render(); }
+  // 지도 크기가 바뀌면(창 크기, 글꼴 로드, 다른 탭에서 돌아옴) 다시 맞춘다. 숨겨져 크기가 0일 때는 건너뛴다
+  function refit() {
+    const r = svg.node().getBoundingClientRect();
+    if (!r.width || !r.height) return;
+    if (Math.round(r.width) !== Math.round(W) || Math.round(r.height) !== Math.round(H)) { const keep = autoCam; boot(); if (!keep) setAuto(false); }
+    else drawTicks();
+  }
   let rt = null;
-  window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { const keep = autoCam; boot(); if (!keep) setAuto(false); }, 200); });
+  const onResize = () => { clearTimeout(rt); rt = setTimeout(() => { if (tab === "map") refit(); if (tab === "data") drawBusChart(); }, 150); };
+  if (window.ResizeObserver) new ResizeObserver(onResize).observe(document.querySelector(".stage"));
+  window.addEventListener("resize", onResize);
+  document.body.dataset.tab = "map";
   boot();
-  // 첫 화면: 1914년 경계와 초기 노선이 함께 보이도록 1920년에서 시작
-  setYear(DATA.startYear || 1920);
+  // 첫 화면: 주소에 연도나 탭이 있으면 그것을, 없으면 1914년 경계와 초기 노선이 함께 보이도록 1920년에서 시작
+  const h0 = readHash();
+  setYear(h0.year || DATA.startYear || 1920);
+  if (h0.tab !== "map") showTab(h0.tab, true);
 })();
 </script>

@@ -154,7 +154,7 @@ if os.path.exists(F("village_layer.json")):
     data["village"] = {"pts": pts, "years": vy}
     print("village pts", len(pts), file=sys.stderr)
 # 지도 버전: 레이어가 늘면 소수점을 올리고(v1.2 → v1.3), 화면·기술만 고치면 셋째 자리를 올린다(v1.3 → v1.3.1). README 「변경 기록」과 git 태그(seoul-layer-map-vX.Y)도 같이 적는다
-data["version"] = {"v": "1.3.1", "date": "2026-11-26"}
+data["version"] = {"v": "1.4", "date": "2026-11-26"}
 tpl = open(F("template.html")).read()
 out = tpl.replace("/*__DATA__*/", "const DATA = " + json.dumps(data, ensure_ascii=False, separators=(",", ":")) + ";")
 if FRAG:
