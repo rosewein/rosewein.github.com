@@ -28,14 +28,14 @@ doc = f'''<!doctype html>
 '''
 open(f"{P}/index.html", "w").write(doc)
 SRC = ["template.html", "method.html", "build.py", "make_publish.py", "gazetteer.py", "geom.py", "roads.py", "rail_build.py", "metro_build.py",
-       "gu_periods.py", "bus_parse.py", "bus_build.py", "bus_route.py", "bus2026.py", "route_years.py", "bus_dead_parse.py", "bus_dead_route.py"]
+       "gu_periods.py", "bus_parse.py", "bus_build.py", "bus_route.py", "bus2026.py", "route_years.py", "bus_dead_parse.py", "bus_dead_route.py", "village.py", "village_clip.py"]
 for f in SRC:
     if os.path.exists(f"{B}/{f}"): shutil.copy(f"{B}/{f}", f"{P}/src/{f}")
 shutil.copy("/home/claude/data/bus/namu/namu_open_years.py", f"{P}/src/namu_open_years.py")
 shutil.copy("/home/claude/data/bus/namu_post/dead_supp.py", f"{P}/src/dead_supp.py")
 DATA = ["tram.json", "years.json", "gu_periods.json", "emd_topo.json", "events_extra.json", "metro.json", "metro_events.json", "metro_dates.json",
         "metro_extra.json", "rail.json", "rail_events.json", "rail_open.json", "rail_alias.json", "place_alias.json", "bus.json", "bus_events.json",
-        "bus2026.json", "route_years.json", "dead_routes.json"]
+        "bus2026.json", "route_years.json", "dead_routes.json", "village_layer.json"]
 for f in DATA:
     if os.path.exists(f"{B}/{f}"): shutil.copy(f"{B}/{f}", f"{P}/data/{f}")
 print("index.html", len(doc), "bytes →", P)

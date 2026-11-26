@@ -118,6 +118,20 @@ if data["bus2026"] and os.path.exists(f"{B}/route_years.json"):
         drawn[y] = len(live) + dead_n
     data["busDrawn"] = drawn; data["busOldFrom"] = OLD_FROM
     print("bus drawn by year:", drawn, file=sys.stderr)
+# 마을버스: 해마다 정류장 목록(번호로)과 '마을버스로만 닿는 땅'
+if os.path.exists(f"{B}/village_layer.json"):
+    VL = json.load(open(f"{B}/village_layer.json"))
+    pts, idx = [], {}
+    vy = {}
+    for y, r in VL["years"].items():
+        ids = []
+        for p in r["stops"]:
+            k = (round(p[0], 4), round(p[1], 4))
+            if k not in idx: idx[k] = len(pts); pts.append([k[0], k[1]])
+            ids.append(idx[k])
+        vy[y] = {"routes": r["routes"], "nstops": r["nstops"], "only_km2": r["only_km2"], "day": r["day"], "stops": sorted(set(ids)), "only": r["only"]}
+    data["village"] = {"pts": pts, "years": vy}
+    print("village pts", len(pts), file=sys.stderr)
 tpl = open(f"{B}/template.html").read()
 out = tpl.replace("/*__DATA__*/", "const DATA = " + json.dumps(data, ensure_ascii=False, separators=(",", ":")) + ";")
 open(f"{B}/seoul-tram-boundary.html", "w").write(out)

@@ -15,6 +15,7 @@
 | 철도(국철) | 1899–현재 | 경인선부터 노선·역의 개통과 폐지 |
 | 지하철·광역철도 | 1974–현재 | 역별 개통일, OpenStreetMap 선로 형상 |
 | 버스 노선망 | 1998–2026 | 구간 굵기 = 지나는 노선 수. 신설·폐선 사건 |
+| 마을버스 | 2015–2026 | 마을버스 정류장과 마을버스로만 걸어서 닿는 땅(시내버스 정류장 300m 밖, 마을버스 정류장 300m 안) |
 | 연표 | 1899–2026 | 위 레이어의 사건을 한 줄로 |
 
 ## 버스 노선망을 맞춘 방법
@@ -33,6 +34,7 @@
 | 2004년 이전 버스 노선, 2004년 이후 폐선 노선, 노선별 신설·폐선 연도, 일부 사건 설명 | `data/bus.json`, `data/dead_routes.json`, `data/route_years.json`, `src/namu_open_years.py`, `src/dead_supp.py`와 지도 안의 같은 자료 | 나무위키 「서울특별시 시내버스/2004년 개편 전 목록」 「서울특별시 시내버스/폐선」 하위 문서, 노선 문서, 「YYYY년 개업한/폐지된 버스 노선」 분류(2026년 11월 열람) | [CC BY-NC-SA 2.0 KR](https://creativecommons.org/licenses/by-nc-sa/2.0/kr/) — 출처 표시, 비영리, 동일조건 변경 허락 |
 | 도로망, 철도·지하철 선로 형상 | 모든 버스 선형, `data/metro.json`, `data/rail.json` | © OpenStreetMap contributors (BBBike 서울 추출본 2026-11-22, [kimmdr2/metroscope](https://github.com/kimmdr2/metroscope) 정리본) | [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/) |
 | 2026년 버스 노선(정류장 순번) | `data/bus2026.json` | 서울 열린데이터광장 「서울시 버스노선별 정류장별 승하차 인원 정보」(OA-12912, 2026-11-18분) | 서울특별시 공공데이터, 열린데이터광장 이용약관 제11조(저작자·출처 표시 조건 자유이용) |
+| 마을버스 정류장(2015–2022년) | `data/village_layer.json` | 서울 열린데이터광장 OA-12912 연간 파일(해마다 11월 셋째 수요일 하루치), 「서울시 버스노선별 표준정류장ID 연계 좌표정보」(2019-06-20) | 서울특별시 공공데이터, 열린데이터광장 이용약관 제11조(저작자·출처 표시 조건 자유이용) |
 | 버스 정류장 좌표, 노선 ID | 버스 선형, 노선 연도 판단 | [kyckang/SeoulTransitMap_data](https://github.com/kyckang/SeoulTransitMap_data) (서울시·TOPIS 원자료) | 저장소 README 표기: 공공누리 제1유형(출처 표시) |
 | 지하철역 좌표 | `data/metro.json` | 서울시 역사마스터 정보([sudo-happy/data-archive](https://github.com/sudo-happy/data-archive) 정리본) | 서울시 공공데이터(출처 표시). 정리본 저장소의 라이선스 표기는 찾지 못함 |
 | 법정동 경계 | `data/emd_topo.json` | [southkorea/seoul-maps](https://github.com/southkorea/seoul-maps) (통계청·행정안전부 원자료) | 저장소 README 표기: Apache 2.0 |

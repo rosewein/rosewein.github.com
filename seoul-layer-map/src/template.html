@@ -21,6 +21,8 @@
   --gu: #5f6b62;
   --focus: #1f6fb2;
   --bus: #f2149a;
+  --village: #9cb81a;
+  --village-dot: #5f7a00;
   --rail: #2a2f2c;
   --display: "Hahmlet", "Noto Serif KR", "AppleMyungjo", serif;
   --body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
@@ -30,13 +32,13 @@
   :root:not([data-theme="light"]) {
     --paper: #111714; --paper-2: #18201c; --ink: #e2e7e1; --ink-2: #a2ada5; --rule: #334039;
     --river: #2b475a; --tram: #ff6a5c; --kido: #b796e6; --area: #7d6f3c; --area-new: #d0a648;
-    --ring: #9a9880; --wall: #c3ccc4; --gu: #8e9a91; --focus: #6fb2ec; --bus: #ff5cb8; --rail: #c9d1ca; color-scheme: dark;
+    --ring: #9a9880; --wall: #c3ccc4; --gu: #8e9a91; --focus: #6fb2ec; --bus: #ff5cb8; --rail: #c9d1ca; --village: #9fbf2a; --village-dot: #c8e05a; color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --paper: #111714; --paper-2: #18201c; --ink: #e2e7e1; --ink-2: #a2ada5; --rule: #334039;
   --river: #2b475a; --tram: #ff6a5c; --kido: #b796e6; --area: #7d6f3c; --area-new: #d0a648;
-  --ring: #9a9880; --wall: #c3ccc4; --gu: #8e9a91; --focus: #6fb2ec; --bus: #ff5cb8; --rail: #c9d1ca; color-scheme: dark;
+  --ring: #9a9880; --wall: #c3ccc4; --gu: #8e9a91; --focus: #6fb2ec; --bus: #ff5cb8; --rail: #c9d1ca; --village: #9fbf2a; --village-dot: #c8e05a; color-scheme: dark;
 }
 * { box-sizing: border-box; }
 body { background: var(--paper); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.55; }
@@ -160,6 +162,7 @@ svg text { font-family: var(--body); }
     <button class="chip" type="button" data-layer="gu" aria-pressed="true"><i style="color:var(--gu);border-top-width:1px"></i>구 경계</button>
     <button class="chip" type="button" data-layer="wall" aria-pressed="true"><i style="color:var(--wall);border-top-style:dotted"></i>한양도성</button>
     <button class="chip" type="button" data-layer="bus" aria-pressed="true" id="busChip" hidden><i style="color:var(--bus);border-top-width:2px"></i>버스</button>
+    <button class="chip" type="button" data-layer="village" aria-pressed="true" id="villageChip" hidden><i class="fill" style="background:var(--village)"></i>마을버스(2015–)</button>
     <button class="chip" type="button" data-layer="dong" aria-pressed="false"><i style="color:var(--rule);border-top-width:1px"></i>현재 법정동</button>
   </div>
   <div class="legend-bus" id="busLegend" hidden>
@@ -167,6 +170,7 @@ svg text { font-family: var(--body); }
     <span><svg width="20" height="12" viewBox="0 0 20 12"><path d="M1,6H19" stroke="var(--bus)" stroke-width="2.2"/></svg>새로 생긴 노선(3년 안)</span>
     <span><svg width="20" height="12" viewBox="0 0 20 12"><path d="M1,6H19" stroke="var(--ink-2)" stroke-width="2.2" stroke-dasharray="5 4"/></svg>없어진 노선(3년 안)</span>
     <span><svg width="20" height="12" viewBox="0 0 20 12"><path d="M1,6H19" stroke="var(--area-new)" stroke-width="2.2"/></svg>연장·단축·경로 변경(최근 3년)</span>
+    <span id="villageLegend" hidden><svg width="20" height="12" viewBox="0 0 20 12"><rect x="1" y="2" width="12" height="8" fill="var(--village)" fill-opacity=".5"/><circle cx="17" cy="6" r="1.6" fill="var(--village-dot)"/></svg>마을버스 정류장(점)과 마을버스로만 닿는 땅(칠한 곳: 시내버스 정류장 300m 밖, 마을버스 정류장 300m 안). 2015년부터, 그 해 11월 셋째 수요일 승하차 기록</span>
   </div>
   <p class="small" style="margin:2px 0 0">선로 형상 © OpenStreetMap contributors</p>
 </div>
@@ -228,7 +232,7 @@ svg text { font-family: var(--body); }
   const svg = d3.select("#map");
   const root = svg.append("g");
   const gArea = root.append("g"), gNew = root.append("g"), gRings = root.append("g"), gDong = root.append("g"),
-        gGu = root.append("g"), gRiver = root.append("g"), gWall = root.append("g"), gTram = root.append("g"),
+        gGu = root.append("g"), gRiver = root.append("g"), gWall = root.append("g"), gVillage = root.append("g"), gTram = root.append("g"),
         gRail = root.append("g"), gMetro = root.append("g"), gBus = root.append("g"), gLabels = root.append("g"), gHit = root.append("g");
   // 버스 종점: {route, name, from, to, lon, lat, conf, source} — 자료가 들어오면 칩이 나타남
   const rail = DATA.rail || null;
@@ -236,6 +240,14 @@ svg text { font-family: var(--body); }
   const metro = DATA.metro || null;
   if (metro) document.getElementById("metroChip").hidden = false;
   const bus = DATA.bus || null;
+  const village = DATA.village || null;
+  if (village) { document.getElementById("villageChip").hidden = false; document.getElementById("villageLegend").hidden = false; }
+  // 그 해 자료가 없으면(2023–2025) 그 앞의 가장 가까운 해를 쓴다
+  function villageYear(y) {
+    if (!village || y < 2015) return null;
+    const ys = Object.keys(village.years).map(Number).filter(v => v <= y);
+    return ys.length ? Math.max(...ys) : null;
+  }
   if (bus) { document.getElementById("busChip").hidden = false; document.getElementById("busLegend").hidden = false; document.getElementById("busBlock").hidden = false; }
   let selRoute = null;  // {net: "old"|"new", i}
   const bus2026 = DATA.bus2026 || null;
@@ -281,7 +293,7 @@ svg text { font-family: var(--body); }
   const busSym = (t) => d3.symbol().type(SYM[t] || d3.symbolDiamond).size(t === "신설" || t === "폐선" ? 70 : 46)();
   let W = 0, H = 0, projection = d3.geoMercator(), path = d3.geoPath(projection), kNow = 1;
 
-  const layerOn = { rail: true, metro: true, tram: true, kido: true, area: true, rings: true, gu: true, wall: true, dong: false, bus: true };
+  const layerOn = { rail: true, metro: true, tram: true, kido: true, area: true, rings: true, gu: true, wall: true, dong: false, bus: true, village: true };
 
   function fit() {
     const r = svg.node().getBoundingClientRect();
@@ -297,6 +309,7 @@ svg text { font-family: var(--body); }
     gLabels.selectAll("text").attr("font-size", d => (d.fs || 11) / kNow).attr("stroke-width", 3 / kNow);
     gRail.selectAll("rect").call(sizeRail);
     sizeBus();
+    gVillage.selectAll("circle").attr("r", 1.1 / kNow);
     gMetro.selectAll("circle").attr("r", st => (Object.keys(st.opens).filter(l => st.opens[l] <= year).length > 1 ? 3.4 : 2.3) / kNow);
     if (ev.sourceEvent) setAuto(false);
   });
@@ -398,6 +411,17 @@ svg text { font-family: var(--body); }
         .on("click", (ev) => { ev.stopPropagation(); showTram(t); });
     });
     gWall.style("display", layerOn.wall ? null : "none");
+
+    // 마을버스: 마을버스로만 닿는 땅(면)과 정류장(점)
+    gVillage.selectAll("*").remove();
+    const vy = layerOn.village ? villageYear(year) : null;
+    if (vy) {
+      const V = village.years[vy];
+      gVillage.append("path").datum(V.only).attr("d", path).attr("fill", "var(--village)").attr("fill-opacity", 0.42).attr("stroke", "none");
+      gVillage.selectAll("circle").data(V.stops.map(i => village.pts[i])).join("circle")
+        .attr("cx", d => projection(d)[0]).attr("cy", d => projection(d)[1]).attr("r", 1.1 / kNow)
+        .attr("fill", "var(--village-dot)").attr("fill-opacity", 0.75).style("pointer-events", "none");
+    }
     gDong.style("display", layerOn.dong ? null : "none");
 
     // rail (국철): 검은 선 위에 바탕색 점선을 얹은 옛 지도식 철도 기호
@@ -549,7 +573,9 @@ svg text { font-family: var(--body); }
     const offArea = er ? er.official : null;
     const bs = bus ? bus.stats.filter(x => x.routes && x.y <= year && year - x.y <= 4).pop() : null;
     const drawn = layerOn.bus && DATA.busDrawn ? DATA.busDrawn[year] : null;
-    d3.select("#statLabel").html(
+    const vyy = layerOn.village ? villageYear(year) : null;
+    const vtxt = vyy ? `마을버스 ${village.years[vyy].routes}개 노선${vyy !== year ? `(${vyy}년 자료)` : ""}, 마을버스로만 닿는 땅 ${village.years[vyy].only_km2}㎢ · ` : "";
+    d3.select("#statLabel").html(vtxt +
       (drawn ? `버스 노선 ${drawn}개 그림${bs ? `(공식 ${bs.routes}개)` : ""} · ` : bs ? `버스 노선 ${bs.routes}개 · ` : "") + (offArea ? `시역 ${offArea}㎢` : "시역 —") + (active.length ? ` · 궤도 ${active.length}구간 ${km.toFixed(1)}km` : "") + (metro && year >= 1974 ? ` · 역 ${metro.stations.filter(st => st.first <= year).length}곳` : (year >= 1968 && !active.length ? " · 전차 폐지(1968)" : ""))
     );
 
