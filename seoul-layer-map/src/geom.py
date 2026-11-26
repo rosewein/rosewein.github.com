@@ -1,6 +1,7 @@
 """OSM 선로 형상(metroscope data/network.json, © OpenStreetMap contributors, ODbL)으로 역 사이 경로를 찾는다."""
 import json, math
-NET = json.load(open("/home/claude/data/osm/network.json"))
+from paths import CODE, DATA, RAW, WORK
+NET = json.load(open(f"{RAW}/osm/network.json"))
 ALIAS = {"당고개": "불암산", "이수": "총신대입구", "4·19민주묘지": "4.19민주묘지", "갈매(신)": "갈매"}
 CHAINS = {}
 for l in NET["lines"]:

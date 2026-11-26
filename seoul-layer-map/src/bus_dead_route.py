@@ -4,10 +4,11 @@ from scipy.sparse import csr_matrix
 from scipy.sparse.csgraph import dijkstra
 from scipy.spatial import cKDTree
 from shapely.geometry import LineString
-sys.path.insert(0, "/home/claude/data/build")
+from paths import CODE, DATA, RAW, WORK
+sys.path.insert(0, CODE)
 
-B = "/home/claude/data/build"
-R = np.load("/home/claude/data/osm/seoul/roads.npz")
+B = DATA
+R = np.load(f"{RAW}/osm/seoul/roads.npz")
 lon, lat, u, v, d, c, cost = R["lon"], R["lat"], R["u"], R["v"], R["d"], R["c"], R["cost"]
 N = len(lon)
 w = d * cost[c]
@@ -51,7 +52,7 @@ def plen(seq):
 
 
 def main():
-    D = [r for r in json.load(open("/home/claude/data/bus/namu_post/dead_parsed.json")) if not r.get("skip")]
+    D = [r for r in json.load(open(f"{RAW}/bus/namu_post/dead_parsed.json")) if not r.get("skip")]
     items = []
     pairs = collections.defaultdict(dict)
     for r in D:

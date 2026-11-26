@@ -1,17 +1,17 @@
 """나무위키 「서울특별시 시내버스/폐선」 하위 문서 → 2004년 7월 이후 없어진 노선의 운행 기간과 경유지.
 
-나온 결과는 /home/claude/data/bus/namu_post/dead_parsed.json
+나온 결과는 RAW/bus/namu_post/dead_parsed.json
 """
 import json, re, sys, collections
-sys.path.insert(0, "/home/claude/data/build")
+from paths import CODE, DATA, RAW, WORK
+sys.path.insert(0, CODE)
 import gazetteer as G
 from bus_parse import tokens, locate_tok, via_from_text
-sys.path.insert(0, "/home/claude/data/bus/namu_post")
 from dead_supp import SUPP
 
-SRC = "/home/claude/data/bus/namu_post/namu_bus_post2004.json"
-OUT = "/home/claude/data/bus/namu_post/dead_parsed.json"
-B = "/home/claude/data/build"
+SRC = f"{RAW}/bus/namu_post/namu_bus_post2004.json"
+OUT = f"{RAW}/bus/namu_post/dead_parsed.json"
+B = DATA
 
 # 문서마다 표식 뜻이 다르다
 CONT_PAGES = ("간선버스", "순환버스", "광역버스", "심야버스")   # ☆ 형간전환, ★ 번호 변경 → 다른 번호로 이어짐
@@ -165,7 +165,6 @@ def main():
                 out.append(rec)
                 stat["skip" if rec.get("skip") else "keep"] += 1
     # 신설 시점을 본문에서 못 찾은 노선은 나무위키 「YYYY년 개업한 버스 노선」 분류로 보완
-    sys.path.insert(0, "/home/claude/data/bus/namu")
     from namu_open_years import OPEN
     cat = collections.defaultdict(list)
     for y, sv in OPEN.items():

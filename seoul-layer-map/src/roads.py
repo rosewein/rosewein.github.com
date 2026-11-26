@@ -1,7 +1,8 @@
 """BBBike 서울 OSM 추출본에서 버스가 다닐 만한 도로망을 뽑아 그래프로 저장."""
 import osmium, numpy as np, json, math, sys
-PBF = "/home/claude/data/osm/seoul/Seoul.osm.pbf"
-OUT = "/home/claude/data/osm/seoul/roads.npz"
+from paths import CODE, DATA, RAW, WORK
+PBF = f"{RAW}/osm/seoul/Seoul.osm.pbf"
+OUT = f"{RAW}/osm/seoul/roads.npz"
 COST = {"motorway": 1.05, "motorway_link": 1.1, "trunk": 0.95, "trunk_link": 1.05, "primary": 0.9, "primary_link": 1.0,
         "secondary": 1.0, "secondary_link": 1.05, "tertiary": 1.15, "tertiary_link": 1.15, "unclassified": 1.5, "residential": 1.9}
 CLS = {k: i for i, k in enumerate(COST)}

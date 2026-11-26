@@ -3,7 +3,8 @@ import json
 from shapely.geometry import Polygon, MultiPolygon, shape, mapping
 from shapely.ops import unary_union
 
-B = "/home/claude/data/build"
+from paths import CODE, DATA, RAW, WORK
+B = DATA
 KX, KY = 88.4, 111.0
 topo = json.load(open(f"{B}/emd_topo.json"))
 sx, sy = topo["transform"]["scale"]; tx, ty = topo["transform"]["translate"]
@@ -35,7 +36,7 @@ for g in topo["objects"]["seoul_neighborhoods_geo"]["geometries"]:
 seoul = unary_union(polys).buffer(0.02).buffer(-0.02)
 print("seoul area km2", round(seoul.area, 1))
 
-V = json.load(open(f"{B}/village.json"))
+V = json.load(open(f"{WORK}/village.json"))
 out = {"years": {}}
 for y, r in sorted(V["years"].items()):
     g = r.get("only")

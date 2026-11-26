@@ -6,8 +6,9 @@ from scipy.spatial import cKDTree
 from shapely.geometry import LineString, MultiLineString
 from shapely.ops import linemerge
 
-B = "/home/claude/data/build"
-R = np.load("/home/claude/data/osm/seoul/roads.npz")
+from paths import CODE, DATA, RAW, WORK
+B = DATA
+R = np.load(f"{RAW}/osm/seoul/roads.npz")
 lon, lat, u, v, d, c, cost = R["lon"], R["lat"], R["u"], R["v"], R["d"], R["c"], R["cost"]
 N = len(lon)
 w = d * cost[c]

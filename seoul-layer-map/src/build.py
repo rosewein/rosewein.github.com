@@ -1,13 +1,26 @@
+"""지도 만들기: python3 src/build.py [출력 폴더] [--fragment 조각.html]
+src/의 틀·설명문과 data/의 자료를 읽어 출력 폴더(기본: seoul-layer-map/)에 index.html을 쓴다.
+--fragment를 주면 Claude 아티팩트용 조각(<title>부터 본문 끝까지)도 그 경로에 쓴다."""
 import json, os, sys
-B = os.path.dirname(os.path.abspath(__file__))
-topo = json.load(open(f"{B}/emd_topo.json"))
+sys.dont_write_bytecode = True   # 저장소에 __pycache__가 생기지 않게
+from paths import CODE as SRC, DATA
+def F(name):
+    """자료 파일은 data/, 틀·설명문은 src/에서 찾는다"""
+    for d in (DATA, SRC):
+        if os.path.exists(os.path.join(d, name)): return os.path.join(d, name)
+    return os.path.join(DATA, name)
+_a = sys.argv[1:]
+FRAG = _a[_a.index("--fragment") + 1] if "--fragment" in _a else None
+_pos = [a for i, a in enumerate(_a) if not a.startswith("--") and not (i and _a[i - 1] == "--fragment")]
+OUT = _pos[0] if _pos else os.path.dirname(SRC)
+topo = json.load(open(F("emd_topo.json")))
 obj = topo["objects"].pop("seoul_neighborhoods_geo")
 topo["objects"]["emd"] = obj
-trams = json.load(open(f"{B}/tram.json"))
-years = json.load(open(f"{B}/years.json")) if os.path.exists(f"{B}/years.json") else {}
-gu_periods = json.load(open(f"{B}/gu_periods.json")) if os.path.exists(f"{B}/gu_periods.json") else []
-extra_events = json.load(open(f"{B}/events_extra.json")) if os.path.exists(f"{B}/events_extra.json") else []
-method_html = open(f"{B}/method.html").read() if os.path.exists(f"{B}/method.html") else ""
+trams = json.load(open(F("tram.json")))
+years = json.load(open(F("years.json"))) if os.path.exists(F("years.json")) else {}
+gu_periods = json.load(open(F("gu_periods.json"))) if os.path.exists(F("gu_periods.json")) else []
+extra_events = json.load(open(F("events_extra.json"))) if os.path.exists(F("events_extra.json")) else []
+method_html = open(F("method.html")).read() if os.path.exists(F("method.html")) else ""
 
 GU = {"11110":"종로구","11140":"중구","11170":"용산구","11200":"성동구","11215":"광진구","11230":"동대문구","11260":"중랑구",
 "11290":"성북구","11305":"강북구","11320":"도봉구","11350":"노원구","11380":"은평구","11410":"서대문구","11440":"마포구",
@@ -67,32 +80,32 @@ for (y,op),ls in sorted(closes.items()):
     events.append({"year": y, "date": str(y), "kind": kind, "text": txt, "conf": conf, "sort": 3})
 events.append({"year": 1968, "date": "1968.11.30", "kind": "tram", "text": "서울 전차 전 노선 운행 정지", "sort": 3})
 events += extra_events
-if os.path.exists(f"{B}/metro_events.json"): events += json.load(open(f"{B}/metro_events.json"))
-if os.path.exists(f"{B}/rail_events.json"): events += json.load(open(f"{B}/rail_events.json"))
-if os.path.exists(f"{B}/bus_events.json"): events += json.load(open(f"{B}/bus_events.json"))
+if os.path.exists(F("metro_events.json")): events += json.load(open(F("metro_events.json")))
+if os.path.exists(F("rail_events.json")): events += json.load(open(F("rail_events.json")))
+if os.path.exists(F("bus_events.json")): events += json.load(open(F("bus_events.json")))
 
 data = {
   "topo": topo, "trams": trams, "eras": eras, "guPeriods": gu_periods, "events": events,
   "guNames": GU, "riverNorth": ["11440","11170","11200","11215"],
   "riverSouth": ["11500","11560","11590","11650","11680","11710","11740"],
   "methodHtml": method_html, "startYear": 1920,
-  "rail": json.load(open(f"{B}/rail.json")) if os.path.exists(f"{B}/rail.json") else None,
-  "metro": json.load(open(f"{B}/metro.json")) if os.path.exists(f"{B}/metro.json") else None,
-  "bus": json.load(open(f"{B}/bus.json")) if os.path.exists(f"{B}/bus.json") else None,
-  "bus2026": json.load(open(f"{B}/bus2026.json")) if os.path.exists(f"{B}/bus2026.json") else None,
+  "rail": json.load(open(F("rail.json"))) if os.path.exists(F("rail.json")) else None,
+  "metro": json.load(open(F("metro.json"))) if os.path.exists(F("metro.json")) else None,
+  "bus": json.load(open(F("bus.json"))) if os.path.exists(F("bus.json")) else None,
+  "bus2026": json.load(open(F("bus2026.json"))) if os.path.exists(F("bus2026.json")) else None,
   # 땅값: landprice.py가 만든 법정동별 ㎡당 공시지가 중앙값(1990–). 파일이 없으면 칩이 나타나지 않음
-  "land": json.load(open(f"{B}/landprice.json")) if os.path.exists(f"{B}/landprice.json") else None,
+  "land": json.load(open(F("landprice.json"))) if os.path.exists(F("landprice.json")) else None,
 }
 # 땅값 설명문은 자료가 있을 때만 「이 지도를 읽는 법」에 넣는다(출처 문단 앞 + 출처 한 줄)
-if data["land"] and os.path.exists(f"{B}/method_land.html"):
+if data["land"] and os.path.exists(F("method_land.html")):
     SRC_AT = "연계 좌표정보」(2019년 6월 20일)."   # 출처 문단에서 버스 자료 다음, 나무위키 연혁 앞
     land_src = " 땅값은 서울 열린데이터광장 「서울시 개별공시지가 정보」(OA-1180, " + f'{data["land"]["years"][0]}~{data["land"]["years"][-1]}' + "년 파일, 원본 서울부동산정보광장)."
     assert method_html.count(SRC_AT) == 1, "method.html 출처 문단이 바뀜 — build.py의 SRC_AT을 고칠 것"
-    data["methodHtml"] = method_html.replace('<p class="small">출처:', open(f"{B}/method_land.html").read() + '<p class="small">출처:', 1).replace(SRC_AT, SRC_AT + land_src, 1)
+    data["methodHtml"] = method_html.replace('<p class="small">출처:', open(F("method_land.html")).read() + '<p class="small">출처:', 1).replace(SRC_AT, SRC_AT + land_src, 1)
 # 버스: 2004년 7월 개편 이후 해마다 그릴 노선(2026년 노선망에서 그 해 뒤에 생긴 노선을 뺀다)
 OLD_FROM = 1998
-if data["bus2026"] and os.path.exists(f"{B}/route_years.json"):
-    ry = json.load(open(f"{B}/route_years.json"))
+if data["bus2026"] and os.path.exists(F("route_years.json")):
+    ry = json.load(open(F("route_years.json")))
     nums = data["bus2026"]["nums"]
     for n in nums:
         if n.get("dead"): continue
@@ -127,8 +140,8 @@ if data["bus2026"] and os.path.exists(f"{B}/route_years.json"):
     data["busDrawn"] = drawn; data["busOldFrom"] = OLD_FROM
     print("bus drawn by year:", drawn, file=sys.stderr)
 # 마을버스: 해마다 정류장 목록(번호로)과 '마을버스로만 닿는 땅'
-if os.path.exists(f"{B}/village_layer.json"):
-    VL = json.load(open(f"{B}/village_layer.json"))
+if os.path.exists(F("village_layer.json")):
+    VL = json.load(open(F("village_layer.json")))
     pts, idx = [], {}
     vy = {}
     for y, r in VL["years"].items():
@@ -142,7 +155,13 @@ if os.path.exists(f"{B}/village_layer.json"):
     print("village pts", len(pts), file=sys.stderr)
 # 지도 버전: 레이어가 늘면 소수점 둘째 자리를 올리고(v1.2 → v1.3), README 「변경 기록」과 git 태그(seoul-layer-map-vX.Y)도 같이 적는다
 data["version"] = {"v": "1.3", "date": "2026-11-26"}
-tpl = open(f"{B}/template.html").read()
+tpl = open(F("template.html")).read()
 out = tpl.replace("/*__DATA__*/", "const DATA = " + json.dumps(data, ensure_ascii=False, separators=(",", ":")) + ";")
-open(f"{B}/seoul-tram-boundary.html", "w").write(out)
-print("wrote", len(out), "bytes", file=sys.stderr)
+if FRAG:
+    open(FRAG, "w").write(out); print("wrote", FRAG, len(out), "chars", file=sys.stderr)
+sys.path.insert(0, SRC)
+from make_publish import wrap
+os.makedirs(OUT, exist_ok=True)
+doc = wrap(out)
+open(os.path.join(OUT, "index.html"), "w").write(doc)
+print("wrote", os.path.join(OUT, "index.html"), len(doc.encode()), "bytes", file=sys.stderr)
