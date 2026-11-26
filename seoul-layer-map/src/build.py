@@ -221,7 +221,9 @@ if os.path.exists(F("village_layer.json")):
 # 토지구획정리 지구: urbanplan_gr91.py가 1991판 『서울 도시계획 연혁』 연혁도에서 다시 그린 면과 오른쪽 표
 if os.path.exists(F("urbanplan_gr91.json")):
     uj = json.load(open(F("urbanplan_gr91.json")))
+    # credit·url: 지구가 보이는 동안 지도 오른쪽 아래 출처 줄에 붙는 한 줄(옛 지도와 같은 방식)
     data["urban"] = {"src": uj["src"],
+                     "credit": "서울특별시 『서울 도시계획 연혁』(1991)", "url": "https://urban.seoul.go.kr/view/html/PMNU1050200000",
                      "features": [{k: f[k] for k in ("key", "nos", "names", "year", "date", "lab", "geom", "note", "areaTbl", "areaDrawn")} for f in uj["features"]],
                      "table": [{k: r[k] for k in ("no", "name", "areaTbl", "notice", "date", "feature") if k in r} for r in uj["table"]]}
 # 토지구획정리 지구: 자료가 있을 때만 설명문(method_urban.html)을 출처 문단 앞에 넣고, 출처 문단 끝에 한 줄(안 2, 이지가 고름)
