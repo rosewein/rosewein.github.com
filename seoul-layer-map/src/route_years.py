@@ -13,10 +13,10 @@ kind
   미확인 근거를 못 찾음 → 2026년에만 그린다
 """
 import csv, json, re, sys
-sys.path.insert(0, "/home/claude/data/bus/namu")
+from paths import CODE, DATA, RAW, WORK
 from namu_open_years import OPEN
 
-B = "/home/claude/data/build"
+B = DATA
 
 # 1) 문서를 열어 확인한 것: 번호 → (연도, kind, 메모)
 CHECKED = {
@@ -88,7 +88,7 @@ VILLAGE = {"서대문02", "서대문09"}  # 유형 정보가 비어 있지만 �
 
 def main():
     new = json.load(open(f"{B}/bus2026.json"))
-    rid = {r["route_no"]: int(r["route_id"]) for r in csv.DictReader(open("/home/claude/data/bus/raw/seoul_bus_routes.csv"))}
+    rid = {r["route_no"]: int(r["route_id"]) for r in csv.DictReader(open(f"{RAW}/bus/raw/seoul_bus_routes.csv"))}
     cat = {}
     for y, s in OPEN.items():
         for p in s.split(","):

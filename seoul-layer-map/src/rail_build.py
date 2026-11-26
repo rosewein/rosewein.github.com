@@ -1,9 +1,10 @@
 import json, os, sys, glob
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import geom
-B = os.path.dirname(os.path.abspath(__file__))
-ST = json.load(open("/home/claude/data/subway/stations_seoul.json"))
-ALL = json.load(open("/home/claude/data/subway/raw/sudo.json"))["DATA"]
+from paths import CODE, DATA, RAW, WORK
+B = DATA
+ST = json.load(open(f"{RAW}/subway/stations_seoul.json"))
+ALL = json.load(open(f"{RAW}/subway/raw/sudo.json"))["DATA"]
 PREF = ["1호선", "경의중앙선", "경춘선", "공항철도", "서해선", "수인분당선", "4호선", "2호선", "3호선", "5호선", "6호선", "7호선", "8호선", "9호선"]
 coord = {}
 for ln in PREF[::-1]:
@@ -12,7 +13,7 @@ for ln in PREF[::-1]:
             coord[s["name"]] = (s["lng"], s["lat"])
 ALIAS = json.load(open(f"{B}/rail_alias.json")) if os.path.exists(f"{B}/rail_alias.json") else {}
 
-parts = [json.load(open(f)) for f in sorted(glob.glob(f"{B}/rail_parts/*.json"))]
+parts = [json.load(open(f)) for f in sorted(glob.glob(f"{WORK}/rail_parts/*.json"))]
 segs_in = [sg for p in parts for sg in p.get("segments", [])]
 st_in = [st for p in parts for st in p.get("stations", [])]
 

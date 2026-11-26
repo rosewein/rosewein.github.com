@@ -20,7 +20,8 @@
 import csv, io, json, os, re, sys, zipfile
 from collections import Counter, defaultdict
 
-B = os.path.dirname(os.path.abspath(__file__))
+from paths import CODE, DATA, RAW, WORK
+B = DATA
 GU = {"11110":"종로구","11140":"중구","11170":"용산구","11200":"성동구","11215":"광진구","11230":"동대문구","11260":"중랑구",
 "11290":"성북구","11305":"강북구","11320":"도봉구","11350":"노원구","11380":"은평구","11410":"서대문구","11440":"마포구",
 "11470":"양천구","11500":"강서구","11530":"구로구","11545":"금천구","11560":"영등포구","11590":"동작구","11620":"관악구",
@@ -182,7 +183,8 @@ def main():
     out["src"] = "서울 열린데이터광장 「서울시 개별공시지가 정보」(OA-1180)"
     out["basis"] = "필지구분 1·2" + ("+기타" if keep_other else "")
     json.dump(out, open(f"{B}/landprice.json", "w"), ensure_ascii=False, separators=(",", ":"))
-    json.dump(report, open(f"{B}/landprice_report.json", "w"), ensure_ascii=False, indent=1)
+    os.makedirs(WORK, exist_ok=True)
+    json.dump(report, open(f"{WORK}/landprice_report.json", "w"), ensure_ascii=False, indent=1)
     print("wrote landprice.json, landprice_report.json", file=sys.stderr)
 
 

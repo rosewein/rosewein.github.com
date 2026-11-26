@@ -1,23 +1,25 @@
-"""seoul-tram-boundary.html(아티팩트용 조각) → 공개용 폴더(index.html + src + data)"""
-import re, shutil, os, sys
-B = "/home/claude/data/build"
-P = sys.argv[1] if len(sys.argv) > 1 else "/home/claude/data/publish/seoul-layer-map"
-os.makedirs(f"{P}/src", exist_ok=True); os.makedirs(f"{P}/data", exist_ok=True)
-html = open(f"{B}/seoul-tram-boundary.html").read().replace('<meta name="claude:viewport-fit-sides" content="cover">\n', '')
-m = re.match(r'\s*<title>(.*?)</title>\n', html)
-title = m.group(1); body = html[m.end():]
-k = body.index('<style>'); pre, rest = body[:k], body[k:]
-e = rest.index('</style>') + len('</style>'); style, rest = rest[:e], rest[e:]
-desc = "1899년 경인선과 전차부터 지하철·철도·버스, 1990년 이후 땅값(공시지가)까지, 서울의 교통망과 시역·행정구역, 땅값이 바뀌어 온 과정을 연도별 레이어로 겹쳐 보는 지도"
-doc = f'''<!doctype html>
+"""아티팩트용 조각(<title>부터 본문 끝까지)을 공개용 완전한 문서(index.html)로 감싼다.
+build.py가 wrap()을 불러 쓴다. 따로 쓸 때: python3 src/make_publish.py <조각.html> <index.html 경로>"""
+import re, sys
+
+DESC = "1899년 경인선과 전차부터 지하철·철도·버스, 1990년 이후 땅값(공시지가)까지, 서울의 교통망과 시역·행정구역, 땅값이 바뀌어 온 과정을 연도별 레이어로 겹쳐 보는 지도"
+
+
+def wrap(html):
+    html = html.replace('<meta name="claude:viewport-fit-sides" content="cover">\n', '')
+    m = re.match(r'\s*<title>(.*?)</title>\n', html)
+    title = m.group(1); body = html[m.end():]
+    k = body.index('<style>'); pre, rest = body[:k], body[k:]
+    e = rest.index('</style>') + len('</style>'); style, rest = rest[:e], rest[e:]
+    return f'''<!doctype html>
 <html lang="ko">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>{title}</title>
-<meta name="description" content="{desc}">
+<meta name="description" content="{DESC}">
 <meta property="og:title" content="{title}">
-<meta property="og:description" content="{desc}">
+<meta property="og:description" content="{DESC}">
 <meta property="og:type" content="website">
 {pre}{style}
 </head>
@@ -26,16 +28,10 @@ doc = f'''<!doctype html>
 </body>
 </html>
 '''
-open(f"{P}/index.html", "w").write(doc)
-SRC = ["template.html", "method.html", "method_land.html", "build.py", "make_publish.py", "gazetteer.py", "geom.py", "roads.py", "rail_build.py", "metro_build.py",
-       "gu_periods.py", "bus_parse.py", "bus_build.py", "bus_route.py", "bus2026.py", "route_years.py", "bus_dead_parse.py", "bus_dead_route.py", "village.py", "village_clip.py", "landprice.py"]
-for f in SRC:
-    if os.path.exists(f"{B}/{f}"): shutil.copy(f"{B}/{f}", f"{P}/src/{f}")
-shutil.copy("/home/claude/data/bus/namu/namu_open_years.py", f"{P}/src/namu_open_years.py")
-shutil.copy("/home/claude/data/bus/namu_post/dead_supp.py", f"{P}/src/dead_supp.py")
-DATA = ["tram.json", "years.json", "gu_periods.json", "emd_topo.json", "events_extra.json", "metro.json", "metro_events.json", "metro_dates.json",
-        "metro_extra.json", "rail.json", "rail_events.json", "rail_open.json", "rail_alias.json", "place_alias.json", "bus.json", "bus_events.json",
-        "bus2026.json", "route_years.json", "dead_routes.json", "village_layer.json", "landprice.json", "land_alias.json"]
-for f in DATA:
-    if os.path.exists(f"{B}/{f}"): shutil.copy(f"{B}/{f}", f"{P}/data/{f}")
-print("index.html", len(doc), "bytes →", P)
+
+
+if __name__ == "__main__":
+    src, dst = sys.argv[1], sys.argv[2]
+    doc = wrap(open(src).read())
+    open(dst, "w").write(doc)
+    print(dst, len(doc.encode()), "bytes")

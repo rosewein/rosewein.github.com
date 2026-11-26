@@ -1,9 +1,10 @@
 """나무위키 '2004년 개편 전 목록' 추출본 → 노선 단면(2004.6)과 폐선 노선 연혁."""
 import json, re, sys, math
-sys.path.insert(0, "/home/claude/data/build")
+from paths import CODE, DATA, RAW, WORK
+sys.path.insert(0, CODE)
 import gazetteer as G
 
-SRC = "/home/claude/data/bus/namu/namu_bus_pre2004.json"
+SRC = f"{RAW}/bus/namu/namu_bus_pre2004.json"
 CITY = (126.9780, 37.5665)  # 시청
 
 HEAD = re.compile(r"^(\d+)\.\s+([0-9]+(?:-[0-9]+)?)\s*(\((?:좌석|고급좌석|직행좌석)\))?\s*\((.+?)\)\s*(\(★\))?\s*$")
@@ -115,7 +116,7 @@ def main():
                            "pts": pts, "succ": r["rows"].get("후신", ""), "alt": r["rows"].get("대체 노선", ""),
                            "open": oy, "open_label": olab, "open_approx": oapp, "open_ctx": oc,
                            "close": cy, "close_label": clab, "close_approx": capp, "close_ctx": cc})
-    json.dump(routes, open("/home/claude/data/bus/namu/routes_parsed.json", "w"), ensure_ascii=False, indent=0)
+    json.dump(routes, open(f"{RAW}/bus/namu/routes_parsed.json", "w"), ensure_ascii=False, indent=0)
     n = len(routes); live = [r for r in routes if not r["star"]]
     withvia = [r for r in live if r["pts"]]
     tot = sum(len(r["pts"]) for r in withvia); hit = sum(1 for r in withvia for p in r["pts"] if p["lng"])

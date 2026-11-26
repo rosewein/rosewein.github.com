@@ -1,8 +1,9 @@
 import json, re, math, os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import geom
-B = os.path.dirname(os.path.abspath(__file__))
-ST = json.load(open("/home/claude/data/subway/stations_seoul.json"))
+from paths import CODE, DATA, RAW, WORK
+B = DATA
+ST = json.load(open(f"{RAW}/subway/stations_seoul.json"))
 DATES = json.load(open(f"{B}/metro_dates.json")) if os.path.exists(f"{B}/metro_dates.json") else {}
 EXTRA = json.load(open(f"{B}/metro_extra.json")) if os.path.exists(f"{B}/metro_extra.json") else {"stations": [], "lines": []}
 

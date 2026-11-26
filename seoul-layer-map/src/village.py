@@ -9,7 +9,8 @@ import csv, io, json, re, sys, zipfile, datetime, collections, os
 from shapely.geometry import Point, mapping
 from shapely.ops import unary_union
 
-B = "/home/claude/data/build"
+from paths import CODE, DATA, RAW, WORK
+B = WORK   # village.json은 중간 파일(village_clip.py가 읽음)
 GU = "종로|중구|용산|성동|광진|동대문|중랑|성북|강북|도봉|노원|은평|서대문|마포|양천|강서|구로|금천|영등포|동작|관악|서초|강남|송파|강동"
 VILLAGE = re.compile(rf"^({GU})\d{{2}}(-\d)?$")
 KX, KY = 88.4, 111.0   # 위도 37.5도 근처 1도 = km
@@ -17,11 +18,11 @@ R = 0.3                # 걸어서 닿는 거리(km)
 
 # 정류장 좌표: 2026년 목록(kyckang/SeoulTransitMap_data)과 2019년 6월 「서울시 버스노선별 표준정류장ID 연계 좌표정보」
 S26, S19 = {}, {}
-for s in csv.DictReader(open("/home/claude/data/bus/raw/seoul_bus_stops.csv")):
+for s in csv.DictReader(open(f"{RAW}/bus/raw/seoul_bus_stops.csv")):
     xy = (float(s["lng"]), float(s["lat"]))
     S26[s["node_id"]] = xy
     if s.get("ars_id"): S26.setdefault("ars:" + s["ars_id"].zfill(5), xy)
-X19 = "/home/claude/data/bus/raw/stops_2019.json"
+X19 = f"{RAW}/bus/raw/stops_2019.json"
 if os.path.exists(X19):
     for nid, ars, x, y in json.load(open(X19)):
         S19[nid] = (x, y)
@@ -106,6 +107,7 @@ def load(path, year):
 
 
 if __name__ == "__main__":
+    os.makedirs(B, exist_ok=True)
     out_path = f"{B}/village.json"
     res = json.load(open(out_path)) if os.path.exists(out_path) else {"years": {}}
     for arg in sys.argv[1:]:

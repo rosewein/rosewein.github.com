@@ -1,10 +1,11 @@
 """버스 레이어 데이터: 2004년 6월 노선망 단면, 신설·폐선 사건, 규모 통계."""
 import json, re, sys, math, collections
-sys.path.insert(0, "/home/claude/data/build")
+from paths import CODE, DATA, RAW, WORK
+sys.path.insert(0, CODE)
 import gazetteer as G
 
 SP = "/tmp/claude-0/-home-claude/438ad995-f3fd-5f5d-89cf-d7ca4fd5c542/scratchpad"
-R = json.load(open("/home/claude/data/bus/namu/routes_parsed.json"))
+R = json.load(open(f"{RAW}/bus/namu/routes_parsed.json"))
 PRE = json.load(open(f"{SP}/bus_events_pre2004.json"))["events"]
 POSTD = json.load(open(f"{SP}/bus_events_post2004.json"))
 CITY = (126.9780, 37.5665)
@@ -140,8 +141,8 @@ for l in sorted(log, key=lambda l: (l["year"], l["date"])):
     seenlog.add(k); log2.append(l)
 
 out = {"routes": routes, "nodes": node_list, "events": events, "stats": stats, "snapshot": {"from": 2003, "to": 2004, "label": "2004년 6월 노선망(개편 직전)"}}
-json.dump(out, open("/home/claude/data/build/bus.json", "w"), ensure_ascii=False, separators=(",", ":"))
-json.dump(log2, open("/home/claude/data/build/bus_events.json", "w"), ensure_ascii=False, indent=0)
+json.dump(out, open(f"{DATA}/bus.json", "w"), ensure_ascii=False, separators=(",", ":"))
+json.dump(log2, open(f"{DATA}/bus_events.json", "w"), ensure_ascii=False, indent=0)
 live = sum(1 for r in routes if r["live"])
 print("dropped outlier points:", DROPPED)
 print(f"routes drawn {len(routes)} (live {live}), nodes {len(node_list)}, events {len(events)} (located {sum(1 for e in events if e['lng'])}), stats {len(stats)}, log {len(log2)}")

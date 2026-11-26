@@ -1,7 +1,8 @@
 """경유지·기종점 지명을 좌표로 바꾼다. 우선순위: 별칭 → 지하철·철도역 → 법정동 → 버스 정류장 이름."""
 import json, csv, re, statistics, os
 from collections import defaultdict
-B = "/home/claude/data"
+from paths import CODE, DATA, RAW, WORK
+B = RAW
 
 def _centroid(geom):
     xs, ys, n = 0, 0, 0
@@ -14,7 +15,7 @@ def _centroid(geom):
 STATION = {}
 for s in json.load(open(f"{B}/subway/raw/sudo.json"))["DATA"]:
     STATION.setdefault(s["name"], (s["lng"], s["lat"]))
-for s in json.load(open(f"{B}/build/rail.json"))["stations"]:
+for s in json.load(open(f"{DATA}/rail.json"))["stations"]:
     nm = re.sub(r"\(.*?\)", "", s["name"])
     STATION.setdefault(nm, (s["lng"], s["lat"]))
 
@@ -37,7 +38,7 @@ for r in csv.DictReader(open(f"{B}/bus/raw/seoul_bus_stops.csv")):
     except ValueError:
         pass
 
-ALIAS = json.load(open(f"{B}/build/place_alias.json")) if os.path.exists(f"{B}/build/place_alias.json") else {}
+ALIAS = json.load(open(f"{DATA}/place_alias.json")) if os.path.exists(f"{DATA}/place_alias.json") else {}
 
 def _median(pts):
     return (statistics.median(p[0] for p in pts), statistics.median(p[1] for p in pts))

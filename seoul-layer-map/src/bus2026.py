@@ -6,9 +6,10 @@ from scipy.spatial import cKDTree
 from shapely.geometry import LineString, MultiLineString
 from shapely.ops import linemerge
 
-B = "/home/claude/data/build"
-RIDE = "/home/claude/data/bus/ride/ride_20261118.csv"
-R = np.load("/home/claude/data/osm/seoul/roads.npz")
+from paths import CODE, DATA, RAW, WORK
+B = DATA
+RIDE = f"{RAW}/bus/ride/ride_20261118.csv"
+R = np.load(f"{RAW}/osm/seoul/roads.npz")
 lon, lat, u, v, d, c, cost = R["lon"], R["lat"], R["u"], R["v"], R["d"], R["c"], R["cost"]
 N = len(lon)
 w = d * cost[c]
@@ -26,8 +27,8 @@ def snap(x, y):
     if da <= 0.3: return int(ia)
     return None
 
-stops = {s["node_id"]: s for s in csv.DictReader(open("/home/claude/data/bus/raw/seoul_bus_stops.csv"))}
-rtype = {r["route_no"]: r["route_type"] for r in csv.DictReader(open("/home/claude/data/bus/raw/seoul_bus_routes.csv"))}
+stops = {s["node_id"]: s for s in csv.DictReader(open(f"{RAW}/bus/raw/seoul_bus_stops.csv"))}
+rtype = {r["route_no"]: r["route_type"] for r in csv.DictReader(open(f"{RAW}/bus/raw/seoul_bus_routes.csv"))}
 rows = list(csv.reader(io.StringIO(open(RIDE, "rb").read().decode("cp949"))))[1:]
 by = collections.defaultdict(list)
 names = {}
