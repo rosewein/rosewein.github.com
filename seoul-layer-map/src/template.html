@@ -424,7 +424,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   // 동 누르기 영역(gHit)은 면 레이어 위, 선·점 레이어 아래에 둔다. 맨 위에 두면 투명한 동 면이 역·노선·정류장 누르기를 모두 가로챈다(v1.4까지 그랬음)
   const gHit = root.append("g");
   const gBus = root.append("g"), gTram = root.append("g"), gRail = root.append("g"), gMetro = root.append("g"), gBusTop = root.append("g"),
-        gStLab = root.append("g"), gLabels = root.append("g");
+        gRingLab = root.append("g"), gStLab = root.append("g"), gLabels = root.append("g");
   // 버스 종점: {route, name, from, to, lon, lat, conf, source} — 자료가 들어오면 칩이 나타남
   const rail = DATA.rail || null;
   if (rail) document.getElementById("railChip").hidden = false;
@@ -766,13 +766,6 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
       sizeBus();
     }
 
-    // ring year labels
-    if (layerOn.rings && er) {
-      DATA.eras.filter(e => e.year <= er.year && eraNew[e.year].coordinates.length && e.year !== 1973).forEach(e => {
-        const b = path.bounds(eraPoly[e.year]);
-        labels.push({ x: b[0][0] + 2, y: b[0][1] - 3, t: String(e.year), fs: 10, cls: "ring" });
-      });
-    }
     guLabs = labels.filter(d => d.cls === "gu" && isFinite(d.x) && isFinite(d.y));
     gLabels.selectAll("text").data(labels.filter(d => isFinite(d.x) && isFinite(d.y))).join("text")
       .attr("x", d => d.x).attr("y", d => d.y).text(d => d.t)
@@ -805,6 +798,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     moveBusCursor && moveBusCursor();
     renderLandTable();
     renderEvPop();
+    drawRingLabels();
     drawStationLabels();
     // log highlight
     d3.selectAll("#log .ev").attr("class", d => "ev " + (d.year === year ? "now" : d.year < year ? "past" : "future"));
@@ -885,7 +879,66 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     if (!ev.target.closest("[data-more]")) return;
     showTab("log");   // 연표 탭을 열면 그 해 항목으로 내려간다
   });
-  d3.select("#evToggle").on("click", function () { evOn = !evOn; this.setAttribute("aria-pressed", evOn ? "true" : "false"); renderEvPop(); drawStationLabels(); });
+  d3.select("#evToggle").on("click", function () { evOn = !evOn; this.setAttribute("aria-pressed", evOn ? "true" : "false"); renderEvPop(); drawRingLabels(); drawStationLabels(); });
+
+  // ---------- 지도 위 글자가 피할 자리 ----------
+  // 화면 좌표(지도 SVG 기준) 상자 [x0, y0, x1, y1]. 연도·시기·수치 글자는 글자가 차지한 폭만(상자째 잡으면 판 전체 폭이 막힘),
+  // 사건 카드·시점 단추·출처 표기는 상자째, 구 이름은 글자 폭만큼
+  function overlayBoxes(t) {
+    const out = [], sv = svg.node().getBoundingClientRect();
+    const keep = (r) => { if (r && r.width) out.push([r.left - sv.left - 4, r.top - sv.top - 2, r.right - sv.left + 4, r.bottom - sv.top + 2]); };
+    ["#yLabel", "#eraLabel", "#statLabel"].forEach(sel => {
+      const el = document.querySelector(sel); if (!el || !el.firstChild) return;
+      const rg = document.createRange(); rg.selectNodeContents(el); for (const r of rg.getClientRects()) keep(r);
+    });
+    ["#evPop", ".camera", "#attrib", "#info"].forEach(sel => { const el = document.querySelector(sel); if (el && !el.hidden) keep(el.getBoundingClientRect()); });
+    if (layerOn.gu) guLabs.forEach(g => { const [gx, gy] = t.apply([g.x, g.y]), gw = g.t.length * 10.5 / 2 + 2; out.push([gx - gw, gy - 11, gx + gw, gy + 3]); });
+    return out;
+  }
+
+  // ---------- 이전 경계 연도 글자 ----------
+  // 경계마다 그 경계선 위에 연도를 쓴다. 자리는 북쪽(화면 위쪽) 점부터 차례로 보며,
+  // 연도 판·사건 카드·단추·구 이름·먼저 놓은 연도와 겹치거나, 글자를 다는 다른 경계와 9px 안으로 붙어 있는(경계가 겹친) 점은 건너뛴다.
+  // 1973년 경계는 1963년과 거의 같아 글자를 달지 않는다. 확대·이동할 때마다 다시 자리를 찾는다(scheduleStLabels).
+  let ringBoxes = [];
+  function drawRingLabels() {
+    gRingLab.selectAll("*").remove(); ringBoxes = [];
+    const er = eraOf(year);
+    if (!layerOn.rings || !er) return;
+    const t = d3.zoomTransform(svg.node()), M = 9, fs = 10;
+    const eras = DATA.eras.filter(e => e.year <= er.year && eraNew[e.year].coordinates.length && e.year !== 1973);
+    // 경계마다 바깥 고리의 꼭짓점을 화면 좌표로(점이 너무 많으면 건너뛰며 600개 안팎)
+    const rings = eras.map(e => {
+      const pts = [];
+      eraPoly[e.year].coordinates.forEach(poly => { const ring = poly[0], step = Math.max(1, Math.floor(ring.length / 600)); for (let i = 0; i < ring.length; i += step) { const p = projection(ring[i]); pts.push({ p, s: t.apply(p) }); } });
+      return { y: e.year, pts };
+    });
+    // 다른 경계와의 거리는 칸(9px) 나눔으로 빠르게 본다
+    const grid = new Map(), key = (x, y) => `${Math.floor(x / M)},${Math.floor(y / M)}`;
+    rings.forEach((r, ri) => r.pts.forEach(q => { const k = key(q.s[0], q.s[1]); (grid.get(k) || grid.set(k, []).get(k)).push([ri, q.s[0], q.s[1]]); }));
+    const nearOther = (ri, x, y) => {
+      const cx = Math.floor(x / M), cy = Math.floor(y / M);
+      for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) for (const [rj, px, py] of grid.get(`${cx + dx},${cy + dy}`) || [])
+        if (rj !== ri && Math.hypot(px - x, py - y) < M) return true;
+      return false;
+    };
+    const placed = overlayBoxes(t), out = [];
+    const hit = (a) => placed.some(b => !(a[2] < b[0] || a[0] > b[2] || a[3] < b[1] || a[1] > b[3]));
+    rings.forEach((r, ri) => {
+      const w = String(r.y).length * fs * 0.62 + 6, h = fs + 3;
+      const cand = r.pts.filter(q => q.s[0] > w && q.s[0] < W - w && q.s[1] > h && q.s[1] < H - h).sort((a, b) => a.s[1] - b.s[1]);
+      for (const q of cand) {
+        const box = [q.s[0] - w / 2, q.s[1] - h / 2, q.s[0] + w / 2, q.s[1] + h / 2];
+        if (hit(box) || nearOther(ri, q.s[0], q.s[1])) continue;
+        placed.push(box); ringBoxes.push(box); out.push({ t: String(r.y), p: q.p }); break;
+      }
+    });
+    gRingLab.selectAll("text").data(out).join("text")
+      .attr("x", d => d.p[0]).attr("y", d => d.p[1]).attr("dy", "0.35em").attr("text-anchor", "middle")
+      .attr("font-size", fs / kNow).attr("font-weight", 600).attr("fill", "var(--ring)")
+      .attr("paint-order", "stroke").attr("stroke", "var(--paper-2)").attr("stroke-width", 3.5 / kNow).attr("stroke-linejoin", "round")
+      .style("pointer-events", "none").text(d => d.t);
+  }
 
   // ---------- 역 이름 ----------
   // 확대했을 때만(화면에서 1km가 ST_LABEL_PXKM픽셀 이상) 그 해 열려 있는 지하철·철도 역 이름을 쓴다.
@@ -895,7 +948,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   const ST_LABEL_PXKM = 30;
   let guLabs = [];
   let stLabRaf = null;
-  function scheduleStLabels() { if (stLabRaf) return; stLabRaf = requestAnimationFrame(() => { stLabRaf = null; drawStationLabels(); }); }
+  function scheduleStLabels() { if (stLabRaf) return; stLabRaf = requestAnimationFrame(() => { stLabRaf = null; drawRingLabels(); drawStationLabels(); }); }
   function drawStationLabels() {
     gStLab.selectAll("*").remove();
     if (pxPerKm() * kNow < ST_LABEL_PXKM) return;
@@ -907,17 +960,8 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     if (layerOn.rail && rail) rail.stations.filter(st => st.open <= year && (!st.close || year < st.close) && !have.has(st.name))
       .forEach(st => cand.push({ name: st.name, p: projection([st.lng, st.lat]), pri: 5 }));
     cand.sort((a, b) => b.pri - a.pri);
-    const fs = 11, gap = 5, placed = [], out = [];
+    const fs = 11, gap = 5, placed = overlayBoxes(t).concat(ringBoxes), out = [];
     const hit = (a) => placed.some(b => !(a[2] < b[0] || a[0] > b[2] || a[3] < b[1] || a[1] > b[3]));
-    const sv = svg.node().getBoundingClientRect();
-    const keep = (r) => { if (r && r.width) placed.push([r.left - sv.left - 4, r.top - sv.top - 2, r.right - sv.left + 4, r.bottom - sv.top + 2]); };
-    // 연도·시기·수치 글자는 글자가 차지한 폭만 비운다(상자째 잡으면 판 전체 폭이 막혀 지도 위쪽에 역 이름이 안 나옴)
-    ["#yLabel", "#eraLabel", "#statLabel"].forEach(sel => {
-      const el = document.querySelector(sel); if (!el || !el.firstChild) return;
-      const rg = document.createRange(); rg.selectNodeContents(el); for (const r of rg.getClientRects()) keep(r);
-    });
-    ["#evPop", ".camera", "#attrib"].forEach(sel => { const el = document.querySelector(sel); if (el && !el.hidden) keep(el.getBoundingClientRect()); });
-    if (layerOn.gu) guLabs.forEach(g => { const [gx, gy] = t.apply([g.x, g.y]), gw = g.t.length * 10.5 / 2 + 2; placed.push([gx - gw, gy - 11, gx + gw, gy + 3]); });
     for (const c of cand) {
       const [sx, sy] = t.apply(c.p);
       if (sx < -60 || sy < -20 || sx > W + 60 || sy > H + 20) continue;
