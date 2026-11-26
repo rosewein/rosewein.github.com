@@ -208,6 +208,12 @@ if os.path.exists(F("village_layer.json")):
         vy[y] = {"routes": r["routes"], "nstops": r["nstops"], "only_km2": r["only_km2"], "day": r["day"], "stops": sorted(set(ids)), "only": r["only"]}
     data["village"] = {"pts": pts, "years": vy}
     print("village pts", len(pts), file=sys.stderr)
+# 토지구획정리 지구(시안): urbanplan_gr91.py가 1991판 『서울 도시계획 연혁』 연혁도에서 다시 그린 면과 오른쪽 표
+if os.path.exists(F("urbanplan_gr91.json")):
+    uj = json.load(open(F("urbanplan_gr91.json")))
+    data["urban"] = {"src": uj["src"],
+                     "features": [{k: f[k] for k in ("key", "nos", "names", "year", "date", "lab", "geom", "note", "areaTbl", "areaDrawn")} for f in uj["features"]],
+                     "table": [{k: r[k] for k in ("no", "name", "areaTbl", "notice", "date", "feature") if k in r} for r in uj["table"]]}
 # 물길(지금 기준): OSM 수면 면 + 이름 있는 하천 선(src/water.py가 만듦)
 if os.path.exists(F("water.json")):
     data["water"] = json.load(open(F("water.json")))

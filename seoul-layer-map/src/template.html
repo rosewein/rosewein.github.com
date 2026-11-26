@@ -37,6 +37,8 @@
   --land-0: #fae8d9; --land-1: #f3c9a6; --land-2: #e4ad7d; --land-3: #d1935a; --land-4: #ba7a3e; --land-5: #9f652b; --land-6: #825122; --land-7: #634121; --land-8: #403227;
   /* 새 건물: 한 색상(남색) 8단계, 밝음→어두움 = 적음→많음(1% 미만은 칠하지 않음). 어두운 화면은 반대. validate_palette.js --ordinal 통과(밝은 끝 대비 2:1 이상) */
   --bld-1: #8f9fbb; --bld-2: #738cb9; --bld-3: #5878b2; --bld-4: #4265a6; --bld-5: #305294; --bld-6: #23417c; --bld-7: #193160; --bld-8: #122343;
+  /* 토지구획정리 지구(시안): 한 색상(자주) 4단계, 고시 연대가 오래될수록 진함(1=80년대 … 4=60년대 이전). 어두운 화면은 반대. validate_palette.js --ordinal 통과 */
+  --up-1: #bb93ca; --up-2: #9a68b0; --up-3: #76418e; --up-4: #512866;
   --display: "Hahmlet", "Noto Serif KR", "AppleMyungjo", serif;
   --body: "SLM Sans KR", "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
   /* 숫자용 글꼴에는 한글이 없으므로 한글은 본문 글꼴로(전에는 운영체제 글꼴로 찍혔음) */
@@ -46,13 +48,13 @@
   :root:not([data-theme="light"]) {
     --paper: #111714; --paper-2: #18201c; --ink: #e2e7e1; --ink-2: #a2ada5; --rule: #334039;
     --river: #2b475a; --tram: #ff6a5c; --kido: #b796e6; --area: #7d6f3c; --area-new: #d0a648;
-    --ring: #9a9880; --wall: #c3ccc4; --gu: #8e9a91; --focus: #6fb2ec; --bus: #ff5cb8; --rail: #c9d1ca; --village: #9fbf2a; --village-dot: #c8e05a; --land-0: #3b2a1b; --land-1: #5a3817; --land-2: #784919; --land-3: #935c24; --land-4: #ad7138; --land-5: #c38853; --land-6: #d7a273; --land-7: #e6bd99; --land-8: #f0d9c7; --bld-1: #41506c; --bld-2: #4a628e; --bld-3: #5675af; --bld-4: #6589cb; --bld-5: #799ee2; --bld-6: #91b3f1; --bld-7: #adc9fb; --bld-8: #d3dff3; --joseon: #6cc3b6; --joseon-2: #a8e6dc; --oldmap-op: .62; color-scheme: dark;
+    --ring: #9a9880; --wall: #c3ccc4; --gu: #8e9a91; --focus: #6fb2ec; --bus: #ff5cb8; --rail: #c9d1ca; --village: #9fbf2a; --village-dot: #c8e05a; --land-0: #3b2a1b; --land-1: #5a3817; --land-2: #784919; --land-3: #935c24; --land-4: #ad7138; --land-5: #c38853; --land-6: #d7a273; --land-7: #e6bd99; --land-8: #f0d9c7; --bld-1: #41506c; --bld-2: #4a628e; --bld-3: #5675af; --bld-4: #6589cb; --bld-5: #799ee2; --bld-6: #91b3f1; --bld-7: #adc9fb; --bld-8: #d3dff3; --joseon: #6cc3b6; --joseon-2: #a8e6dc; --oldmap-op: .62; --up-1: #694380; --up-2: #8d5ca6; --up-3: #b385cb; --up-4: #dbbde8; color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --paper: #111714; --paper-2: #18201c; --ink: #e2e7e1; --ink-2: #a2ada5; --rule: #334039;
   --river: #2b475a; --tram: #ff6a5c; --kido: #b796e6; --area: #7d6f3c; --area-new: #d0a648;
-  --ring: #9a9880; --wall: #c3ccc4; --gu: #8e9a91; --focus: #6fb2ec; --bus: #ff5cb8; --rail: #c9d1ca; --village: #9fbf2a; --village-dot: #c8e05a; --land-0: #3b2a1b; --land-1: #5a3817; --land-2: #784919; --land-3: #935c24; --land-4: #ad7138; --land-5: #c38853; --land-6: #d7a273; --land-7: #e6bd99; --land-8: #f0d9c7; --bld-1: #41506c; --bld-2: #4a628e; --bld-3: #5675af; --bld-4: #6589cb; --bld-5: #799ee2; --bld-6: #91b3f1; --bld-7: #adc9fb; --bld-8: #d3dff3; --joseon: #6cc3b6; --joseon-2: #a8e6dc; --oldmap-op: .62; color-scheme: dark;
+  --ring: #9a9880; --wall: #c3ccc4; --gu: #8e9a91; --focus: #6fb2ec; --bus: #ff5cb8; --rail: #c9d1ca; --village: #9fbf2a; --village-dot: #c8e05a; --land-0: #3b2a1b; --land-1: #5a3817; --land-2: #784919; --land-3: #935c24; --land-4: #ad7138; --land-5: #c38853; --land-6: #d7a273; --land-7: #e6bd99; --land-8: #f0d9c7; --bld-1: #41506c; --bld-2: #4a628e; --bld-3: #5675af; --bld-4: #6589cb; --bld-5: #799ee2; --bld-6: #91b3f1; --bld-7: #adc9fb; --bld-8: #d3dff3; --joseon: #6cc3b6; --joseon-2: #a8e6dc; --oldmap-op: .62; --up-1: #694380; --up-2: #8d5ca6; --up-3: #b385cb; --up-4: #dbbde8; color-scheme: dark;
 }
 * { box-sizing: border-box; }
 body { background: var(--paper); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.55; }
@@ -370,6 +372,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     <button class="chip" type="button" data-layer="kido" aria-pressed="true"><i style="color:var(--kido)"></i>경성궤도 기동차</button>
     <button class="chip" type="button" data-layer="land" aria-pressed="false" id="landChip" hidden><i class="fill" style="background:linear-gradient(90deg,var(--land-1),var(--land-4),var(--land-7))"></i>땅값(공시지가)</button>
     <button class="chip" type="button" data-layer="bld" aria-pressed="false" id="bldChip" hidden><i class="fill" style="background:linear-gradient(90deg,var(--bld-2),var(--bld-5),var(--bld-8))"></i>새 건물(5년)</button>
+    <button class="chip" type="button" data-layer="urban" aria-pressed="false" id="urbanChip" hidden><i class="fill" style="background:linear-gradient(90deg,var(--up-1),var(--up-4))"></i>토지구획정리 지구</button>
     <button class="chip" type="button" data-layer="area" aria-pressed="true"><i class="fill" style="background:var(--area)"></i>시역</button>
     <button class="chip" type="button" data-layer="rings" aria-pressed="true"><i style="color:var(--ring);border-top-style:dashed;border-top-width:2px"></i>이전 경계</button>
     <button class="chip" type="button" data-layer="gu" aria-pressed="true"><i style="color:var(--gu);border-top-width:1px"></i>구 경계</button>
@@ -415,6 +418,10 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     <div class="tk" id="bldTicks"></div>
     <div id="bldDotKey" hidden style="margin:4px 0 2px"><svg id="bldDotSvg" width="210" height="44" role="img" aria-label="원 크기 보기"></svg></div>
     <p id="bldNote">새 건물: 그 해까지 5년 동안 사용승인된 건물 연면적을 법정동 면적으로 나눈 값(%)입니다. 칸 하나가 두 배씩(로그 눈금)이고, 1% 미만은 칠하지 않았습니다. 지금 건축물대장에 헐려서 말소된 건물을 더한 값입니다.</p>
+  </div>
+  <div class="legend-bus" id="urbanLegend" hidden>
+    <span><svg width="64" height="12" viewBox="0 0 64 12"><rect x="1" y="2" width="14" height="8" fill="var(--up-4)"/><rect x="17" y="2" width="14" height="8" fill="var(--up-3)"/><rect x="33" y="2" width="14" height="8" fill="var(--up-2)"/><rect x="49" y="2" width="14" height="8" fill="var(--up-1)"/></svg>토지구획정리 지구, 고시 연대: 1937–53 · 60년대 · 70년대 · 80년대</span>
+    <span id="urbanNote">고시한 해부터 보입니다. 1991년 『서울 도시계획 연혁』 연혁도의 지구 경계를 다시 그린 것이라 경계는 근사입니다.</span>
   </div>
   <div class="legend-bus" id="waterLegend">
     <span><svg width="20" height="12" viewBox="0 0 20 12"><rect x="1" y="2" width="9" height="8" fill="var(--river)"/><path d="M12,6H19" stroke="var(--river)" stroke-width="1.8"/></svg>물길(한강 수면·하천): 지금 모습</span>
@@ -631,6 +638,9 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   const gJoseon = root.append("g");
   const gBus = root.append("g"), gTram = root.append("g"), gRail = root.append("g"), gMetro = root.append("g"), gBusTop = root.append("g"),
         gRingLab = root.append("g"), gStLab = root.append("g"), gLabels = root.append("g");
+  // 토지구획정리 지구(시안): 면은 시역 채움 위·이전 경계선 아래(동 누르기 영역보다 아래라 동 정보창을 막지 않음), 이름은 역 이름 바로 아래
+  const gUrban = root.insert("g", () => gRings.node());
+  const gUpLab = root.insert("g", () => gStLab.node());
   // 버스 종점: {route, name, from, to, lon, lat, conf, source} — 자료가 들어오면 칩이 나타남
   const rail = DATA.rail || null;
   if (rail) document.getElementById("railChip").hidden = false;
@@ -668,6 +678,65 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     gVillage.selectAll("circle").data(V.stops.map(i => village.pts[i])).join("circle")
       .attr("cx", d => projection(d)[0]).attr("cy", d => projection(d)[1]).attr("r", 1.1 / kNow)
       .attr("fill", "var(--village-dot)").attr("fill-opacity", 0.75).style("pointer-events", "none");
+  }
+  // ---------- 토지구획정리 지구(시안) ----------
+  // 1991판 『서울 도시계획 연혁』 「토지구획정리사업」 연혁도(89.12 말 현재)의 색칠한 면을 다시 그린 것(src/urbanplan_gr91.py).
+  // 고시한 해부터 보인다. 그림에서 경계가 나뉘지 않은 지구는 묶음(3·4·7 등)으로 한 면이다.
+  // 시안 단계라 보기 방식을 window.UPMODE로 바꿔 본다: fill era(연대별 채움)|line(테두리+빗금), time all|new(고시 5년 안 진하게),
+  // land outline(땅값·새 건물 위에서 테두리만)|hatch(빗금), lab zoom(확대하면 번호·이름)|num(늘 번호)|none
+  const urban = DATA.urban || null;
+  if (urban) document.getElementById("urbanChip").hidden = false;
+  const upCls = (y) => y < 1960 ? 4 : y < 1970 ? 3 : y < 1980 ? 2 : 1;
+  const UP_NEW = 5;
+  const upMode = () => Object.assign({ fill: "era", time: "all", land: "outline", lab: "zoom" }, window.UPMODE || {});
+  const upPat = svg.select("defs").append("pattern").attr("id", "upHatch").attr("patternUnits", "userSpaceOnUse")
+    .attr("width", 7).attr("height", 7).attr("patternTransform", "rotate(-45)");
+  const upPatLine = upPat.append("rect").attr("width", 1.4).attr("height", 7).attr("fill", "var(--up-3)").attr("fill-opacity", 0.8);
+  function sizeUrban() {
+    upPat.attr("width", 7 / kNow).attr("height", 7 / kNow); upPatLine.attr("width", 1.4 / kNow).attr("height", 7 / kNow);
+  }
+  function drawUrban(fillOff) {
+    gUrban.selectAll("*").remove();
+    if (!urban || !layerOn.urban) { gUpLab.selectAll("*").remove(); return; }
+    const M = upMode(), fs = urban.features.filter(f => f.year <= year);
+    const fresh = (f) => M.time === "new" && year - f.year < UP_NEW;
+    const P = (f) => gUrban.append("path").datum(f.geom).attr("d", path).attr("stroke-linejoin", "round")
+      .attr("vector-effect", "non-scaling-stroke").style("pointer-events", "none");
+    fs.forEach(f => {
+      const c = `var(--up-${upCls(f.year)})`;
+      if (fillOff && M.land === "outline") {   // 땅값·새 건물 면 위: 바탕색 테 + 진한 선만(면을 얹으면 땅값 칸의 밝기가 바뀜)
+        P(f).attr("fill", "none").attr("stroke", "var(--paper)").attr("stroke-width", fresh(f) ? 4.2 : 3).attr("stroke-opacity", 0.85);
+        P(f).attr("fill", "none").attr("stroke", "var(--up-4)").attr("stroke-width", fresh(f) ? 2.2 : 1.3);
+      } else if (fillOff || M.fill === "line") {   // 빗금 + 테두리(한 색)
+        if (fresh(f)) P(f).attr("fill", "var(--up-3)").attr("fill-opacity", 0.28).attr("stroke", "none");
+        P(f).attr("fill", "url(#upHatch)").attr("stroke", "var(--up-3)").attr("stroke-width", fresh(f) ? 2 : 1.1);
+      } else {   // 연대별 채움
+        const op = M.time === "new" ? (fresh(f) ? 0.8 : 0.35) : 0.6;
+        P(f).attr("fill", c).attr("fill-opacity", op).attr("stroke", c).attr("stroke-width", fresh(f) ? 1.8 : 0.8);
+      }
+    });
+    drawUrbanLabels();
+  }
+  // 지구 이름: lab=zoom이면 확대했을 때만(역 이름과 같은 기준, 1km가 30px 이상) 「번호 이름」, lab=num이면 늘 번호(확대하면 이름까지)
+  function drawUrbanLabels() {
+    gUpLab.selectAll("*").remove();
+    if (!urban || !layerOn.urban) return;
+    const M = upMode(); if (M.lab === "none") return;
+    const big = pxPerKm() * kNow >= 30;
+    if (M.lab === "zoom" && !big) return;
+    const t = d3.zoomTransform(svg.node()), placed = overlayBoxes(t), out = [];
+    const hit = (a) => placed.some(b => !(a[2] < b[0] || a[0] > b[2] || a[3] < b[1] || a[1] > b[3]));
+    const fsz = big ? 11 : 9.5;
+    urban.features.filter(f => f.year <= year).sort((a, b) => b.areaDrawn - a.areaDrawn).forEach(f => {
+      const txt = big ? `${f.key} ${f.names.join("·")}` : f.key, p = projection(f.lab), [sx, sy] = t.apply(p);
+      const w = txt.length * fsz * (big ? 0.9 : 0.62) + 4, h = fsz + 3, box = [sx - w / 2, sy - h / 2, sx + w / 2, sy + h / 2];
+      if (sx < -w || sy < -h || sx > W + w || sy > H + h || hit(box)) return;
+      placed.push(box); out.push({ txt, p });
+    });
+    gUpLab.selectAll("text").data(out).join("text").attr("x", d => d.p[0]).attr("y", d => d.p[1]).attr("dy", "0.35em")
+      .attr("text-anchor", "middle").attr("font-size", fsz / kNow).attr("font-weight", 600).attr("fill", "var(--up-4)")
+      .attr("paint-order", "stroke").attr("stroke", "var(--paper-2)").attr("stroke-width", 3 / kNow).attr("stroke-linejoin", "round")
+      .style("pointer-events", "none").text(d => d.txt);
   }
   // 옛 지도: 1914년 6월 「경성부시가강계도」를 1914–1935년에 깐다. 웹 메르카토르 격자라 두 모서리만 투영하면 된다
   // 진하기: 띠를 건드리기 전에는 화면 색에 맞춘 기본값(--oldmap-op), 건드리면 그 값
@@ -788,7 +857,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   const busSym = (t) => d3.symbol().type(SYM[t] || d3.symbolDiamond).size(t === "신설" || t === "폐선" ? 70 : 46)();
   let W = 0, H = 0, projection = d3.geoMercator(), path = d3.geoPath(projection), kNow = 1;
 
-  const layerOn = { rail: true, metro: true, tram: true, kido: true, area: true, rings: true, gu: true, wall: true, dong: false, bus: true, village: true, land: false, bld: false, joseon: true, oldmap: true };
+  const layerOn = { rail: true, metro: true, tram: true, kido: true, area: true, rings: true, gu: true, wall: true, dong: false, bus: true, village: true, land: false, bld: false, joseon: true, oldmap: true, urban: false };
 
   function fit() {
     const r = svg.node().getBoundingClientRect();
@@ -809,6 +878,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     gBuildDot.selectAll("circle").attr("r", q => bldR(q.v));
     landPat.attr("width", 6 / kNow).attr("height", 6 / kNow); landPatBg.attr("width", 6 / kNow).attr("height", 6 / kNow);
     landPatLine.attr("width", 1.2 / kNow).attr("height", 6 / kNow);
+    sizeUrban();
     gMetro.selectAll("circle").attr("r", st => (Object.keys(st.opens).filter(l => st.opens[l] <= year).length > 1 ? 3.4 : 2.3) / kNow);
     scheduleStLabels();
     if (ev.sourceEvent) setAuto(false);
@@ -976,6 +1046,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     gWall.style("display", layerOn.wall ? null : "none");
 
     drawVillage(fillOff);   // 땅값이나 새 건물 면 위에서는 마을버스 땅을 옅게
+    drawUrban(fillOff);
     drawJoseon();
     drawOld();
     gDong.style("display", layerOn.dong ? null : "none");
@@ -1169,6 +1240,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     d3.select("#landLegend").attr("hidden", layerOn.land && land ? null : true);
     d3.select("#joseonLegend").attr("hidden", layerOn.joseon && joseon ? null : true);
     d3.select("#oldmapLegend").attr("hidden", oldShownAt(year) ? null : true);
+    d3.select("#urbanLegend").attr("hidden", layerOn.urban && urban ? null : true);
   }
 
   function eraText(er, gp) {
@@ -1303,7 +1375,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   const ST_LABEL_PXKM = 30;
   let guLabs = [];
   let stLabRaf = null;
-  function scheduleStLabels() { if (stLabRaf) return; stLabRaf = requestAnimationFrame(() => { stLabRaf = null; drawRingLabels(); drawStationLabels(); }); }
+  function scheduleStLabels() { if (stLabRaf) return; stLabRaf = requestAnimationFrame(() => { stLabRaf = null; drawRingLabels(); drawStationLabels(); drawUrbanLabels(); }); }
   function drawStationLabels() {
     gStLab.selectAll("*").remove();
     if (pxPerKm() * kNow < ST_LABEL_PXKM) return;
