@@ -42,6 +42,8 @@
 | 지하철역 좌표 | `data/metro.json` | 서울시 역사마스터 정보([sudo-happy/data-archive](https://github.com/sudo-happy/data-archive) 정리본) | 서울시 공공데이터(출처 표시). 정리본 저장소의 라이선스 표기는 찾지 못함 |
 | 개별공시지가 | `data/landprice.json`, `src/landprice.py` | 서울 열린데이터광장 「서울시 개별공시지가 정보」(OA-1180) 1990–2026년 연도별 파일(2026-11-26 받음, 원본 서울부동산정보광장) | 데이터셋 페이지 표기: 이용허락범위 제한 없음. 공공데이터포털의 같은 자료(15052418) 표기는 공공누리 제1유형(출처 표시) |
 | 건축물대장 표제부, 폐쇄말소대장 표제부(새 건물) | `data/building.json`, `src/building.py` | 서울 열린데이터광장 「서울시 건축물대장 표제부」(OA-22424)와 「서울시 폐쇄말소대장 표제부」(OA-22432), 2026-11-26 받음, 원천 서울 건축주택 종합정보시스템 | 데이터셋 페이지 표기: 이용허락범위 제한 없음. 공공데이터포털의 같은 자료(15049335) 표기는 공공누리 제1유형(출처 표시) |
+| 큰 개발 이름(새 건물 정보창) | `data/building.json`의 `big[].nm`, `src/building.py`, `src/building_names_tool.py` | 공공데이터포털 국토교통부 「건축HUB 건축물대장정보 서비스」(15134735) 표제부·총괄표제부, 지번 3,265곳을 2026-11-26 이지의 크롬에서 조회(조회 도구는 `building_names_tool.py`가 만드는 HTML) | 데이터셋 페이지 표기: 이용허락범위 제한 없음 |
+| 건축물 연면적 통계(새 건물 대조용, 지도에는 쓰지 않음) | 「읽는 법」 새 건물 설명 | 서울 열린데이터광장 「서울시 건축물 연면적 통계」(DT201004K030006, 2000~2020년, 원천 서울특별시 건축기획과), 2026-11-26 받음 | 공공누리 제1유형(출처 표시) |
 | 법정동 경계 | `data/emd_topo.json` | [southkorea/seoul-maps](https://github.com/southkorea/seoul-maps) (통계청·행정안전부 원자료) | 저장소 README 표기: Apache 2.0 |
 | 폐역 좌표 일부 | `data/rail.json` | OpenHistoricalMap | CC0 |
 | 전차·철도·지하철 연혁, 행정구역 변천 | 연표, `data/tram.json`, `data/years.json`, `data/gu_periods.json` | 위키백과, 한국민족문화대백과사전, 서울연구원, 서울시 미디어허브, 국토교통부·서울시 보도자료 등 | 날짜와 사실 위주로 옮겼고, 출처는 지도 아래 설명에 적음 |
@@ -104,7 +106,7 @@ seoul-layer-map/
 6. `bus2026.py` — 폐선 노선을 넣어 다시 실행
 7. `water.py` — OSM 추출본에서 물길(한강 수면 면, 이름 있는 하천 선) `water.json` 만들기
 8. `landprice.py <zip 폴더>` — 개별공시지가 연도별 zip(37개)에서 법정동별 중앙값 `landprice.json` 만들기
-9. `building.py <csv 폴더>` — 건축물대장 표제부와 폐쇄말소대장 표제부 CSV에서 법정동·사용승인 연도별 연면적 `building.json` 만들기(보고서 `building_report.json`은 `$SLM_RAW/build`에)
+9. `building.py <csv 폴더>` — 건축물대장 표제부와 폐쇄말소대장 표제부 CSV에서 법정동·사용승인 연도별 연면적 `building.json` 만들기(보고서 `building_report.json`은 `$SLM_RAW/build`에). 폴더에 `건물이름_건축HUB_날짜.json`이 있으면 큰 개발 이름도 붙인다. 이 파일은 `building_names_tool.py <building.json> <html>`로 만든 HTML을 크롬에서 열고 인증키를 넣어 받는다(작업 공간에서는 API에 닿지 않음)
 10. `build.py` — `template.html`에 데이터를 넣어 `index.html` 만들기(`make_publish.py`의 `wrap()`으로 완전한 문서로 감쌈)
 
 ## 한계
