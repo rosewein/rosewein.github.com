@@ -637,9 +637,11 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   const gBuildDot = root.insert("g", () => gHit.node());
   // 조선 후기 선·점은 동 누르기 영역 위(눌러서 근거를 봄), 버스·전차 아래
   const gJoseon = root.append("g");
-  const gPalace = root.insert("g", () => gNew.node()), gPalaceTop = root.append("g");
+  const gPalace = root.insert("g", () => gNew.node());
   const gBus = root.append("g"), gTram = root.append("g"), gRail = root.append("g"), gMetro = root.append("g"), gBusTop = root.append("g"),
         gRingLab = root.append("g"), gStLab = root.append("g"), gLabels = root.append("g");
+  // 궁궐 화살표·별표(gPalaceTop)와 글자(gPalaceLab)는 교통선 위, 경계 연도·역 이름 아래. 누르기는 막지 않음
+  const gPalaceTop = root.insert("g", () => gRingLab.node()).style("pointer-events", "none"), gPalaceLab = root.insert("g", () => gRingLab.node()).style("pointer-events", "none");
   // 버스 종점: {route, name, from, to, lon, lat, conf, source} — 자료가 들어오면 칩이 나타남
   const rail = DATA.rail || null;
   if (rail) document.getElementById("railChip").hidden = false;
@@ -710,11 +712,11 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   // 궁궐: 지금 궁역에 해마다 상태(궁으로 쓰임·크게 헐리거나 다른 쓰임·복원 사업 뒤)를 칠하고, 그 해의 이름(경운궁→덕수궁, 창경원)과
   // 사건 뒤 몇 해 동안만 짧은 설명을 단다. 옮겨 간 건물 화살표는 단추(palMove)로 켜고, 1868–1910년 임금 거처에 별표와 칭호를 단다
   const PAL_MOVE_YEARS = 5;
-  let palMove = false;
+  let palMove = false, palLab = null, palBoxes = [];   // palLab: drawPalace가 모은 글자 자리 거리, palBoxes: 놓은 글자 상자(역 이름이 피함)
   function drawPalace() {
     gPalace.selectAll("*").remove(); gPalaceTop.selectAll("*").remove();
     d3.select("#palMove").attr("hidden", palace && layerOn.palace ? null : true);
-    if (!palace || !layerOn.palace) return;
+    if (!palace || !layerOn.palace) { palLab = null; return; }
     const y = year, k = kNow;   // 조선 후기 단계(1898 자리)는 1898년 상태
     let defs = svg.select("defs"); if (defs.empty()) defs = svg.insert("defs", ":first-child");
     if (defs.select("#palHatch").empty()) {
@@ -727,34 +729,97 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     defs.select("#palHatch").attr("patternTransform", `rotate(45) scale(${1 / k})`);
     const moves = palMove ? palace.moves.filter(m => m.to && y >= m.y && y < m.y + PAL_MOVE_YEARS) : [];
     const moveEv = new Set(moves.map(m => m.ev));   // 화살표로 보이는 사건은 궁 아래 설명을 빼고 화살표 이름표로만
-    const lab = (x, yy, txt, fs, fw) => gPalaceTop.append("text").attr("x", x).attr("y", yy).attr("text-anchor", "middle").attr("font-size", fs / k).attr("font-weight", fw)
-      .attr("fill", "var(--palace-2)").attr("paint-order", "stroke").attr("stroke", "var(--paper)").attr("stroke-width", 3 / k).style("pointer-events", "none").text(txt);
+    // 글자는 여기서 그리지 않고 자리 정할 거리만 모은다(drawPalaceLabels가 겹치지 않는 자리에 씀)
+    const L = { names: [], res: null, arrows: [], dots: [], lines: [] };
     palace.areas.forEach(a => {
       const ph = a.phases.find(p => y >= p[0] && y <= p[1]); if (!ph) return;
       gPalace.append("path").datum(a.geom).attr("d", path).style("pointer-events", "none")
         .attr("fill", ph[2] === "훼손" ? "url(#palHatch)" : "var(--palace)").attr("fill-opacity", ph[2] === "궁" ? .42 : ph[2] === "복원" ? .18 : 1)
         .attr("stroke", "var(--palace-2)").attr("stroke-width", 1.3 / k).attr("stroke-dasharray", ph[2] === "복원" ? `${4 / k} ${3 / k}` : null);
-      const c = projection(a.c), nm = (a.names.find(n => y >= n[0] && y <= n[1]) || [0, 0, a.name])[2];
-      lab(c[0], c[1], nm, 11.5, 600);
+      const nm = (a.names.find(n => y >= n[0] && y <= n[1]) || [0, 0, a.name])[2];
       const note = a.notes.filter(n => y >= n[0] && y < n[0] + palace.noteYears).pop();
-      if (note && !moveEv.has(note[2])) lab(c[0], c[1] + 13 / k, `${note[1]}(${note[0]})`, 9.5, 400);
+      L.names.push({ txt: nm, c: projection(a.c), bb: path.bounds(a.geom), note: note && !moveEv.has(note[2]) ? `${note[1]}(${note[0]})` : null });
     });
     moves.forEach(m => {
       const a = projection(m.from.p), b = projection(m.to.p);
       gPalaceTop.append("path").attr("d", `M${a[0]},${a[1]}L${b[0]},${b[1]}`).attr("fill", "none").attr("stroke", "var(--palace-2)").style("pointer-events", "none")
         .attr("stroke-width", 1.6 / k).attr("stroke-dasharray", `${5 / k} ${3 / k}`).attr("marker-end", "url(#palArrow)");
       gPalaceTop.append("circle").attr("cx", a[0]).attr("cy", a[1]).attr("r", 3 / k).attr("fill", "var(--paper)").attr("stroke", "var(--palace-2)").attr("stroke-width", 1.4 / k);
-      // 이름표는 화살 끝 너머에(가운데에 두면 궁 이름과 겹침)
-      const east = b[0] >= a[0];
-      lab(b[0] + (east ? 6 : -6) / k, b[1] + 3.5 / k, `${m.y} ${m.what}`, 10, 400).attr("text-anchor", east ? "start" : "end");
+      L.arrows.push({ txt: `${m.y} ${m.what}`, a, b }); L.dots.push([a, 5], [b, 6]); L.lines.push([a, b]);
     });
     const r = palace.residence.find(r => y >= +r.from.slice(0, 4) && y < +r.to.slice(0, 4));
     if (r) {
-      const p = projection(r.at.p);
-      gPalaceTop.append("path").attr("d", d3.symbol(d3.symbolStar, 150 / (k * k))()).attr("transform", `translate(${p[0]},${p[1] - 24 / k})`)
+      const p = projection(r.at.p);   // 별표는 거처 건물 자리에, 이름표는 둘레 빈자리에
+      gPalaceTop.append("path").attr("d", d3.symbol(d3.symbolStar, 150 / (k * k))()).attr("transform", `translate(${p[0]},${p[1]})`)
         .attr("fill", "var(--palace)").attr("stroke", "var(--palace-2)").attr("stroke-width", 1 / k);
-      lab(p[0], p[1] - 34 / k, `${r.who}(${(r.title_y && r.title_y[String(y)]) || r.title}) 거처`, 10, 600);
+      L.res = { txt: `${r.who}(${(r.title_y && r.title_y[String(y)]) || r.title}) 거처`, p }; L.dots.push([p, 8]);
     }
+    palLab = L;
+  }
+  // 궁궐 글자: 궁 이름 → 임금 거처 → 화살표 이름표 → 궁 아래 설명 순으로, 이름표마다 후보 자리를 차례로 보고
+  // 연도 판·사건 카드·단추·구 이름·이전 경계 연도·먼저 놓은 글자·별표·화살표 양 끝과 겹치지 않는 첫 자리에 쓴다.
+  // 화살표 선은 되도록 피하고(선을 넘지 않는 자리가 없을 때만 넘음, 궁 이름은 궁 안에 남도록 선은 따지지 않음), 그래도 자리가 없으면 궁 이름·거처·화살표 이름표는 첫 후보에,
+  // 궁 아래 설명은 그 해엔 쓰지 않는다. 역 이름은 여기서 놓은 자리(palBoxes)를 피한다. 확대·이동할 때마다 다시 자리를 찾는다(scheduleStLabels)
+  const palTextW = (() => { const cx = document.createElement("canvas").getContext("2d"); return (txt, fs, fw) => { cx.font = `${fw} ${fs}px "SLM Sans KR", "IBM Plex Sans KR", sans-serif`; return cx.measureText(txt).width; }; })();
+  function drawPalaceLabels() {
+    gPalaceLab.selectAll("*").remove(); palBoxes = [];
+    if (!palLab || !palace || !layerOn.palace) return;
+    const t = d3.zoomTransform(svg.node()), S = q => t.apply(q);
+    const hard = overlayBoxes(t).concat(ringBoxes), soft = [], out = [];
+    const ov = (a, b) => !(a[2] < b[0] || a[0] > b[2] || a[3] < b[1] || a[1] > b[3]);
+    palLab.dots.forEach(([q, rr]) => { const [x, y] = S(q); hard.push([x - rr, y - rr, x + rr, y + rr]); });
+    palLab.lines.forEach(([a, b]) => {
+      const A = S(a), B = S(b), n = Math.ceil(Math.hypot(B[0] - A[0], B[1] - A[1]) / 6);
+      for (let i = 1; i < n; i++) { const x = A[0] + (B[0] - A[0]) * i / n, y = A[1] + (B[1] - A[1]) * i / n; soft.push([x - 2, y - 2, x + 2, y + 2]); }
+    });
+    // c: [x, y(글자 가운데), 맞춤]. 놓으면 화면 상자를, 못 놓으면 null
+    const put = (txt, fs, fw, cands, force, lines = true) => {   // lines: 화살표 선도 피할지(궁 이름은 선 위에 얹혀도 됨)
+      const w = palTextW(txt, fs, fw) + 6, h = fs * 1.3 + 2;
+      const box = ([x, y, an]) => { const x0 = an === "start" ? x : an === "end" ? x - w : x - w / 2; return [x0, y - h / 2, x0 + w, y + h / 2]; };
+      const inView = b => b[0] >= 2 && b[1] >= 2 && b[2] <= W - 2 && b[3] <= H - 2;
+      let pick = null;
+      for (const strict of lines ? [true, false] : [false]) {
+        pick = cands.find(c => { const b = box(c); return inView(b) && !hard.some(o => ov(b, o)) && !(strict && soft.some(o => ov(b, o))); });
+        if (pick) break;
+      }
+      if (!pick && force) pick = cands.find(c => inView(box(c))) || cands[0];   // 자리가 없으면 화면 안 첫 후보에
+      if (!pick) return null;
+      const b = box(pick); hard.push(b); palBoxes.push(b); out.push({ txt, fs, fw, c: pick });
+      return b;
+    };
+    const G = 4;   // 글자와 점·궁 테두리 사이
+    const named = palLab.names.map(n => {
+      const [cx, cy] = S(n.c), [x0, y0] = S(n.bb[0]), [x1, y1] = S(n.bb[1]), h = 11.5 + 3;
+      const b = put(n.txt, 11.5, 600, [[cx, cy, "middle"], [cx, cy - h, "middle"], [cx, cy + h, "middle"], [x1 + G, cy, "start"], [x0 - G, cy, "end"],
+        [cx, y0 - h / 2 - G, "middle"], [cx, y1 + h / 2 + G, "middle"], [x1 + G, y0 + h / 2, "start"], [x0 - G, y0 + h / 2, "end"], [x1 + G, y1 - h / 2, "start"], [x0 - G, y1 - h / 2, "end"]], true, false);
+      return { n, b };
+    });
+    if (palLab.res) {
+      const [x, y] = S(palLab.res.p), h = 13;
+      put(palLab.res.txt, 10, 600, [[x, y - 8 - h / 2, "middle"], [x + 10, y, "start"], [x - 10, y, "end"], [x, y + 8 + h / 2, "middle"],
+        [x + 8, y - 8 - h / 2, "start"], [x - 8, y - 8 - h / 2, "end"], [x + 8, y + 8 + h / 2, "start"], [x - 8, y + 8 + h / 2, "end"]], true);
+    }
+    palLab.arrows.forEach(m => {
+      const A = S(m.a), B = S(m.b), h = 13, e = B[0] >= A[0], fw = e ? "start" : "end", bw = e ? "end" : "start", d = e ? 1 : -1;
+      const len = Math.hypot(B[0] - A[0], B[1] - A[1]) || 1, nx = -(B[1] - A[1]) / len, ny = (B[0] - A[0]) / len, M = [(A[0] + B[0]) / 2, (A[1] + B[1]) / 2];
+      const cands = [[B[0] + d * 8, B[1], fw], [B[0], B[1] - 8 - h / 2, "middle"], [B[0], B[1] + 8 + h / 2, "middle"], [B[0] + d * 8, B[1] - h, fw], [B[0] + d * 8, B[1] + h, fw],
+        [B[0] - d * 8, B[1] - h, bw], [B[0] - d * 8, B[1] + h, bw], [A[0] - d * 8, A[1], bw], [M[0] + nx * 10, M[1] + ny * 10, "middle"], [M[0] - nx * 10, M[1] - ny * 10, "middle"]];
+      // 화살 끝이 화면 밖이면 보이는 구간을 따라서도 자리를 찾는다
+      [0.8, 0.65, 0.5, 0.35, 0.2].forEach(f => { const x = A[0] + (B[0] - A[0]) * f, y = A[1] + (B[1] - A[1]) * f; cands.push([x + nx * 10, y + ny * 10, "middle"], [x - nx * 10, y - ny * 10, "middle"], [x + d * 8, y, fw], [x - d * 8, y, bw]); });
+      put(m.txt, 10, 400, cands, true);
+    });
+    named.forEach(({ n, b }) => {
+      if (!n.note) return;
+      const mx = (b[0] + b[2]) / 2, h = 9.5 + 3;
+      put(n.note, 9.5, 400, [[mx, b[3] + h / 2, "middle"], [mx, b[1] - h / 2, "middle"], [b[2] + G, (b[1] + b[3]) / 2, "start"], [b[0] - G, (b[1] + b[3]) / 2, "end"],
+        [mx, b[3] + h * 1.5, "middle"], [mx, b[1] - h * 1.5, "middle"]], false);
+    });
+    const k = t.k;
+    gPalaceLab.selectAll("text").data(out).join("text")
+      .attr("x", d => t.invert([d.c[0], d.c[1]])[0]).attr("y", d => t.invert([d.c[0], d.c[1]])[1]).attr("dy", "0.35em").attr("text-anchor", d => d.c[2])
+      .attr("font-size", d => d.fs / k).attr("font-weight", d => d.fw).attr("fill", "var(--palace-2)")
+      .attr("paint-order", "stroke").attr("stroke", "var(--paper)").attr("stroke-width", 3 / k).attr("stroke-linejoin", "round")
+      .style("pointer-events", "none").text(d => d.txt);
   }
   function drawJoseon() {
     gJoseon.selectAll("*").remove();
@@ -1203,6 +1268,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     renderLandTable();
     renderEvPop();
     drawRingLabels();
+    drawPalaceLabels();
     drawStationLabels();
     // log highlight
     d3.selectAll("#log .ev").attr("class", d => "ev " + (d.year === year ? "now" : d.year < year ? "past" : "future"));
@@ -1296,7 +1362,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     if (!ev.target.closest("[data-more]")) return;
     showTab("log");   // 연표 탭을 열면 그 해 항목으로 내려간다
   });
-  d3.select("#evToggle").on("click", function () { evOn = !evOn; this.setAttribute("aria-pressed", evOn ? "true" : "false"); renderEvPop(); drawRingLabels(); drawStationLabels(); });
+  d3.select("#evToggle").on("click", function () { evOn = !evOn; this.setAttribute("aria-pressed", evOn ? "true" : "false"); renderEvPop(); drawRingLabels(); drawPalaceLabels(); drawStationLabels(); });
 
   // ---------- 지도 위 글자가 피할 자리 ----------
   // 화면 좌표(지도 SVG 기준) 상자 [x0, y0, x1, y1]. 연도·시기·수치 글자는 글자가 차지한 폭만(상자째 잡으면 판 전체 폭이 막힘),
@@ -1365,7 +1431,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   const ST_LABEL_PXKM = 30;
   let guLabs = [];
   let stLabRaf = null;
-  function scheduleStLabels() { if (stLabRaf) return; stLabRaf = requestAnimationFrame(() => { stLabRaf = null; drawRingLabels(); drawStationLabels(); }); }
+  function scheduleStLabels() { if (stLabRaf) return; stLabRaf = requestAnimationFrame(() => { stLabRaf = null; drawRingLabels(); drawPalaceLabels(); drawStationLabels(); }); }
   function drawStationLabels() {
     gStLab.selectAll("*").remove();
     if (pxPerKm() * kNow < ST_LABEL_PXKM) return;
@@ -1377,7 +1443,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     if (layerOn.rail && rail) rail.stations.filter(st => st.open <= year && (!st.close || year < st.close) && !have.has(st.name))
       .forEach(st => cand.push({ name: st.name, p: projection([st.lng, st.lat]), pri: 5 }));
     cand.sort((a, b) => b.pri - a.pri);
-    const fs = 11, gap = 5, placed = overlayBoxes(t).concat(ringBoxes), out = [];
+    const fs = 11, gap = 5, placed = overlayBoxes(t).concat(ringBoxes, palBoxes), out = [];
     const hit = (a) => placed.some(b => !(a[2] < b[0] || a[0] > b[2] || a[3] < b[1] || a[1] > b[3]));
     for (const c of cand) {
       const [sx, sy] = t.apply(c.p);
@@ -1724,7 +1790,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   d3.selectAll("#palaceLegend .bseg button, #palMove button").on("click", function () {
     palMove = !palMove;
     d3.selectAll("#palaceLegend .bseg button, #palMove button").attr("aria-pressed", palMove ? "true" : "false");
-    drawPalace();
+    drawPalace(); drawPalaceLabels(); drawStationLabels();
   });
   // 전체 켜기·끄기: 자료가 있어 보이는 칩만
   function setAll(on) {
