@@ -408,7 +408,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     <span><svg width="20" height="12" viewBox="0 0 20 12"><path d="M1,6H19" stroke="var(--road-a)" stroke-width="2"/></svg>진한 선: 개통한 해부터. 개통일을 확인한 길과, 국가표준노드링크 옛 판(2011년 판부터)에 처음 나온 해로 개통 해를 추정한 길</span>
     <span><svg width="20" height="12" viewBox="0 0 20 12"><path d="M1,6H19" stroke="var(--road-a)" stroke-width="2" stroke-opacity=".72"/></svg>옅은 선: 『서울 도시계획 연혁』 도로 연혁도에 도시계획 도로(광로·대로·중로)로 그려진 해부터. 실제로 뚫린 해는 그 뒤일 수 있음</span>
     <span><svg width="20" height="12" viewBox="0 0 20 12"><path d="M1,6H19" stroke="var(--road-a)" stroke-width="2" stroke-opacity=".72" stroke-dasharray="5 3"/></svg>점선: 계획으로 결정됐고 아직 개통 전</span>
-    <span id="roadsNowNote" hidden><svg width="20" height="12" viewBox="0 0 20 12"><path d="M1,6H19" stroke="var(--road-m)" stroke-width="1.4" stroke-dasharray="1 3" stroke-linecap="round"/></svg>점점이: 언제 생겼는지 아직 모르는 길. 국가표준노드링크 옛 판(2008년 판부터)에 처음 보이는 해부터 그림(늦어도 그때는 있었음)</span>
+    <span id="roadsNowNote" hidden><svg width="20" height="12" viewBox="0 0 20 12"><path d="M1,6H19" stroke="var(--road-m)" stroke-width="1.4" stroke-dasharray="1 3" stroke-linecap="round"/></svg>점점이: 언제 생겼는지 아직 모르는 길. 국가표준노드링크 옛 판에 처음 보이는 해부터 그림(늦어도 그때는 있었음). 자료실에서 받을 수 있는 가장 오래된 판이 2008년 11월 판이라, 그 판에 이미 있던 길은 2008년에 한꺼번에 나타남. 대부분 그보다 일찍 생긴 길임</span>
     <span id="roadsGoneNote" hidden><svg width="20" height="12" viewBox="0 0 20 12"><path d="M1,6H19" stroke="var(--road-x)" stroke-width="3.6"/><path d="M1,6H19" stroke="var(--paper)" stroke-width="1.2"/></svg>지금은 없는 고가도로(있던 해에만)</span>
     <span class="meta">선을 누르면 이름, 개통일과 근거, 연혁도에 처음 그려진 해, 표준노드링크 옛 판에 처음 나온 해가 나옵니다</span>
   </div>
@@ -802,7 +802,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     const nl = roads.nlVers || [], nd = y => { const v = nl.find(v => v[0] === y); return v ? dot(v[1]) : y + "년"; };
     if (!o && sg.oh) { const i = nl.findIndex(v => v[0] === sg.oh);
       h += `<div class="meta">개통 추정: 국가표준노드링크 ${nd(sg.oh)} 판에 처음 나오고 바로 앞 ${nd(nl[i - 1][0])} 판에는 없음. 그 사이에 개통한 것으로 보고 ${sg.oh}년부터 그림. 개통 뒤 한두 판 늦게 실리거나 개통 전에 먼저 실린 예가 있음</div>`; }
-    else if (!o && sg.hb) h += `<div class="meta">국가표준노드링크 ${nd(sg.hb)} 판부터 있음${sg.hb === nl[0]?.[0] ? "(받은 가장 오래된 판)" : sg.hb <= 2010 ? "(2010년 판까지는 실린 길이 적어 그 전에 없었다고 볼 수 없음)" : "(이 판에서 실린 길이 크게 늘어 새로 난 길인지 가르지 않음)"}. 늦어도 그때는 있었음</div>`;
+    else if (!o && sg.hb) h += `<div class="meta">국가표준노드링크 ${nd(sg.hb)} 판부터 있음${sg.hb === nl[0]?.[0] ? "(자료실에서 받을 수 있는 가장 오래된 판이라 그보다 일찍 생겼을 수 있음)" : sg.hb <= 2010 ? "(2010년 판까지는 실린 길이 적어 그 전에 없었다고 볼 수 없음)" : "(이 판에서 실린 길이 크게 늘어 새로 난 길인지 가르지 않음)"}. 늦어도 그때는 있었음</div>`;
     h += !sheet ? `<div class="meta">『서울 도시계획 연혁』 도로 연혁도(1936–1989)에서 도시계획 도로로 그려진 해를 찾지 못함</div>`
       : sg.pm ? `<div class="meta">도시계획: ${sg.p}년 도로 연혁도 「${sheet.midTitle || sheet.title}」에 중로로 처음 그려짐${sg.pb ? ` · ${sg.pb}년 그림부터 광로·대로` : ""}(『서울 도시계획 연혁』, 그림 대조)</div>`
       : `<div class="meta">도시계획: ${sg.p}년 도로 연혁도 「${sheet.title}」에 광로·대로로 처음 그려짐(『서울 도시계획 연혁』, 그림 대조)</div>`;
