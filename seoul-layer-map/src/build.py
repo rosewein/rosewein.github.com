@@ -183,8 +183,12 @@ if data.get("hanseong") and os.path.exists(F("method_hanseong.html")):
     SRC_PAR = '<p class="small">출처:'
     mh = data["methodHtml"]
     i = mh.index(SRC_PAR); j = mh.index("</p>", i)
-    hs_src = " 1914년 앞 한성부·경성부 경계는 국사편찬위원회 HGIS 「행정구역 GIS 데이터(1910–1945년)」 폴리곤."
-    data["methodHtml"] = mh[:i] + open(F("method_hanseong.html")).read() + mh[i:j] + hs_src + mh[j:]
+    hs_src = (" 1914년 앞 한성부·경성부 경계는 국사편찬위원회 HGIS 「행정구역 GIS 데이터(1910–1945년)」 폴리곤."
+              " 성저십리 경계 서술과 조선 후기 단계의 『대동지지』 한성부 강역(100·424쪽에서 다시 인용)은 서울역사편찬원 『조선시대 다스림으로 본 성저십리』(서울역사 중점연구 5, 2019).")
+    mh = mh[:i] + open(F("method_hanseong.html")).read() + mh[i:j] + hs_src + mh[j:]
+    # method.html의 「1914년 이전 … 그 경계는 이 지도에 그리지 않았습니다」는 이제 그리므로 뺀다(설명문이 대신함)
+    OLD_P = re.search(r'<p><b>1914년 이전</b>[^<]*그리지 않았습니다\.</p>\n?', mh)
+    data["methodHtml"] = mh.replace(OLD_P.group(0), "", 1) if OLD_P else mh
 # 버스: 2004년 7월 개편 이후 해마다 그릴 노선(2026년 노선망에서 그 해 뒤에 생긴 노선을 뺀다)
 OLD_FROM = 1998
 if data["bus2026"] and os.path.exists(F("route_years.json")):

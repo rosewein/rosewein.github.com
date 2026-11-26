@@ -419,6 +419,9 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     <span><svg width="20" height="12" viewBox="0 0 20 12"><path d="M1,6H19" stroke="var(--joseon)" stroke-width="1.6" stroke-dasharray="4 4"/></svg>나룻배로 건너는 곳</span>
     <span><svg width="46" height="12" viewBox="0 0 46 12"><rect x="2" y="2" width="8" height="8" fill="var(--joseon-2)"/><circle cx="22" cy="6" r="4" fill="var(--paper)" stroke="var(--joseon-2)" stroke-width="1.6"/><path d="M34,10L38,2L42,10Z" fill="var(--joseon)" stroke="var(--joseon-2)" stroke-width=".8"/></svg>역 · 원 · 나루</span>
   </div>
+  <div class="legend-bus" id="gangyeokLegend" hidden>
+    <span id="gangyeokNote"><svg width="20" height="12" viewBox="0 0 20 12"><path d="M2,6H13" stroke="var(--ink-2)" stroke-width="1.3" stroke-linecap="round"/><path d="M19,6L13,2.6V9.4Z" fill="var(--ink-2)"/></svg>도성에서 이웃 고을 경계까지 거리(『대동지지』, 19세기 중엽). 이때 경계선 자료는 없어 선은 긋지 않음. 화살표 자리와 길이는 방향만 보임</span>
+  </div>
   <div class="legend-bus" id="palaceLegend" hidden>
     <div class="bseg" role="group" aria-label="궁궐 옮겨 간 건물"><span>궁궐</span><button type="button" data-pm="1" aria-pressed="false">옮겨 간 건물 보기</button></div>
     <span><svg width="46" height="12" viewBox="0 0 46 12"><defs><pattern id="palHatchLg" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="4" stroke="var(--palace)" stroke-width="1.6"/></pattern></defs><rect x="1" y="2" width="12" height="8" fill="var(--palace)" fill-opacity=".42" stroke="var(--palace-2)"/><rect x="17" y="2" width="12" height="8" fill="url(#palHatchLg)" stroke="var(--palace-2)"/><rect x="33" y="2" width="12" height="8" fill="var(--palace)" fill-opacity=".18" stroke="var(--palace-2)" stroke-dasharray="3 2"/></svg>궁궐: 궁으로 쓰임 · 크게 헐리거나 다른 쓰임 · 복원 사업 뒤(궁역은 지금 모습)</span>
@@ -662,6 +665,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   const gBuildDot = root.insert("g", () => gHit.node());
   // 조선 후기 선·점은 동 누르기 영역 위(눌러서 근거를 봄), 버스·전차 아래
   const gJoseon = root.append("g");
+  const gGy = root.append("g");   // 조선 후기 한성부 강역(『대동지지』) 화살표
   const gPalace = root.insert("g", () => gNew.node());
   const gBus = root.append("g"), gTram = root.append("g"), gRail = root.append("g"), gMetro = root.append("g"), gBusTop = root.append("g"),
         gRingLab = root.append("g"), gStLab = root.append("g"), gLabels = root.append("g");
@@ -915,6 +919,79 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
       .attr("font-size", p => (p.kind === "문" ? 9.5 : 11) / kNow).attr("stroke-width", 3 / kNow);
     gJoseon.selectAll("text.jr").attr("x", d => d._p[0]).attr("y", d => d._p[1] - 6 / kNow).attr("font-size", 10.5 / kNow).attr("stroke-width", 3 / kNow);
   }
+  // 조선 후기 한성부 강역: 이 시기 경계선 자료가 없어(1910년 선이 조선 후기와 같은지 알 수 없음) 선 대신
+  // 『대동지지』(19세기 중엽)가 적은 도성에서 8방위 이웃 고을 경계까지의 거리(리)를 보인다(이지가 정함, 2026-11-26).
+  // 숫자는 서울역사편찬원 『조선시대 다스림으로 본 성저십리』(2019) 100·424쪽에서 다시 인용. 『대동지지』 원문은 확인 못 함.
+  // 리를 km로 바꾸지 않는다(환산값과 잰 기준을 확인하지 못함). 지도 위 화살표 길이는 화면에서 일정하고 거리와 상관없다.
+  const GANGYEOK = [   // [방위, 이웃 고을, 리, 화면 x, 화면 y(아래가 +)]
+    ["동", "양주", 15, 1, 0], ["동남", "광주", 20, 1, 1], ["남", "과천", 10, 0, 1], ["서남", "시흥", 15, -1, 1],
+    ["서", "양천", 15, -1, 0], ["서북", "고양", 20, -1, -1], ["북", "양주", 20, 0, -1], ["동북", null, 15, 1, -1]];
+  const GY_SRC = "『대동지지』(김정호, 19세기 중엽) 경도 한성부 강역. 서울역사편찬원 『조선시대 다스림으로 본 성저십리』(2019) 100·424쪽에서 다시 인용";
+  const gyText = g => `${g[1] ? g[1] + " 경계" : g[0] + "쪽"} ${g[2]}리`;
+  const gyCenter = () => { const gates = joseon.points.filter(p => p.kind === "문"); return [d3.mean(gates, p => p.lng), d3.mean(gates, p => p.lat)]; };   // 도성 가운데(성문 7곳의 평균)
+  function drawGangyeok() {
+    gGy.selectAll("*").remove();
+    const on = !!(joseon && layerOn.joseon && year < 1899);
+    d3.select("#gangyeokLegend").attr("hidden", on ? null : true);
+    if (!on) return;
+    const info = g => showInfo(`<b>한성부 강역 · ${g[0]}</b><div class="meta">도성에서 ${g[1] ? g[1] + " 경계까지" : g[0] + "쪽으로"} ${g[2]}리</div><div class="meta">근거: ${GY_SRC}. 이때 한성부 경계선 자료는 없어 지도에 선을 긋지 않았습니다. 화살표 자리와 길이는 방향만 보입니다.</div>`);
+    GANGYEOK.forEach(g => {
+      const n = Math.hypot(g[3], g[4]), ux = g[3] / n, uy = g[4] / n;
+      const a = gGy.append("g").datum({ g, ux, uy }).attr("class", "gy").style("cursor", "pointer").on("click", (ev) => { ev.stopPropagation(); info(g); });
+      a.append("path").attr("class", "gyl").attr("fill", "none").attr("stroke", "var(--ink-2)").attr("stroke-linecap", "round").attr("vector-effect", "non-scaling-stroke");
+      a.append("path").attr("class", "gyh").attr("fill", "var(--ink-2)");
+      a.append("text").text(gyText(g)).attr("fill", "var(--ink-2)").attr("font-weight", 500).attr("paint-order", "stroke").attr("stroke", "var(--paper-2)");
+    });
+    sizeGangyeok();
+  }
+  // 화살표 자리: 도성 가운데에서 R km 떨어진 곳에서 시작하고, 글자는 화살표 끝(out)이나 옆(s1·s2)에 둔다.
+  // 역·원·나루 이름과 대로 이름, 앞서 놓은 화살표와 겹치지 않고 화면 안에 드는 첫 후보를 고르고,
+  // 없으면 화면 안 후보 가운데 덜 겹치는 것을 고른다(확대·이동할 때마다 다시)
+  const GY_CAND = [[4.2, "out"], [3.6, "out"], [4.9, "out"], [3.1, "out"], [5.6, "out"],
+    ...[4.2, 3.6, 3.1, 4.9].flatMap(R => [[R, "s1"], [R, "s2"]]), [2.6, "out"], [2.6, "s1"], [2.6, "s2"], [6.4, "out"]];
+  function sizeGangyeok() {
+    const els = gGy.selectAll("g.gy"); if (els.empty()) return;
+    const t = d3.zoomTransform(svg.node()), S = q => t.apply(q), L = 20, FS = 11, lh = FS + 4;
+    const ov = (a, b) => !(a[2] < b[0] || a[0] > b[2] || a[3] < b[1] || a[1] > b[3]);
+    const inView = b => b[0] >= 2 && b[1] >= 2 && b[2] <= W - 2 && b[3] <= H - 2;
+    const hard = [];
+    gJoseon.selectAll("path.jp").each(p => { const [x, y] = S(p._p); hard.push([x - 5, y - 5, x + 5, y + 5]); });
+    gJoseon.selectAll("text.jl").each(p => { const [x, y] = S(p._p), fs = p.kind === "문" ? 9.5 : 11, w = palTextW(p.name, fs, 600);
+      hard.push([x + 6, y + 4 - fs, x + 6 + w, y + 7]); });
+    gJoseon.selectAll("text.jr").each(d => { const [x, y] = S(d._p), w = palTextW(d.t, 10.5, 400); hard.push([x - w / 2, y - 6 - 11, x + w / 2, y - 3]); });
+    const c = gyCenter();
+    els.each(function (d) {
+      const lw = palTextW(gyText(d.g), FS, 500) + 4, ux = d.ux, uy = d.uy;
+      const geom = ([R, pos]) => {
+        const q = projection([c[0] + ux * R / (111.32 * Math.cos(c[1] * Math.PI / 180)), c[1] - uy * R / 111.32]), s0 = S(q);
+        let cx, cy, an;   // 글자 가운데(화살표 시작점 기준 px)와 맞춤
+        if (pos === "out") {
+          cx = ux * (L + 4); cy = uy * (L + 4) + (uy > 0.3 ? 7 : uy < -0.3 ? -7 : 0); an = ux > 0.3 ? "start" : ux < -0.3 ? "end" : "middle";
+        } else {
+          const sg = pos === "s1" ? 1 : -1, px = -uy * sg, py = ux * sg, mx = ux * L / 2, my = uy * L / 2;
+          if (Math.abs(py) > 0.9) { cx = mx; cy = my + py * (lh / 2 + 2); an = "middle"; }
+          else { cx = mx + px * 6; cy = my + py * 6; an = px > 0 ? "start" : "end"; }
+        }
+        const x0 = s0[0] + cx - (an === "start" ? 0 : an === "end" ? lw : lw / 2), y0 = s0[1] + cy - lh / 2;
+        const lab = [x0, y0, x0 + lw, y0 + lh], e = [s0[0] + ux * L, s0[1] + uy * L];
+        const arr = [Math.min(s0[0], e[0]) - 3, Math.min(s0[1], e[1]) - 3, Math.max(s0[0], e[0]) + 3, Math.max(s0[1], e[1]) + 3];
+        const hits = hard.filter(o => ov(lab, o) || ov(arr, o)).length;
+        return { q, lab, arr, tx: cx, ty: cy + 4, an, hits, ok: inView(lab) && inView(arr) };
+      };
+      const cands = GY_CAND.map(geom);
+      const pick = cands.find(g => g.ok && !g.hits) || cands.filter(g => g.ok).sort((a, b) => a.hits - b.hits)[0] || cands[0];
+      hard.push(pick.lab, pick.arr);
+      d.s = pick.q; d.tx = pick.tx; d.ty = pick.ty; d.an = pick.an;
+    });
+    const k = kNow, Lk = L / k, Hk = 5 / k;
+    els.each(function (d) {
+      const e = [d.s[0] + d.ux * Lk, d.s[1] + d.uy * Lk], px = -d.uy, py = d.ux, el = d3.select(this);
+      el.select("path.gyl").attr("d", `M${d.s[0]},${d.s[1]}L${e[0] - d.ux * Hk},${e[1] - d.uy * Hk}`).attr("stroke-width", 1.3);
+      el.select("path.gyh").attr("d", `M${e[0]},${e[1]}L${e[0] - d.ux * Hk * 1.6 + px * Hk * 0.8},${e[1] - d.uy * Hk * 1.6 + py * Hk * 0.8}L${e[0] - d.ux * Hk * 1.6 - px * Hk * 0.8},${e[1] - d.uy * Hk * 1.6 - py * Hk * 0.8}Z`);
+      el.select("text").attr("x", d.s[0] + d.tx / k).attr("y", d.s[1] + d.ty / k).attr("text-anchor", d.an)
+        .attr("font-size", FS / k).attr("stroke-width", 3 / k);
+    });
+  }
   if (bus) { document.getElementById("busChip").hidden = false; document.getElementById("busBlock").hidden = false; }
   if (land) { document.getElementById("landChip").hidden = false; document.getElementById("landBlock").hidden = false; }
   if (bld) document.getElementById("bldChip").hidden = false;
@@ -979,7 +1056,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     gLabels.selectAll("text").attr("font-size", d => (d.fs || 11) / kNow).attr("stroke-width", 3 / kNow);
     gRail.selectAll("rect").call(sizeRail);
     sizeBus();
-    sizeJoseon(); drawPalace();
+    sizeJoseon(); sizeGangyeok(); drawPalace();
     gVillage.selectAll("circle").attr("r", 1.1 / kNow);
     gBuildDot.selectAll("circle").attr("r", q => bldR(q.v));
     landPat.attr("width", 6 / kNow).attr("height", 6 / kNow); landPatBg.attr("width", 6 / kNow).attr("height", 6 / kNow);
@@ -1196,6 +1273,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
 
     drawVillage(fillOff);   // 땅값이나 새 건물 면 위에서는 마을버스 땅을 옅게
     drawJoseon();
+    drawGangyeok();
     drawOld();
     drawPalace();
     gDong.style("display", layerOn.dong ? null : "none");
@@ -1354,7 +1432,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     stats.push(offArea ? `시역 ${offArea}㎢` : hsPhase(year) && year >= 1899 ? `시역 ${hanseong.km2}㎢(1910년 경계)` : "시역 —");
     if (active.length) stats.push(`궤도 ${active.length}구간 ${km.toFixed(1)}km`);
     if (metro && year >= 1974) stats.push(`역 ${metro.stations.filter(st => st.first <= year).length}곳`); else if (year >= 1968 && !active.length) stats.push("전차 폐지(1968)");
-    if (year < 1899 && joseon) { const n = k => joseon.points.filter(p => p.kind === k).length; stats.splice(0, stats.length, `대로 ${joseon.roads.filter(r => /^r\d$/.test(r.id)).length}갈래 · 역 ${n("역")} · 원 ${n("원")} · 나루 ${n("나루")}`); }
+    if (year < 1899 && joseon) { const n = k => joseon.points.filter(p => p.kind === k).length; stats.splice(0, stats.length, `대로 ${joseon.roads.filter(r => /^r\d$/.test(r.id)).length}갈래 · 역 ${n("역")} · 원 ${n("원")} · 나루 ${n("나루")}`); if (layerOn.joseon) stats.push("화살표: 이웃 고을 경계까지 거리(『대동지지』)"); }
     d3.select("#statLabel").html(stats.join(" · "));
     d3.select("#statStrip").selectAll("span").data(stats).join("span").text(d => d);
 
