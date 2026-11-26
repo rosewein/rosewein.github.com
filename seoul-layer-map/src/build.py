@@ -96,12 +96,18 @@ data = {
   # 땅값: landprice.py가 만든 법정동별 ㎡당 공시지가 중앙값(1990–). 파일이 없으면 칩이 나타나지 않음
   "land": json.load(open(F("landprice.json"))) if os.path.exists(F("landprice.json")) else None,
 }
+# 역 둘레 땅값(개통 전후): station_land_layer.py가 만든 역별 고리 값과 모양. 파일이 없으면 칩이 나타나지 않음
+data["stationLand"] = json.load(open(F("station_land.json"))) if os.path.exists(F("station_land.json")) else None
 # 땅값 설명문은 자료가 있을 때만 「이 지도를 읽는 법」에 넣는다(출처 문단 앞 + 출처 한 줄)
 if data["land"] and os.path.exists(F("method_land.html")):
     SRC_AT = "연계 좌표정보」(2019년 6월 20일)."   # 출처 문단에서 버스 자료 다음, 나무위키 연혁 앞
     land_src = " 땅값은 서울 열린데이터광장 「서울시 개별공시지가 정보」(OA-1180, " + f'{data["land"]["years"][0]}~{data["land"]["years"][-1]}' + "년 파일, 원본 서울부동산정보광장)."
     assert method_html.count(SRC_AT) == 1, "method.html 출처 문단이 바뀜 — build.py의 SRC_AT을 고칠 것"
     data["methodHtml"] = method_html.replace('<p class="small">출처:', open(F("method_land.html")).read() + '<p class="small">출처:', 1).replace(SRC_AT, SRC_AT + land_src, 1)
+# 역 둘레 땅값 설명문: 땅값 설명 뒤, 출처는 땅값 출처 뒤에 한 줄
+if data["stationLand"] and data["land"] and os.path.exists(F("method_station_land.html")):
+    st_src = " 역 둘레 땅값의 필지 위치는 V-World 「연속지적도형정보」(2026-11-08·2016-01-13분)와 「토지이동이력정보」(2026-10-31분)로 찾음(둘 다 V-World 표기 CC BY)."
+    data["methodHtml"] = data["methodHtml"].replace('<p class="small">출처:', open(F("method_station_land.html")).read() + '<p class="small">출처:', 1).replace(land_src, land_src + st_src, 1)
 # 버스: 2004년 7월 개편 이후 해마다 그릴 노선(2026년 노선망에서 그 해 뒤에 생긴 노선을 뺀다)
 OLD_FROM = 1998
 if data["bus2026"] and os.path.exists(F("route_years.json")):

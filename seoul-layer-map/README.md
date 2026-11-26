@@ -39,6 +39,7 @@
 | 버스 정류장 좌표, 노선 ID | 버스 선형, 노선 연도 판단 | [kyckang/SeoulTransitMap_data](https://github.com/kyckang/SeoulTransitMap_data) (서울시·TOPIS 원자료) | 저장소 README 표기: 공공누리 제1유형(출처 표시) |
 | 지하철역 좌표 | `data/metro.json` | 서울시 역사마스터 정보([sudo-happy/data-archive](https://github.com/sudo-happy/data-archive) 정리본) | 서울시 공공데이터(출처 표시). 정리본 저장소의 라이선스 표기는 찾지 못함 |
 | 개별공시지가 | `data/landprice.json`, `src/landprice.py` | 서울 열린데이터광장 「서울시 개별공시지가 정보」(OA-1180) 1990–2026년 연도별 파일(2026-11-26 받음, 원본 서울부동산정보광장) | 데이터셋 페이지 표기: 이용허락범위 제한 없음. 공공데이터포털의 같은 자료(15052418) 표기는 공공누리 제1유형(출처 표시) |
+| 연속지적도형정보, 토지이동이력정보 | 역 둘레 땅값에서 필지 위치를 찾는 데만 씀(`src/cad_points.py`, `src/cad_points2016.py`, `src/parcel_lineage.py`, `src/parcel_locations.py`). 지도에는 역별 고리 값(`data/station_land.json`)만 들어감 | V-World 「연속지적도형정보」(dsId=23) 서울 2026-11-08분·2016-01-13분, 「토지이동이력정보」(dsId=13) 서울 2026-10-31분(2026-11-26 받음, 로그인 필요) | V-World 데이터셋 페이지 표기: CC BY |
 | 법정동 경계 | `data/emd_topo.json` | [southkorea/seoul-maps](https://github.com/southkorea/seoul-maps) (통계청·행정안전부 원자료) | 저장소 README 표기: Apache 2.0 |
 | 폐역 좌표 일부 | `data/rail.json` | OpenHistoricalMap | CC0 |
 | 전차·철도·지하철 연혁, 행정구역 변천 | 연표, `data/tram.json`, `data/years.json`, `data/gu_periods.json` | 위키백과, 한국민족문화대백과사전, 서울연구원, 서울시 미디어허브, 국토교통부·서울시 보도자료 등 | 날짜와 사실 위주로 옮겼고, 출처는 지도 아래 설명에 적음 |
