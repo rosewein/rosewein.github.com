@@ -74,7 +74,9 @@ seoul-layer-map/
 
 ## 다시 만들기
 
-`src/`의 스크립트는 만든 사람의 작업 환경에 맞춰 쓴 것이라 파일 경로가 고정되어 있습니다. 원자료(BBBike 서울 OSM 추출본, 열린데이터광장 CSV, 나무위키 문서 모음)는 크기와 이용 조건 때문에 넣지 않았습니다. 대략의 순서는 다음과 같습니다.
+지도만 다시 만들 때는 저장소를 받은 뒤 `python3 seoul-layer-map/src/build.py` 한 번이면 됩니다. `src/`의 틀과 `data/`의 자료를 읽어 `seoul-layer-map/index.html`을 씁니다.
+
+자료를 처음부터 다시 만드는 스크립트는 원자료(BBBike 서울 OSM 추출본, 열린데이터광장 CSV, 나무위키 문서 모음)가 있어야 돌아갑니다. 원자료는 크기와 이용 조건 때문에 넣지 않았고, 놓인 곳은 환경변수 `SLM_RAW`로 알려 줍니다(경로는 `src/paths.py` 한곳에 모여 있음). 대략의 순서는 다음과 같습니다.
 
 1. `roads.py` — OSM 추출본에서 도로망 그래프 만들기
 2. `bus_parse.py` → `bus_build.py` → `bus_route.py` — 2004년 6월 노선망
@@ -83,7 +85,7 @@ seoul-layer-map/
 5. `bus_dead_parse.py` → `bus_dead_route.py` — 2004년 이후 폐선 노선 복원
 6. `bus2026.py` — 폐선 노선을 넣어 다시 실행
 7. `landprice.py <zip 폴더>` — 개별공시지가 연도별 zip(37개)에서 법정동별 중앙값 `landprice.json` 만들기
-8. `build.py` → `make_publish.py` — `template.html`에 데이터를 넣어 `index.html` 만들기
+8. `build.py` — `template.html`에 데이터를 넣어 `index.html` 만들기(`make_publish.py`의 `wrap()`으로 완전한 문서로 감쌈)
 
 ## 한계
 
