@@ -39,7 +39,7 @@
 | 2026년 버스 노선(정류장 순번) | `data/bus2026.json` | 서울 열린데이터광장 「서울시 버스노선별 정류장별 승하차 인원 정보」(OA-12912, 2026-11-18분) | 서울특별시 공공데이터, 열린데이터광장 이용약관 제11조(저작자·출처 표시 조건 자유이용) |
 | 마을버스 정류장(2015–2022년) | `data/village_layer.json` | 서울 열린데이터광장 OA-12912 연간 파일(해마다 11월 셋째 수요일 하루치), 「서울시 버스노선별 표준정류장ID 연계 좌표정보」(2019-06-20) | 서울특별시 공공데이터, 열린데이터광장 이용약관 제11조(저작자·출처 표시 조건 자유이용) |
 | 버스 정류장 좌표, 노선 ID | 버스 선형, 노선 연도 판단 | [kyckang/SeoulTransitMap_data](https://github.com/kyckang/SeoulTransitMap_data) (서울시·TOPIS 원자료) | 저장소 README 표기: 공공누리 제1유형(출처 표시) |
-| 지하철역 좌표 | `data/metro.json` | 서울시 역사마스터 정보([sudo-happy/data-archive](https://github.com/sudo-happy/data-archive) 정리본) | 서울시 공공데이터(출처 표시). 정리본 저장소의 라이선스 표기는 찾지 못함 |
+| 지하철역 좌표 | `data/metro.json`, 역 둘레 땅값의 노선별 승강장 자리(`src/station_platforms.py`, 결과는 `data/station_land.json`의 고리 중심) | 서울시 역사마스터 정보([sudo-happy/data-archive](https://github.com/sudo-happy/data-archive) 정리본) | 서울시 공공데이터(출처 표시). 정리본 저장소의 라이선스 표기는 찾지 못함 |
 | 지하철역 좌표 일부(8호선 동구릉·장자호수공원·구리, 5호선 미사) | `data/metro_extra.json` | OpenStreetMap 역 자리([kimmdr2/metroscope](https://github.com/kimmdr2/metroscope) `data/network.json`, 2026-10-12 생성). 역사마스터에 없거나(별내선) 선로에서 떨어진(미사) 역. v1.7.2 | © OpenStreetMap contributors, [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/) |
 | 개별공시지가 | `data/landprice.json`, `src/landprice.py` | 서울 열린데이터광장 「서울시 개별공시지가 정보」(OA-1180) 1990–2026년 연도별 파일(2026-11-26 받음, 원본 서울부동산정보광장) | 데이터셋 페이지 표기: 이용허락범위 제한 없음. 공공데이터포털의 같은 자료(15052418) 표기는 공공누리 제1유형(출처 표시) |
 | 건축물대장 표제부, 폐쇄말소대장 표제부(새 건물) | `data/building.json`, `src/building.py` | 서울 열린데이터광장 「서울시 건축물대장 표제부」(OA-22424)와 「서울시 폐쇄말소대장 표제부」(OA-22432), 2026-11-26 받음, 원천 서울 건축주택 종합정보시스템 | 데이터셋 페이지 표기: 이용허락범위 제한 없음. 공공데이터포털의 같은 자료(15049335) 표기는 공공누리 제1유형(출처 표시) |

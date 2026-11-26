@@ -1,5 +1,7 @@
 """역 둘레 같은 필지 변화를 대조 세 가지와 견주고, 역 둘레 개발 정도를 함께 적는다(시험용).
-    python3 -I station_rings_ctrl.py <pnu_price.npz> <loc.npz> <metro.json> <emd_topo.json> <출력 json> [gb_flags.npz]
+    python3 -I station_rings_ctrl.py <pnu_price.npz> <loc.npz> <metro.json> <emd_topo.json> <출력 json> [gb_flags.npz] [--platforms=<json>]
+- --platforms(station_platforms.py 출력)를 주면 환승역을 노선별 승강장으로 나눠 다룬다. 고리 중심은 처음 연 노선의
+  승강장, "열린 역"·"나중에 열릴 역"은 노선마다 그 노선이 선 해의 승강장 좌표로 센다. 주지 않으면 지도 역 점 하나를 쓴다.
 - gb_flags.npz(gb_flags.py)를 주면 개통 5년 전 위치가 그린벨트(2026년 경계) 안인 필지를 역 고리와 대조에서 모두 뺀다.
 - 대상 역: station_rings.py와 같다(T−5 ≥ 1990, T+5 ≤ 2026, 개통 때 1km 안에 먼저 열린 역 없음, 서울 안).
 - 필지: T−5년에 정확한 위치(방법 0–2)가 있고 값이 0보다 큰 필지. T+5년에 열린 역 가운데 가장 가까운 역에 붙인다.
@@ -16,8 +18,9 @@ from scipy.spatial import cKDTree
 from pyproj import Transformer
 from shapely.geometry import Polygon, MultiPolygon, Point
 from shapely.ops import unary_union
-Z = np.load(sys.argv[1]); L = np.load(sys.argv[2]); metro = json.load(open(sys.argv[3])); topo = json.load(open(sys.argv[4]))
-GB = np.load(sys.argv[6]) if len(sys.argv) > 6 else None
+pos = [a for a in sys.argv[1:] if not a.startswith('--')]; opt = dict(a[2:].split('=', 1) for a in sys.argv[1:] if a.startswith('--'))
+Z = np.load(pos[0]); L = np.load(pos[1]); metro = json.load(open(pos[2])); topo = json.load(open(pos[3]))
+GB = np.load(pos[5]) if len(pos) > 5 else None
 yrs = sorted(int(k[1:]) for k in Z.files if k[0] == 'c')
 C = {y: Z[f'c{y}'] for y in yrs}; P = {y: Z[f'p{y}'] for y in yrs}
 tr = Transformer.from_crs(4326, 5186, always_xy=True).transform
@@ -35,16 +38,25 @@ polys = [Polygon(ring_(g['arcs'][0]), [ring_(r) for r in g['arcs'][1:]]) if g['t
          MultiPolygon([Polygon(ring_(pp[0]), [ring_(r) for r in pp[1:]]) for pp in g['arcs']])
          for g in topo['objects']['seoul_neighborhoods_geo']['geometries']]
 seoul = unary_union([p.buffer(0) for p in polys])
-st = [dict(name=s['name'], T=s['first'], lines=sorted(s['opens']), xy=tr(s['lng'], s['lat'])) for s in metro['stations'] if seoul.contains(Point(s['lng'], s['lat']))]
-# 서울 밖 역도 "가장 가까운 열린 역" 계산에는 넣는다
-allst = [(s['first'], tr(s['lng'], s['lat'])) for s in metro['stations']]
-aT = np.array([f for f, _ in allst]); axy = np.array([p for _, p in allst])
+PF = json.load(open(opt['platforms']))['stations'] if 'platforms' in opt else None
+if PF is not None:
+    assert [(p['name'], p['first']) for p in PF] == [(s['name'], s['first']) for s in metro['stations']], 'platforms json이 metro.json과 순서가 다름'
+inS = [seoul.contains(Point(s['lng'], s['lat'])) for s in metro['stations']]
+st = [dict(name=s['name'], T=s['first'], lines=sorted(s['opens']), sid=k,
+           xy=tr(*PF[k]['center']) if PF else tr(s['lng'], s['lat'])) for k, s in enumerate(metro['stations']) if inS[k]]
+# 서울 밖 역도 "가장 가까운 열린 역" 계산에는 넣는다. --platforms면 노선별 승강장 하나하나가 한 점
+if PF:
+    allst = [(y, tr(x, yy), k) for k, p in enumerate(PF) for _, y, x, yy in p['pf']]
+else:
+    allst = [(s['first'], tr(s['lng'], s['lat']), k) for k, s in enumerate(metro['stations'])]
+aT = np.array([f for f, _, _ in allst]); axy = np.array([p for _, p, _ in allst]); aid = np.array([k for _, _, k in allst])
 sxy = np.array([s['xy'] for s in st]); sT = np.array([s['T'] for s in st])
+ainS = np.array([inS[k] for k in aid])
 def eligible(i):
     T = sT[i]
     if T - 5 < 1990 or T + 5 > 2026: return False
-    d = np.hypot(*(sxy - sxy[i]).T)
-    return not np.any((sT < T) & (d <= 1000))
+    d = np.hypot(*(axy[ainS] - sxy[i]).T)   # 개통 때 1km 안에 먼저 열린 역(승강장)이 없음(서울 안)
+    return not np.any((aT[ainS] < T) & (d <= 1000))
 targets = [i for i in range(len(st)) if eligible(i)]
 RINGS = [(0, 250), (250, 500), (500, 1000)]
 res = []
@@ -84,8 +96,8 @@ for b in sorted({int(sT[i]) - 5 for i in targets}):
             fut = np.zeros(len(cb), bool)
         for i in [i for i in group if sT[i] == T]:
             s = st[i]; x0, y0 = sxy[i]
-            # 이 역이 allst 안에서 몇 번인지(같은 좌표)
-            me = np.where(np.hypot(*(axy - sxy[i]).T) < 1)[0]
+            # 이 역의 점(--platforms면 이 역의 모든 승강장)이 allst 안에서 몇 번인지
+            me = np.where(aid == s['sid'])[0]
             d = np.hypot(X - x0, Y - y0)
             mine = np.isin(near, me)
             rec = dict(name=s['name'], T=T, lines=s['lines'], years={}, n={}, dev=None, gb=None)
@@ -121,5 +133,5 @@ for b in sorted({int(sT[i]) - 5 for i in targets}):
                 rec['n'][t - T] = dict(sim=int(okc.sum()), future=int(len(fv)), ring=int(len(rv)))
             res.append(rec)
     print(b, len(group), '역')
-json.dump(res, open(sys.argv[5], 'w'), ensure_ascii=False)
+json.dump(res, open(pos[4], 'w'), ensure_ascii=False)
 print('역', len(res))

@@ -1,5 +1,7 @@
 """역 둘레 땅값 레이어 자료: station_rings_ctrl.py 결과(json)를 지도용으로 줄이고 고리 모양을 붙인다.
-    python3 -I station_land_layer.py <rings_ctrl.json> [출력 json] [--gb=<그린벨트를 넣어 돌린 rings_ctrl json>]   (출력 기본: data/station_land.json)
+    python3 -I station_land_layer.py <rings_ctrl.json> [출력 json] [--gb=<그린벨트를 넣어 돌린 rings_ctrl json>] [--platforms=<json>]   (출력 기본: data/station_land.json)
+- --platforms(station_platforms.py 출력)를 주면 고리 중심을 처음 연 노선의 승강장으로, 보로노이 칸을 노선별 승강장으로 만들고
+  같은 역 승강장의 칸을 합친다. rings_ctrl.json도 같은 --platforms로 돌린 것이어야 범위가 맞는다.
 - --gb를 주면 역마다 개통 5년 전 500m 안 필지 가운데 2026년 그린벨트 안인 비율(gb)을 붙인다(값은 그린벨트 필지를 넣은 계산 그대로).
 
 - 값: 같은 필지 변화에서 '비슷한 땅'(같은 구 · 개통 5년 전 값 10분위 같음 · 열린 역 1km 밖) 변화를 뺀 것(%).
@@ -36,12 +38,17 @@ polys = [Polygon(ring(g["arcs"][0]), [ring(r) for r in g["arcs"][1:]]) if g["typ
          MultiPolygon([Polygon(ring(pp[0]), [ring(r) for r in pp[1:]]) for pp in g["arcs"]])
          for g in topo["objects"]["seoul_neighborhoods_geo"]["geometries"]]
 seoul_ll = unary_union([p.buffer(0) for p in polys]); seoul = transform(fwd, seoul_ll)
-allst = [(s["first"], fwd(s["lng"], s["lat"])) for s in metro["stations"]]
+PF = json.load(open(opt["platforms"]))["stations"] if "platforms" in opt else None
+if PF is not None:
+    assert [(q["name"], q["first"]) for q in PF] == [(s["name"], s["first"]) for s in metro["stations"]], "platforms json이 metro.json과 순서가 다름"
+    allst = [(y, fwd(x, yy), k) for k, q in enumerate(PF) for _, y, x, yy in q["pf"]]
+else:
+    allst = [(s["first"], fwd(s["lng"], s["lat"]), k) for k, s in enumerate(metro["stations"])]
 env = seoul.envelope.buffer(20000)
 _cells = {}
 def cells(ref):
     if ref not in _cells:
-        pts = sorted({(round(x, 1), round(y, 1)) for f, (x, y) in allst if f <= ref})
+        pts = sorted({(round(x, 1), round(y, 1)) for f, (x, y), _ in allst if f <= ref})
         vd = voronoi_diagram(MultiPoint(pts), envelope=env)
         _cells[ref] = list(vd.geoms)
     return _cells[ref]
@@ -50,6 +57,8 @@ def cell_of(ref, xy):
     for c in cells(ref):
         if c.contains(p) or c.touches(p): return c
     raise RuntimeError("보로노이 칸을 못 찾음")
+def station_cell(ref, k):   # 역 k의 승강장 가운데 ref년에 열린 것들의 칸을 합친 것
+    return unary_union([cell_of(ref, xy) for f, xy, kk in allst if kk == k and f <= ref])
 def geo(g):
     g = transform(inv, g.simplify(4))
     if g.is_empty: return None
@@ -58,18 +67,20 @@ def geo(g):
     return [[r5(p.exterior.coords)] + [r5(i.coords) for i in p.interiors] for p in ps]
 pct = lambda v: None if v is None else round(100 * (2 ** v - 1), 1)
 RINGS = [(0, 250), (250, 500), (500, 1000)]
-inside = [s for s in metro["stations"] if seoul_ll.contains(Point(s["lng"], s["lat"]))]
+inside = [(k, s) for k, s in enumerate(metro["stations"]) if seoul_ll.contains(Point(s["lng"], s["lat"]))]
 out = []
 for r in R:
-    cand = [s for s in inside if s["name"] == r["name"] and s["first"] == r["T"]]
+    cand = [(k, s) for k, s in inside if s["name"] == r["name"] and s["first"] == r["T"]]
     assert len(cand) == 1, (r["name"], r["T"], len(cand))
-    s = cand[0]; xy = fwd(s["lng"], s["lat"]); T = r["T"]
-    c = cell_of(T + 5, xy).intersection(seoul)
+    k, s = cand[0]; T = r["T"]
+    ll = PF[k]["center"] if PF else [s["lng"], s["lat"]]   # 고리 중심(--platforms면 처음 연 노선 승강장)
+    xy = fwd(*ll)
+    c = station_cell(T + 5, k).intersection(seoul)
     shapes = [geo(Point(xy).buffer(b, quad_segs=24).difference(Point(xy).buffer(a, quad_segs=24)).intersection(c) if a else
                   Point(xy).buffer(b, quad_segs=24).intersection(c)) for a, b in RINGS]
     first_line = min(s["opens"], key=lambda l: (s["opens"][l], l))
     rec = {"name": r["name"], "T": T, "date": s.get("dates", {}).get(first_line, str(T)),
-           "lines": sorted(s["opens"], key=lambda l: (s["opens"][l], l)), "lng": s["lng"], "lat": s["lat"],
+           "lines": sorted(s["opens"], key=lambda l: (s["opens"][l], l)), "lng": round(ll[0], 6), "lat": round(ll[1], 6),
            "dev": None if r["dev"] is None else round(r["dev"], 3), "n500": r["n500"],
            "gb": None if GBS.get((r["name"], T)) is None else round(GBS[(r["name"], T)], 3),
            "v": [[pct((r["years"][str(k)][f"{a}-{b}"] or {}).get("sim")) for k in range(-5, 6)] for a, b in RINGS],
