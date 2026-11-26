@@ -205,11 +205,13 @@ V-World 페이지를 크롬으로 직접 열어 확인했고, 이지가 로그�
 2. 토지이동이력: `AL_D157_11_20261031.zip` → `hist_to_parquet.py` → `parcel_lineage.py hist.parquet lineage.pkl`.
 3. 지적도 대표점: `AL_D002_11_20261108.zip`(2026) → `cad_points.py … cad2026_pts.npz`, `AL_11_D002_20160113 (1).zip`(2016, 정상 파일은 80.6MB 쪽. 39.7MB짜리는 끊긴 파일) → `cad_points2016.py <shp> cad2026_pts.npz cad2016_pts.npz`.
 4. 위치: `parcel_locations.py pnu_price.npz lineage.pkl loc.npz cad2026_pts.npz cad2016_pts.npz`.
-5. 그린벨트·구역: `AL_D032_00_20261109.zip`(그린벨트 2026), `AL_00_D032_20160305.zip`(2016), 도시개발구역(`20793c5c-….tmp`, 이름을 `AL_D033_00_20261109.zip`으로 바꿔도 됨), 택지(`AL_D025_00_20261109.zip`), 정비구역(`c05f5edb-….tmp`). `gb_flags.py`로 필지 그린벨트 표시.
+5. 그린벨트·구역: `AL_D032_00_20261109.zip`(그린벨트 2026), `AL_00_D032_20160305.zip`(2016), `AL_D033_00_20261109.zip`(도시개발구역, 620행), `AL_D025_00_20261109.zip`(택지), `AL_D029_00_20261109.zip`(정비구역, 2,251행). 처음 받을 때 `.tmp`로 남았던 두 파일은 다운로드 폴더에서 이 이름으로 바뀌어 있다(2026-11-26 저녁 열어서 확인). `AL_00_D032_20151224.zip`은 서울이 빠진 달이라 쓰지 않는다. `gb_flags.py`로 필지 그린벨트 표시.
 6. 계산과 그림: 먼저 `station_platforms.py data/metro.json data/metro_extra.json <역사마스터 json> platforms.json`. 그다음 `station_rings_ctrl.py … --platforms=platforms.json`(그린벨트 넣은 것·뺀 것 두 번) → `station_rings_ctrl_plot.py`(그림 3 다시), `station_events.py … <도시개발구역 SHP>` → `station_events_plot.py`(그림 4b), `station_land_layer.py <rings_ctrl.json> --gb=<뺀 것 json> --platforms=platforms.json` → `data/station_land.json`. 한 번 도는 데 1분쯤 걸린다(메모리 7GB 작업 공간).
 7. 지도 레이어 자료(`data/station_land.json`, `data/greenbelt.json`)는 저장소에 있으므로, 그림이나 계산을 바꾸지 않으면 1–6 없이 `python3 seoul-layer-map/src/build.py`만 해도 지도는 나온다.
 
 ### 아직 안 한 것
+
+**다음 채팅(레이어 마무리)은 프로젝트 문서 「역 둘레 땅값 레이어 마무리」부터 읽는다.** 할 일·정할 것·지금 값·시작 문구를 그 문서에 모았다. 작업 공간에만 있던 계산 결과(`rings_ctrl_pf.json` 등 대조 네 가지가 다 든 결과, `platforms.json`, `gb_flags.npz`, `lineage.pkl`)와 시험 그림·탐색 스크립트·화면 확인 도우미는 이지 다운로드 폴더의 `seoul-layer-map_채팅A_보관_20261126.zip`(6.7MB, 안에 「읽어보기.txt」)에 보관했다. 필지 위치에서 나온 자료라 공개 저장소에는 올리지 않는다. `pnu_price.npz`·`loc.npz`·지적도 대표점은 크기 때문에 보관하지 못했으니 위 1–4번으로 다시 만든다.
 
 2026-11-26 저녁에 이지와 정한 것: master는 받아 맞춘다(끝남, master v1.7.2 `0db7db8`을 합침). 환승역은 보정한다(끝남, 위 「노선별 승강장 보정」). 그린벨트는 1971년부터 보인다(끝남). 칩은 나중에 새 채팅에서 본다(프로젝트 문서 「칩 정리 메모」). 땅값 「5년 변화」(건물 갈래)와 역 둘레 땅값처럼 뜻이 겹치는 것은 한 레이어로 묶지 않고 레이어를 완전히 나눈다. 사건 날짜 원문 확인은 천천히 해도 된다. 용량 점검은 v2.0 올리기 전에 한다. 분석은 새 채팅에서 한다.
 
