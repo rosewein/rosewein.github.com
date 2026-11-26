@@ -759,12 +759,13 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   // 궁궐 글자: 궁 이름 → 임금 거처 → 화살표 이름표 → 궁 아래 설명 순으로, 이름표마다 후보 자리를 차례로 보고
   // 연도 판·사건 카드·단추·구 이름·이전 경계 연도·먼저 놓은 글자·별표·화살표 양 끝과 겹치지 않는 첫 자리에 쓴다.
   // 화살표 선은 되도록 피하고(선을 넘지 않는 자리가 없을 때만 넘음, 궁 이름은 궁 안에 남도록 선은 따지지 않음), 그래도 자리가 없으면 궁 이름·거처·화살표 이름표는 첫 후보에,
-  // 궁 아래 설명은 그 해엔 쓰지 않는다. 역 이름은 여기서 놓은 자리(palBoxes)를 피한다. 확대·이동할 때마다 다시 자리를 찾는다(scheduleStLabels)
+  // 궁 아래 설명은 그 해엔 쓰지 않는다. 글자는 역 이름과 같은 배율(ST_LABEL_PXKM)부터 쓴다. 역 이름은 여기서 놓은 자리(palBoxes)를 피한다. 확대·이동할 때마다 다시 자리를 찾는다(scheduleStLabels)
   const palTextW = (() => { const cx = document.createElement("canvas").getContext("2d"); return (txt, fs, fw) => { cx.font = `${fw} ${fs}px "SLM Sans KR", "IBM Plex Sans KR", sans-serif`; return cx.measureText(txt).width; }; })();
   function drawPalaceLabels() {
     gPalaceLab.selectAll("*").remove(); palBoxes = [];
     if (!palLab || !palace || !layerOn.palace) return;
     const t = d3.zoomTransform(svg.node()), S = q => t.apply(q);
+    if (pxPerKm() * t.k < ST_LABEL_PXKM) return;   // 역 이름처럼 확대했을 때만(서울 전체로 보면 궁보다 글자가 커서 도심에 뭉침)
     const hard = overlayBoxes(t).concat(ringBoxes), soft = [], out = [];
     const ov = (a, b) => !(a[2] < b[0] || a[0] > b[2] || a[3] < b[1] || a[1] > b[3]);
     palLab.dots.forEach(([q, rr]) => { const [x, y] = S(q); hard.push([x - rr, y - rr, x + rr, y + rr]); });
