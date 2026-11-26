@@ -35,6 +35,8 @@
   --joseon: #2a6f68; --joseon-2: #134640; --oldmap-op: .92;
   /* 땅값: 한 색상(흙색) 9단계, 밝음→어두움 = 쌈→비쌈. 어두운 화면은 반대로(싼 곳이 바탕에 묻힘) */
   --land-0: #fae8d9; --land-1: #f3c9a6; --land-2: #e4ad7d; --land-3: #d1935a; --land-4: #ba7a3e; --land-5: #9f652b; --land-6: #825122; --land-7: #634121; --land-8: #403227;
+  /* 땅값 5년 변화: 방향이 있는 값이라 한 색상 규칙의 예외로 두 색상(덜 오름 청록 ← 회색 → 더 오름 갈색). 두 팔을 validate_palette.js --ordinal로 밝은·어두운 화면 모두 통과 */
+  --chg-0: #1c524c; --chg-1: #47807a; --chg-2: #7cada5; --chg-3: #c4c2bb; --chg-4: #d19663; --chg-5: #a65e2a; --chg-6: #6b3511;
   /* 새 건물: 한 색상(남색) 8단계, 밝음→어두움 = 적음→많음(1% 미만은 칠하지 않음). 어두운 화면은 반대. validate_palette.js --ordinal 통과(밝은 끝 대비 2:1 이상) */
   --bld-1: #8f9fbb; --bld-2: #738cb9; --bld-3: #5878b2; --bld-4: #4265a6; --bld-5: #305294; --bld-6: #23417c; --bld-7: #193160; --bld-8: #122343;
   --display: "Hahmlet", "Noto Serif KR", "AppleMyungjo", serif;
@@ -46,13 +48,13 @@
   :root:not([data-theme="light"]) {
     --paper: #111714; --paper-2: #18201c; --ink: #e2e7e1; --ink-2: #a2ada5; --rule: #334039;
     --river: #2b475a; --tram: #ff6a5c; --kido: #b796e6; --area: #7d6f3c; --area-new: #d0a648;
-    --ring: #9a9880; --wall: #c3ccc4; --gu: #8e9a91; --focus: #6fb2ec; --bus: #ff5cb8; --rail: #c9d1ca; --village: #9fbf2a; --village-dot: #c8e05a; --land-0: #3b2a1b; --land-1: #5a3817; --land-2: #784919; --land-3: #935c24; --land-4: #ad7138; --land-5: #c38853; --land-6: #d7a273; --land-7: #e6bd99; --land-8: #f0d9c7; --bld-1: #41506c; --bld-2: #4a628e; --bld-3: #5675af; --bld-4: #6589cb; --bld-5: #799ee2; --bld-6: #91b3f1; --bld-7: #adc9fb; --bld-8: #d3dff3; --joseon: #6cc3b6; --joseon-2: #a8e6dc; --oldmap-op: .62; color-scheme: dark;
+    --ring: #9a9880; --wall: #c3ccc4; --gu: #8e9a91; --focus: #6fb2ec; --bus: #ff5cb8; --rail: #c9d1ca; --village: #9fbf2a; --village-dot: #c8e05a; --land-0: #3b2a1b; --land-1: #5a3817; --land-2: #784919; --land-3: #935c24; --land-4: #ad7138; --land-5: #c38853; --land-6: #d7a273; --land-7: #e6bd99; --land-8: #f0d9c7; --chg-0: #9ad6cc; --chg-1: #5f9f96; --chg-2: #3f6f69; --chg-3: #4a4946; --chg-4: #7d5636; --chg-5: #b97a44; --chg-6: #f2b47e; --bld-1: #41506c; --bld-2: #4a628e; --bld-3: #5675af; --bld-4: #6589cb; --bld-5: #799ee2; --bld-6: #91b3f1; --bld-7: #adc9fb; --bld-8: #d3dff3; --joseon: #6cc3b6; --joseon-2: #a8e6dc; --oldmap-op: .62; color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --paper: #111714; --paper-2: #18201c; --ink: #e2e7e1; --ink-2: #a2ada5; --rule: #334039;
   --river: #2b475a; --tram: #ff6a5c; --kido: #b796e6; --area: #7d6f3c; --area-new: #d0a648;
-  --ring: #9a9880; --wall: #c3ccc4; --gu: #8e9a91; --focus: #6fb2ec; --bus: #ff5cb8; --rail: #c9d1ca; --village: #9fbf2a; --village-dot: #c8e05a; --land-0: #3b2a1b; --land-1: #5a3817; --land-2: #784919; --land-3: #935c24; --land-4: #ad7138; --land-5: #c38853; --land-6: #d7a273; --land-7: #e6bd99; --land-8: #f0d9c7; --bld-1: #41506c; --bld-2: #4a628e; --bld-3: #5675af; --bld-4: #6589cb; --bld-5: #799ee2; --bld-6: #91b3f1; --bld-7: #adc9fb; --bld-8: #d3dff3; --joseon: #6cc3b6; --joseon-2: #a8e6dc; --oldmap-op: .62; color-scheme: dark;
+  --ring: #9a9880; --wall: #c3ccc4; --gu: #8e9a91; --focus: #6fb2ec; --bus: #ff5cb8; --rail: #c9d1ca; --village: #9fbf2a; --village-dot: #c8e05a; --land-0: #3b2a1b; --land-1: #5a3817; --land-2: #784919; --land-3: #935c24; --land-4: #ad7138; --land-5: #c38853; --land-6: #d7a273; --land-7: #e6bd99; --land-8: #f0d9c7; --chg-0: #9ad6cc; --chg-1: #5f9f96; --chg-2: #3f6f69; --chg-3: #4a4946; --chg-4: #7d5636; --chg-5: #b97a44; --chg-6: #f2b47e; --bld-1: #41506c; --bld-2: #4a628e; --bld-3: #5675af; --bld-4: #6589cb; --bld-5: #799ee2; --bld-6: #91b3f1; --bld-7: #adc9fb; --bld-8: #d3dff3; --joseon: #6cc3b6; --joseon-2: #a8e6dc; --oldmap-op: .62; color-scheme: dark;
 }
 * { box-sizing: border-box; }
 body { background: var(--paper); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.55; }
@@ -291,6 +293,15 @@ svg text { font-family: var(--body); }
   .side .bldUse:not([hidden]) { display: flex; margin: 10px 0 0; }
   #bldLegend .bseg { display: none; }
 }
+/* 땅값 보기(수준 / 5년 변화)와 면 진하기: 새 건물 용도 단추와 같은 방식으로 데스크톱은 칩 아래, 휴대폰·낮은 화면은 범례 안 */
+.side .landCtl { display: none; }
+@media (min-width: 901px) and (min-height: 501px) {
+  .side .landCtl:not([hidden]) { display: flex; margin: 8px 0 0; }
+  #landLegend .bseg { display: none; }
+}
+.bseg label.alpha { display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; }
+.bseg label.alpha input { width: 84px; accent-color: var(--ink); margin: 0; }
+.bseg label.alpha output { font-family: var(--mono); font-size: 11px; min-width: 2.6em; }
 .bspark { height: 86px; }
 .bbig { margin: 4px 0 0; padding: 0; list-style: none; font-size: 12.5px; }
 .bbig li { margin: 1px 0; }
@@ -395,6 +406,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   </div>
   </div>
   <div class="bseg bldUse" id="bldUse" role="group" aria-label="새 건물 용도" hidden><span>새 건물 용도</span><button type="button" data-use="all" aria-pressed="true">전체</button><button type="button" data-use="r" aria-pressed="false">주거</button><button type="button" data-use="c" aria-pressed="false">상업·업무</button></div>
+  <div class="bseg landCtl" id="landCtl" role="group" aria-label="땅값 보기" hidden></div>
   <button type="button" class="legbtn" id="legBtn" aria-expanded="false" aria-controls="legends">범례</button>
   <button class="lgfold" id="lgFold" type="button" aria-expanded="false" aria-controls="legends">범례 보기</button>
   <div class="legends" id="legends">
@@ -418,9 +430,10 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     <span><svg width="46" height="12" viewBox="0 0 46 12"><rect x="2" y="2" width="8" height="8" fill="var(--joseon-2)"/><circle cx="22" cy="6" r="4" fill="var(--paper)" stroke="var(--joseon-2)" stroke-width="1.6"/><path d="M34,10L38,2L42,10Z" fill="var(--joseon)" stroke="var(--joseon-2)" stroke-width=".8"/></svg>역 · 원 · 나루</span>
   </div>
   <div class="legend-land" id="landLegend" hidden>
+    <div class="bseg" id="landCtlLg" role="group" aria-label="땅값 보기"></div>
     <div class="bar" id="landBar"></div>
     <div class="tk" id="landTicks"></div>
-    <p>땅값: 서울 필지 중앙값의 몇 배인지. 칸마다 두 배, 굵은 1이 서울 중앙값 · <i class="na"></i>자료 없음</p>
+    <p id="landNote">땅값: 서울 필지 중앙값의 몇 배인지. 칸마다 두 배, 굵은 1이 서울 중앙값 · <i class="na"></i>자료 없음</p>
   </div>
   <div class="legend-land" id="bldLegend" hidden>
     <div class="bseg" role="group" aria-label="새 건물 용도"><span>용도</span><button type="button" data-use="all" aria-pressed="true">전체</button><button type="button" data-use="r" aria-pressed="false">주거</button><button type="button" data-use="c" aria-pressed="false">상업·업무</button></div>
@@ -589,6 +602,18 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     return m && sm ? m / sm : null;
   }
   function landClass(r) { let k = 0; while (k < LAND_EDGES.length && r >= LAND_EDGES[k]) k++; return k; }
+  // 땅값 보기: 수준(서울 중앙값의 몇 배) / 5년 변화(그 배수가 5년 전의 몇 배). 변화 칸은 1995–2026년 동·해를 모아 절반이 ×0.94–1.07, 80%가 ×0.86–1.19, 90%가 ×0.78–1.30인 것을 보고 나눔
+  let landMode = "lvl", landAlpha = null;   // landAlpha: 면 진하기(null이면 기본값. 새 건물 원과 함께면 0.3, 아니면 1)
+  const CHG_LAG = 5, CHG_EDGES = [0.8, 0.9, 0.95, 1.053, 1.111, 1.25], CHG_TICKS = ["×0.8", "0.9", "0.95", "1.05", "1.11", "1.25"];
+  function landChg(cd, y) { const a = landRatio(cd, y - CHG_LAG), b = landRatio(cd, y); return a && b ? b / a : null; }
+  function chgClass(v) { let k = 0; while (k < CHG_EDGES.length && v >= CHG_EDGES[k]) k++; return k; }
+  // 동 하나의 땅값 색(자료가 없으면 null). 땅값 면과 새 건물 원이 같이 쓴다
+  function landFill(cd, y) {
+    if (landMode === "chg") { const c = landChg(cd, y); return c == null ? null : `var(--chg-${chgClass(c)})`; }
+    const r = landRatio(cd, y); return r == null ? null : `var(--land-${landClass(r)})`;
+  }
+  const landReady = (y) => landYi(y) >= 0 && (landMode !== "chg" || landYi(y - CHG_LAG) >= 0);
+  const landFaceAlpha = (withDots) => landAlpha ?? (withDots ? 0.3 : 1);
   function fmtWon(v) {
     if (v == null) return "—";
     if (v < 1e6) return `${Math.round(v).toLocaleString("ko-KR")}원`;
@@ -924,7 +949,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
       const pts = dongFeatures.filter(f => f.properties.y <= year && isFinite(f._c[0])).map(f => ({ f, v: bldWin(f.properties.cd, year, BLD_USE[bldUse]) })).filter(q => q.v >= BLD_DOT_MIN).sort((a, b) => b.v - a.v);
       gBuildDot.selectAll("circle").data(pts, q => q.f.properties.cd).join("circle")
         .attr("cx", q => q.f._c[0]).attr("cy", q => q.f._c[1]).attr("r", q => bldR(q.v))
-        .attr("fill", "var(--bld-6)").attr("fill-opacity", 0.55).attr("stroke", "var(--paper)").attr("stroke-width", 1)
+        .attr("fill", q => landFill(q.f.properties.cd, year) || "url(#landNA)").attr("fill-opacity", 1).attr("stroke", "var(--ink)").attr("stroke-width", 0.9)
         .attr("vector-effect", "non-scaling-stroke").style("pointer-events", "none");
     }
     if (shown && !asDots) gBuild.selectAll("path")
@@ -934,18 +959,61 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     d3.select("#bldUse").attr("hidden", on ? null : true);
   }
 
+  // 땅값 보기 단추(수준 / 5년 변화)와 면 진하기. 데스크톱 오른쪽 판은 칩 아래(#landCtl), 휴대폰·낮은 화면은 범례 안(#landCtlLg)에 같은 것을 둔다
+  function drawLandCtl(on, withDots) {
+    d3.select("#landCtl").attr("hidden", on ? null : true);
+    const a = Math.round(landFaceAlpha(withDots) * 100);
+    d3.selectAll("#landCtl, #landCtlLg").each(function () {
+      const g = d3.select(this);
+      if (g.select("button").empty()) {
+        g.append("span").text("땅값");
+        g.selectAll("button").data([["lvl", "수준"], ["chg", "5년 변화"]]).join("button").attr("type", "button").text(d => d[1])
+          .on("click", (ev, d) => { landMode = d[0]; render(); if (selDong && !document.getElementById("info").hidden) showDong(selDong); });
+        const lb = g.append("label").attr("class", "alpha");
+        lb.append("span").text("면 진하기");
+        lb.append("input").attr("type", "range").attr("min", 0).attr("max", 100).attr("step", 5).attr("aria-label", "땅값 면 진하기")
+          .on("input", function () {   // 끌 때는 면 진하기만 바꾼다(전체를 다시 그리지 않음)
+            landAlpha = this.value / 100;
+            gLand.selectAll("path").attr("fill-opacity", landAlpha);
+            d3.selectAll("#landCtl input, #landCtlLg input").property("value", this.value);
+            d3.selectAll("#landCtl output, #landCtlLg output").text(this.value + "%");
+          });
+        lb.append("output");
+      }
+      g.selectAll("button").attr("aria-pressed", d => d[0] === landMode ? "true" : "false");
+      g.select("input").property("value", a);
+      g.select("output").text(a + "%");
+    });
+  }
+  // 땅값 범례 막대·눈금·설명(보기 방식에 따라)
+  function drawLandKey() {
+    if (!land) return;
+    const chg = landMode === "chg", n = chg ? 7 : 9, tk = chg ? CHG_TICKS : LAND_TICKS;
+    d3.select("#landBar").style("grid-template-columns", `repeat(${n}, minmax(0, 1fr))`).selectAll("i").data(d3.range(n)).join("i")
+      .style("background", k => `var(--${chg ? "chg" : "land"}-${k})`)
+      .attr("title", k => chg ? (k === 0 ? "×0.8 미만" : k === n - 1 ? "×1.25 이상" : `×${tk[k - 1].replace("×", "")}–${tk[k]}`)
+        : (k === 0 ? "서울 중앙값의 1/8 미만" : k === n - 1 ? "16배 이상" : `${tk[k - 1]}–${tk[k]}배`));
+    d3.select("#landTicks").selectAll("span").data(tk).join("span").attr("class", t => !chg && t === "1" ? "mid" : null)
+      .style("left", (t, k) => `${(k + 1) / n * 100}%`).text(t => t);
+    d3.select("#landNote").html(chg
+      ? `땅값 5년 변화: ${year - CHG_LAG}→${year}년에 서울 중앙값 대비 배수가 몇 배로 바뀌었는지. 가운데 회색은 서울 전체와 비슷(±5%), 갈색은 서울보다 더 오름, 청록은 덜 오름 · <i class="na"></i>자료 없음${landYi(year - CHG_LAG) < 0 ? ` · 5년 변화는 ${land.years[0] + CHG_LAG}년부터` : ""}`
+      : `땅값: 서울 필지 중앙값의 몇 배인지. 칸마다 두 배, 굵은 1이 서울 중앙값 · <i class="na"></i>자료 없음`);
+  }
+
   function render() {
     const er = eraOf(year);
     // land price
-    const landOn = !!(layerOn.land && land), li = landOn ? landYi(year) : -1, landShown = li >= 0;
+    const landOn = !!(layerOn.land && land), li = landOn ? landYi(year) : -1, landShown = landOn && landReady(year);
+    const bldOn = !!(layerOn.bld && bld), bldShown = bldOn && year >= bld.from;
     gLand.style("display", landShown ? null : "none");
     if (landShown) gLand.selectAll("path")
       .attr("display", d => d.properties.y <= year ? null : "none")
-      .attr("fill", d => { const r = landRatio(d.properties.cd, year); return r == null ? "url(#landNA)" : `var(--land-${landClass(r)})`; });
+      .attr("fill", d => landFill(d.properties.cd, year) || "url(#landNA)").attr("fill-opacity", landFaceAlpha(bldShown));
+    drawLandCtl(landOn, landShown && bldShown);
+    drawLandKey();
     renderLegends();
     drawStationLand();
     drawGreenbelt();
-    const bldOn = !!(layerOn.bld && bld), bldShown = bldOn && year >= bld.from;
     renderBuild(bldOn, bldShown, landShown);
     fitLegends();
     const fillOff = landShown || bldShown;   // 땅값과 새 건물이 같이 켜지면 땅값 = 면, 새 건물 = 원
@@ -1165,7 +1233,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     // 수치: 항목별로 모아 데스크톱은 연도 판에 한 줄로, 좁은 화면은 지도 아래 띠(항목마다 한 칸)로
     const stats = [];
     if (bldOn) stats.push(bldShown ? `서울 ${year - BLD_WIN + 1}–${year}년 새 건물 ${fmtArea(d3.sum(dongFeatures, f => bldWin(f.properties.cd, year, BLD_USE[bldUse])))}${bldUse !== "all" ? "(" + BLD_USE_NM[bldUse] + ")" : ""}${year === bld.y1 ? `(${bld.y1}년은 ${bld.asof}까지)` : ""}` : `새 건물은 ${bld.from}년부터`);
-    if (landOn) stats.push(landShown ? `서울 필지 중앙값 ㎡당 ${fmtWon(land.seoul[li])}${landPartial(year) ? "(" + landPartial(year) + ")" : ""}` : `땅값 자료는 ${land.years[0]}–${land.years[land.years.length - 1]}년`);
+    if (landOn) stats.push(li >= 0 ? `서울 필지 중앙값 ㎡당 ${fmtWon(land.seoul[li])}${landPartial(year) ? "(" + landPartial(year) + ")" : ""}` : `땅값 자료는 ${land.years[0]}–${land.years[land.years.length - 1]}년`);
     if (vyy) stats.push(`마을버스 ${village.years[vyy].routes}개 노선${vyy !== year ? `(${vyy}년 자료)` : ""}, 마을버스로만 닿는 땅 ${village.years[vyy].only_km2}㎢`);
     if (drawn) stats.push(`버스 노선 ${drawn}개 그림${bs ? `(공식 ${bs.routes}개)` : ""}`); else if (bs) stats.push(`버스 노선 ${bs.routes}개`);
     stats.push(offArea ? `시역 ${offArea}㎢` : "시역 —");
@@ -1411,6 +1479,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
       landHtml = i < 0 ? `<div class="meta" style="margin-top:4px">땅값 자료는 ${land.years[0]}–${land.years[land.years.length - 1]}년</div>`
         : r == null ? `<div class="meta" style="margin-top:4px">${year}년 땅값 자료 없음</div>`
         : `<div style="margin-top:4px">${year}년 ㎡당 공시지가 중앙값 <b>${fmtWon(land.dong[p.cd][i])}</b> · 서울 중앙값의 <b>${fmtRatio(r)}</b><span class="meta"> · 필지 ${land.n[p.cd][i].toLocaleString("ko-KR")}개</span></div>${landPartial(year) ? `<div class="meta">${landPartial(year)}</div>` : ""}`;
+      if (landMode === "chg" && i >= 0) { const c = landChg(p.cd, year); landHtml += `<div class="meta">${year - CHG_LAG}→${year}년 배수 변화 ${c == null ? "자료 없음" : "×" + c.toFixed(2)}</div>`; }
       landHtml += `<svg class="spark" id="spark" role="img" aria-label="${p.nm} 서울 중앙값 대비 배수 변화"></svg>`;
     }
     const bldHtml = bldInfoHtml(p);
@@ -1430,10 +1499,13 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     if (year < bld.from) return `<div class="meta" style="margin-top:6px">새 건물 자료는 ${bld.from}년부터</div>`;
     const y0 = year - BLD_WIN + 1, r = bldWin(p.cd, year, ["r"]), c = bldWin(p.cd, year, ["c"]), o = bldWin(p.cd, year, ["o"]), g = bldWin(p.cd, year, ["g"]);
     const hh = d3.sum(d3.range(y0, year + 1), t => { const a = bld.d[p.cd].h, i = t - bld.y0; return a && i >= 0 && i < a.length ? a[i] : 0; });
-    const big = bld.big.filter(b => b.cd === p.cd && b.y >= y0 && b.y <= year).sort((a, b) => b.a - a.a).slice(0, 4);
+    // bld.big[동] = [[해, 연면적/100, 세대수, 지번, 이름?, 헐림?], …]
+    const big = (bld.big[p.cd] || []).map(([y, a, hh, jb, nm, g]) => ({ y, a: a * 100, hh, jb, nm: nm || "", g: !!g }))
+      .filter(b => b.y >= y0 && b.y <= year).sort((a, b) => b.a - a.a).slice(0, 4);
     return `<div style="margin-top:8px">${y0}–${year}년 사용승인 연면적 <b>${fmtArea(r + c + o)}</b> · 동 면적의 <b>${fmtPct((r + c + o) / dongArea[p.cd] * 100)}</b></div>`
       + `<div class="meta">주거 ${fmtArea(r)} · 상업·업무 ${fmtArea(c)} · 그 밖 ${fmtArea(o)}${hh ? ` · 공동주택 ${hh.toLocaleString("ko-KR")}세대` : ""}${g ? ` · 이 가운데 그 뒤 헐린 것 ${fmtArea(g)}` : ""}</div>`
-      + (big.length ? `<ul class="bbig">${big.map(b => `<li>${b.nm || `${p.nm} ${b.jb}번지`} <span class="meta">${b.y} · ${fmtArea(b.a)}${b.hh ? ` · ${b.hh.toLocaleString("ko-KR")}세대` : ""}${b.g ? " · 지금은 헐림" : ""}</span></li>`).join("")}</ul>` : "")
+      + (big.length ? `<ul class="bbig">${big.map(b => `<li>${b.nm ? `${b.nm} <span class="meta">${b.jb}번지</span>` : `${p.nm} ${b.jb}번지`} <span class="meta">${b.y} · ${fmtArea(b.a)}${b.hh ? ` · ${b.hh.toLocaleString("ko-KR")}세대` : ""}${b.g ? " · 지금은 헐림" : ""}</span></li>`).join("")}</ul>`
+        + (big.some(b => b.nm) ? `<div class="meta">이름은 ${bld.nmAsof || "지금"} 건축물대장에 적힌 것이라 지은 해의 이름과 다를 수 있음</div>` : "") : "")
       + `<svg class="spark bspark" id="bspark" role="img" aria-label="${p.nm} 해마다 사용승인된 연면적과 헐린 연면적"></svg>`
       + `<div class="meta">막대: 해마다 사용승인된 연면적(진한 칸 = 지금도 있음, 연한 칸 = 그 뒤 헐림). 아래로 난 회색 막대 = 그 해 헐린(말소된) 연면적. 옅은 띠 = 지도에 칠한 ${BLD_WIN}년</div>`;
   }
@@ -1623,13 +1695,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
       : `<td><i style="background:var(--land-${landClass(q.r)})"></i>${dongName(q.p)}</td><td class="n">${fmtRatio(q.r)}</td><td class="n">${fmtWon(land.dong[q.p.cd][i])}</td><td class="n">${land.n[q.p.cd][i].toLocaleString("ko-KR")}</td>`);
   }
   landTab.addEventListener("toggle", renderLandTable);
-  // 범례 막대와 눈금
-  if (land) {
-    d3.select("#landBar").selectAll("i").data(d3.range(9)).join("i").style("background", k => `var(--land-${k})`)
-      .attr("title", k => k === 0 ? `서울 중앙값의 1/8 미만` : k === 8 ? `16배 이상` : `${LAND_TICKS[k - 1]}–${LAND_TICKS[k]}배`);
-    d3.select("#landTicks").selectAll("span").data(LAND_TICKS).join("span").attr("class", t => t === "1" ? "mid" : null)
-      .style("left", (t, k) => `${(k + 1) / 9 * 100}%`).text(t => t);
-  }
+  // 땅값 범례 막대와 눈금은 drawLandKey()가 render 때마다 그린다(보기 방식에 따라 바뀜)
 
   // 새 건물 범례: 1% 미만(칠하지 않음) + 8칸
   if (bld) {
@@ -1640,10 +1706,10 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     // 원 크기 보기(땅값과 함께 켤 때). 지도 배율이 1일 때의 크기
     const ks = d3.select("#bldDotSvg").attr("width", 210).attr("height", 44); [10e4, 50e4, 200e4].forEach((v, k) => {   // 글자는 원 아래(옆 패널 폭이 좁음)
       const r = Math.sqrt(v / 1e6) * 0.6 * 9, x = 28 + k * 70;
-      ks.append("circle").attr("cx", x).attr("cy", 26 - r).attr("r", r).attr("fill", "var(--bld-6)").attr("fill-opacity", 0.55).attr("stroke", "var(--ink-2)").attr("stroke-width", 0.8);
+      ks.append("circle").attr("cx", x).attr("cy", 26 - r).attr("r", r).attr("fill", "var(--paper-2)").attr("stroke", "var(--ink)").attr("stroke-width", 0.9);
       ks.append("text").attr("x", x).attr("y", 40).attr("text-anchor", "middle").text(`${v / 1e4}만㎡`).attr("font-size", 11).attr("fill", "var(--ink-2)").style("font-family", "var(--mono)");
     });
-    d3.select("#bldNote").text(`새 건물: 그 해까지 ${BLD_WIN}년 동안 사용승인된 건물 연면적을 법정동 면적으로 나눈 값(%)입니다. 칸 하나가 두 배씩(로그 눈금)이고 1% 미만은 칠하지 않았습니다. ${bld.gone ? "지금 건축물대장에 헐려서 말소된 건물을 더했습니다." : "시험판: 아직 지금 건축물대장만 써서 그 사이 헐린 건물이 빠져 있습니다."} ${bld.from}년부터 · ${bld.y1}년은 ${bld.asof}까지. 땅값과 함께 켜면 땅값은 면, 새 건물은 원(넓이 = 5년 연면적, 처음 배율에서 100만㎡ = 반지름 약 0.6km)으로 바뀝니다. 확대하면 원은 지도보다 덜 커집니다.`);
+    d3.select("#bldNote").text(`새 건물: 그 해까지 ${BLD_WIN}년 동안 사용승인된 건물 연면적을 법정동 면적으로 나눈 값(%)입니다. 칸 하나가 두 배씩(로그 눈금)이고 1% 미만은 칠하지 않았습니다. ${bld.gone ? "지금 건축물대장에 헐려서 말소된 건물을 더했습니다." : "시험판: 아직 지금 건축물대장만 써서 그 사이 헐린 건물이 빠져 있습니다."} ${bld.from}년부터 · ${bld.y1}년은 ${bld.asof}까지. 땅값과 함께 켜면 새 건물은 원(넓이 = 5년 연면적, 처음 배율에서 100만㎡ = 반지름 약 0.6km)으로 바뀌고, 원 안은 그 동의 땅값 색(수준이나 5년 변화)으로 칠합니다. 이때 땅값 면은 처음에 옅게(30%) 깔리며 「면 진하기」로 바꿀 수 있습니다. 확대하면 원은 지도보다 덜 커집니다.`);
   }
 
   // ---------- log ----------
