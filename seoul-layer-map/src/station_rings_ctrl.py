@@ -1,5 +1,6 @@
 """역 둘레 같은 필지 변화를 대조 세 가지와 견주고, 역 둘레 개발 정도를 함께 적는다(시험용).
-    python3 -I station_rings_ctrl.py <pnu_price.npz> <loc.npz> <metro.json> <emd_topo.json> <출력 json>
+    python3 -I station_rings_ctrl.py <pnu_price.npz> <loc.npz> <metro.json> <emd_topo.json> <출력 json> [gb_flags.npz]
+- gb_flags.npz(gb_flags.py)를 주면 개통 5년 전 위치가 그린벨트(2026년 경계) 안인 필지를 역 고리와 대조에서 모두 뺀다.
 - 대상 역: station_rings.py와 같다(T−5 ≥ 1990, T+5 ≤ 2026, 개통 때 1km 안에 먼저 열린 역 없음, 서울 안).
 - 필지: T−5년에 정확한 위치(방법 0–2)가 있고 값이 0보다 큰 필지. T+5년에 열린 역 가운데 가장 가까운 역에 붙인다.
 - 같은 필지 변화: log2(p_t / p_{T−5}), t = T−5…T+5, 같은 토지코드로 남은 필지만.
@@ -16,6 +17,7 @@ from pyproj import Transformer
 from shapely.geometry import Polygon, MultiPolygon, Point
 from shapely.ops import unary_union
 Z = np.load(sys.argv[1]); L = np.load(sys.argv[2]); metro = json.load(open(sys.argv[3])); topo = json.load(open(sys.argv[4]))
+GB = np.load(sys.argv[6]) if len(sys.argv) > 6 else None
 yrs = sorted(int(k[1:]) for k in Z.files if k[0] == 'c')
 C = {y: Z[f'c{y}'] for y in yrs}; P = {y: Z[f'p{y}'] for y in yrs}
 tr = Transformer.from_crs(4326, 5186, always_xy=True).transform
@@ -49,7 +51,11 @@ res = []
 for b in sorted({int(sT[i]) - 5 for i in targets}):
     group = [i for i in targets if sT[i] - 5 == b]
     X, Y, M = L[f'x{b}'], L[f'y{b}'], L[f'm{b}']; cb = C[b]; pb = P[b]
-    has = ~np.isnan(X) & (pb > 0); exact = has & (M <= 2)
+    has = ~np.isnan(X) & (pb > 0)
+    ingb = GB[f'g{b}'].astype(bool) if GB is not None else np.zeros(len(cb), bool)
+    gbshare_src = has.copy()
+    if GB is not None: has = has & ~ingb
+    exact = has & (M <= 2)
     gu = (cb // 10**14).astype(np.int64)
     # 구 안 T−5 값 10분위
     lp = np.log(np.where(pb > 0, pb, np.nan))
@@ -67,7 +73,7 @@ for b in sorted({int(sT[i]) - 5 for i in targets}):
     for T in sorted({int(sT[i]) for i in group}):
         ref = T + 5
         op = np.where(aT <= ref)[0]; tree = cKDTree(axy[op])
-        idx_has = np.where(has)[0]; dmin = np.full(len(cb), np.nan); near = np.full(len(cb), -1)
+        idx_has = np.where(gbshare_src)[0]; dmin = np.full(len(cb), np.nan); near = np.full(len(cb), -1)
         d_, k_ = tree.query(np.c_[X[idx_has], Y[idx_has]]); dmin[idx_has] = d_; near[idx_has] = op[k_]
         far = exact & (dmin > 1000)
         fu = np.where((aT > ref) & (aT <= T + 15))[0]
@@ -82,7 +88,9 @@ for b in sorted({int(sT[i]) - 5 for i in targets}):
             me = np.where(np.hypot(*(axy - sxy[i]).T) < 1)[0]
             d = np.hypot(X - x0, Y - y0)
             mine = np.isin(near, me)
-            rec = dict(name=s['name'], T=T, lines=s['lines'], years={}, n={}, dev=None)
+            rec = dict(name=s['name'], T=T, lines=s['lines'], years={}, n={}, dev=None, gb=None)
+            a5 = gbshare_src & mine & (d < 500)
+            if GB is not None and a5.sum() >= 20: rec['gb'] = float(ingb[a5].mean())
             a500 = has & mine & (d < 500)
             if a500.sum() >= 20:
                 j = np.searchsorted(C[T + 5], cb[a500]); j = np.minimum(j, len(C[T + 5]) - 1)
