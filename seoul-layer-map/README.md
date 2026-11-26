@@ -50,6 +50,7 @@
 
 | 버전 | 날짜 | 커밋 | 바뀐 점 |
 |---|---|---|---|
+| v1.4.4 | 2026-11-26 | (이 행을 넣은 커밋) | 글꼴을 구글 폰트에서 받지 않고 저장소 `fonts/`에 직접 담음. 페이지에 쓰는 글자만 남긴 파일을 굵기마다 하나씩 두어(본문 94–105KB, 제목 24KB), 한글 조각 하나가 늦거나 빠지면 「서울 시내버스 규모」의 「시」「스」처럼 몇 글자만 다른 글꼴로 찍히던 것을 없앰. 숫자용 글꼴 자리의 한글도 운영체제 글꼴 대신 본문 글꼴로 |
 | v1.4.3 | 2026-11-26 | (이 행을 넣은 커밋) | 지도에서 읽지 않는 자료 필드(약 0.7MB)를 빌드할 때 덜어 냄. index.html 7.3MB → 6.6MB(압축 기준 1.71MB → 1.53MB). `data/` 원본은 그대로. 탭 주소(`#data` 등)로 열면 주소가 `#1920`으로 바뀌던 것, 「서울 시내버스 규모」 그림에서 줄 이름이 1950년 표시선과 겹치던 것을 고침 |
 | v1.4.2 | 2026-11-26 | `7798940` | 이전 경계 연도 글자(1914·1936·1949·1963)를 그 경계선 위, 연도 판·사건 카드·구 이름과 겹치지 않는 자리에 씀(전에는 시역을 둘러싼 상자의 모서리에 놓여 연도 판 밑에 겹쳤음) |
 | v1.4.1 | 2026-11-26 | `80c7abd`, `2433d52` | 버스 노선망을 바탕으로 깔고 그 위에 전차·철도·지하철을 그림(버스에 지하철 선과 역이 묻히던 것). 눌러서 굵게 보이는 버스 노선은 맨 위에. 서울 안에서 역·노선·정류장을 눌러도 동 정보만 나오던 것을 고침. 「읽는 법」 탭의 글 폭을 760px로 넓힘 |
@@ -63,6 +64,7 @@
 ## 이 저장소의 이용 조건
 
 - **코드**(`index.html`의 스타일·스크립트, `src/`의 스크립트): MIT License ([LICENSE](LICENSE))
+- **글꼴**(`fonts/`): Hahmlet(© 2020 The Hahmlet Project Authors)과 IBM Plex Sans KR·IBM Plex Mono(© 2017 IBM Corp., 예약된 글꼴 이름 "Plex"), 모두 [SIL Open Font License 1.1](fonts/OFL-IBM-Plex.txt)입니다. 원본은 [google/fonts](https://github.com/google/fonts)의 TTF이고, 이 페이지에 쓰는 글자만 남겼습니다. 글자를 덜어 낸 것은 라이선스상 수정본이라 예약된 이름을 쓸 수 없으므로 IBM Plex는 글꼴 안의 이름을 SLM Sans KR·SLM Mono로 바꿨습니다(SLM = seoul-layer-map). 라이선스 원문은 `fonts/OFL-Hahmlet.txt`, `fonts/OFL-IBM-Plex.txt`에 있습니다.
 - **데이터**(`data/`, `index.html` 안의 `DATA`): 위 표의 출처별 조건을 따릅니다. 나무위키에서 온 자료가 들어 있는 부분은 CC BY-NC-SA 2.0 KR이므로 영리 목적으로 쓸 수 없고, 고쳐서 다시 배포할 때는 같은 조건을 붙여야 합니다. OpenStreetMap에서 온 형상은 출처 "© OpenStreetMap contributors"를 밝혀야 합니다.
 
 ## 저장소 구성
@@ -74,12 +76,15 @@
 seoul-layer-map/
 ├─ index.html   지도(데이터가 들어 있는 한 파일)
 ├─ data/        index.html에 들어간 가공 데이터(JSON)
+├─ fonts/       페이지에 쓰는 글자만 담은 글꼴(woff2)과 라이선스 원문. build.py가 만듦
 └─ src/         가공·빌드 스크립트(Python)와 지도 틀(template.html), 설명문(method.html)
 ```
 
 ## 다시 만들기
 
 지도만 다시 만들 때는 저장소를 받은 뒤 `python3 seoul-layer-map/src/build.py` 한 번이면 됩니다. `src/`의 틀과 `data/`의 자료를 읽어 `seoul-layer-map/index.html`을 씁니다.
+
+글꼴은 `src/fonts.py`가 빌드 때 페이지에 든 글자를 모아 `fonts/`에 만듭니다. 글자 모음이 지난번과 같으면(`fonts/manifest.json`) 그대로 두고, 바뀌었으면 원본 TTF를 google/fonts의 고정된 커밋에서 받아(`$SLM_RAW/fonts`, sha256으로 확인) 다시 만듭니다. 이때 `pip install fonttools brotli`가 필요합니다. 새로 만들지 못하면 있던 파일을 그대로 쓰고, 빠지는 글자 수를 알려 줍니다.
 
 자료를 처음부터 다시 만드는 스크립트는 원자료(BBBike 서울 OSM 추출본, 열린데이터광장 CSV, 나무위키 문서 모음)가 있어야 돌아갑니다. 원자료는 크기와 이용 조건 때문에 넣지 않았고, 놓인 곳은 환경변수 `SLM_RAW`로 알려 줍니다(경로는 `src/paths.py` 한곳에 모여 있음). 대략의 순서는 다음과 같습니다.
 

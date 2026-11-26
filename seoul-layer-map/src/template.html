@@ -1,9 +1,17 @@
 <title>서울 도시 연대지도</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hahmlet:wght@300;500;700&family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<!--__FONTLINKS__-->
 <style>
+/* 글꼴: 저장소 fonts/에 페이지에 쓰는 글자만 담아 둔다(src/fonts.py가 빌드 때 만듦). IBM Plex는 'Plex'가 예약된 이름이라
+   글자를 덜어 낸 것은 SLM Sans KR·SLM Mono로 이름을 바꿨다. 제목 글꼴(Hahmlet)은 h1·h2·연표 시기 제목·연도 숫자 글자만 담으므로,
+   var(--display)를 다른 곳에 새로 쓰면 build.py의 display_text()에 그 글자를 더해야 한다 */
+@font-face { font-family: "Hahmlet"; src: url("fonts/hahmlet-500.woff2?v=__FV__") format("woff2"); font-weight: 500; font-display: swap; }
+@font-face { font-family: "Hahmlet"; src: url("fonts/hahmlet-700.woff2?v=__FV__") format("woff2"); font-weight: 700; font-display: swap; }
+@font-face { font-family: "SLM Sans KR"; src: url("fonts/slm-sans-kr-400.woff2?v=__FV__") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "SLM Sans KR"; src: url("fonts/slm-sans-kr-500.woff2?v=__FV__") format("woff2"); font-weight: 500; font-display: swap; }
+@font-face { font-family: "SLM Sans KR"; src: url("fonts/slm-sans-kr-600.woff2?v=__FV__") format("woff2"); font-weight: 600; font-display: swap; }
+@font-face { font-family: "SLM Mono"; src: url("fonts/slm-mono-400.woff2?v=__FV__") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "SLM Mono"; src: url("fonts/slm-mono-500.woff2?v=__FV__") format("woff2"); font-weight: 500; font-display: swap; }
 /* Layout: 지도가 화면 대부분을 차지하는 무대, 그 아래 고정 연도 띠(슬라이더), 그 아래 연표·메모. 옛 측량도의 종이·먹·철도 붉은선을 차용 */
 :root {
   --paper: #e8ebe4;
@@ -27,8 +35,9 @@
   /* 땅값: 한 색상(흙색) 9단계, 밝음→어두움 = 쌈→비쌈. 어두운 화면은 반대로(싼 곳이 바탕에 묻힘) */
   --land-0: #fae8d9; --land-1: #f3c9a6; --land-2: #e4ad7d; --land-3: #d1935a; --land-4: #ba7a3e; --land-5: #9f652b; --land-6: #825122; --land-7: #634121; --land-8: #403227;
   --display: "Hahmlet", "Noto Serif KR", "AppleMyungjo", serif;
-  --body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
-  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --body: "SLM Sans KR", "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  /* 숫자용 글꼴에는 한글이 없으므로 한글은 본문 글꼴로(전에는 운영체제 글꼴로 찍혔음) */
+  --mono: "SLM Mono", "IBM Plex Mono", "SLM Sans KR", "IBM Plex Sans KR", ui-monospace, "SFMono-Regular", Menlo, monospace;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
