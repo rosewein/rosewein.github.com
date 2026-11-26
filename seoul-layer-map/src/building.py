@@ -7,7 +7,17 @@
   (서울 열린데이터광장 「서울시 건축물대장 표제부」 OA-22424)
 - 폐쇄말소대장 표제부: 이름에 '폐쇄' 또는 '말소'와 '표제부'가 있고 '총괄'이 없는 파일
   (서울 열린데이터광장 「서울시 폐쇄말소대장 표제부」)
-- 총괄표제부(선택): 이름에 '총괄'이 있는 파일. 단지 이름을 붙이는 데만 쓴다.
+- 총괄표제부(선택): 이름에 '총괄'이 있는 파일. 지금은 읽지 않는다(서울 열린데이터광장 파일에 건물명 열이 없음).
+- 기본개요(선택): 이름에 '기본개요'가 있는 파일. 큰 개발 이름을 붙이는 데만 쓴다
+  (「서울시 건축물대장 기본개요」 OA-22422, 「서울시 폐쇄말소대장 기본개요」 OA-22430).
+  표제부의 건축물대장일련번호로 건물명을 찾고, 그 줄의 상위건축물대장일련번호(총괄표제부)에 건물명이 있으면 그쪽을 먼저 쓴다.
+  (2026-11-26 이지의 크롬에서 두 번 내려받기를 눌렀으나 파일이 생기지 않아, 아래 건축HUB 파일로 대신함)
+- 건축HUB 건물명(선택): 이름에 '건축HUB'가 있는 .json. src/building_names_tool.py로 만든 HTML에서 받은 파일로,
+  큰 개발 지번(PNU)마다 국토교통부 「건축HUB 건축물대장정보 서비스」 표제부·총괄표제부의 건물명·동명·사용승인일·연면적이 들어 있다.
+  지금 대장에 남은 큰 개발 줄만 이름을 붙인다: 같은 지번에서 사용승인 해가 같은 총괄표제부 건물명을 먼저 쓰고, 없으면 같은 해
+  표제부 건물명 가운데 연면적이 가장 큰 것. 헐린 줄은 같은 지번에 새 건물이 있으므로 붙이지 않는다.
+  이름은 받은 날 대장에 적힌 지금 이름이라, 리모델링이나 이름 바꾸기를 거친 건물은 지은 해의 이름과 다르다
+  (예: 당산동 374는 1995년 사용승인 동들이 '래미안당산1차아파트', 같은 해 상가동이 '당산동삼성아파트').
 
 셈하는 법
 - 줄 하나 = 건축물 한 동(표제부). 연면적은 표제부의 연면적(㎡)을 그대로 더한다. 총괄표제부는 합계라서 더하지 않는다.
@@ -40,6 +50,7 @@ GU = {"11110":"종로구","11140":"중구","11170":"용산구","11200":"성동�
 "11470":"양천구","11500":"강서구","11530":"구로구","11545":"금천구","11560":"영등포구","11590":"동작구","11620":"관악구",
 "11650":"서초구","11680":"강남구","11710":"송파구","11740":"강동구"}
 Y0, Y1 = 1900, 2026
+AREA_MAX = 1_000_000   # 한 동 연면적이 이보다 크면 자릿수 오류로 본다(2026-11 자료에서 이 다섯 줄 다음으로 큰 동은 지금 대장 약 39만㎡)
 CLASSES = ["res", "com", "ind", "edu", "etc", "unk"]
 
 def norm(h):
@@ -142,6 +153,46 @@ def num(s):
     except ValueError: return 0.0
 
 
+# 건축HUB 건물명: 짧은 기호(101동·A동·제1동)와 부속 이름은 버린다. '○○상가'처럼 뜻 있는 이름은 남긴다
+HUB_GENERIC = re.compile(r"^(지하)?주차장$|^관리(동|사무소)$|^(경비실|기계실|전기실|창고|부속동?|주건축물|상가|상가동|근린상가|노인정|경로당|어린이집|유치원|주민공동시설|복리시설|본관|별관|신관|구관|공장|주공장)$|^[가-힣]동$")
+
+
+def hub_clean(s):
+    s = re.sub(r"\s+", " ", s or "").strip()
+    return re.sub(r"\s*(제?\s*[A-Za-z]?\d+(-\d+)?\s*동)$", "", s).strip()   # 끝의 '101동'·'제1동'·'A1동'
+
+
+def hub_ok(s):
+    if not s or HUB_GENERIC.search(s) or not re.search(r"[가-힣]{2,}|[A-Za-z]{3,}", s): return False   # '..'처럼 글자가 없는 것도 버림
+    return not (len(s) <= 6 and re.fullmatch(r"[\s\d\-()A-Za-z제동호층]*", s))
+
+
+def hub_names(bl, paths, report):
+    H = {}
+    for p in paths: H.update(json.load(open(p))["done"])
+    how = Counter()
+    for b in bl:
+        if b["gone"]: continue
+        L = H.get(b.get("pnu") or "")
+        if L is None:
+            if b["a"] >= 30000 or b["hh"] >= 300: how["받은 자료에 지번 없음"] += 1
+            continue
+        y = str(b["y"])
+        ty = [t for t in L["t"] if t["useAprDay"][:4] == y]
+        rn = Counter(hub_clean(r["bldNm"]) for r in L["r"] if r["useAprDay"][:4] == y and hub_ok(hub_clean(r["bldNm"])))
+        tn = Counter()
+        for t in ty:
+            c = hub_clean(t["bldNm"])
+            if hub_ok(c): tn[c] += float(t["totArea"] or 0)
+        if rn: b["nm"] = rn.most_common(1)[0][0]; how["총괄표제부 이름"] += 1
+        elif tn: b["nm"] = tn.most_common(1)[0][0]; how["표제부 이름"] += 1
+        elif ty: how["같은 해 줄은 있으나 이름 없음"] += 1
+        else: how["같은 해 사용승인 줄 없음"] += 1
+    report["건축HUB 이름"] = {"파일": [os.path.basename(p) for p in paths], "지번": len(H), "큰 개발 줄(헐린 것 뺌)": dict(how)}
+    return max(json.load(open(p)).get("made", "")[:10] for p in paths)
+    print(f"건축HUB 이름: {dict(how)}", file=sys.stderr)
+
+
 def main():
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     if not args:
@@ -152,11 +203,13 @@ def main():
     emd = {g["properties"]["cd"]: g["properties"] for g in geoms}
     by_gu_nm = {(GU[p["gu"]], p["nm"]): cd for cd, p in emd.items()}
 
-    files = {"cur": [], "gone": [], "recap": []}
+    files = {"cur": [], "gone": [], "recap": [], "names": [], "hub": []}
     for f in sorted(os.listdir(src)):
-        if not f.lower().endswith((".zip", ".csv", ".txt")): continue
         p = os.path.join(src, f)
-        if "총괄" in f: files["recap"].append(p)
+        if "건축HUB" in f and f.lower().endswith(".json"): files["hub"].append(p); continue
+        if not f.lower().endswith((".zip", ".csv", ".txt")): continue
+        if "기본개요" in f: files["names"].append(p)
+        elif "총괄" in f: files["recap"].append(p)
         elif ("폐쇄" in f or "말소" in f) and "표제부" in f: files["gone"].append(p)
         elif "표제부" in f: files["cur"].append(p)
     if not files["cur"]:
@@ -168,9 +221,35 @@ def main():
                                 "hh": zero(), "hhGone": zero(), "demol": zero(), "demolHh": zero()})
     big = defaultdict(lambda: {"a": 0.0, "hh": 0, "dongs": 0, "names": Counter(), "use": Counter()})
     report = {}
+    fixed = []   # 연면적 자릿수를 고친 줄
     out_asof = []
     GONE_OK = {"말소", "일부말소"}
     cur_keys = set()   # 지금 대장의 (대지위치, 동명, 사용승인일) — 말소대장 줄이 지금 건물과 같은지 가리는 데 씀
+
+    # 기본개요에서 일련번호 → 건물명, 일련번호 → 상위(총괄표제부) 일련번호. 전유부 줄은 이름이 같아 읽지 않는다
+    NAMES, PARENT = {}, {}
+    for path in files["names"]:
+        head, rd, enc, delim = open_rows(path)
+        h = {norm(x): i for i, x in enumerate(head)}
+        ipk, iup, inm, ikind = (h.get(norm(k)) for k in ("건축물대장일련번호", "상위건축물대장일련번호", "건물명", "대장종류코드명"))
+        if ipk is None or inm is None:
+            print(f"{os.path.basename(path)}: 일련번호·건물명 열이 없어 건너뜀", file=sys.stderr); continue
+        nrow = 0
+        for r in rd:
+            if len(r) < len(head) or (ikind is not None and r[ikind].strip() == "전유부"): continue
+            nrow += 1
+            sn = r[ipk].strip()
+            if r[inm].strip(): NAMES[sn] = r[inm].strip()
+            if iup is not None and r[iup].strip(): PARENT[sn] = r[iup].strip()
+        report[os.path.basename(path)] = {"종류": "기본개요(이름)", "encoding": enc, "읽은 줄(전유부 뺌)": nrow, "건물명 있는 줄": len(NAMES)}
+        print(f"{os.path.basename(path)} [이름] 읽은 줄 {nrow:,} · 이름 {len(NAMES):,}", file=sys.stderr)
+    GENERIC = re.compile(r"^[\s\d\-()A-Za-z제동호층]*$|주차장|관리동|경비실|기계실|전기실|창고|부속|주건축물|상가동?$")
+    def name_for(sn):
+        """표제부 일련번호의 건물명: 총괄표제부 이름을 먼저, 없으면 그 동의 이름. '101동'·'지하주차장' 같은 이름은 버린다"""
+        for k in (PARENT.get(sn), sn):
+            nm = NAMES.get(k) if k else None
+            if nm and not GENERIC.search(nm): return nm
+        return ""
 
     def locate(r, c):
         sgg = r[c["sgg_cd"]].strip() if "sgg_cd" in c else ""
@@ -218,6 +297,13 @@ def main():
                 if "regstr" in c: regstr[r[c["regstr"]].strip()] += 1
                 if "mainatch" in c: mainatch[r[c["mainatch"]].strip()] += 1
                 area = num(r[c["area"]])
+                if area > AREA_MAX:
+                    # 한 동의 연면적이 100만㎡를 넘는 줄은 서울에 있을 수 없는 값이다. 지금까지 본 다섯 줄은 모두 소수점이 빠져
+                    # 1,000배로 적힌 것으로 보여(용적률산정연면적·건축면적×층수와 견줘 맞음) 1/1000로 고쳐 넣고 보고서에 남긴다
+                    fixed.append({"파일": which, "대지위치": r[c["plat"]].strip() if "plat" in c else "", "동명": r[c["dongnm"]].strip() if "dongnm" in c else "",
+                                  "적힌 연면적": area, "고친 연면적": round(area / 1000, 3), "사용승인일": r[c["useapr"]].strip()})
+                    why["연면적 100만㎡ 넘음(소수점 빠진 것으로 보고 1/1000로 고침)"] += 1
+                    area /= 1000
                 uc = use_class(r[c["purps"]] if "purps" in c else "")
                 uses[(r[c["purps"]].strip() if "purps" in c else "") + " → " + uc] += 1
                 y, raw = ymd(r[c["useapr"]])
@@ -245,6 +331,9 @@ def main():
                 key = (which, cd, {"1": "산", "산": "산"}.get(r[c["platgb"]].strip(), "") if "platgb" in c else "", bun, ji, y)
                 bg = big[key]; bg["a"] += area; bg["hh"] += hh; bg["dongs"] += 1
                 if "bldnm" in c and r[c["bldnm"]].strip(): bg["names"][r[c["bldnm"]].strip()] += 1
+                elif NAMES and "pk" in c:
+                    nm = name_for(r[c["pk"]].strip())
+                    if nm: bg["names"][nm] += 1
                 bg["use"][uc] += area
                 if "pnu" not in bg:
                     # PNU 19자리 = 법정동 10자리(서울은 리가 없어 cd 8자리 + 00) + 대지·산 구분(1·2) + 본번 4 + 부번 4
@@ -282,7 +371,9 @@ def main():
             bl.append({"cd": cd, "y": y, "a": round(bg["a"]), "hh": bg["hh"], "n": bg["dongs"], "gone": which == "gone",
                        "nm": bg["names"].most_common(1)[0][0] if bg["names"] else "", "use": bg["use"].most_common(1)[0][0],
                        "jb": f"{pg}{bun}{'-' + ji if ji else ''}", "pnu": bg.get("pnu")})
+    if files["hub"]: out["nmAsof"] = hub_names(bl, files["hub"], report)   # 이름을 받은 날(YYYY-MM-DD)
     out["big"] = sorted(bl, key=lambda b: (b["y"], -b["a"]))
+    report["연면적 자릿수를 고친 줄"] = fixed
     out["asof"] = max(out_asof) if out_asof else ""
     out["src"] = {"cur": [os.path.basename(p) for p in files["cur"]], "gone": [os.path.basename(p) for p in files["gone"]]}
     json.dump(out, open(f"{B}/building.json", "w"), ensure_ascii=False, separators=(",", ":"))
