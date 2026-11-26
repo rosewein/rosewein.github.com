@@ -214,7 +214,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     <div class="tk" id="landTicks"></div>
     <p>땅값: 법정동마다 ㎡당 개별공시지가의 중앙값을 그 해 서울 전체 필지 중앙값으로 나눈 배수. 칸 하나가 두 배씩(로그 눈금)이고, 굵은 1이 서울 중앙값입니다. 1990년부터 · <i class="na"></i>자료 없음</p>
   </div>
-  <p class="small" style="margin:2px 0 0">지도를 확대하면 역 이름이 나옵니다. 선로 형상 © OpenStreetMap contributors</p>
+  <p class="small" style="margin:2px 0 0">지도를 확대하면 역 이름이 나옵니다. 선로 형상 © OpenStreetMap contributors<span id="verLabel"></span></p>
 </div>
 
 <main class="notes wrap">
@@ -915,6 +915,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     return `<td>${e.label}</td><td class="n">${e.official ?? "—"}</td><td class="n">${a.toFixed(1)}</td>`;
   });
   d3.select("#method").html(DATA.methodHtml);
+  if (DATA.version) d3.select("#verLabel").html(` · <a href="https://github.com/rosewein/rosewein.github.com/tree/master/seoul-layer-map#변경-기록" target="_blank" rel="noopener" style="color:inherit">v${DATA.version.v}</a> (${DATA.version.date})`);
 
   // 버스 규모 차트(노선 수, 운행 대수) — 두 줄을 따로 그린 작은 표
   let busCursor = null;

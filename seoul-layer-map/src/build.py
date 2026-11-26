@@ -140,6 +140,8 @@ if os.path.exists(f"{B}/village_layer.json"):
         vy[y] = {"routes": r["routes"], "nstops": r["nstops"], "only_km2": r["only_km2"], "day": r["day"], "stops": sorted(set(ids)), "only": r["only"]}
     data["village"] = {"pts": pts, "years": vy}
     print("village pts", len(pts), file=sys.stderr)
+# 지도 버전: 레이어가 늘면 소수점 둘째 자리를 올리고(v1.2 → v1.3), README 「변경 기록」과 git 태그(seoul-layer-map-vX.Y)도 같이 적는다
+data["version"] = {"v": "1.2", "date": "2026-11-26"}
 tpl = open(f"{B}/template.html").read()
 out = tpl.replace("/*__DATA__*/", "const DATA = " + json.dumps(data, ensure_ascii=False, separators=(",", ":")) + ";")
 open(f"{B}/seoul-tram-boundary.html", "w").write(out)
