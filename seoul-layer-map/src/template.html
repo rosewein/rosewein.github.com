@@ -653,6 +653,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   // 조선 후기 대로·역·원·나루: 자료가 있으면 연도 띠가 1899년 한 칸 앞(Y0=1898)에서 시작한다. 1898은 '조선 후기' 단계를 뜻하고 실제 1898년이 아니다
   const joseon = DATA.joseon || null;
   const oldmap = DATA.oldmap || null;   // 1914 경성부시가강계도: 웹 메르카토르로 다시 그린 이미지(img/). 처음 보일 때 불러온다
+  const hanseong = DATA.hanseong;   // 1914년 앞 한성부·경성부 경계(HGIS 1910)
   const palace = DATA.palaces;
   if (oldmap) document.getElementById("oldmapChip").hidden = false;
   if (joseon) document.getElementById("joseonChip").hidden = false;
@@ -821,6 +822,29 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
       .attr("font-size", d => d.fs / k).attr("font-weight", d => d.fw).attr("fill", "var(--palace-2)")
       .attr("paint-order", "stroke").attr("stroke", "var(--paper)").attr("stroke-width", 3 / k).attr("stroke-linejoin", "round")
       .style("pointer-events", "none").text(d => d.txt);
+  }
+  // 1914년 앞 시역: HGIS가 그린 1910년 한성부(성저십리 포함, 243.6㎢)를 시역처럼 칠하고, 안쪽은 구 경계 자리에
+  // 1910년까지 5부, 1911–1913년 5부 8면을 그린다. 1910년 앞 경계 자료는 없어서 1899–1909년에도 1910년 경계를 쓴다.
+  // 1914년부터는 옛 한성부 경계를 이전 경계 점선(이름 「한성부」)으로 남긴다(이지가 고름, 2026-11-26).
+  // HS_STAGE: 조선 후기 단계에도 점선으로 보일지. 성저십리 바깥 경계가 조선 후기와 1910년에 같은지 원문을 본 뒤 정하기로 함
+  const HS_STAGE = false;
+  const hsPhase = (y) => !hanseong ? null : y >= 1914 ? null : y >= 1911 ? "bm1911" : y >= 1899 ? "bu1910" : HS_STAGE ? "bu1910" : null;
+  function drawHanseong(er, fillOff, labels) {
+    if (!hanseong) return;
+    if (er) {
+      gRings.append("path").datum(hanseong.outline).attr("d", path).attr("fill", "none").attr("stroke", "var(--ring)")
+        .attr("stroke-width", 1).attr("stroke-dasharray", "4 3").attr("vector-effect", "non-scaling-stroke");
+      return;
+    }
+    const ph = hsPhase(year); if (!ph) return;
+    const stage = year < 1899;
+    gArea.append("path").datum(hanseong.outline).attr("d", path)
+      .attr("fill", "var(--area)").attr("fill-opacity", fillOff || stage ? 0 : 0.32)
+      .attr("stroke", "var(--ink)").attr("stroke-width", stage ? 1.2 : 1.6).attr("stroke-dasharray", stage ? "5 4" : null)
+      .attr("vector-effect", "non-scaling-stroke");
+    gGu.append("path").datum(hanseong[ph].mesh).attr("d", path).attr("fill", "none").attr("stroke", "var(--gu)")
+      .attr("stroke-width", 0.9).attr("stroke-dasharray", stage ? "3 3" : null).attr("vector-effect", "non-scaling-stroke");
+    hanseong[ph].labels.forEach(l => { const c = projection(l.p); labels.push({ x: c[0], y: c[1], t: l.name, fs: 10.5, cls: "gu" }); });
   }
   function drawJoseon() {
     gJoseon.selectAll("*").remove();
@@ -1077,6 +1101,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
         if (isFinite(c[0])) labels.push({ x: c[0], y: c[1], t: grp.name, fs: 10.5, cls: "gu" });
       });
     }
+    drawHanseong(er, fillOff, labels);
     gGu.style("display", layerOn.gu ? null : "none");
 
     // trams
@@ -1258,7 +1283,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     if (landOn) stats.push(landShown ? `서울 필지 중앙값 ㎡당 ${fmtWon(land.seoul[li])}${landPartial(year) ? "(" + landPartial(year) + ")" : ""}` : `땅값 자료는 ${land.years[0]}–${land.years[land.years.length - 1]}년`);
     if (vyy) stats.push(`마을버스 ${village.years[vyy].routes}개 노선${vyy !== year ? `(${vyy}년 자료)` : ""}, 마을버스로만 닿는 땅 ${village.years[vyy].only_km2}㎢`);
     if (drawn) stats.push(`버스 노선 ${drawn}개 그림${bs ? `(공식 ${bs.routes}개)` : ""}`); else if (bs) stats.push(`버스 노선 ${bs.routes}개`);
-    stats.push(offArea ? `시역 ${offArea}㎢` : "시역 —");
+    stats.push(offArea ? `시역 ${offArea}㎢` : hsPhase(year) && year >= 1899 ? `시역 ${hanseong.km2}㎢(1910년 경계)` : "시역 —");
     if (active.length) stats.push(`궤도 ${active.length}구간 ${km.toFixed(1)}km`);
     if (metro && year >= 1974) stats.push(`역 ${metro.stations.filter(st => st.first <= year).length}곳`); else if (year >= 1968 && !active.length) stats.push("전차 폐지(1968)");
     if (year < 1899 && joseon) { const n = k => joseon.points.filter(p => p.kind === k).length; stats.splice(0, stats.length, `대로 ${joseon.roads.filter(r => /^r\d$/.test(r.id)).length}갈래 · 역 ${n("역")} · 원 ${n("원")} · 나루 ${n("나루")}`); }
@@ -1302,6 +1327,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
 
   function eraText(er, gp) {
     if (!er && year < 1899) return "한성부 · 도성에서 나가는 대로와 역·원·나루 (위치·경로는 근사)";
+    if (!er && hsPhase(year)) return year >= 1911 ? "경성부 · 5부 8면 (경계는 HGIS 1910년)" : year === 1910 ? "한성부, 10월 경성부 · 5부 (경계는 HGIS 1910년)" : "한성부 · 5부, 성저십리 포함 (경계는 HGIS 1910년)";
     if (!er) return "한성부 · 성저십리 포함 (1914년 이전 경계는 그리지 않음)";
     const pre = year < 1946 ? "경성부" : year < 1949 ? "서울특별자유시" : "서울특별시";
     return `${pre} · ${gp ? gp.label : "구 없음"}`;
@@ -1395,8 +1421,13 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     const rings = eras.map(e => {
       const pts = [];
       eraPoly[e.year].coordinates.forEach(poly => { const ring = poly[0], step = Math.max(1, Math.floor(ring.length / 600)); for (let i = 0; i < ring.length; i += step) { const p = projection(ring[i]); pts.push({ p, s: t.apply(p) }); } });
-      return { y: e.year, pts };
+      return { t: String(e.year), pts };
     });
+    if (hanseong) {   // 1914년부터 남기는 옛 한성부 경계(drawHanseong)
+      const pts = [];
+      hanseong.outline.coordinates.forEach(poly => { const ring = poly[0], step = Math.max(1, Math.floor(ring.length / 600)); for (let i = 0; i < ring.length; i += step) { const p = projection(ring[i]); pts.push({ p, s: t.apply(p) }); } });
+      rings.push({ t: "한성부", pts });
+    }
     // 다른 경계와의 거리는 칸(9px) 나눔으로 빠르게 본다
     const grid = new Map(), key = (x, y) => `${Math.floor(x / M)},${Math.floor(y / M)}`;
     rings.forEach((r, ri) => r.pts.forEach(q => { const k = key(q.s[0], q.s[1]); (grid.get(k) || grid.set(k, []).get(k)).push([ri, q.s[0], q.s[1]]); }));
@@ -1409,12 +1440,12 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     const placed = overlayBoxes(t), out = [];
     const hit = (a) => placed.some(b => !(a[2] < b[0] || a[0] > b[2] || a[3] < b[1] || a[1] > b[3]));
     rings.forEach((r, ri) => {
-      const w = String(r.y).length * fs * 0.62 + 6, h = fs + 3;
+      const w = [...r.t].reduce((a, ch) => a + (ch > "\u3000" ? fs : fs * 0.62), 0) + 6, h = fs + 3;
       const cand = r.pts.filter(q => q.s[0] > w && q.s[0] < W - w && q.s[1] > h && q.s[1] < H - h).sort((a, b) => a.s[1] - b.s[1]);
       for (const q of cand) {
         const box = [q.s[0] - w / 2, q.s[1] - h / 2, q.s[0] + w / 2, q.s[1] + h / 2];
         if (hit(box) || nearOther(ri, q.s[0], q.s[1])) continue;
-        placed.push(box); ringBoxes.push(box); out.push({ t: String(r.y), p: q.p }); break;
+        placed.push(box); ringBoxes.push(box); out.push({ t: r.t, p: q.p }); break;
       }
     });
     gRingLab.selectAll("text").data(out).join("text")
