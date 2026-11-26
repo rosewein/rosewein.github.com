@@ -161,6 +161,9 @@ input[type=range] { width: 100%; margin: 0; accent-color: var(--tram); height: 2
 .log .era-h i.lbl { font-style: normal; }
 @media (max-width: 560px) { .log .era-h i.lbl { display: none; } }
 .legend-notes { margin: 0 0 14px; padding-left: 18px; font-size: 13.5px; max-width: 62ch; }
+/* 읽는 법 탭: 한 단, 폭 760px(글자 크기는 그대로). 넓은 화면에서 글이 가운데 좁은 띠로만 모여 보이던 것 */
+#pane-read { max-width: 760px; }
+#pane-read p, #pane-read .lead, #pane-read .legend-notes { max-width: none; }
 .legend-notes li { margin-bottom: 4px; }
 h2 { font-family: var(--display); font-weight: 500; font-size: 19px; margin: 0 0 10px; }
 .log { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--rule); }
