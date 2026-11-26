@@ -138,6 +138,8 @@ input[type=range] { width: 100%; margin: 0; accent-color: var(--tram); height: 2
 .side .legend-land .tk span { font-size: 10px; }
 .attrib { position: absolute; right: 4px; bottom: 3px; font-size: 10.5px; color: var(--ink-2); background: var(--paper-2); background: color-mix(in srgb, var(--paper-2) 80%, transparent); padding: 1px 5px; border-radius: 3px; pointer-events: auto; }
 .attrib a { color: inherit; }
+.toast { position: absolute; left: 50%; bottom: 30px; transform: translateX(-50%); max-width: min(420px, calc(100% - 24px)); background: var(--ink); color: var(--paper); border-radius: 4px; padding: 7px 12px; font-size: 13px; line-height: 1.45; box-shadow: 0 2px 6px rgba(0,0,0,.18); pointer-events: none; z-index: 5; }
+.exclnote { margin: 4px 0 0; font-size: 11.5px; color: var(--ink-2); }
 #oldAttrib, #verLabel { white-space: nowrap; }   /* 좁은 화면에서 줄이 바뀌어도 출처·버전 덩어리는 나뉘지 않게 */
 .statstrip { display: none; }
 /* 오른쪽 판은 폭이 넉넉할 때만. 태블릿 세로 화면처럼 좁으면 칩을 지도 위 한 줄로(서울은 가로가 길어 폭을 지도에 주는 편이 크게 보임) */
@@ -380,6 +382,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     <button id="layBtn" class="laybtn" type="button" aria-expanded="false" aria-controls="side">레이어·범례</button>
   </div>
   <div class="info" id="info" hidden><button class="x" id="infoX" type="button" aria-label="닫기">×</button><div id="infoBody"></div></div>
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
   <div class="attrib" id="attrib">선로·물길 형상 © OpenStreetMap contributors<span id="oldAttrib" hidden></span><span id="verLabel"></span></div>
 </div>
 <aside class="side" id="side" aria-label="레이어">
@@ -434,6 +437,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     <div class="bar" id="landBar"></div>
     <div class="tk" id="landTicks"></div>
     <p id="landNote">땅값: 서울 필지 중앙값의 몇 배인지. 칸마다 두 배, 굵은 1이 서울 중앙값 · <i class="na"></i>자료 없음</p>
+    <p class="exclnote" id="landExcl" hidden>역 둘레 땅값과는 함께 켜지 않습니다(하나를 켜면 다른 하나는 꺼짐).</p>
   </div>
   <div class="legend-land" id="bldLegend" hidden>
     <div class="bseg" role="group" aria-label="새 건물 용도"><span>용도</span><button type="button" data-use="all" aria-pressed="true">전체</button><button type="button" data-use="r" aria-pressed="false">주거</button><button type="button" data-use="c" aria-pressed="false">상업·업무</button></div>
@@ -445,7 +449,8 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   <div class="legend-land" id="stLandLegend" hidden>
     <div class="bar stl"><i style="background:var(--stl-low)"></i><i style="background:var(--stl-0)"></i><i style="background:var(--stl-1)"></i><i style="background:var(--stl-2)"></i><i style="background:var(--stl-3)"></i><i style="background:var(--stl-4)"></i></div>
     <div class="tk"><span style="left:16.7%">−5</span><span style="left:33.3%">+5</span><span style="left:50%">+10</span><span style="left:66.7%">+20</span><span style="left:83.3%">+40%</span></div>
-    <p>역 둘레 땅값: 개통 5년 전보다, 같은 구에서 값대가 같고 역에서 1km 넘게 떨어진 땅에 견줘 얼마나 더 올랐는지. 고리는 안쪽부터 250m · 500m · 1km(더 가까운 역이 있으면 그 역 몫). 개통 앞뒤 5년은 진하게, 그 뒤엔 개통 5년 뒤 값을 옅게 · <i class="na"></i>필지 20개 미만</p>
+    <p>역 둘레 땅값: 개통 5년 전보다, 같은 구에서 값대가 같고 역에서 1km 넘게 떨어진 땅에 견줘 얼마나 더 올랐는지. 고리는 안쪽부터 250m · 500m · 1km(더 가까운 역이 있으면 그 역 몫, 강·하천 수면은 뺌). 개통 앞뒤 5년은 진하게, 그 뒤엔 개통 5년 뒤 값을 옅게 · <i class="na"></i>필지 20개 미만</p>
+    <p class="exclnote">땅값(공시지가)과는 함께 켜지 않습니다. 둘 다 서울보다 더 오른 몫을 보이지만 재는 방법이 달라서, 하나를 켜면 다른 하나는 꺼집니다.</p>
   </div>
   <div class="legend-land" id="gbLegend" hidden>
     <p><i class="gbsw"></i><span id="gbLegendText">그린벨트(개발제한구역)</span></p>
@@ -1272,6 +1277,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     d3.select("#busLegend").attr("hidden", layerOn.bus && bus ? null : true);
     d3.select("#villageLegend").attr("hidden", layerOn.village && villageYear(year) ? null : true);
     d3.select("#landLegend").attr("hidden", layerOn.land && land ? null : true);
+    d3.select("#landExcl").attr("hidden", stLand ? null : true);
     d3.select("#joseonLegend").attr("hidden", layerOn.joseon && joseon ? null : true);
     d3.select("#oldmapLegend").attr("hidden", oldShownAt(year) ? null : true);
     d3.select("#stLandLegend").attr("hidden", layerOn.stland && stLand ? null : true);
@@ -1605,6 +1611,22 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   const stFill = (v) => { const c = stClass(v); return c == null ? "url(#landNA)" : `var(--stl-${c})`; };
   const fmtStPct = (v) => v == null ? "—" : `${v > 0 ? "+" : v < 0 ? "−" : "±"}${Math.abs(v).toFixed(1)}%`;
   const RING_LAB = ["250m 안", "250–500m", "500m–1km"];
+  // 땅값(공시지가)과 역 둘레 땅값은 둘 다 '서울보다 더 오른 몫'을 보이지만 재는 방법이 달라(동 중앙값 배수 / 같은 필지 변화),
+  // 한 화면에 함께 켜지 않는다. 하나를 켜면 다른 하나를 끈다(2026-11-26 이지가 정함)
+  const EXCL = { land: "stland", stland: "land" };
+  const EXCL_NAME = { land: "땅값(공시지가)", stland: "역 둘레 땅값" };
+  function exclOff(k, tell) {
+    const o = EXCL[k]; if (!o || !layerOn[o]) return;
+    layerOn[o] = false;
+    const c = document.querySelector(`.chip[data-layer="${o}"]`); if (c) c.setAttribute("aria-pressed", "false");
+    if (tell) showToast(`${EXCL_NAME[o]}을 껐습니다. ${EXCL_NAME[k]}과 함께 켜지 않습니다.`);
+  }
+  let toastT = null;
+  function showToast(t) {
+    const el = document.getElementById("toast"); if (!el) return;
+    el.textContent = t; el.hidden = false;
+    clearTimeout(toastT); toastT = setTimeout(() => { el.hidden = true; }, 4000);
+  }
   function drawStationLand() {
     gStLand.selectAll("*").remove();
     const on = !!(layerOn.stland && stLand);
@@ -1840,6 +1862,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   d3.selectAll(".chip").on("click", function () {
     const k = this.dataset.layer; layerOn[k] = !layerOn[k];
     this.setAttribute("aria-pressed", layerOn[k] ? "true" : "false");
+    if (layerOn[k]) exclOff(k, true);
     render();
     if (selDong && !document.getElementById("info").hidden) showDong(selDong);
   });
@@ -1852,6 +1875,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   // 전체 켜기·끄기: 자료가 있어 보이는 칩만
   function setAll(on) {
     document.querySelectorAll(".chip").forEach(c => { if (c.hidden) return; layerOn[c.dataset.layer] = on; c.setAttribute("aria-pressed", on ? "true" : "false"); });
+    if (on) exclOff("land", true);   // 전체 켜기: 땅값을 켜 두고 역 둘레 땅값은 끈다
     render();
   }
   d3.select("#allOn").on("click", () => setAll(true));
@@ -1905,6 +1929,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   function goMapDong(cd, y) {
     const f = dongFeatures.find(g => g.properties.cd === cd); if (!f) return;
     ["land", "bld"].forEach(k => { if (DATA[k] && !layerOn[k]) { layerOn[k] = true; const c = document.querySelector(`.chip[data-layer="${k}"]`); if (c) c.setAttribute("aria-pressed", "true"); } });
+    exclOff("land", true);
     setAuto(false);
     goMap(y);
     const b = path.bounds(f), cx = (b[0][0] + b[1][0]) / 2, cy = (b[0][1] + b[1][1]) / 2;

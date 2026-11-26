@@ -1,7 +1,9 @@
 """역 둘레 땅값 레이어 자료: station_rings_ctrl.py 결과(json)를 지도용으로 줄이고 고리 모양을 붙인다.
-    python3 -I station_land_layer.py <rings_ctrl.json> [출력 json] [--gb=<그린벨트를 넣어 돌린 rings_ctrl json>] [--platforms=<json>]   (출력 기본: data/station_land.json)
+    python3 -I station_land_layer.py <rings_ctrl.json> [출력 json] [--gb=<그린벨트를 넣어 돌린 rings_ctrl json>] [--platforms=<json>] [--water=<water.json>]   (출력 기본: data/station_land.json)
 - --platforms(station_platforms.py 출력)를 주면 고리 중심을 처음 연 노선의 승강장으로, 보로노이 칸을 노선별 승강장으로 만들고
   같은 역 승강장의 칸을 합친다. rings_ctrl.json도 같은 --platforms로 돌린 것이어야 범위가 맞는다.
+- --water(data/water.json)를 주면 고리 모양에서 OSM 수면 면(area)을 뺀다. 법정동 경계가 강 가운데까지 가서 고리가 한강 위에 그려지던 것을 막는다.
+  필지는 수면에 없으므로 값(v·s·n)은 그대로이고 모양만 바뀐다.
 - --gb를 주면 역마다 개통 5년 전 500m 안 필지 가운데 2026년 그린벨트 안인 비율(gb)을 붙인다(값은 그린벨트 필지를 넣은 계산 그대로).
 
 - 값: 같은 필지 변화에서 '비슷한 땅'(같은 구 · 개통 5년 전 값 10분위 같음 · 열린 역 1km 밖) 변화를 뺀 것(%).
@@ -38,6 +40,10 @@ polys = [Polygon(ring(g["arcs"][0]), [ring(r) for r in g["arcs"][1:]]) if g["typ
          MultiPolygon([Polygon(ring(pp[0]), [ring(r) for r in pp[1:]]) for pp in g["arcs"]])
          for g in topo["objects"]["seoul_neighborhoods_geo"]["geometries"]]
 seoul_ll = unary_union([p.buffer(0) for p in polys]); seoul = transform(fwd, seoul_ll)
+if "water" in opt:   # 수면을 뺀 서울 땅(고리를 이것으로 자름)
+    from shapely.geometry import shape
+    water = transform(fwd, shape(json.load(open(opt["water"]))["area"]).buffer(0))
+    seoul = seoul.difference(water)
 PF = json.load(open(opt["platforms"]))["stations"] if "platforms" in opt else None
 if PF is not None:
     assert [(q["name"], q["first"]) for q in PF] == [(s["name"], s["first"]) for s in metro["stations"]], "platforms json이 metro.json과 순서가 다름"
