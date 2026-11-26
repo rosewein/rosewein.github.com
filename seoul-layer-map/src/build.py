@@ -208,7 +208,7 @@ if os.path.exists(F("village_layer.json")):
         vy[y] = {"routes": r["routes"], "nstops": r["nstops"], "only_km2": r["only_km2"], "day": r["day"], "stops": sorted(set(ids)), "only": r["only"]}
     data["village"] = {"pts": pts, "years": vy}
     print("village pts", len(pts), file=sys.stderr)
-# 토지구획정리 지구(시안): urbanplan_gr91.py가 1991판 『서울 도시계획 연혁』 연혁도에서 다시 그린 면과 오른쪽 표
+# 토지구획정리 지구: urbanplan_gr91.py가 1991판 『서울 도시계획 연혁』 연혁도에서 다시 그린 면과 오른쪽 표
 if os.path.exists(F("urbanplan_gr91.json")):
     uj = json.load(open(F("urbanplan_gr91.json")))
     data["urban"] = {"src": uj["src"],
