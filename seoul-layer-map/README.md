@@ -35,7 +35,7 @@
 | 자료 | 이 지도에서 쓴 곳 | 출처 | 이용 조건 |
 |---|---|---|---|
 | 2004년 이전 버스 노선, 2004년 이후 폐선 노선, 노선별 신설·폐선 연도, 일부 사건 설명 | `data/bus.json`, `data/dead_routes.json`, `data/route_years.json`, `src/namu_open_years.py`, `src/dead_supp.py`와 지도 안의 같은 자료 | 나무위키 「서울특별시 시내버스/2004년 개편 전 목록」 「서울특별시 시내버스/폐선」 하위 문서, 노선 문서, 「YYYY년 개업한/폐지된 버스 노선」 분류(2026년 11월 열람) | [CC BY-NC-SA 2.0 KR](https://creativecommons.org/licenses/by-nc-sa/2.0/kr/) — 출처 표시, 비영리, 동일조건 변경 허락 |
-| 도로망, 철도·지하철 선로 형상, 물길(한강 수면·하천), 성문·산꼭대기 자리 | 모든 버스 선형, `data/metro.json`, `data/rail.json`, `data/water.json`, `data/joseon.json`(대로 근사선·성문), `src/kanggye1914.py`(옛 지도 기준점) | © OpenStreetMap contributors (BBBike 서울 추출본 2026-11-22, [kimmdr2/metroscope](https://github.com/kimmdr2/metroscope) 정리본) | [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/) |
+| 도로망, 철도·지하철 선로 형상, 물길(한강 수면·하천), 성문·산꼭대기 자리, 궁역·궁궐 건물 자리 | 모든 버스 선형, `data/metro.json`, `data/rail.json`, `data/water.json`, `data/joseon.json`(대로 근사선·성문), `src/kanggye1914.py`(옛 지도 기준점), `data/palace_geo.json`(궁역·건물 자리) | © OpenStreetMap contributors (BBBike 서울 추출본 2026-11-22, [kimmdr2/metroscope](https://github.com/kimmdr2/metroscope) 정리본) | [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/) |
 | 2026년 버스 노선(정류장 순번) | `data/bus2026.json` | 서울 열린데이터광장 「서울시 버스노선별 정류장별 승하차 인원 정보」(OA-12912, 2026-11-18분) | 서울특별시 공공데이터, 열린데이터광장 이용약관 제11조(저작자·출처 표시 조건 자유이용) |
 | 마을버스 정류장(2015–2022년) | `data/village_layer.json` | 서울 열린데이터광장 OA-12912 연간 파일(해마다 11월 셋째 수요일 하루치), 「서울시 버스노선별 표준정류장ID 연계 좌표정보」(2019-06-20) | 서울특별시 공공데이터, 열린데이터광장 이용약관 제11조(저작자·출처 표시 조건 자유이용) |
 | 버스 정류장 좌표, 노선 ID | 버스 선형, 노선 연도 판단 | [kyckang/SeoulTransitMap_data](https://github.com/kyckang/SeoulTransitMap_data) (서울시·TOPIS 원자료) | 저장소 README 표기: 공공누리 제1유형(출처 표시) |
@@ -46,6 +46,7 @@
 | 역·원·나루 문헌 근거(『동국여지비고』 등 원문) | `data/joseon.json` | 국사편찬위원회 HGIS 「한양역사지리정보 역사지명데이터」(xlsx, 2026-11-26 받음) | 출처 표시(HGIS 누리집 안내) |
 | 원 터 표석 주소, 대로 경유지 | `src/joseon.py` | 서울신문 기사(2006-10-23 「부산에서 서울까지 다시 걷는 옛길」, 2018-06-28·2018-12-20 「서울미래유산 그랜드 투어」, 2019-11-07, 2022-02-11, 2026-07-31), 공유마당 「청파 배다리」, 서울시 한강 누리집, 경기도 웹진 「경기옛길」 | 지명·주소·경로 사실만 참고, 글은 옮기지 않음 |
 | 1914년 「경성부시가강계도」(6월 수정판) | `img/kanggye1914.webp`, `img/kanggye1914_inset.webp`, `data/oldmap.json`, `src/kanggye1914.py` | 서울역사아카이브 소장유물 [「경성부시가강계도」](https://museum.seoul.go.kr/archive/archiveNew/NR_relicView.do?mcsjgbnc=PS01003026001&mcseqno1=001349&mcseqno2=00000&cdLanguage=KOR)(서울역사001349, 십자옥 발행 1:10,000, 서울역사박물관 소장, 2026-11-26 받음) | 공공누리 제1유형(출처표시). 출처표시 예: 서울역사박물관 소장. 이용 신청서는 내지 않고 출처표시로 씀(지도 출처 줄·설명문) |
+| 궁궐 사건(생기고 헐리고 옮겨 간 일, 임금 거처) | `data/palace_events.csv`, `data/palace_geo.json`, `src/palaces.py` | 『조선왕조실록』(국사편찬위원회 [조선왕조실록](https://sillok.history.go.kr) 누리집, 기사 주소는 사건표 「링크」 칸), 국가유산청 궁능유적본부 궁궐 누리집 연혁, 국가기록원 「1968년 광화문 복원」「조선총독부건물 철거(역사 바로 세우기)」, 한국민족문화대백과사전 「경희궁」「덕수궁」, 서울시 「내 손안에 서울」 기사, 신문 기사(서울신문·세계일보·아주경제), 대조전 일곽 연구 논문, 서울대공원 누리집, 더위키 「경희궁」(2026-11-26 열람) | 날짜·사실만 참고, 글은 옮기지 않음(사건표 「내용」 칸은 새로 쓴 요약) |
 | 법정동 경계 | `data/emd_topo.json` | [southkorea/seoul-maps](https://github.com/southkorea/seoul-maps) (통계청·행정안전부 원자료) | 저장소 README 표기: Apache 2.0 |
 | 폐역 좌표 일부 | `data/rail.json` | OpenHistoricalMap | CC0 |
 | 전차·철도·지하철 연혁, 행정구역 변천 | 연표, `data/tram.json`, `data/years.json`, `data/gu_periods.json` | 위키백과, 한국민족문화대백과사전, 서울연구원, 서울시 미디어허브, 국토교통부·서울시 보도자료 등 | 날짜와 사실 위주로 옮겼고, 출처는 지도 아래 설명에 적음 |

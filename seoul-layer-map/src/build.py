@@ -96,6 +96,7 @@ data = {
   # 땅값: landprice.py가 만든 법정동별 ㎡당 공시지가 중앙값(1990–). 파일이 없으면 칩이 나타나지 않음
   "land": json.load(open(F("landprice.json"))) if os.path.exists(F("landprice.json")) else None,
   # 조선 후기 대로·역·원·나루(시안): joseon.py가 만든다. 있으면 연도 띠 맨 앞에 '조선 후기' 단계가 생긴다
+  "palaces": json.load(open(F("palace_geo.json"))) if os.path.exists(F("palace_geo.json")) else None,
   "joseon": json.load(open(F("joseon.json"))) if os.path.exists(F("joseon.json")) else None,
   # 옛 지도(시안): kanggye1914.py가 만든 이미지의 위치·출처. 이미지는 img/에 따로 두고 처음 보일 때 불러온다
   "oldmap": {k: v for k, v in json.load(open(F("oldmap.json"))).items() if k != "gcp"} if os.path.exists(F("oldmap.json")) else None,
@@ -157,6 +158,15 @@ if (data["joseon"] or data["oldmap"]) and os.path.exists(F("method_oldmap.html")
                " 옛 지도는 서울역사아카이브 「경성부시가강계도」(서울역사001349, 서울역사박물관 소장, 공공누리 제1유형,"
                ' <a href="' + (data["oldmap"] or {}).get("url", "") + '" target="_blank" rel="noopener">아카이브 상세</a>).')
     data["methodHtml"] = mh[:i] + open(F("method_oldmap.html")).read() + mh[i:j] + old_src + mh[j:]
+# 궁궐: 자료가 있을 때만 설명문을 출처 문단 앞에 넣고, 출처 문단 끝에 한 줄
+if data.get("palaces") and os.path.exists(F("method_palace.html")):
+    SRC_PAR = '<p class="small">출처:'
+    mh = data["methodHtml"]
+    i = mh.index(SRC_PAR); j = mh.index("</p>", i)
+    pal_src = (" 궁궐 사건은 『조선왕조실록』(국사편찬위원회 조선왕조실록 누리집, 날짜·사실만 참고), 국가유산청 궁능유적본부 궁궐 누리집 연혁,"
+               " 국가기록원 「1968년 광화문 복원」「조선총독부건물 철거」, 한국민족문화대백과사전 「경희궁」「덕수궁」, 서울시 「내 손안에 서울」 기사,"
+               " 신문 기사(서울신문·세계일보·아주경제) 등. 궁역·건물 자리는 OpenStreetMap.")
+    data["methodHtml"] = mh[:i] + open(F("method_palace.html")).read() + mh[i:j] + pal_src + mh[j:]
 # 버스: 2004년 7월 개편 이후 해마다 그릴 노선(2026년 노선망에서 그 해 뒤에 생긴 노선을 뺀다)
 OLD_FROM = 1998
 if data["bus2026"] and os.path.exists(F("route_years.json")):

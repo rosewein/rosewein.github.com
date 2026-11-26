@@ -32,7 +32,7 @@
   --village: #9cb81a;
   --village-dot: #5f7a00;
   --rail: #2a2f2c;
-  --joseon: #2a6f68; --joseon-2: #134640; --oldmap-op: .92;
+  --joseon: #2a6f68; --joseon-2: #134640; --palace: #22d65a; --palace-2: #0f7a33; --oldmap-op: .92;
   /* 땅값: 한 색상(흙색) 9단계, 밝음→어두움 = 쌈→비쌈. 어두운 화면은 반대로(싼 곳이 바탕에 묻힘) */
   --land-0: #fae8d9; --land-1: #f3c9a6; --land-2: #e4ad7d; --land-3: #d1935a; --land-4: #ba7a3e; --land-5: #9f652b; --land-6: #825122; --land-7: #634121; --land-8: #403227;
   /* 새 건물: 한 색상(남색) 8단계, 밝음→어두움 = 적음→많음(1% 미만은 칠하지 않음). 어두운 화면은 반대. validate_palette.js --ordinal 통과(밝은 끝 대비 2:1 이상) */
@@ -46,13 +46,13 @@
   :root:not([data-theme="light"]) {
     --paper: #111714; --paper-2: #18201c; --ink: #e2e7e1; --ink-2: #a2ada5; --rule: #334039;
     --river: #2b475a; --tram: #ff6a5c; --kido: #b796e6; --area: #7d6f3c; --area-new: #d0a648;
-    --ring: #9a9880; --wall: #c3ccc4; --gu: #8e9a91; --focus: #6fb2ec; --bus: #ff5cb8; --rail: #c9d1ca; --village: #9fbf2a; --village-dot: #c8e05a; --land-0: #3b2a1b; --land-1: #5a3817; --land-2: #784919; --land-3: #935c24; --land-4: #ad7138; --land-5: #c38853; --land-6: #d7a273; --land-7: #e6bd99; --land-8: #f0d9c7; --bld-1: #41506c; --bld-2: #4a628e; --bld-3: #5675af; --bld-4: #6589cb; --bld-5: #799ee2; --bld-6: #91b3f1; --bld-7: #adc9fb; --bld-8: #d3dff3; --joseon: #6cc3b6; --joseon-2: #a8e6dc; --oldmap-op: .62; color-scheme: dark;
+    --ring: #9a9880; --wall: #c3ccc4; --gu: #8e9a91; --focus: #6fb2ec; --bus: #ff5cb8; --rail: #c9d1ca; --village: #9fbf2a; --village-dot: #c8e05a; --land-0: #3b2a1b; --land-1: #5a3817; --land-2: #784919; --land-3: #935c24; --land-4: #ad7138; --land-5: #c38853; --land-6: #d7a273; --land-7: #e6bd99; --land-8: #f0d9c7; --bld-1: #41506c; --bld-2: #4a628e; --bld-3: #5675af; --bld-4: #6589cb; --bld-5: #799ee2; --bld-6: #91b3f1; --bld-7: #adc9fb; --bld-8: #d3dff3; --joseon: #6cc3b6; --joseon-2: #a8e6dc; --palace: #45ff7d; --palace-2: #b9ffcf; --oldmap-op: .62; color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --paper: #111714; --paper-2: #18201c; --ink: #e2e7e1; --ink-2: #a2ada5; --rule: #334039;
   --river: #2b475a; --tram: #ff6a5c; --kido: #b796e6; --area: #7d6f3c; --area-new: #d0a648;
-  --ring: #9a9880; --wall: #c3ccc4; --gu: #8e9a91; --focus: #6fb2ec; --bus: #ff5cb8; --rail: #c9d1ca; --village: #9fbf2a; --village-dot: #c8e05a; --land-0: #3b2a1b; --land-1: #5a3817; --land-2: #784919; --land-3: #935c24; --land-4: #ad7138; --land-5: #c38853; --land-6: #d7a273; --land-7: #e6bd99; --land-8: #f0d9c7; --bld-1: #41506c; --bld-2: #4a628e; --bld-3: #5675af; --bld-4: #6589cb; --bld-5: #799ee2; --bld-6: #91b3f1; --bld-7: #adc9fb; --bld-8: #d3dff3; --joseon: #6cc3b6; --joseon-2: #a8e6dc; --oldmap-op: .62; color-scheme: dark;
+  --ring: #9a9880; --wall: #c3ccc4; --gu: #8e9a91; --focus: #6fb2ec; --bus: #ff5cb8; --rail: #c9d1ca; --village: #9fbf2a; --village-dot: #c8e05a; --land-0: #3b2a1b; --land-1: #5a3817; --land-2: #784919; --land-3: #935c24; --land-4: #ad7138; --land-5: #c38853; --land-6: #d7a273; --land-7: #e6bd99; --land-8: #f0d9c7; --bld-1: #41506c; --bld-2: #4a628e; --bld-3: #5675af; --bld-4: #6589cb; --bld-5: #799ee2; --bld-6: #91b3f1; --bld-7: #adc9fb; --bld-8: #d3dff3; --joseon: #6cc3b6; --joseon-2: #a8e6dc; --palace: #45ff7d; --palace-2: #b9ffcf; --oldmap-op: .62; color-scheme: dark;
 }
 * { box-sizing: border-box; }
 body { background: var(--paper); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.55; }
@@ -290,6 +290,7 @@ svg text { font-family: var(--body); }
 @media (min-width: 901px) and (min-height: 501px) {
   .side .bldUse:not([hidden]) { display: flex; margin: 10px 0 0; }
   #bldLegend .bseg { display: none; }
+  #palaceLegend .bseg { display: none; }
 }
 .bspark { height: 86px; }
 .bbig { margin: 4px 0 0; padding: 0; list-style: none; font-size: 12.5px; }
@@ -376,12 +377,14 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     <button class="chip" type="button" data-layer="wall" aria-pressed="true"><i style="color:var(--wall);border-top-style:dotted"></i>한양도성</button>
     <button class="chip" type="button" data-layer="joseon" aria-pressed="true" id="joseonChip" hidden><i style="color:var(--joseon);border-top-width:2px"></i>조선 후기 대로·역·원·나루</button>
     <button class="chip" type="button" data-layer="oldmap" aria-pressed="true" id="oldmapChip" hidden><i class="fill" style="background:#e6d2ad"></i>옛 지도(1914–1935)</button>
+    <button class="chip" type="button" data-layer="palace" aria-pressed="true" id="palaceChip" hidden><i class="fill" style="background:var(--palace)"></i>궁궐</button>
     <button class="chip" type="button" data-layer="bus" aria-pressed="true" id="busChip" hidden><i style="color:var(--bus);border-top-width:2px"></i>버스</button>
     <button class="chip" type="button" data-layer="village" aria-pressed="true" id="villageChip" hidden><i class="fill" style="background:var(--village)"></i>마을버스(2015–)</button>
     <button class="chip" type="button" data-layer="dong" aria-pressed="false"><i style="color:var(--rule);border-top-width:1px"></i>현재 법정동</button>
   </div>
   </div>
   <div class="bseg bldUse" id="bldUse" role="group" aria-label="새 건물 용도" hidden><span>새 건물 용도</span><button type="button" data-use="all" aria-pressed="true">전체</button><button type="button" data-use="r" aria-pressed="false">주거</button><button type="button" data-use="c" aria-pressed="false">상업·업무</button></div>
+  <div class="bseg bldUse" id="palMove" role="group" aria-label="궁궐 옮겨 간 건물" hidden><span>궁궐</span><button type="button" data-pm="1" aria-pressed="false">옮겨 간 건물 보기</button></div>
   <button type="button" class="legbtn" id="legBtn" aria-expanded="false" aria-controls="legends">범례</button>
   <button class="lgfold" id="lgFold" type="button" aria-expanded="false" aria-controls="legends">범례 보기</button>
   <div class="legends" id="legends">
@@ -403,6 +406,11 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     <span><svg width="20" height="12" viewBox="0 0 20 12"><path d="M1,6H19" stroke="var(--joseon)" stroke-width="2.4"/></svg>조선 후기 대로(지금 길을 따라 그린 근사선, 점선은 근거가 약한 구간)</span>
     <span><svg width="20" height="12" viewBox="0 0 20 12"><path d="M1,6H19" stroke="var(--joseon)" stroke-width="1.6" stroke-dasharray="4 4"/></svg>나룻배로 건너는 곳</span>
     <span><svg width="46" height="12" viewBox="0 0 46 12"><rect x="2" y="2" width="8" height="8" fill="var(--joseon-2)"/><circle cx="22" cy="6" r="4" fill="var(--paper)" stroke="var(--joseon-2)" stroke-width="1.6"/><path d="M34,10L38,2L42,10Z" fill="var(--joseon)" stroke="var(--joseon-2)" stroke-width=".8"/></svg>역 · 원 · 나루</span>
+  </div>
+  <div class="legend-bus" id="palaceLegend" hidden>
+    <div class="bseg" role="group" aria-label="궁궐 옮겨 간 건물"><span>궁궐</span><button type="button" data-pm="1" aria-pressed="false">옮겨 간 건물 보기</button></div>
+    <span><svg width="46" height="12" viewBox="0 0 46 12"><defs><pattern id="palHatchLg" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="4" stroke="var(--palace)" stroke-width="1.6"/></pattern></defs><rect x="1" y="2" width="12" height="8" fill="var(--palace)" fill-opacity=".42" stroke="var(--palace-2)"/><rect x="17" y="2" width="12" height="8" fill="url(#palHatchLg)" stroke="var(--palace-2)"/><rect x="33" y="2" width="12" height="8" fill="var(--palace)" fill-opacity=".18" stroke="var(--palace-2)" stroke-dasharray="3 2"/></svg>궁궐: 궁으로 쓰임 · 크게 헐리거나 다른 쓰임 · 복원 사업 뒤(궁역은 지금 모습)</span>
+    <span><svg width="46" height="12" viewBox="0 0 46 12"><path d="M6,1.5L7.4,4.6L10.8,5L8.3,7.3L9,10.6L6,8.9L3,10.6L3.7,7.3L1.2,5L4.6,4.6Z" fill="var(--palace)" stroke="var(--palace-2)" stroke-width=".6"/><path d="M16,6H40" stroke="var(--palace-2)" stroke-width="1.4" stroke-dasharray="4 2.5"/><path d="M40,3L45,6L40,9Z" fill="var(--palace-2)"/></svg>임금 거처(1868–1910) · 옮겨 간 건물(옮긴 해부터 5년)</span>
   </div>
   <div class="legend-land" id="landLegend" hidden>
     <div class="bar" id="landBar"></div>
@@ -629,6 +637,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   const gBuildDot = root.insert("g", () => gHit.node());
   // 조선 후기 선·점은 동 누르기 영역 위(눌러서 근거를 봄), 버스·전차 아래
   const gJoseon = root.append("g");
+  const gPalace = root.insert("g", () => gNew.node()), gPalaceTop = root.append("g");
   const gBus = root.append("g"), gTram = root.append("g"), gRail = root.append("g"), gMetro = root.append("g"), gBusTop = root.append("g"),
         gRingLab = root.append("g"), gStLab = root.append("g"), gLabels = root.append("g");
   // 버스 종점: {route, name, from, to, lon, lat, conf, source} — 자료가 들어오면 칩이 나타남
@@ -642,8 +651,10 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   // 조선 후기 대로·역·원·나루: 자료가 있으면 연도 띠가 1899년 한 칸 앞(Y0=1898)에서 시작한다. 1898은 '조선 후기' 단계를 뜻하고 실제 1898년이 아니다
   const joseon = DATA.joseon || null;
   const oldmap = DATA.oldmap || null;   // 1914 경성부시가강계도: 웹 메르카토르로 다시 그린 이미지(img/). 처음 보일 때 불러온다
+  const palace = DATA.palaces;
   if (oldmap) document.getElementById("oldmapChip").hidden = false;
   if (joseon) document.getElementById("joseonChip").hidden = false;
+  if (palace) document.getElementById("palaceChip").hidden = false;
   const Y0 = joseon ? 1898 : 1899;
   const yearText = y => y < 1899 ? "조선 후기" : String(y);
   // 그 해 자료가 없으면(2023–2025) 그 앞의 가장 가까운 해를 쓴다
@@ -696,6 +707,55 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   }
   // 조선 후기 대로·역·원·나루: 1899년 앞 단계에서는 진하게(이름까지), 그 뒤로는 옅게 깔아 옛 길이 뒤의 교통망과 어떻게 겹치는지만 보인다
   const JSYM = { "역": d3.symbolSquare, "원": d3.symbolCircle, "나루": d3.symbolTriangle, "문": d3.symbolDiamond };
+  // 궁궐: 지금 궁역에 해마다 상태(궁으로 쓰임·크게 헐리거나 다른 쓰임·복원 사업 뒤)를 칠하고, 그 해의 이름(경운궁→덕수궁, 창경원)과
+  // 사건 뒤 몇 해 동안만 짧은 설명을 단다. 옮겨 간 건물 화살표는 단추(palMove)로 켜고, 1868–1910년 임금 거처에 별표와 칭호를 단다
+  const PAL_MOVE_YEARS = 5;
+  let palMove = false;
+  function drawPalace() {
+    gPalace.selectAll("*").remove(); gPalaceTop.selectAll("*").remove();
+    d3.select("#palMove").attr("hidden", palace && layerOn.palace ? null : true);
+    if (!palace || !layerOn.palace) return;
+    const y = year, k = kNow;   // 조선 후기 단계(1898 자리)는 1898년 상태
+    let defs = svg.select("defs"); if (defs.empty()) defs = svg.insert("defs", ":first-child");
+    if (defs.select("#palHatch").empty()) {
+      const pt = defs.append("pattern").attr("id", "palHatch").attr("width", 6).attr("height", 6).attr("patternUnits", "userSpaceOnUse").attr("patternTransform", "rotate(45)");
+      pt.append("rect").attr("width", 6).attr("height", 6).attr("fill", "var(--palace)").attr("fill-opacity", .10);
+      pt.append("line").attr("x1", 0).attr("y1", 0).attr("x2", 0).attr("y2", 6).attr("stroke", "var(--palace)").attr("stroke-width", 2).attr("stroke-opacity", .6);
+      defs.append("marker").attr("id", "palArrow").attr("viewBox", "0 0 10 10").attr("refX", 9).attr("refY", 5).attr("markerWidth", 6).attr("markerHeight", 6).attr("orient", "auto-start-reverse")
+        .append("path").attr("d", "M0,0L10,5L0,10z").attr("fill", "var(--palace-2)");
+    }
+    defs.select("#palHatch").attr("patternTransform", `rotate(45) scale(${1 / k})`);
+    const moves = palMove ? palace.moves.filter(m => m.to && y >= m.y && y < m.y + PAL_MOVE_YEARS) : [];
+    const moveEv = new Set(moves.map(m => m.ev));   // 화살표로 보이는 사건은 궁 아래 설명을 빼고 화살표 이름표로만
+    const lab = (x, yy, txt, fs, fw) => gPalaceTop.append("text").attr("x", x).attr("y", yy).attr("text-anchor", "middle").attr("font-size", fs / k).attr("font-weight", fw)
+      .attr("fill", "var(--palace-2)").attr("paint-order", "stroke").attr("stroke", "var(--paper)").attr("stroke-width", 3 / k).style("pointer-events", "none").text(txt);
+    palace.areas.forEach(a => {
+      const ph = a.phases.find(p => y >= p[0] && y <= p[1]); if (!ph) return;
+      gPalace.append("path").datum(a.geom).attr("d", path).style("pointer-events", "none")
+        .attr("fill", ph[2] === "훼손" ? "url(#palHatch)" : "var(--palace)").attr("fill-opacity", ph[2] === "궁" ? .42 : ph[2] === "복원" ? .18 : 1)
+        .attr("stroke", "var(--palace-2)").attr("stroke-width", 1.3 / k).attr("stroke-dasharray", ph[2] === "복원" ? `${4 / k} ${3 / k}` : null);
+      const c = projection(a.c), nm = (a.names.find(n => y >= n[0] && y <= n[1]) || [0, 0, a.name])[2];
+      lab(c[0], c[1], nm, 11.5, 600);
+      const note = a.notes.filter(n => y >= n[0] && y < n[0] + palace.noteYears).pop();
+      if (note && !moveEv.has(note[2])) lab(c[0], c[1] + 13 / k, `${note[1]}(${note[0]})`, 9.5, 400);
+    });
+    moves.forEach(m => {
+      const a = projection(m.from.p), b = projection(m.to.p);
+      gPalaceTop.append("path").attr("d", `M${a[0]},${a[1]}L${b[0]},${b[1]}`).attr("fill", "none").attr("stroke", "var(--palace-2)").style("pointer-events", "none")
+        .attr("stroke-width", 1.6 / k).attr("stroke-dasharray", `${5 / k} ${3 / k}`).attr("marker-end", "url(#palArrow)");
+      gPalaceTop.append("circle").attr("cx", a[0]).attr("cy", a[1]).attr("r", 3 / k).attr("fill", "var(--paper)").attr("stroke", "var(--palace-2)").attr("stroke-width", 1.4 / k);
+      // 이름표는 화살 끝 너머에(가운데에 두면 궁 이름과 겹침)
+      const east = b[0] >= a[0];
+      lab(b[0] + (east ? 6 : -6) / k, b[1] + 3.5 / k, `${m.y} ${m.what}`, 10, 400).attr("text-anchor", east ? "start" : "end");
+    });
+    const r = palace.residence.find(r => y >= +r.from.slice(0, 4) && y < +r.to.slice(0, 4));
+    if (r) {
+      const p = projection(r.at.p);
+      gPalaceTop.append("path").attr("d", d3.symbol(d3.symbolStar, 150 / (k * k))()).attr("transform", `translate(${p[0]},${p[1] - 24 / k})`)
+        .attr("fill", "var(--palace)").attr("stroke", "var(--palace-2)").attr("stroke-width", 1 / k);
+      lab(p[0], p[1] - 34 / k, `${r.who}(${(r.title_y && r.title_y[String(y)]) || r.title}) 거처`, 10, 600);
+    }
+  }
   function drawJoseon() {
     gJoseon.selectAll("*").remove();
     if (!joseon || !layerOn.joseon) return;
@@ -788,7 +848,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   const busSym = (t) => d3.symbol().type(SYM[t] || d3.symbolDiamond).size(t === "신설" || t === "폐선" ? 70 : 46)();
   let W = 0, H = 0, projection = d3.geoMercator(), path = d3.geoPath(projection), kNow = 1;
 
-  const layerOn = { rail: true, metro: true, tram: true, kido: true, area: true, rings: true, gu: true, wall: true, dong: false, bus: true, village: true, land: false, bld: false, joseon: true, oldmap: true };
+  const layerOn = { rail: true, metro: true, tram: true, kido: true, area: true, rings: true, gu: true, wall: true, dong: false, bus: true, village: true, land: false, bld: false, joseon: true, oldmap: true, palace: true };
 
   function fit() {
     const r = svg.node().getBoundingClientRect();
@@ -804,7 +864,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     gLabels.selectAll("text").attr("font-size", d => (d.fs || 11) / kNow).attr("stroke-width", 3 / kNow);
     gRail.selectAll("rect").call(sizeRail);
     sizeBus();
-    sizeJoseon();
+    sizeJoseon(); drawPalace();
     gVillage.selectAll("circle").attr("r", 1.1 / kNow);
     gBuildDot.selectAll("circle").attr("r", q => bldR(q.v));
     landPat.attr("width", 6 / kNow).attr("height", 6 / kNow); landPatBg.attr("width", 6 / kNow).attr("height", 6 / kNow);
@@ -978,6 +1038,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     drawVillage(fillOff);   // 땅값이나 새 건물 면 위에서는 마을버스 땅을 옅게
     drawJoseon();
     drawOld();
+    drawPalace();
     gDong.style("display", layerOn.dong ? null : "none");
 
     // rail (국철): 검은 선 위에 바탕색 점선을 얹은 옛 지도식 철도 기호
@@ -1168,6 +1229,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     d3.select("#villageLegend").attr("hidden", layerOn.village && villageYear(year) ? null : true);
     d3.select("#landLegend").attr("hidden", layerOn.land && land ? null : true);
     d3.select("#joseonLegend").attr("hidden", layerOn.joseon && joseon ? null : true);
+    d3.select("#palaceLegend").attr("hidden", layerOn.palace && palace ? null : true);
     d3.select("#oldmapLegend").attr("hidden", oldShownAt(year) ? null : true);
   }
 
@@ -1657,6 +1719,12 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     bldUse = this.dataset.use;
     d3.selectAll("#bldLegend .bseg button, #bldUse button").attr("aria-pressed", function () { return this.dataset.use === bldUse ? "true" : "false"; });
     render();
+  });
+  // 궁궐: 옮겨 간 건물 화살표 켜기(범례 밖·안 두 벌이 같은 값)
+  d3.selectAll("#palaceLegend .bseg button, #palMove button").on("click", function () {
+    palMove = !palMove;
+    d3.selectAll("#palaceLegend .bseg button, #palMove button").attr("aria-pressed", palMove ? "true" : "false");
+    drawPalace();
   });
   // 전체 켜기·끄기: 자료가 있어 보이는 칩만
   function setAll(on) {
