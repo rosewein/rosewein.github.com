@@ -1,5 +1,7 @@
 """사건 시점 시험 그림용 계열 계산.
-    python3 -I station_events.py <pnu_price.npz> <loc.npz> <metro.json> <출력 json>
+    python3 -I station_events.py <pnu_price.npz> <loc.npz> <metro.json> <출력 json> [도시개발구역 SHP(.shp 앞부분)]
+도시개발구역 SHP(V-World 용도지역지구정보 「도시개발/도시개발구역」)를 주면 은평뉴타운·마곡지구를 법정동 대신 구역 경계로도 계산한다:
+구역 안(정확한 위치), 구역 바깥 1km 띠, 대조는 같은 구에서 구역과 1km 띠 밖인 필지.
 묶음마다 기준 해 b를 두고 1990–2026 모든 해에 대해
 - sp: 기준 해 필지 가운데 t년에도 같은 코드로 남은 필지의 log2(p_t/p_b) 중앙값 − 서울 전체 같은 계산
 - cs: log2(묶음 중앙값_t / 서울 중앙값_t) − log2(묶음 중앙값_b / 서울 중앙값_b)
@@ -95,8 +97,36 @@ groups = {
     '진관동(은평뉴타운)': (dong_mask([11380114]), 2002, [11380114], None),
     '마곡동(마곡지구)': (dong_mask([11500105]), 2005, [11500105], None),
 }
+# 도시개발구역 경계(고유번호의 시군구 코드로 고름: 은평 11380, 마곡 11500)
+if len(sys.argv) > 5:
+    import shapefile, shapely
+    from shapely.geometry import shape
+    zr = shapefile.Reader(sys.argv[5], encoding="cp949")
+    ZONES = {}
+    for sr in zr.iterShapeRecords():
+        c = sr.record[1]
+        if c[7:12] in ("11380", "11500"):
+            g = shape(sr.shape.__geo_interface__).buffer(0)
+            if g.area > 3e6: ZONES[int(c[7:12])] = g   # 3㎢ 넘는 구역(은평 3.50, 마곡 3.67)
+    def zone_mask(gu, part):
+        g = ZONES[gu]; ring = g.buffer(1000).difference(g); shapely.prepare(g); shapely.prepare(ring)
+        def f(y):
+            X, Y, M = loc(y); ok = ~np.isnan(X) & (M <= 2); out = np.zeros(len(X), bool)
+            if part == "in": out[ok] = shapely.contains_xy(g, X[ok], Y[ok])
+            elif part == "ring": out[ok] = shapely.contains_xy(ring, X[ok], Y[ok])
+            else:   # 대조: 같은 구, 구역과 1km 띠 밖
+                far = g.buffer(1000); shapely.prepare(far)
+                out[ok] = (C[y][ok] // 10**14 == gu) & ~shapely.contains_xy(far, X[ok], Y[ok])
+            return out
+        return f
+    for gu, name, b in ((11380, "은평뉴타운(도시개발구역)", 2002), (11500, "마곡지구(도시개발구역)", 2005)):
+        groups[name] = (zone_mask(gu, "in"), b, None, "zone", zone_mask(gu, "ctrl"))
+        groups[name + " 바깥 1km"] = (zone_mask(gu, "ring"), b, None, "zone", zone_mask(gu, "ctrl"))
 res = {}
-for k, (m, b, ids, ref) in groups.items():
+for k, v in groups.items():
+    if v[3] == "zone":
+        m, b, _, _, ctrl = v; res[k] = series(m, b, ctrl); res[k]['ctrl_gus'] = 'zone'; continue
+    m, b, ids, ref = v
     if ref: gus = sorted({int(x) for x in C[b][m(b)] // 10**14}); ctrl = gu_ctrl(ids, ref, gus)
     else: gus = sorted({d // 1000 for d in ids}); ctrl = gu_rest(ids)
     res[k] = series(m, b, ctrl); res[k]['ctrl_gus'] = gus
