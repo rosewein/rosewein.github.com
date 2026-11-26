@@ -326,6 +326,23 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     const ys = Object.keys(village.years).map(Number).filter(v => v <= y);
     return ys.length ? Math.max(...ys) : null;
   }
+  // 마을버스: 마을버스로만 닿는 땅(면)과 정류장(점).
+  // 땅값 위에서는 면을 옅게(0.2) 하고 테두리(바탕색 테 + 진한 초록 선)로 범위를 보인다. 진한 면을 얹으면 땅값 칸의 밝기가 바뀌어 다른 단계처럼 보이기 때문
+  function drawVillage(onLand) {
+    gVillage.selectAll("*").remove();
+    const vy = layerOn.village ? villageYear(year) : null;
+    if (!vy) return;
+    const V = village.years[vy];
+    if (onLand) gVillage.append("path").datum(V.only).attr("d", path).attr("fill", "none")
+      .attr("stroke", "var(--paper)").attr("stroke-width", 2.4).attr("stroke-opacity", 0.7)
+      .attr("stroke-linejoin", "round").attr("vector-effect", "non-scaling-stroke");
+    gVillage.append("path").datum(V.only).attr("d", path).attr("fill", "var(--village)").attr("fill-opacity", onLand ? 0.2 : 0.42)
+      .attr("stroke", onLand ? "var(--village-dot)" : "none").attr("stroke-width", 1.1)
+      .attr("stroke-linejoin", "round").attr("vector-effect", "non-scaling-stroke");
+    gVillage.selectAll("circle").data(V.stops.map(i => village.pts[i])).join("circle")
+      .attr("cx", d => projection(d)[0]).attr("cy", d => projection(d)[1]).attr("r", 1.1 / kNow)
+      .attr("fill", "var(--village-dot)").attr("fill-opacity", 0.75).style("pointer-events", "none");
+  }
   if (bus) { document.getElementById("busChip").hidden = false; document.getElementById("busBlock").hidden = false; }
   if (land) { document.getElementById("landChip").hidden = false; document.getElementById("landBlock").hidden = false; }
   let selRoute = null;  // {net: "old"|"new", i}
@@ -506,16 +523,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     });
     gWall.style("display", layerOn.wall ? null : "none");
 
-    // 마을버스: 마을버스로만 닿는 땅(면)과 정류장(점)
-    gVillage.selectAll("*").remove();
-    const vy = layerOn.village ? villageYear(year) : null;
-    if (vy) {
-      const V = village.years[vy];
-      gVillage.append("path").datum(V.only).attr("d", path).attr("fill", "var(--village)").attr("fill-opacity", 0.42).attr("stroke", "none");
-      gVillage.selectAll("circle").data(V.stops.map(i => village.pts[i])).join("circle")
-        .attr("cx", d => projection(d)[0]).attr("cy", d => projection(d)[1]).attr("r", 1.1 / kNow)
-        .attr("fill", "var(--village-dot)").attr("fill-opacity", 0.75).style("pointer-events", "none");
-    }
+    drawVillage(landShown);
     gDong.style("display", layerOn.dong ? null : "none");
 
     // rail (국철): 검은 선 위에 바탕색 점선을 얹은 옛 지도식 철도 기호
