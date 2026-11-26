@@ -128,15 +128,25 @@ if os.path.exists(F("building.json")):
         rec["x"] = _pack(D["demol"], BLD_UNIT)
         rec["h"] = _pack([a + b for a, b in zip(D["hh"], D["hhGone"])], 1)
         bd[cd] = {k: v for k, v in rec.items() if v}
-    big = [{"cd": b["cd"], "y": b["y"], "nm": b["nm"], "jb": b["jb"], "a": round(b["a"], -2), "hh": b["hh"], **({"g": 1} if b["gone"] else {})}
-           for b in bj["big"] if b["y"] >= by0 + s0 and (b["a"] >= 30000 or b["hh"] >= 300)]
+    # 큰 개발은 법정동별로 묶어 [해, 연면적(100㎡ 단위), 세대수, 지번, 이름, 헐림] 줄로 넣는다(이름·헐림은 있을 때만).
+    # 연면적은 원래도 100㎡에서 반올림해 보여 주므로 줄이는 것이 없다
+    big = {}
+    for b in bj["big"]:
+        if b["y"] >= by0 + s0 and (b["a"] >= 30000 or b["hh"] >= 300):
+            row = [b["y"], round(b["a"] / 100), b["hh"], b["jb"]]
+            if b["nm"] or b["gone"]: row.append(b["nm"])
+            if b["gone"]: row.append(1)
+            big.setdefault(b["cd"], []).append(row)
     data["bld"] = {"y0": by0 + s0, "y1": by1, "from": BLD_FROM, "win": BLD_WIN, "unit": BLD_UNIT, "asof": bj.get("asof", "")[:7].replace("-", "년 ") + "월" if bj.get("asof") else "",
-                   "gone": bool(bj["src"]["gone"]), "d": bd, "big": big}
-    print("bld dongs", len(bd), "big", len(big), file=sys.stderr)
+                   "gone": bool(bj["src"]["gone"]), "d": bd, "big": big,
+                   "nmAsof": bj["nmAsof"][:7].replace("-", "년 ") + "월" if bj.get("nmAsof") else ""}
+    print("bld dongs", len(bd), "big", sum(map(len, big.values())), file=sys.stderr)
     if os.path.exists(F("method_building.html")):
         SRC_PAR = '<p class="small">출처:'
         assert data["methodHtml"].count(SRC_PAR) == 1, "method.html 출처 문단이 바뀜 — build.py의 SRC_PAR을 고칠 것"
         bld_src = " 새 건물은 서울 열린데이터광장 「서울시 건축물대장 표제부」(OA-22424)와 「서울시 폐쇄말소대장 표제부」(OA-22432, 원천 서울 건축주택 종합정보시스템, " + data["bld"]["asof"] + " 기준)."
+        if data["bld"]["nmAsof"]:   # 큰 개발 이름
+            bld_src += " 큰 개발 이름은 공공데이터포털 국토교통부 「건축HUB 건축물대장정보 서비스」(15134735) 표제부·총괄표제부(" + data["bld"]["nmAsof"] + " 조회, 이용허락범위 제한 없음)."
         mb = open(F("method_building.html")).read()
         if not data["bld"]["gone"]:   # 폐쇄말소대장을 아직 못 넣은 시험판
             mb += '<p><b>시험판 주의</b>: 지금은 폐쇄말소대장을 아직 넣지 못해 지금 있는 건물만 칠했습니다. 그 사이 헐린 건물은 모든 해에서 빠져 있습니다.</p>'
@@ -214,11 +224,23 @@ if os.path.exists(F("urbanplan_gr91.json")):
     data["urban"] = {"src": uj["src"],
                      "features": [{k: f[k] for k in ("key", "nos", "names", "year", "date", "lab", "geom", "note", "areaTbl", "areaDrawn")} for f in uj["features"]],
                      "table": [{k: r[k] for k in ("no", "name", "areaTbl", "notice", "date", "feature") if k in r} for r in uj["table"]]}
+# 토지구획정리 지구: 자료가 있을 때만 설명문(method_urban.html)을 출처 문단 앞에 넣고, 출처 문단 끝에 한 줄(안 2, 이지가 고름)
+if data.get("urban") and os.path.exists(F("method_urban.html")):
+    SRC_PAR = '<p class="small">출처:'
+    mh = data["methodHtml"]
+    assert mh.count(SRC_PAR) == 1, "method.html 출처 문단이 바뀜 — build.py의 SRC_PAR을 고칠 것"
+    i = mh.index(SRC_PAR); j = mh.index("</p>", i)
+    up_src = (" 토지구획정리 지구는 서울특별시 『서울 도시계획 연혁』(1991) 연혁도 「토지구획정리사업」(1989년 12월 말 현재,"
+              ' 서울도시공간포털 <a href="https://urban.seoul.go.kr/view/html/PMNU1050200000" target="_blank" rel="noopener">연혁집</a>에서 받음)의'
+              " 색칠된 면 경계를 다시 그렸고(그림은 싣지 않음), 지구명·면적·고시는 같은 연혁도의 표를 옮겼습니다."
+              " 저작권법 제24조의2(공공저작물의 자유이용)에 따라 이용했고, 문제가 있으면 내리겠습니다."
+              ' 사업 설명은 서울시 도시정비과 <a href="https://news.seoul.go.kr/citybuild/?p=29639" target="_blank" rel="noopener">「토지구획정리사업 홈페이지 오픈」</a>(2014).')
+    data["methodHtml"] = mh[:i] + open(F("method_urban.html")).read() + mh[i:j] + up_src + mh[j:]
 # 물길(지금 기준): OSM 수면 면 + 이름 있는 하천 선(src/water.py가 만듦)
 if os.path.exists(F("water.json")):
     data["water"] = json.load(open(F("water.json")))
 # 지도 버전: 레이어가 늘면 소수점을 올리고(v1.2 → v1.3), 화면·기술만 고치면 셋째 자리를 올린다(v1.3 → v1.3.1). README 「변경 기록」과 git 태그(seoul-layer-map-vX.Y)도 같이 적는다
-data["version"] = {"v": "1.7.2", "date": "2026-11-26"}
+data["version"] = {"v": "1.8", "date": "2026-11-26"}
 
 # 지도에서 읽지 않는 필드는 index.html에 넣기 직전에 덜어 낸다(data/*.json 원본은 그대로 둔다).
 # 근거 문장·운수회사·승하차 인원처럼 나중에 분석이나 정보창에 쓸 수 있는 기록이라 원본에서는 지우지 않는다.
