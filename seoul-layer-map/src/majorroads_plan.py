@@ -1,6 +1,7 @@
 """큰 도로 레이어(시안) 1단계: 『서울 도시계획 연혁』 도로 연혁도에 지금의 큰 도로가 광로·대로로 그려져 있는지 잰다.
 
 python3 src/majorroads_plan.py   → data/majorroads_plan.json, RAW/build/majorroads_plan_report.json
+python3 src/majorroads_plan.py --reuse   맞춤은 지난 보고서 것을 그대로 쓰고 링크 대조만 다시
 
 원자료(이지의 다운로드 폴더에서 옮김)
 - RAW/urbanplan/img77/  1977image.zip을 푼 것(HS_UB500RD_{27,36,52,62,65,66,71,72,76}_77LN.jpg)
@@ -107,7 +108,7 @@ def boundary_pts(year=2026):
 
 
 def big_links():
-    """majorroads.py의 select_links()와 같은 링크(고속·도시고속, 주간선, 왕복 6차로 이상)."""
+    """majorroads.py의 select_links()와 같은 링크(고속·도시고속, 주간선, 보조간선, 왕복 6차로 이상)."""
     from majorroads import select_links
     return select_links()
 
@@ -253,8 +254,14 @@ def sheet_mask(names, ed, by, aff, bnd_cache):
     return Md, frame, A0
 
 
+def load_registration():
+    """--reuse: 지난번 맞춤(RAW/build/majorroads_plan_report.json의 affine)을 그대로 쓴다. 고르는 링크만 바뀌었을 때."""
+    r = json.load(open(REPORT))
+    return {k: np.array(v) for k, v in r["affine"].items()}, r["fit"]
+
+
 def main():
-    aff, rep = register()
+    aff, rep = load_registration() if "--reuse" in sys.argv else register()
     print("맞춤", json.dumps(rep, ensure_ascii=False), file=sys.stderr)
     links = big_links(); P, own = [], []
     for k, l in enumerate(links):

@@ -33,7 +33,7 @@
   --village-dot: #5f7a00;
   --rail: #2a2f2c;
   --joseon: #2a6f68; --joseon-2: #134640; --oldmap-op: .92;
-  --road-x: #3d3832; --road-a: #6e675e; --road-m: #958e84;   /* 큰 도로: 따뜻한 회색 한 색상, 진할수록 등급이 높음 */
+  --road-x: #3d3832; --road-a: #6e675e; --road-m: #958e84; --road-b: #aca59b;   /* 큰 도로: 따뜻한 회색 한 색상, 진할수록 등급이 높음 */
   /* 땅값: 한 색상(흙색) 9단계, 밝음→어두움 = 쌈→비쌈. 어두운 화면은 반대로(싼 곳이 바탕에 묻힘) */
   --land-0: #fae8d9; --land-1: #f3c9a6; --land-2: #e4ad7d; --land-3: #d1935a; --land-4: #ba7a3e; --land-5: #9f652b; --land-6: #825122; --land-7: #634121; --land-8: #403227;
   /* 땅값 5년 변화: 방향이 있는 값이라 한 색상 규칙의 예외로 두 색상(덜 오름 청록 ← 회색 → 더 오름 갈색). 두 팔을 validate_palette.js --ordinal로 밝은·어두운 화면 모두 통과 */
@@ -49,13 +49,13 @@
   :root:not([data-theme="light"]) {
     --paper: #111714; --paper-2: #18201c; --ink: #e2e7e1; --ink-2: #a2ada5; --rule: #334039;
     --river: #2b475a; --tram: #ff6a5c; --kido: #b796e6; --area: #7d6f3c; --area-new: #d0a648;
-    --ring: #9a9880; --wall: #c3ccc4; --gu: #8e9a91; --focus: #6fb2ec; --bus: #ff5cb8; --rail: #c9d1ca; --village: #9fbf2a; --village-dot: #c8e05a; --land-0: #3b2a1b; --land-1: #5a3817; --land-2: #784919; --land-3: #935c24; --land-4: #ad7138; --land-5: #c38853; --land-6: #d7a273; --land-7: #e6bd99; --land-8: #f0d9c7; --chg-0: #9ad6cc; --chg-1: #5f9f96; --chg-2: #3f6f69; --chg-3: #4a4946; --chg-4: #7d5636; --chg-5: #b97a44; --chg-6: #f2b47e; --bld-1: #41506c; --bld-2: #4a628e; --bld-3: #5675af; --bld-4: #6589cb; --bld-5: #799ee2; --bld-6: #91b3f1; --bld-7: #adc9fb; --bld-8: #d3dff3; --joseon: #6cc3b6; --joseon-2: #a8e6dc; --oldmap-op: .62; --road-x: #e3ddd3; --road-a: #b2aba0; --road-m: #857f76; color-scheme: dark;
+    --ring: #9a9880; --wall: #c3ccc4; --gu: #8e9a91; --focus: #6fb2ec; --bus: #ff5cb8; --rail: #c9d1ca; --village: #9fbf2a; --village-dot: #c8e05a; --land-0: #3b2a1b; --land-1: #5a3817; --land-2: #784919; --land-3: #935c24; --land-4: #ad7138; --land-5: #c38853; --land-6: #d7a273; --land-7: #e6bd99; --land-8: #f0d9c7; --chg-0: #9ad6cc; --chg-1: #5f9f96; --chg-2: #3f6f69; --chg-3: #4a4946; --chg-4: #7d5636; --chg-5: #b97a44; --chg-6: #f2b47e; --bld-1: #41506c; --bld-2: #4a628e; --bld-3: #5675af; --bld-4: #6589cb; --bld-5: #799ee2; --bld-6: #91b3f1; --bld-7: #adc9fb; --bld-8: #d3dff3; --joseon: #6cc3b6; --joseon-2: #a8e6dc; --oldmap-op: .62; --road-x: #e3ddd3; --road-a: #b2aba0; --road-m: #857f76; --road-b: #69645c; color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --paper: #111714; --paper-2: #18201c; --ink: #e2e7e1; --ink-2: #a2ada5; --rule: #334039;
   --river: #2b475a; --tram: #ff6a5c; --kido: #b796e6; --area: #7d6f3c; --area-new: #d0a648;
-  --ring: #9a9880; --wall: #c3ccc4; --gu: #8e9a91; --focus: #6fb2ec; --bus: #ff5cb8; --rail: #c9d1ca; --village: #9fbf2a; --village-dot: #c8e05a; --land-0: #3b2a1b; --land-1: #5a3817; --land-2: #784919; --land-3: #935c24; --land-4: #ad7138; --land-5: #c38853; --land-6: #d7a273; --land-7: #e6bd99; --land-8: #f0d9c7; --chg-0: #9ad6cc; --chg-1: #5f9f96; --chg-2: #3f6f69; --chg-3: #4a4946; --chg-4: #7d5636; --chg-5: #b97a44; --chg-6: #f2b47e; --bld-1: #41506c; --bld-2: #4a628e; --bld-3: #5675af; --bld-4: #6589cb; --bld-5: #799ee2; --bld-6: #91b3f1; --bld-7: #adc9fb; --bld-8: #d3dff3; --joseon: #6cc3b6; --joseon-2: #a8e6dc; --oldmap-op: .62; --road-x: #e3ddd3; --road-a: #b2aba0; --road-m: #857f76; color-scheme: dark;
+  --ring: #9a9880; --wall: #c3ccc4; --gu: #8e9a91; --focus: #6fb2ec; --bus: #ff5cb8; --rail: #c9d1ca; --village: #9fbf2a; --village-dot: #c8e05a; --land-0: #3b2a1b; --land-1: #5a3817; --land-2: #784919; --land-3: #935c24; --land-4: #ad7138; --land-5: #c38853; --land-6: #d7a273; --land-7: #e6bd99; --land-8: #f0d9c7; --chg-0: #9ad6cc; --chg-1: #5f9f96; --chg-2: #3f6f69; --chg-3: #4a4946; --chg-4: #7d5636; --chg-5: #b97a44; --chg-6: #f2b47e; --bld-1: #41506c; --bld-2: #4a628e; --bld-3: #5675af; --bld-4: #6589cb; --bld-5: #799ee2; --bld-6: #91b3f1; --bld-7: #adc9fb; --bld-8: #d3dff3; --joseon: #6cc3b6; --joseon-2: #a8e6dc; --oldmap-op: .62; --road-x: #e3ddd3; --road-a: #b2aba0; --road-m: #857f76; --road-b: #69645c; color-scheme: dark;
 }
 * { box-sizing: border-box; }
 body { background: var(--paper); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.55; }
@@ -94,6 +94,7 @@ h1 { font-family: var(--display); font-weight: 500; font-size: clamp(19px, 3.4vw
 .camera button[aria-pressed="true"] { border-color: var(--ink); }
 .camera button:focus-visible, .chip:focus-visible, .play:focus-visible, input[type=range]:focus-visible, .ev:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
+.info a { color: inherit; text-decoration-color: var(--ink2, currentColor); text-underline-offset: 2px; }
 .info { position: absolute; left: max(10px, env(safe-area-inset-left, 0px)); right: max(10px, env(safe-area-inset-right, 0px)); bottom: 10px; max-width: 420px; background: var(--paper); border: 1px solid var(--ink); border-radius: 4px; padding: 10px 12px; font-size: 13.5px; box-shadow: 0 2px 0 var(--rule); }
 .info b { font-weight: 600; }
 .info .meta { color: var(--ink-2); font-size: 12.5px; }
@@ -402,11 +403,14 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   <h3>범례</h3>
   <div class="legend-bus" id="roadsLegend" hidden>
     <span><svg width="20" height="12" viewBox="0 0 20 12"><path d="M1,6H19" stroke="var(--road-x)" stroke-width="3"/></svg>고속도로·도시고속도로</span>
-    <span><svg width="46" height="12" viewBox="0 0 46 12"><path d="M1,6H21" stroke="var(--road-a)" stroke-width="2"/><path d="M25,6H45" stroke="var(--road-m)" stroke-width="1.4"/></svg>서울시 주간선도로 · 그 밖의 왕복 6차로 이상</span>
+    <span><svg width="46" height="12" viewBox="0 0 46 12"><path d="M1,6H21" stroke="var(--road-a)" stroke-width="2"/><path d="M25,6H45" stroke="var(--road-b)" stroke-width="1.1"/></svg>서울시 주간선도로 · 보조간선도로</span>
+    <span><svg width="20" height="12" viewBox="0 0 20 12"><path d="M1,6H19" stroke="var(--road-m)" stroke-width="1.4"/></svg>그 밖의 왕복 6차로 이상</span>
     <span><svg width="20" height="12" viewBox="0 0 20 12"><path d="M1,6H19" stroke="var(--road-a)" stroke-width="2"/></svg>진한 선: 개통한 해부터(개통일을 확인한 길)</span>
     <span><svg width="20" height="12" viewBox="0 0 20 12"><path d="M1,6H19" stroke="var(--road-a)" stroke-width="2" stroke-opacity=".6"/></svg>옅은 선: 『서울 도시계획 연혁』 도로 연혁도에 광로·대로(너비 25m 이상)로 그려진 해부터. 실제로 뚫린 해는 그 뒤일 수 있음</span>
     <span><svg width="20" height="12" viewBox="0 0 20 12"><path d="M1,6H19" stroke="var(--road-a)" stroke-width="2" stroke-opacity=".6" stroke-dasharray="5 3"/></svg>점선: 계획으로 결정됐고 아직 개통 전</span>
     <span id="roadsNowNote" hidden><svg width="20" height="12" viewBox="0 0 20 12"><path d="M1,6H19" stroke="var(--road-m)" stroke-width="1.4" stroke-dasharray="1 3" stroke-linecap="round"/></svg>점점이: 지금 있으나 언제 생겼는지 아직 모름(2026년에만)</span>
+    <span id="roadsGoneNote" hidden><svg width="20" height="12" viewBox="0 0 20 12"><path d="M1,6H19" stroke="var(--road-x)" stroke-width="3.6"/><path d="M1,6H19" stroke="var(--paper)" stroke-width="1.2"/></svg>지금은 없는 고가도로(있던 해에만)</span>
+    <span class="meta">선을 누르면 이름, 개통일과 근거, 연혁도에 처음 그려진 해가 나옵니다</span>
   </div>
   <div class="legend-bus" id="busLegend" hidden>
     <span><svg width="46" height="12" viewBox="0 0 46 12"><path d="M1,6H9" stroke="var(--bus)" stroke-width="1" stroke-opacity=".6"/><path d="M13,6H21" stroke="var(--bus)" stroke-width="2.2"/><path d="M25,6H33" stroke="var(--bus)" stroke-width="3.6"/><path d="M37,6H45" stroke="var(--bus)" stroke-width="6"/></svg>버스 노선망(마을버스 제외). 굵을수록 지나는 노선이 많음</span>
@@ -736,7 +740,9 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   // 큰 도로(시안, roads 브랜치): o = 개통(해 또는 해-달), p = 연혁도에 광로·대로로 그려진 첫 해. 둘 다 없으면 지금 해에만 그린다
   const roads = DATA.majorroads || null;
   if (roads) document.getElementById("roadsChip").hidden = false;
-  const ROAD_W = { x: 3, a: 2, m: 1.3 };
+  const ROAD_W = { x: 3, a: 2, m: 1.4, b: 1.1 };
+  // 누르기 영역: 동 누르기(gHit) 위, 조선 후기 선 아래. 보이는 선과 같은 묶음마다 투명한 굵은 선 하나
+  const gRoadHit = root.insert("g", () => gJoseon.node());
   function roadState(sg, y) {
     const yo = sg.o ? +sg.o.slice(0, 4) : null;
     if (yo != null && y >= yo) return "open";
@@ -745,15 +751,18 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     return null;
   }
   function drawRoads() {
-    gRoads.selectAll("*").remove();
+    gRoads.selectAll("*").remove(); gRoadHit.selectAll("*").remove();
     if (!roads || !layerOn.roads) return;
-    const buckets = {};
+    const buckets = {}, hits = new Map();
     roads.segs.forEach(sg => {
       const st = roadState(sg, year); if (!st) return;
       const k = sg.c + "|" + st; (buckets[k] = buckets[k] || []).push(sg.g);
+      const hk = [sg.n, sg.c, sg.o || "", sg.oi ?? "", sg.p || "", sg.l].join("|");
+      if (!hits.has(hk)) hits.set(hk, { sg, lines: [] });
+      hits.get(hk).lines.push(sg.g);
     });
     // 낮은 등급부터 그려 높은 등급이 위에 오게
-    ["m", "a", "x"].forEach(c => ["now", "plan", "planned", "open"].forEach(st => {
+    ["b", "m", "a", "x"].forEach(c => ["now", "plan", "planned", "open"].forEach(st => {
       const lines = buckets[c + "|" + st]; if (!lines) return;
       gRoads.append("path").datum({ type: "MultiLineString", coordinates: lines }).attr("d", path)
         .attr("fill", "none").attr("stroke", `var(--road-${c})`).attr("stroke-width", ROAD_W[c] * (st === "now" ? 0.9 : 1))
@@ -761,6 +770,36 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
         .attr("stroke-dasharray", st === "planned" ? "5 3" : st === "now" ? "1 3" : null)
         .attr("stroke-linecap", "round").attr("stroke-linejoin", "round").attr("vector-effect", "non-scaling-stroke").style("pointer-events", "none");
     }));
+    // 없어진 고가도로: 연 해부터 닫은 해 전까지(전차·철도와 같은 셈). 두 줄 기호로 지금 길과 구별
+    const gone = (roads.gone || []).filter(g => +g.o.slice(0, 4) <= year && year < +g.c.slice(0, 4));
+    gone.forEach(g => [["var(--road-x)", 3.6], ["var(--paper)", 1.2]].forEach(([col, w]) =>
+      gRoads.append("path").datum({ type: "MultiLineString", coordinates: g.g }).attr("d", path).attr("fill", "none")
+        .attr("stroke", col).attr("stroke-width", w).attr("stroke-linecap", "butt").attr("stroke-linejoin", "round")
+        .attr("vector-effect", "non-scaling-stroke").style("pointer-events", "none")));
+    gRoadHit.selectAll("path.gone").data(gone).join("path").attr("class", "gone")
+      .attr("d", g => path({ type: "MultiLineString", coordinates: g.g })).attr("fill", "none").attr("stroke", "transparent")
+      .attr("stroke-width", 10).attr("vector-effect", "non-scaling-stroke").style("pointer-events", "stroke").style("cursor", "pointer")
+      .on("click", (ev, g) => { ev.stopPropagation(); showGone(g); });
+    gRoadHit.selectAll("path.seg").data([...hits.values()]).join("path").attr("class", "seg")
+      .attr("d", h => path({ type: "MultiLineString", coordinates: h.lines })).attr("fill", "none").attr("stroke", "transparent")
+      .attr("stroke-width", h => h.sg.c === "x" || h.sg.c === "a" ? 9 : 6).attr("vector-effect", "non-scaling-stroke")
+      .style("pointer-events", "stroke").style("cursor", "pointer")
+      .on("click", (ev, h) => { ev.stopPropagation(); showRoad(h.sg); });
+  }
+  function showGone(g) {
+    const r = roads.goneRows[g.i], dot = d => d.replace(/-/g, ".");
+    showInfo(`<b>${r.이름}</b> <span class="meta">지금은 없는 고가도로 · ${r.길이}</span><div class="meta">개통 ${dot(r.연날)} · 차량 통행 끝 ${dot(r.닫은날)} · ${r.구간}</div>`
+      + `<div class="meta">근거: <a href="${r.주소}" target="_blank" rel="noopener">${r.근거}</a> · 확인 정도: ${r.확인}. ${r.메모}</div><div class="meta">선: ${r.선}</div>`);
+  }
+  function showRoad(sg) {
+    const o = sg.oi != null ? roads.open[sg.oi] : null, dot = d => d.replace(/-/g, ".");
+    const sheet = sg.p ? roads.planSheets.find(s => s.year === sg.p) : null;
+    let h = `<b>${sg.n}</b> <span class="meta">${roads.cls[sg.c]} · 한 방향 ${sg.l}차로${sg.l >= 6 ? " 이상" : ""}</span>`;
+    if (o) h += `<div class="meta">개통 ${dot(o.개통일)} · ${o.구간}</div><div class="meta">근거: ${o.주소 ? `<a href="${o.주소}" target="_blank" rel="noopener">${o.근거}</a>` : o.근거} · 확인 정도: ${o.확인}${o.메모 ? ". " + o.메모 : ""}</div>`;
+    else h += `<div class="meta">개통일은 아직 찾지 못함</div>`;
+    h += sheet ? `<div class="meta">도시계획: ${sg.p}년 도로 연혁도 「${sheet.title}」에 광로·대로로 처음 그려짐(『서울 도시계획 연혁』, 그림 대조)</div>`
+               : `<div class="meta">『서울 도시계획 연혁』 도로 연혁도(1936–1989)에서 광로·대로로 그려진 해를 찾지 못함</div>`;
+    showInfo(h + `<div class="meta">선은 2026년 국가표준노드링크 모습</div>`);
   }
   function drawJoseon() {
     gJoseon.selectAll("*").remove();
@@ -1280,6 +1319,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     d3.select("#joseonLegend").attr("hidden", layerOn.joseon && joseon ? null : true);
     d3.select("#roadsLegend").attr("hidden", layerOn.roads && roads && year >= 1936 ? null : true);
     d3.select("#roadsNowNote").attr("hidden", year >= +document.getElementById("year").max ? null : true);
+    d3.select("#roadsGoneNote").attr("hidden", roads && (roads.gone || []).some(g => +g.o.slice(0, 4) <= year && year < +g.c.slice(0, 4)) ? null : true);
     d3.select("#oldmapLegend").attr("hidden", oldShownAt(year) ? null : true);
   }
 

@@ -99,8 +99,8 @@ data = {
   "joseon": json.load(open(F("joseon.json"))) if os.path.exists(F("joseon.json")) else None,
   # 옛 지도(시안): kanggye1914.py가 만든 이미지의 위치·출처. 이미지는 img/에 따로 두고 처음 보일 때 불러온다
   "oldmap": {k: v for k, v in json.load(open(F("oldmap.json"))).items() if k != "gcp"} if os.path.exists(F("oldmap.json")) else None,
-  # 큰 도로(시안, roads 브랜치): majorroads.py가 만든다. 지도에는 선과 해만 싣는다
-  "majorroads": {"segs": json.load(open(F("majorroads.json")))["segs"]} if os.path.exists(F("majorroads.json")) else None,
+  # 큰 도로(시안, roads 브랜치): majorroads.py가 만든다. 선·해와 팝업에 쓸 개통일 표·연혁도 제목
+  "majorroads": (lambda m: {k: m[k] for k in ("cls", "planSheets", "open", "segs", "gone", "goneRows") if k in m})(json.load(open(F("majorroads.json")))) if os.path.exists(F("majorroads.json")) else None,
 }
 # 땅값 설명문은 자료가 있을 때만 「이 지도를 읽는 법」에 넣는다(출처 문단 앞 + 출처 한 줄)
 if data["land"] and os.path.exists(F("method_land.html")):
@@ -176,7 +176,7 @@ if data.get("majorroads"):
     assert mh.count(SRC_PAR) == 1, "method.html 출처 문단이 바뀜 — build.py의 SRC_PAR을 고칠 것"
     i = mh.index(SRC_PAR); j = mh.index("</p>", i)
     road_src = (" 큰 도로는 국가교통정보센터 「전국표준노드링크」(2026-11-11 판, 차로 수·도로등급), 서울 열린데이터광장 「서울시 소통 돌발 도로 분류 정보」(OA-15059, 2025),"
-                " 서울특별시 『서울 도시계획 연혁』(1977·1991) 도로 연혁도(그림은 싣지 않고 도시계획가로로 결정된 해를 판단하는 데만 씀), 개통일은 서울시·국가기록원·건설교통부 보도자료 등.")
+                " 서울특별시 『서울 도시계획 연혁』(1977·1991) 도로 연혁도(그림은 싣지 않고 도시계획가로로 결정된 해를 판단하는 데만 씀), 개통일은 「수도권 도시 연대지도 시안」 정리(한국어 위키백과 노선 문서 연혁, 국가기록원 「고속도로 연표」, 서울시 보도 등)와 서울시·국가기록원·건설교통부 보도자료 등. 없어진 고가도로(아현·삼일·서울역·청계)는 서울시 보도자료와 국가기록원 「기록으로 보는 한국」 고가도로, 선은 OSM의 지금 길·물길을 따라 그린 근사.")
     data["methodHtml"] = mh[:j] + road_src + mh[j:]
 # 버스: 2004년 7월 개편 이후 해마다 그릴 노선(2026년 노선망에서 그 해 뒤에 생긴 노선을 뺀다)
 OLD_FROM = 1998
