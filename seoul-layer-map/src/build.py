@@ -184,7 +184,8 @@ if data.get("hanseong") and os.path.exists(F("method_hanseong.html")):
     mh = data["methodHtml"]
     i = mh.index(SRC_PAR); j = mh.index("</p>", i)
     hs_src = (" 1914년 앞 한성부·경성부 경계는 국사편찬위원회 HGIS 「행정구역 GIS 데이터(1910–1945년)」 폴리곤."
-              " 성저십리 경계 서술과 조선 후기 단계의 『대동지지』 한성부 강역(100·424쪽에서 다시 인용)은 서울역사편찬원 『조선시대 다스림으로 본 성저십리』(서울역사 중점연구 5, 2019).")
+              " 성저십리 경계 서술은 서울역사편찬원 『조선시대 다스림으로 본 성저십리』(서울역사 중점연구 5, 2019),"
+              " 조선 후기 단계의 한성부 강역은 규장각한국학연구원 소장 『대동지지』(古4790-37) 원문 텍스트.")
     mh = mh[:i] + open(F("method_hanseong.html")).read() + mh[i:j] + hs_src + mh[j:]
     # method.html의 「1914년 이전 … 그 경계는 이 지도에 그리지 않았습니다」는 이제 그리므로 뺀다(설명문이 대신함)
     OLD_P = re.search(r'<p><b>1914년 이전</b>[^<]*그리지 않았습니다\.</p>\n?', mh)

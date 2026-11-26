@@ -420,7 +420,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     <span><svg width="46" height="12" viewBox="0 0 46 12"><rect x="2" y="2" width="8" height="8" fill="var(--joseon-2)"/><circle cx="22" cy="6" r="4" fill="var(--paper)" stroke="var(--joseon-2)" stroke-width="1.6"/><path d="M34,10L38,2L42,10Z" fill="var(--joseon)" stroke="var(--joseon-2)" stroke-width=".8"/></svg>역 · 원 · 나루</span>
   </div>
   <div class="legend-bus" id="gangyeokLegend" hidden>
-    <span id="gangyeokNote"><svg width="20" height="12" viewBox="0 0 20 12"><path d="M2,6H13" stroke="var(--ink-2)" stroke-width="1.3" stroke-linecap="round"/><path d="M19,6L13,2.6V9.4Z" fill="var(--ink-2)"/></svg>도성에서 이웃 고을 경계까지 거리(『대동지지』, 19세기 중엽). 이때 경계선 자료는 없어 선은 긋지 않음. 화살표 자리와 길이는 방향만 보임</span>
+    <span id="gangyeokNote"><svg width="20" height="12" viewBox="0 0 20 12"><path d="M2,6H13" stroke="var(--ink-2)" stroke-width="1.3" stroke-linecap="round"/><path d="M19,6L13,2.6V9.4Z" fill="var(--ink-2)"/></svg>한성부 치소에서 이웃 고을 경계까지 거리(『대동지지』, 19세기 중엽). 이때 경계선 자료는 없어 선은 긋지 않음. 화살표 자리와 길이는 방향만 보임</span>
   </div>
   <div class="legend-bus" id="palaceLegend" hidden>
     <div class="bseg" role="group" aria-label="궁궐 옮겨 간 건물"><span>궁궐</span><button type="button" data-pm="1" aria-pressed="false">옮겨 간 건물 보기</button></div>
@@ -921,12 +921,15 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   }
   // 조선 후기 한성부 강역: 이 시기 경계선 자료가 없어(1910년 선이 조선 후기와 같은지 알 수 없음) 선 대신
   // 『대동지지』(19세기 중엽)가 적은 도성에서 8방위 이웃 고을 경계까지의 거리(리)를 보인다(이지가 정함, 2026-11-26).
-  // 숫자는 서울역사편찬원 『조선시대 다스림으로 본 성저십리』(2019) 100·424쪽에서 다시 인용. 『대동지지』 원문은 확인 못 함.
+  // 숫자는 규장각 소장 『대동지지』(古4790-37, 1932년 필사본) 권1 한성부 「疆域」 원문 텍스트(1책 40b–41a)로 확인(2026-11-27):
+  //   疆域東揚州界十五里東南廣州界二十里南十里又果川界十里西南始興界十五里西陽川界十五里西北高陽界二十里北楊州界二十里東北十五里
+  //   남쪽은 고을 이름 없는 「南十里」가 하나 더 있어 과천 경계만 적음. 김정호 친필본으로 알려진 고려대본은 못 봄.
+  //   문목(門目): 강역은 본 고을 치소에서 이웃 고을 경계까지 리 수를 8방으로 적은 것. 한성부 치소를 어디로 잡았는지는 없음.
   // 리를 km로 바꾸지 않는다(환산값과 잰 기준을 확인하지 못함). 지도 위 화살표 길이는 화면에서 일정하고 거리와 상관없다.
   const GANGYEOK = [   // [방위, 이웃 고을, 리, 화면 x, 화면 y(아래가 +)]
     ["동", "양주", 15, 1, 0], ["동남", "광주", 20, 1, 1], ["남", "과천", 10, 0, 1], ["서남", "시흥", 15, -1, 1],
     ["서", "양천", 15, -1, 0], ["서북", "고양", 20, -1, -1], ["북", "양주", 20, 0, -1], ["동북", null, 15, 1, -1]];
-  const GY_SRC = "『대동지지』(김정호, 19세기 중엽) 경도 한성부 강역. 서울역사편찬원 『조선시대 다스림으로 본 성저십리』(2019) 100·424쪽에서 다시 인용";
+  const GY_SRC = "『대동지지』(김정호, 19세기 중엽) 권1 한성부 「강역」. 규장각한국학연구원 소장본(古4790-37, 1932년 필사본) 원문 텍스트로 확인";
   const gyText = g => `${g[1] ? g[1] + " 경계" : g[0] + "쪽"} ${g[2]}리`;
   const gyCenter = () => { const gates = joseon.points.filter(p => p.kind === "문"); return [d3.mean(gates, p => p.lng), d3.mean(gates, p => p.lat)]; };   // 도성 가운데(성문 7곳의 평균)
   function drawGangyeok() {
@@ -934,7 +937,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     const on = !!(joseon && layerOn.joseon && year < 1899);
     d3.select("#gangyeokLegend").attr("hidden", on ? null : true);
     if (!on) return;
-    const info = g => showInfo(`<b>한성부 강역 · ${g[0]}</b><div class="meta">도성에서 ${g[1] ? g[1] + " 경계까지" : g[0] + "쪽으로"} ${g[2]}리</div><div class="meta">근거: ${GY_SRC}. 이때 한성부 경계선 자료는 없어 지도에 선을 긋지 않았습니다. 화살표 자리와 길이는 방향만 보입니다.</div>`);
+    const info = g => showInfo(`<b>한성부 강역 · ${g[0]}</b><div class="meta">한성부 치소에서 ${g[1] ? g[1] + " 경계까지" : g[0] + "쪽으로"} ${g[2]}리</div><div class="meta">근거: ${GY_SRC}. 『대동지지』는 강역을 본 고을 치소에서 이웃 고을 경계까지의 리 수로 적습니다. 이때 한성부 경계선 자료는 없어 지도에 선을 긋지 않았고, 화살표 자리와 길이는 방향만 보입니다.${g[0] === "남" ? " 원문 남쪽 줄에는 고을 이름 없는 「남 10리」가 하나 더 있습니다." : ""}</div>`);
     GANGYEOK.forEach(g => {
       const n = Math.hypot(g[3], g[4]), ux = g[3] / n, uy = g[4] / n;
       const a = gGy.append("g").datum({ g, ux, uy }).attr("class", "gy").style("cursor", "pointer").on("click", (ev) => { ev.stopPropagation(); info(g); });
