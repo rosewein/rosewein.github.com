@@ -201,6 +201,41 @@ svg text { font-family: var(--body); }
 .legend-bus[hidden] { display: none; }   /* display: flex가 hidden 속성을 이기므로 따로 적는다 */
 .legend-bus svg { vertical-align: -2px; margin-right: 4px; }
 #busChart { display: block; width: 100%; height: 150px; }
+/* 낮은 가로 화면(휴대폰 가로 등): 지도와 재생 막대가 화면 높이 안에 다 들어오게 줄이고,
+   레이어 칩·범례(오른쪽 판이나 칩 줄)는 접어서 지도 오른쪽 위 「레이어·범례」 단추로 연다(v1.5.1, 시안 2) */
+.camera .laybtn { display: none; }
+@media (max-height: 500px) and (orientation: landscape) {
+  body[data-tab="map"] .app { min-height: 0; }
+  .mapwrap { min-height: 0; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
+  header.top { padding-top: 2px; gap: 0 14px; }
+  header.top h1 { font-size: 16px; padding-bottom: 3px; }
+  .tabs button { padding: 4px 8px 5px; font-size: 13px; }
+  .yearplate { top: 6px; }
+  .yearplate .y { font-size: clamp(30px, 10vh, 84px); }
+  .yearplate .era { margin-top: 2px; font-size: 12px; }
+  .yearplate .stat { font-size: 11px; }
+  .evpop { max-width: 300px; font-size: 12px; padding: 4px 8px; margin-top: 5px; }
+  .camera { top: 6px; gap: 4px; }
+  .camera button { padding: 3px 7px; font-size: 11.5px; }
+  .camera .laybtn { display: block; }
+  .side { position: absolute; z-index: 7; top: 6px; right: 96px; left: auto; width: min(460px, 60%); max-height: calc(100% - 12px); overflow-y: auto; display: none;
+    background: var(--paper); border: 1px solid var(--ink); border-radius: 4px; padding: 8px; order: 0; }
+  .side.chipsopen { display: block; }
+  .side .scroller { display: flex; flex-wrap: wrap; overflow: visible; gap: 6px; }
+  .side .all { display: flex; margin: 0 0 6px; }
+  .side .chips { display: flex; flex-direction: row; flex-wrap: wrap; gap: 4px; }
+  .side .chip { width: auto; flex: none; border-radius: 999px; padding: 2px 8px; }
+  .legbtn { display: none !important; }
+  .side .legends { display: block; position: static; border: 0; padding: 0; max-height: none; }
+  .timebar .wrap { padding-block: 3px; gap: 0 10px; grid-template-columns: auto 1fr auto; }
+  .timebar .speed { grid-column: 3; grid-row: 1 / span 2; }
+  .speed span { display: none; }
+  .speed button { min-height: 22px; padding: 1px 7px; }
+  .play { width: 32px; height: 32px; }
+  #ticks { height: 11px; }
+  input[type=range] { height: 18px; }
+  .scale { height: 13px; font-size: 10.5px; }
+}
 @media (prefers-reduced-motion: reduce) { .pulse { animation: none !important; } }
 @keyframes pulse { 0% { stroke-opacity: .9 } 100% { stroke-opacity: 0 } }
 .pulse { animation: pulse 1.6s ease-out infinite; }
@@ -264,6 +299,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     <button id="viewCore" type="button" title="도성 일대로 확대">도심</button>
     <button id="viewAll" type="button" title="현재 서울 전체">서울 전체</button>
     <button id="evToggle" type="button" aria-pressed="true" title="그 해에 일어난 일을 연도 아래에 띄움">그 해 사건</button>
+    <button id="layBtn" class="laybtn" type="button" aria-expanded="false" aria-controls="side">레이어·범례</button>
   </div>
   <div class="info" id="info" hidden><button class="x" id="infoX" type="button" aria-label="닫기">×</button><div id="infoBody"></div></div>
   <div class="attrib" id="attrib">선로·물길 형상 © OpenStreetMap contributors<span id="verLabel"></span></div>
@@ -853,6 +889,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   function guPeriodOf(y) { let p = null; for (const g of DATA.guPeriods) if (g.from <= y) p = g; return p; }
 
   // ---------- camera ----------
+  const LOWQ = window.matchMedia("(max-height: 500px) and (orientation: landscape)");   // 낮은 가로 화면(CSS의 같은 조건과 짝)
   let autoCam = true;
   function setAuto(v) { autoCam = v; d3.select("#autoCam").attr("aria-pressed", v ? "true" : "false"); }
   function boundsOf(features) {
@@ -863,7 +900,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   function zoomTo(b, dur = 750) {
     const [[x0, y0], [x1, y1]] = b;
     // 위쪽 여백: 넓은 화면은 연도 판이 왼쪽에만 있어 조금만, 좁은 화면은 판이 폭을 다 차지하므로 판의 실제 높이만큼
-    const padTop = W < 560 ? Math.min(plateBottom() + 6, H * 0.45) : Math.min(110, H * 0.22);
+    const padTop = W < 560 ? Math.min(plateBottom() + 6, H * 0.45) : LOWQ.matches ? 10 : Math.min(110, H * 0.22);   // 낮은 가로 화면은 서울이 가운데에 작게 놓여 판과 덜 겹치므로 거의 비우지 않음
     const k = Math.min(60, 0.9 / Math.max((x1 - x0) / W, (y1 - y0) / (H - padTop)));
     const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
     const t = d3.zoomIdentity.translate(W / 2 - k * cx, (H + padTop) / 2 - k * cy).scale(k);
@@ -895,7 +932,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     const box = document.getElementById("evPop");
     const list = evOn ? evs.filter(e => e.year === year) : [];   // evs가 이미 날짜순
     if (!list.length) { box.hidden = true; box.innerHTML = ""; lastEvYear = null; return; }
-    const maxN = W < 560 ? 1 : 4, more = list.length - maxN;   // 좁은 화면은 한 건만(판이 지도를 덜 가리게)
+    const maxN = (W < 560 || LOWQ.matches) ? 1 : 4, more = list.length - maxN;   // 좁은 화면은 한 건만(판이 지도를 덜 가리게)
     box.innerHTML = `<ul>${list.slice(0, maxN).map(e => `<li><i class="k" style="background:${e.color || KIND_COLOR[e.kind] || "var(--gu)"}"></i><span><span class="d">${e.date || e.year}</span>${e.text}${e.conf ? ` <span class="c">(${e.conf})</span>` : ""}</span></li>`).join("")}</ul>` +
       (more > 0 ? `<button type="button" class="more" data-more="1">외 ${more}건 · 연표에서 보기</button>` : "");
     box.hidden = false;
@@ -1250,6 +1287,8 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   d3.select("#allOn").on("click", () => setAll(true));
   d3.select("#allOff").on("click", () => setAll(false));
   // 좁은 화면: 범례는 단추를 눌러 지도 위에 펼친다
+  d3.select("#layBtn").on("click", function () { const open = document.getElementById("side").classList.toggle("chipsopen"); this.setAttribute("aria-expanded", open ? "true" : "false"); });
+  document.addEventListener("keydown", (ev) => { if (ev.key === "Escape" && document.getElementById("side").classList.contains("chipsopen")) { document.getElementById("side").classList.remove("chipsopen"); const b = document.getElementById("layBtn"); b.setAttribute("aria-expanded", "false"); b.focus(); } });
   d3.select("#legBtn").on("click", function () { const open = document.getElementById("side").classList.toggle("legopen"); this.setAttribute("aria-expanded", open ? "true" : "false"); });
 
   // ---------- 탭과 주소 ----------
@@ -1299,9 +1338,10 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   window.addEventListener("resize", onResize);
   document.body.dataset.tab = "map";
   boot();
-  // 첫 화면: 주소에 연도나 탭이 있으면 그것을, 없으면 1914년 경계와 초기 노선이 함께 보이도록 1920년에서 시작
-  const h0 = readHash();
-  setYear(h0.year || DATA.startYear || 1920);
+  // 첫 화면: 주소에 연도나 탭이 있으면 그것을, 없으면 처음(1899년)부터. 주소에 연도가 없던 첫 방문은 주소를 그대로 둔다
+  const h0 = readHash(), bare = !location.hash;
+  setYear(h0.year || DATA.startYear || 1899);
   if (h0.tab !== "map") { showTab(h0.tab, true); syncHash(); }   // setYear가 주소를 #연도로 바꿔 놓으므로 탭 주소(#data 등)를 되돌린다
+  if (bare) { try { history.replaceState(null, "", location.pathname + location.search); } catch (e) { /* 주소를 못 바꾸는 곳 */ } }
 })();
 </script>

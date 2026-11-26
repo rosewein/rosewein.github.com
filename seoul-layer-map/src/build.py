@@ -88,7 +88,7 @@ data = {
   "topo": topo, "trams": trams, "eras": eras, "guPeriods": gu_periods, "events": events,
   "guNames": GU, "riverNorth": ["11440","11170","11200","11215"],
   "riverSouth": ["11500","11560","11590","11650","11680","11710","11740"],
-  "methodHtml": method_html, "startYear": 1920,
+  "methodHtml": method_html, "startYear": 1899,
   "rail": json.load(open(F("rail.json"))) if os.path.exists(F("rail.json")) else None,
   "metro": json.load(open(F("metro.json"))) if os.path.exists(F("metro.json")) else None,
   "bus": json.load(open(F("bus.json"))) if os.path.exists(F("bus.json")) else None,
@@ -157,7 +157,7 @@ if os.path.exists(F("village_layer.json")):
 if os.path.exists(F("water.json")):
     data["water"] = json.load(open(F("water.json")))
 # 지도 버전: 레이어가 늘면 소수점을 올리고(v1.2 → v1.3), 화면·기술만 고치면 셋째 자리를 올린다(v1.3 → v1.3.1). README 「변경 기록」과 git 태그(seoul-layer-map-vX.Y)도 같이 적는다
-data["version"] = {"v": "1.5", "date": "2026-11-26"}
+data["version"] = {"v": "1.5.1", "date": "2026-11-26"}
 
 # 지도에서 읽지 않는 필드는 index.html에 넣기 직전에 덜어 낸다(data/*.json 원본은 그대로 둔다).
 # 근거 문장·운수회사·승하차 인원처럼 나중에 분석이나 정보창에 쓸 수 있는 기록이라 원본에서는 지우지 않는다.
