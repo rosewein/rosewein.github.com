@@ -199,6 +199,31 @@ def plan_year(on, missing, years):
     return None
 
 
+HIST = os.path.join(DATA, "majorroads_hist.json")
+# 선이 크게 늘어난 판(2020: 4.1만 → 5.1만 선, 2025: 5.3만 → 13.2만 선). 이 판에 처음 나온 링크는 새로 난 길인지 그때 새로 넣은 길인지 가를 수 없다
+HIST_DENSE = {2020, 2025}
+HIST_FULL = 2011   # 2010년 판에서 서울 둘레 선이 2.0만 → 3.9만으로 늘었다. 2010년 판까지는 처음 나와도 「늦어도」만 말할 수 있다
+
+
+def hist_seen(on, yrs):
+    """처음 나온 판의 해. 그 뒤 판에서 한 번까지는 빠져도 된다."""
+    for i, y in enumerate(yrs):
+        if y in on and sum(z in on for z in yrs[i + 1:]) >= len(yrs) - i - 2: return y
+    return None
+
+
+def hist_year(hist, link_id):
+    """표준노드링크 옛 판으로 본 해. (oh, hb): oh = 바로 앞 판에는 없다가 처음 나온 판의 해(개통 어림),
+    hb = 늦어도 그 판에는 있었던 해. 촘촘한 기준(30m)과 느슨한 기준(70m) 가운데 이른 쪽을 쓴다.
+    느슨한 기준에만 먼저 걸리면 옛 판이 선을 30m 넘게 비껴 그렸던 것으로 본다."""
+    if not hist or link_id not in hist["links"]: return None, None
+    yrs = [v["year"] for v in hist["versions"]]
+    seen = [y for y in (hist_seen(on, yrs) for on in hist["links"][link_id]) if y is not None]
+    if not seen: return None, None
+    h = min(seen)
+    return (None, h) if h < HIST_FULL or h in HIST_DENSE else (h, None)
+
+
 GONE_CSV = os.path.join(DATA, "majorroads_gone.csv")
 
 
@@ -255,6 +280,7 @@ def main():
         r["i"] = i
         if r["from"] == "csv": by_name[r["노선"]].append(r)
         else: by_key[r["key"]] = r
+    hist = json.load(open(HIST)) if os.path.exists(HIST) else None
     sm = sudo_match(links); nb2 = collections.defaultdict(list)
     for l in links:
         for n in (l["F_NODE"], l["T_NODE"]): nb2[(l["ROAD_NAME"], n)].append(l)
@@ -287,21 +313,29 @@ def main():
     stat = collections.Counter(); groups = collections.defaultdict(list)
     for l in links:
         P = np.array(l["pts"]); cx, cy = TO_LL.transform(*P.mean(0))
+        # 표준노드링크 옛 판에 처음 나온 해(oh = 바로 앞 판에는 없다가 처음 나옴, hb = 늦어도 그 판에는 있었음). 개통일 표의 조건에도 쓴다(oh == 2019 등)
+        oh, hb = hist_year(hist, l["LINK_ID"])
         def pick(use):
             for r in by_name.get(l["ROAD_NAME"], []):
-                if r["쓰임"] == use and (not r["조건"] or eval(r["조건"], {}, {"x": cx, "y": cy, "rank": l["ROAD_RANK"]})): return r
+                if r["쓰임"] == use and (not r["조건"] or eval(r["조건"], {}, {"x": cx, "y": cy, "rank": l["ROAD_RANK"], "oh": oh})): return r
         r = pick("우선") or by_key.get(sm.get(l["LINK_ID"])) or pick("대신")
         o, oi = (r["개통일"][:10], r["i"]) if r else (None, None)
+        if o: oh = hb = None   # 개통일을 찾은 길은 개통일만 쓴다
+        if o and hist:
+            seen = [y for y in (hist_seen(on, [v["year"] for v in hist["versions"]]) for on in hist["links"].get(l["LINK_ID"], [])) if y]
+            if seen and int(o[:4]) >= 2008 and min(seen) > int(o[:4]) + 1: stat[("확인: 개통일보다 2년 넘게 늦게 나옴", r["노선"] + " " + o + " → " + str(min(seen)))] += l["LENGTH"]
         # 보이는 결정 해: 중로까지 넣은 해가 더 이르면 그 해(mid = 중로로 먼저 그려짐), pb = 광로·대로가 된 해
         # 고속·도시고속도로(x)는 중로로 계획된 길이 아니라서, 옆을 나란히 지나는 중로에 잘못 닿는 일을 막으려고 광로·대로 해만 쓴다
         pb = l["p"]; mid = l["cls"] != "x" and l["pa"] is not None and (pb is None or l["pa"] < pb); p = l["pa"] if mid else pb
         if mid: stat[("중로로 먼저", l["cls"])] += l["LENGTH"]
         if l.get("filled"): stat[("메운 링크", "")] += l["LENGTH"]
         if r: stat[("개통일 출처", r["from"] + ("" if r["from"] == "sudo" else "·" + r["쓰임"]))] += l["LENGTH"]
-        stat[(l["cls"], "o" if o else "p" if p else "-")] += l["LENGTH"]
-        groups[(l["ROAD_NAME"], l["cls"], o, oi, p, mid, pb if mid else None, min(l["LANES"], 6))].append(LineString(P))
+        stat[(l["cls"], "o" if o else "oh" if oh else "p" if p else "hb" if hb else "-")] += l["LENGTH"]
+        if oh: stat[("노드링크 개통 어림", str(oh))] += l["LENGTH"]
+        if hb: stat[("노드링크 늦어도", str(hb))] += l["LENGTH"]
+        groups[(l["ROAD_NAME"], l["cls"], o, oi, p, mid, pb if mid else None, min(l["LANES"], 6), oh, hb)].append(LineString(P))
     segs = []
-    for (nm, c, o, oi, p, mid, pb, ln), gs in groups.items():
+    for (nm, c, o, oi, p, mid, pb, ln, oh, hb), gs in groups.items():
         m = linemerge(gs); parts = list(getattr(m, "geoms", [m]))
         for g in parts:
             g = g.simplify(12 if c in "bm" else 8)
@@ -311,15 +345,19 @@ def main():
             if p: s["p"] = p
             if mid: s["pm"] = 1
             if pb: s["pb"] = pb
+            if oh: s["oh"] = oh
+            if hb: s["hb"] = hb
             segs.append(s)
     # 쓰인 개통일 줄만 남기고 번호를 다시 매긴다
     used = sorted({s["oi"] for s in segs if "oi" in s}); re_i = {o: i for i, o in enumerate(used)}
     for s in segs:
         if "oi" in s: s["oi"] = re_i[s["oi"]]
     rows = [rows[o] for o in used]
-    out = {"note": "큰 도로(시안). o = 개통일(oi = open 표 번호), p = 연혁도에 도시계획 도로로 그려진 첫 해(pm = 중로로 먼저 그려짐, pb = 광로·대로가 된 해). 선은 2026-11-11 표준노드링크(지금 모습)",
+    out = {"note": "큰 도로(시안). o = 개통일(oi = open 표 번호), p = 연혁도에 도시계획 도로로 그려진 첫 해(pm = 중로로 먼저 그려짐, pb = 광로·대로가 된 해),"
+                   " oh = 개통일을 못 찾은 길이 표준노드링크 옛 판에 처음 나온 해(바로 앞 판에는 없음, 개통 어림), hb = 늦어도 그 해 판에는 있었음. 선은 2026-11-11 표준노드링크(지금 모습)",
            "cls": CLS_NAME, "planSheets": [{k: s[k] for k in ("year", "title", "midTitle") if k in s} for s in plan["sheets"]],
            "open": [{k: r.get(k, "") for k in ("노선", "구간", "개통일", "근거", "주소", "확인", "메모")} for r in rows], "segs": segs}
+    if hist: out["nlVers"] = [[v["year"], v["date"]] for v in hist["versions"]]
     if os.path.exists(GONE_CSV): out["goneRows"], out["gone"] = gone_roads()
     json.dump(out, open(OUT, "w"), ensure_ascii=False, separators=(",", ":"))
     print("구간", len(segs), "점", sum(len(s["g"]) for s in segs), "bytes", os.path.getsize(OUT), file=sys.stderr)
