@@ -80,7 +80,15 @@ data = {
   "metro": json.load(open(f"{B}/metro.json")) if os.path.exists(f"{B}/metro.json") else None,
   "bus": json.load(open(f"{B}/bus.json")) if os.path.exists(f"{B}/bus.json") else None,
   "bus2026": json.load(open(f"{B}/bus2026.json")) if os.path.exists(f"{B}/bus2026.json") else None,
+  # 땅값: landprice.py가 만든 법정동별 ㎡당 공시지가 중앙값(1990–). 파일이 없으면 칩이 나타나지 않음
+  "land": json.load(open(f"{B}/landprice.json")) if os.path.exists(f"{B}/landprice.json") else None,
 }
+# 땅값 설명문은 자료가 있을 때만 「이 지도를 읽는 법」에 넣는다(출처 문단 앞 + 출처 한 줄)
+if data["land"] and os.path.exists(f"{B}/method_land.html"):
+    SRC_AT = "연계 좌표정보」(2019년 6월 20일)."   # 출처 문단에서 버스 자료 다음, 나무위키 연혁 앞
+    land_src = " 땅값은 서울 열린데이터광장 「서울시 개별공시지가 정보」(OA-1180, " + f'{data["land"]["years"][0]}~{data["land"]["years"][-1]}' + "년 파일, 원본 서울부동산정보광장)."
+    assert method_html.count(SRC_AT) == 1, "method.html 출처 문단이 바뀜 — build.py의 SRC_AT을 고칠 것"
+    data["methodHtml"] = method_html.replace('<p class="small">출처:', open(f"{B}/method_land.html").read() + '<p class="small">출처:', 1).replace(SRC_AT, SRC_AT + land_src, 1)
 # 버스: 2004년 7월 개편 이후 해마다 그릴 노선(2026년 노선망에서 그 해 뒤에 생긴 노선을 뺀다)
 OLD_FROM = 1998
 if data["bus2026"] and os.path.exists(f"{B}/route_years.json"):

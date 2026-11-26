@@ -24,6 +24,8 @@
   --village: #9cb81a;
   --village-dot: #5f7a00;
   --rail: #2a2f2c;
+  /* 땅값: 한 색상(흙색) 9단계, 밝음→어두움 = 쌈→비쌈. 어두운 화면은 반대로(싼 곳이 바탕에 묻힘) */
+  --land-0: #fae8d9; --land-1: #f3c9a6; --land-2: #e4ad7d; --land-3: #d1935a; --land-4: #ba7a3e; --land-5: #9f652b; --land-6: #825122; --land-7: #634121; --land-8: #403227;
   --display: "Hahmlet", "Noto Serif KR", "AppleMyungjo", serif;
   --body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
   --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
@@ -32,13 +34,13 @@
   :root:not([data-theme="light"]) {
     --paper: #111714; --paper-2: #18201c; --ink: #e2e7e1; --ink-2: #a2ada5; --rule: #334039;
     --river: #2b475a; --tram: #ff6a5c; --kido: #b796e6; --area: #7d6f3c; --area-new: #d0a648;
-    --ring: #9a9880; --wall: #c3ccc4; --gu: #8e9a91; --focus: #6fb2ec; --bus: #ff5cb8; --rail: #c9d1ca; --village: #9fbf2a; --village-dot: #c8e05a; color-scheme: dark;
+    --ring: #9a9880; --wall: #c3ccc4; --gu: #8e9a91; --focus: #6fb2ec; --bus: #ff5cb8; --rail: #c9d1ca; --village: #9fbf2a; --village-dot: #c8e05a; --land-0: #3b2a1b; --land-1: #5a3817; --land-2: #784919; --land-3: #935c24; --land-4: #ad7138; --land-5: #c38853; --land-6: #d7a273; --land-7: #e6bd99; --land-8: #f0d9c7; color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --paper: #111714; --paper-2: #18201c; --ink: #e2e7e1; --ink-2: #a2ada5; --rule: #334039;
   --river: #2b475a; --tram: #ff6a5c; --kido: #b796e6; --area: #7d6f3c; --area-new: #d0a648;
-  --ring: #9a9880; --wall: #c3ccc4; --gu: #8e9a91; --focus: #6fb2ec; --bus: #ff5cb8; --rail: #c9d1ca; --village: #9fbf2a; --village-dot: #c8e05a; color-scheme: dark;
+  --ring: #9a9880; --wall: #c3ccc4; --gu: #8e9a91; --focus: #6fb2ec; --bus: #ff5cb8; --rail: #c9d1ca; --village: #9fbf2a; --village-dot: #c8e05a; --land-0: #3b2a1b; --land-1: #5a3817; --land-2: #784919; --land-3: #935c24; --land-4: #ad7138; --land-5: #c38853; --land-6: #d7a273; --land-7: #e6bd99; --land-8: #f0d9c7; color-scheme: dark;
 }
 * { box-sizing: border-box; }
 body { background: var(--paper); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.55; }
@@ -115,6 +117,38 @@ svg text { font-family: var(--body); }
 @media (prefers-reduced-motion: reduce) { .pulse { animation: none !important; } }
 @keyframes pulse { 0% { stroke-opacity: .9 } 100% { stroke-opacity: 0 } }
 .pulse { animation: pulse 1.6s ease-out infinite; }
+/* 그 해 사건: 연도 판 아래 작은 카드(재생할 때 지도 위에서 바로 보이도록) */
+.evpop { margin-top: 8px; max-width: 380px; background: var(--paper); background: color-mix(in srgb, var(--paper) 88%, transparent); border-left: 3px solid var(--ink); border-radius: 0 4px 4px 0; padding: 6px 10px 6px 9px; font-size: 12.5px; line-height: 1.45; pointer-events: auto; }
+.evpop[hidden] { display: none; }
+.evpop ul { list-style: none; margin: 0; padding: 0; }
+.evpop li { display: grid; grid-template-columns: 8px minmax(0, 1fr); gap: 0 7px; align-items: baseline; }
+.evpop li + li { margin-top: 3px; }
+.evpop .k { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.evpop .d { font-family: var(--mono); font-size: 11px; color: var(--ink-2); margin-right: 5px; font-variant-numeric: tabular-nums; }
+.evpop .c { color: var(--ink-2); font-size: 11.5px; }
+.evpop .more { font: 500 12px var(--body); color: var(--ink-2); background: none; border: 0; padding: 3px 0 0 15px; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.evpop .more:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+@keyframes evin { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
+.evpop.fresh { animation: evin .35s ease-out; }
+@media (prefers-reduced-motion: reduce) { .evpop.fresh { animation: none; } }
+@media (max-width: 560px) { .evpop { max-width: none; font-size: 12px; } }
+.legend-land { margin: 6px 0 0; font-size: 12.5px; color: var(--ink-2); }
+.legend-land .bar { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 2px; max-width: 480px; }
+.legend-land .bar i { height: 12px; border-radius: 2px; display: block; }
+.legend-land i.na { display: inline-block; width: 18px; height: 10px; border-radius: 2px; vertical-align: -1px; margin: 0 4px 0 2px; background: repeating-linear-gradient(45deg, transparent 0 3px, var(--ink-2) 3px 4px); border: 1px solid var(--rule); }
+.legend-land .tk { position: relative; height: 16px; max-width: 480px; font-family: var(--mono); font-size: 11px; }
+.legend-land .tk span { position: absolute; top: 1px; transform: translateX(-50%); white-space: nowrap; }
+.legend-land .tk span.mid { color: var(--ink); font-weight: 500; }
+.legend-land p { margin: 2px 0 0; }
+.spark { display: block; width: 100%; max-width: 380px; height: 74px; margin-top: 6px; }
+details.landtab { margin: 0 0 18px; }
+details.landtab summary { cursor: pointer; font-size: 13.5px; color: var(--ink); }
+details.landtab .scroll { max-height: 340px; overflow-y: auto; margin-top: 6px; border-top: 1px solid var(--rule); }
+details.landtab table { width: 100%; border-collapse: collapse; font-size: 13px; }
+details.landtab td, details.landtab th { padding: 4px; border-bottom: 1px solid var(--rule); text-align: left; }
+details.landtab td.n, details.landtab th.n { font-family: var(--mono); text-align: right; font-variant-numeric: tabular-nums; }
+details.landtab th { font-weight: 500; color: var(--ink-2); font-size: 12px; position: sticky; top: 0; background: var(--paper); }
+details.landtab td i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
 </style>
 
 <header class="top wrap">
@@ -130,11 +164,13 @@ svg text { font-family: var(--body); }
     <div class="y" id="yLabel">1899</div>
     <div class="era" id="eraLabel"></div>
     <div class="stat" id="statLabel"></div>
+    <div class="evpop" id="evPop" hidden aria-live="polite"></div>
   </div>
   <div class="camera">
     <button id="autoCam" type="button" aria-pressed="true" title="연도에 맞춰 화면 범위를 자동으로 조정">자동 시점</button>
     <button id="viewCore" type="button" title="도성 일대로 확대">도심</button>
     <button id="viewAll" type="button" title="현재 서울 전체">서울 전체</button>
+    <button id="evToggle" type="button" aria-pressed="true" title="그 해에 일어난 일을 연도 아래에 띄움">그 해 사건</button>
   </div>
   <div class="info" id="info" hidden><button class="x" id="infoX" type="button" aria-label="닫기">×</button><div id="infoBody"></div></div>
 </div>
@@ -157,6 +193,7 @@ svg text { font-family: var(--body); }
     <button class="chip" type="button" data-layer="metro" aria-pressed="true" id="metroChip" hidden><i style="color:#00A84D;border-top-width:4px"></i>지하철·광역철도</button>
     <button class="chip" type="button" data-layer="tram" aria-pressed="true"><i style="color:var(--tram)"></i>전차</button>
     <button class="chip" type="button" data-layer="kido" aria-pressed="true"><i style="color:var(--kido)"></i>경성궤도 기동차</button>
+    <button class="chip" type="button" data-layer="land" aria-pressed="false" id="landChip" hidden><i class="fill" style="background:linear-gradient(90deg,var(--land-1),var(--land-4),var(--land-7))"></i>땅값(공시지가)</button>
     <button class="chip" type="button" data-layer="area" aria-pressed="true"><i class="fill" style="background:var(--area)"></i>시역</button>
     <button class="chip" type="button" data-layer="rings" aria-pressed="true"><i style="color:var(--ring);border-top-style:dashed;border-top-width:2px"></i>이전 경계</button>
     <button class="chip" type="button" data-layer="gu" aria-pressed="true"><i style="color:var(--gu);border-top-width:1px"></i>구 경계</button>
@@ -172,7 +209,12 @@ svg text { font-family: var(--body); }
     <span><svg width="20" height="12" viewBox="0 0 20 12"><path d="M1,6H19" stroke="var(--area-new)" stroke-width="2.2"/></svg>연장·단축·경로 변경(최근 3년)</span>
     <span id="villageLegend" hidden><svg width="20" height="12" viewBox="0 0 20 12"><rect x="1" y="2" width="12" height="8" fill="var(--village)" fill-opacity=".5"/><circle cx="17" cy="6" r="1.6" fill="var(--village-dot)"/></svg>마을버스 정류장(점)과 마을버스로만 닿는 땅(칠한 곳: 시내버스 정류장 300m 밖, 마을버스 정류장 300m 안). 2015년부터, 그 해 11월 셋째 수요일 승하차 기록</span>
   </div>
-  <p class="small" style="margin:2px 0 0">선로 형상 © OpenStreetMap contributors</p>
+  <div class="legend-land" id="landLegend" hidden>
+    <div class="bar" id="landBar"></div>
+    <div class="tk" id="landTicks"></div>
+    <p>땅값: 법정동마다 ㎡당 개별공시지가의 중앙값을 그 해 서울 전체 필지 중앙값으로 나눈 배수. 칸 하나가 두 배씩(로그 눈금)이고, 굵은 1이 서울 중앙값입니다. 1990년부터 · <i class="na"></i>자료 없음</p>
+  </div>
+  <p class="small" style="margin:2px 0 0">지도를 확대하면 역 이름이 나옵니다. 선로 형상 © OpenStreetMap contributors</p>
 </div>
 
 <main class="notes wrap">
@@ -182,6 +224,10 @@ svg text { font-family: var(--body); }
     <ul class="log" id="log"></ul>
   </section>
   <section class="prose">
+    <div id="landBlock" hidden>
+      <h2>법정동별 땅값</h2>
+      <details class="landtab" id="landTab"><summary id="landTabSum">표로 보기</summary><div class="scroll"><table><thead><tr><th>법정동</th><th class="n">서울 중앙값 대비</th><th class="n">㎡당 중앙값</th><th class="n">필지</th></tr></thead><tbody id="landRows"></tbody></table></div></details>
+    </div>
     <h2>시역 면적</h2>
     <table class="areas">
       <thead><tr><th>시점</th><th style="text-align:right">공식 면적</th><th style="text-align:right">지도 근사</th></tr></thead>
@@ -225,15 +271,44 @@ svg text { font-family: var(--body); }
   const dongFeatures = topojson.feature(topo, obj).features;
   const guName = DATA.guNames;
 
+  // 땅값(공시지가): 법정동별 ㎡당 중앙값 ÷ 그 해 서울 필지 중앙값. 로그 눈금 9칸(칸마다 두 배, 가운데 칸 경계가 1)
+  const land = DATA.land || null;
+  const LAND_EDGES = [1 / 8, 1 / 4, 1 / 2, 1, 2, 4, 8, 16];
+  const LAND_TICKS = ["1/8", "1/4", "1/2", "1", "2", "4", "8", "16"];
+  const landYi = (y) => land ? land.years.indexOf(y) : -1;
+  function landRatio(cd, y) {
+    const i = landYi(y); if (i < 0) return null;
+    const a = land.dong[cd], m = a ? a[i] : null, sm = land.seoul[i];
+    return m && sm ? m / sm : null;
+  }
+  function landClass(r) { let k = 0; while (k < LAND_EDGES.length && r >= LAND_EDGES[k]) k++; return k; }
+  function fmtWon(v) {
+    if (v == null) return "—";
+    if (v < 1e6) return `${Math.round(v).toLocaleString("ko-KR")}원`;
+    const eok = Math.floor(v / 1e8), man = Math.round((v % 1e8) / 1e4);
+    return eok ? `${eok}억${man ? " " + man.toLocaleString("ko-KR") + "만" : ""} 원` : `${man.toLocaleString("ko-KR")}만 원`;
+  }
+  // 파일에 필지가 덜 실린 해(앞뒤 해 대비, landprice.py가 표시). 2006년 파일이 그렇다
+  function landPartial(y) { const c = land && land.partial ? land.partial[String(y)] : null; return c ? `${y}년 파일엔 필지가 앞뒤 해의 ${Math.round(c * 100)}%만 실려 있어 값이 덜 정확함` : ""; }
+  function fmtRatio(r) { return r == null ? "—" : r >= 10 ? `×${Math.round(r)}` : r >= 1 ? `×${r.toFixed(1)}` : `×${r.toPrecision(2)}`; }
+  const dongName = (p) => `${p.nm} (${guName[p.gu] || ""})`;
+
   const trams = DATA.trams.lines.map(l => ({ ...l, geo: { type: "LineString", coordinates: l.coords } }));
   const wallGeo = { type: "LineString", coordinates: DATA.trams.wall };
 
   // ---------- svg ----------
   const svg = d3.select("#map");
+  // 자료 없는 동: 빗금(확대해도 굵기가 같도록 zoom에서 크기를 맞춤)
+  const landPat = svg.append("defs").append("pattern").attr("id", "landNA").attr("patternUnits", "userSpaceOnUse")
+    .attr("width", 6).attr("height", 6).attr("patternTransform", "rotate(45)");
+  const landPatBg = landPat.append("rect").attr("width", 6).attr("height", 6).attr("fill", "var(--paper-2)");
+  const landPatLine = landPat.append("rect").attr("width", 1.2).attr("height", 6).attr("fill", "var(--ink-2)").attr("fill-opacity", 0.55);
   const root = svg.append("g");
+  // 땅값은 면이라 맨 아래(시역 채움보다도 아래). 켜면 시역 채움은 투명하게 하고 테두리만 남긴다
+  const gLand = root.append("g");
   const gArea = root.append("g"), gNew = root.append("g"), gRings = root.append("g"), gDong = root.append("g"),
         gGu = root.append("g"), gRiver = root.append("g"), gWall = root.append("g"), gVillage = root.append("g"), gTram = root.append("g"),
-        gRail = root.append("g"), gMetro = root.append("g"), gBus = root.append("g"), gLabels = root.append("g"), gHit = root.append("g");
+        gRail = root.append("g"), gMetro = root.append("g"), gBus = root.append("g"), gStLab = root.append("g"), gLabels = root.append("g"), gHit = root.append("g");
   // 버스 종점: {route, name, from, to, lon, lat, conf, source} — 자료가 들어오면 칩이 나타남
   const rail = DATA.rail || null;
   if (rail) document.getElementById("railChip").hidden = false;
@@ -249,7 +324,9 @@ svg text { font-family: var(--body); }
     return ys.length ? Math.max(...ys) : null;
   }
   if (bus) { document.getElementById("busChip").hidden = false; document.getElementById("busLegend").hidden = false; document.getElementById("busBlock").hidden = false; }
+  if (land) { document.getElementById("landChip").hidden = false; document.getElementById("landBlock").hidden = false; }
   let selRoute = null;  // {net: "old"|"new", i}
+  let selDong = null;   // 땅값 정보창을 연도에 맞춰 다시 쓰려고 기억
   const bus2026 = DATA.bus2026 || null;
   const nets = { old: bus, new: bus2026 };
   // 2003년까지는 2004년 6월 노선망에서, 2004년부터는 2026년 11월 노선망에서 그 해 뒤에 생긴 노선을 빼서 그린다
@@ -293,7 +370,7 @@ svg text { font-family: var(--body); }
   const busSym = (t) => d3.symbol().type(SYM[t] || d3.symbolDiamond).size(t === "신설" || t === "폐선" ? 70 : 46)();
   let W = 0, H = 0, projection = d3.geoMercator(), path = d3.geoPath(projection), kNow = 1;
 
-  const layerOn = { rail: true, metro: true, tram: true, kido: true, area: true, rings: true, gu: true, wall: true, dong: false, bus: true, village: true };
+  const layerOn = { rail: true, metro: true, tram: true, kido: true, area: true, rings: true, gu: true, wall: true, dong: false, bus: true, village: true, land: false };
 
   function fit() {
     const r = svg.node().getBoundingClientRect();
@@ -310,7 +387,10 @@ svg text { font-family: var(--body); }
     gRail.selectAll("rect").call(sizeRail);
     sizeBus();
     gVillage.selectAll("circle").attr("r", 1.1 / kNow);
+    landPat.attr("width", 6 / kNow).attr("height", 6 / kNow); landPatBg.attr("width", 6 / kNow).attr("height", 6 / kNow);
+    landPatLine.attr("width", 1.2 / kNow).attr("height", 6 / kNow);
     gMetro.selectAll("circle").attr("r", st => (Object.keys(st.opens).filter(l => st.opens[l] <= year).length > 1 ? 3.4 : 2.3) / kNow);
+    scheduleStLabels();
     if (ev.sourceEvent) setAuto(false);
   });
   svg.call(zoom).on("dblclick.zoom", null);
@@ -338,6 +418,10 @@ svg text { font-family: var(--body); }
     gWall.selectAll("*").remove();
     gWall.append("path").datum(wallGeo).attr("d", path).attr("fill", "none").attr("stroke", "var(--wall)")
       .attr("stroke-width", 1.4).attr("stroke-dasharray", "1.5 2.5").attr("stroke-linecap", "round").attr("vector-effect", "non-scaling-stroke");
+    gLand.selectAll("*").remove();
+    if (land) gLand.selectAll("path").data(dongFeatures).join("path").attr("d", path)
+      .attr("stroke", "var(--paper-2)").attr("stroke-width", 0.6).attr("stroke-linejoin", "round")
+      .attr("vector-effect", "non-scaling-stroke").style("pointer-events", "none");
     gDong.selectAll("*").remove();
     gDong.append("path").datum(dongMesh).attr("d", path).attr("fill", "none").attr("stroke", "var(--rule)")
       .attr("stroke-width", 0.6).attr("vector-effect", "non-scaling-stroke");
@@ -352,12 +436,19 @@ svg text { font-family: var(--body); }
 
   function render() {
     const er = eraOf(year);
+    // land price
+    const landOn = !!(layerOn.land && land), li = landOn ? landYi(year) : -1, landShown = li >= 0;
+    gLand.style("display", landShown ? null : "none");
+    if (landShown) gLand.selectAll("path")
+      .attr("display", d => d.properties.y <= year ? null : "none")
+      .attr("fill", d => { const r = landRatio(d.properties.cd, year); return r == null ? "url(#landNA)" : `var(--land-${landClass(r)})`; });
+    d3.select("#landLegend").attr("hidden", landOn ? null : true);
     // area + new area
     gArea.selectAll("*").remove(); gNew.selectAll("*").remove(); gRings.selectAll("*").remove();
     if (er) {
-      gArea.append("path").datum(eraPoly[er.year]).attr("d", path).attr("fill", "var(--area)").attr("fill-opacity", 0.32)
+      gArea.append("path").datum(eraPoly[er.year]).attr("d", path).attr("fill", "var(--area)").attr("fill-opacity", landShown ? 0 : 0.32)
         .attr("stroke", "var(--ink)").attr("stroke-width", 1.6).attr("vector-effect", "non-scaling-stroke");
-      if (er.year !== DATA.eras[0].year || year - er.year < 3) {
+      if (!landShown && (er.year !== DATA.eras[0].year || year - er.year < 3)) {
         gNew.append("path").datum(eraNew[er.year]).attr("d", path).attr("fill", "var(--area-new)")
           .attr("fill-opacity", Math.max(0.12, 0.42 - (year - er.year) * 0.012)).attr("stroke", "none");
       }
@@ -557,6 +648,7 @@ svg text { font-family: var(--body); }
         labels.push({ x: b[0][0] + 2, y: b[0][1] - 3, t: String(e.year), fs: 10, cls: "ring" });
       });
     }
+    guLabs = labels.filter(d => d.cls === "gu" && isFinite(d.x) && isFinite(d.y));
     gLabels.selectAll("text").data(labels.filter(d => isFinite(d.x) && isFinite(d.y))).join("text")
       .attr("x", d => d.x).attr("y", d => d.y).text(d => d.t)
       .attr("text-anchor", d => d.cls === "gu" ? "middle" : "start")
@@ -575,11 +667,15 @@ svg text { font-family: var(--body); }
     const drawn = layerOn.bus && DATA.busDrawn ? DATA.busDrawn[year] : null;
     const vyy = layerOn.village ? villageYear(year) : null;
     const vtxt = vyy ? `마을버스 ${village.years[vyy].routes}개 노선${vyy !== year ? `(${vyy}년 자료)` : ""}, 마을버스로만 닿는 땅 ${village.years[vyy].only_km2}㎢ · ` : "";
-    d3.select("#statLabel").html(vtxt +
+    const landStat = landOn ? (landShown ? `서울 필지 중앙값 ㎡당 ${fmtWon(land.seoul[li])}${landPartial(year) ? "(" + landPartial(year) + ")" : ""} · ` : `땅값 자료는 ${land.years[0]}–${land.years[land.years.length - 1]}년 · `) : "";
+    d3.select("#statLabel").html(landStat + vtxt +
       (drawn ? `버스 노선 ${drawn}개 그림${bs ? `(공식 ${bs.routes}개)` : ""} · ` : bs ? `버스 노선 ${bs.routes}개 · ` : "") + (offArea ? `시역 ${offArea}㎢` : "시역 —") + (active.length ? ` · 궤도 ${active.length}구간 ${km.toFixed(1)}km` : "") + (metro && year >= 1974 ? ` · 역 ${metro.stations.filter(st => st.first <= year).length}곳` : (year >= 1968 && !active.length ? " · 전차 폐지(1968)" : ""))
     );
 
     moveBusCursor && moveBusCursor();
+    renderLandTable();
+    renderEvPop();
+    drawStationLabels();
     // log highlight
     d3.selectAll("#log .ev").attr("class", d => "ev " + (d.year === year ? "now" : d.year < year ? "past" : "future"));
     d3.select("#ticks").select(".cursor").attr("x", tickX(year) - 1);
@@ -628,9 +724,75 @@ svg text { font-family: var(--body); }
   d3.select("#viewCore").on("click", () => { setAuto(false); zoomTo(boundsOf([wallGeo, ...trams.map(t => t.geo)])); });
   d3.select("#viewAll").on("click", () => { setAuto(false); zoomTo(boundsOf([seoulNow])); });
 
+  // ---------- 그 해 사건(연도 판 아래 카드) ----------
+  const KIND_COLOR = { tram: "var(--tram)", kido: "var(--kido)", area: "var(--area-new)", rail: "var(--rail)", bus: "var(--bus)", gu: "var(--gu)" };
+  let evOn = true, lastEvYear = null;
+  function renderEvPop() {
+    const box = document.getElementById("evPop");
+    const list = evOn ? evs.filter(e => e.year === year).sort((a, b) => String(a.date || a.year).localeCompare(String(b.date || b.year))) : [];
+    if (!list.length) { box.hidden = true; box.innerHTML = ""; lastEvYear = null; return; }
+    const maxN = W < 560 ? 2 : 4, more = list.length - maxN;
+    box.innerHTML = `<ul>${list.slice(0, maxN).map(e => `<li><i class="k" style="background:${e.color || KIND_COLOR[e.kind] || "var(--gu)"}"></i><span><span class="d">${e.date || e.year}</span>${e.text}${e.conf ? ` <span class="c">(${e.conf})</span>` : ""}</span></li>`).join("")}</ul>` +
+      (more > 0 ? `<button type="button" class="more" data-more="1">외 ${more}건 · 연표에서 보기</button>` : "");
+    box.hidden = false;
+    if (lastEvYear !== year) { box.classList.remove("fresh"); void box.offsetWidth; box.classList.add("fresh"); lastEvYear = year; }
+  }
+  d3.select("#evPop").on("click", (ev) => {
+    if (!ev.target.closest("[data-more]")) return;
+    const li = document.querySelector("#log .ev.now");
+    if (li) { li.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "center" }); li.focus({ preventScroll: true }); }
+  });
+  d3.select("#evToggle").on("click", function () { evOn = !evOn; this.setAttribute("aria-pressed", evOn ? "true" : "false"); renderEvPop(); drawStationLabels(); });
+
+  // ---------- 역 이름 ----------
+  // 확대했을 때만(화면에서 1km가 ST_LABEL_PXKM픽셀 이상) 그 해 열려 있는 지하철·철도 역 이름을 쓴다.
+  // 기준을 확대 배율이 아니라 1km당 픽셀로 잡은 건, 휴대폰처럼 좁은 화면은 같은 배율에서도 역이 훨씬 촘촘해서다.
+  // 글자가 겹치면 환승 노선이 많은 역부터 남기고(오른쪽 → 왼쪽 순으로 자리를 찾음) 나머지는 숨긴다.
+  // 연도 판·시점 단추·구 이름 자리는 미리 비워 둔다.
+  const ST_LABEL_PXKM = 30;
+  let guLabs = [];
+  let stLabRaf = null;
+  function scheduleStLabels() { if (stLabRaf) return; stLabRaf = requestAnimationFrame(() => { stLabRaf = null; drawStationLabels(); }); }
+  function drawStationLabels() {
+    gStLab.selectAll("*").remove();
+    if (pxPerKm() * kNow < ST_LABEL_PXKM) return;
+    const t = d3.zoomTransform(svg.node()), cand = [], have = new Set();
+    if (layerOn.metro && metro) metro.stations.filter(st => st.first <= year).forEach(st => {
+      have.add(st.name);
+      cand.push({ name: st.name, p: projection([st.lng, st.lat]), pri: 10 + Object.keys(st.opens).filter(l => st.opens[l] <= year).length });
+    });
+    if (layerOn.rail && rail) rail.stations.filter(st => st.open <= year && (!st.close || year < st.close) && !have.has(st.name))
+      .forEach(st => cand.push({ name: st.name, p: projection([st.lng, st.lat]), pri: 5 }));
+    cand.sort((a, b) => b.pri - a.pri);
+    const fs = 11, gap = 5, placed = [], out = [];
+    const hit = (a) => placed.some(b => !(a[2] < b[0] || a[0] > b[2] || a[3] < b[1] || a[1] > b[3]));
+    const sv = svg.node().getBoundingClientRect();
+    ["#yLabel", "#eraLabel", "#statLabel", "#evPop", ".camera"].forEach(sel => {
+      const el = document.querySelector(sel), r = el && el.getBoundingClientRect();
+      if (r && r.width) placed.push([r.left - sv.left - 4, r.top - sv.top - 2, r.right - sv.left + 4, r.bottom - sv.top + 2]);
+    });
+    if (layerOn.gu) guLabs.forEach(g => { const [gx, gy] = t.apply([g.x, g.y]), gw = g.t.length * 10.5 / 2 + 2; placed.push([gx - gw, gy - 11, gx + gw, gy + 3]); });
+    for (const c of cand) {
+      const [sx, sy] = t.apply(c.p);
+      if (sx < -60 || sy < -20 || sx > W + 60 || sy > H + 20) continue;
+      const w = c.name.length * fs * 0.95 + 2, h = fs + 2;
+      for (const side of [1, -1]) {
+        const x0 = side > 0 ? sx + gap : sx - gap - w, box = [x0, sy - h / 2, x0 + w, sy + h / 2];
+        if (hit(box)) continue;
+        placed.push(box); out.push({ c, side }); break;
+      }
+    }
+    gStLab.selectAll("text").data(out).join("text")
+      .attr("x", d => d.c.p[0] + d.side * gap / kNow).attr("y", d => d.c.p[1]).attr("dy", "0.35em")
+      .attr("text-anchor", d => d.side > 0 ? "start" : "end")
+      .attr("font-size", fs / kNow).attr("font-weight", 500).attr("fill", "var(--ink)")
+      .attr("paint-order", "stroke").attr("stroke", "var(--paper-2)").attr("stroke-width", 3 / kNow).attr("stroke-linejoin", "round")
+      .style("pointer-events", "none").text(d => d.c.name);
+  }
+
   // ---------- info ----------
-  function showInfo(html) { d3.select("#infoBody").html(html); d3.select("#info").attr("hidden", null); }
-  d3.select("#infoX").on("click", () => { d3.select("#info").attr("hidden", true); if (selRoute != null) { selRoute = null; render(); } });
+  function showInfo(html) { selDong = null; d3.select("#infoBody").html(html); d3.select("#info").attr("hidden", null); }
+  d3.select("#infoX").on("click", () => { selDong = null; d3.select("#info").attr("hidden", true); if (selRoute != null) { selRoute = null; render(); } });
   function showTram(t) {
     showInfo(`<b>${t.line}</b> · ${t.name}<div class="meta">${t.op} · 개통 ${t.openLabel} · ${t.closeLabel || (t.close === 1968 ? "1968.11.30 전면 폐지" : t.close)}</div><div class="meta">근거: ${t.conf}${t.note ? " · " + t.note : ""} · 선형은 현재 도로를 따라 그린 근사선</div>`);
   }
@@ -658,7 +820,84 @@ svg text { font-family: var(--body); }
     const yt = y <= 1914 ? "1914년 경성부 안" : `${y}년 편입`;
     const gp = guPeriodOf(year), k = dongFeatures.indexOf(d);
     const then = gp && y <= year ? ` · ${year}년엔 ${gp.names[gp.idx[k]]}` : (y > year ? ` · ${year}년엔 아직 시역 밖` : "");
-    showInfo(`<b>${p.nm}</b> <span class="meta">(현 ${guName[p.gu] || ""}${then})</span><div class="meta">${yt}${p.yn ? " · " + p.yn : ""}${p.yc ? " · 근거 확인 정도: " + p.yc : ""}</div>`);
+    let landHtml = "";
+    if (land && land.dong[p.cd]) {
+      const i = landYi(year), r = landRatio(p.cd, year);
+      landHtml = i < 0 ? `<div class="meta" style="margin-top:4px">땅값 자료는 ${land.years[0]}–${land.years[land.years.length - 1]}년</div>`
+        : r == null ? `<div class="meta" style="margin-top:4px">${year}년 땅값 자료 없음</div>`
+        : `<div style="margin-top:4px">${year}년 ㎡당 공시지가 중앙값 <b>${fmtWon(land.dong[p.cd][i])}</b> · 서울 중앙값의 <b>${fmtRatio(r)}</b><span class="meta"> · 필지 ${land.n[p.cd][i].toLocaleString("ko-KR")}개</span></div>${landPartial(year) ? `<div class="meta">${landPartial(year)}</div>` : ""}`;
+      landHtml += `<svg class="spark" id="spark" role="img" aria-label="${p.nm} 서울 중앙값 대비 배수 변화"></svg>`;
+    }
+    showInfo(`<b>${p.nm}</b> <span class="meta">(현 ${guName[p.gu] || ""}${then})</span><div class="meta">${yt}${p.yn ? " · " + p.yn : ""}${p.yc ? " · 근거 확인 정도: " + p.yc : ""}</div>${landHtml}`);
+    selDong = d;
+    if (land && land.dong[p.cd]) drawSpark(d);
+  }
+
+  // 동 하나의 '서울 중앙값 대비 배수'를 해마다 이은 작은 선(로그 눈금). 아래 눈금은 그 동 안 지하철역이 처음 열린 해
+  function drawSpark(d) {
+    const p = d.properties, svgs = d3.select("#spark"); if (svgs.empty()) return;
+    const w = svgs.node().getBoundingClientRect().width || 300, h = 74, padL = 34, padR = 8, padT = 8, padB = 18;
+    svgs.attr("viewBox", `0 0 ${w} ${h}`);
+    const pts = land.years.map((y, i) => ({ y, r: landRatio(p.cd, y) })).filter(q => q.r != null);
+    if (!pts.length) return;
+    const lo = Math.min(0.5, d3.min(pts, q => q.r) / 1.2), hi = Math.max(2, d3.max(pts, q => q.r) * 1.2);
+    const x = d3.scaleLinear().domain([land.years[0], land.years[land.years.length - 1]]).range([padL, w - padR]);
+    const yy = d3.scaleLog().domain([lo, hi]).range([h - padB, padT]);
+    // 가로 눈금: 두 배 간격(1/8 … 16) 가운데 범위 안의 것만, 1은 점선으로 조금 진하게
+    LAND_EDGES.filter(v => v >= lo && v <= hi).forEach((v, k, a) => {
+      const one = v === 1;
+      svgs.append("line").attr("x1", padL).attr("x2", w - padR).attr("y1", yy(v)).attr("y2", yy(v))
+        .attr("stroke", "var(--rule)").attr("stroke-width", 1).attr("stroke-dasharray", one ? "3 3" : null).attr("stroke-opacity", one ? 1 : 0.6);
+      if (one || a.length <= 4 || k % 2 === a.indexOf(1) % 2)
+        svgs.append("text").attr("x", padL - 4).attr("y", yy(v) + 3.5).attr("text-anchor", "end").text("×" + LAND_TICKS[LAND_EDGES.indexOf(v)])
+          .attr("font-size", 10).attr("fill", one ? "var(--ink)" : "var(--ink-2)").style("font-family", "var(--mono)");
+    });
+    [land.years[0], 2000, 2010, 2020].filter(t => t >= land.years[0]).forEach(t => svgs.append("text").attr("x", x(t)).attr("y", h - 3).attr("text-anchor", "middle").text(t).attr("font-size", 10).attr("fill", "var(--ink-2)").style("font-family", "var(--mono)"));
+    // 그 동 안 지하철역(처음 열린 해)
+    const sts = metro ? metro.stations.filter(st => st.first >= land.years[0] && d3.geoContains(d, [st.lng, st.lat])) : [];
+    if (sts.length) d3.select("#infoBody").append("div").attr("class", "meta")
+      .text("세로선: 이 동 안 지하철역이 처음 열린 해 — " + sts.slice().sort((a, b) => a.first - b.first).map(st => `${st.name} ${st.first}`).join(", "));
+    sts.forEach(st => {
+      svgs.append("line").attr("x1", x(st.first)).attr("x2", x(st.first)).attr("y1", padT).attr("y2", h - padB).attr("stroke", "var(--ink-2)").attr("stroke-width", 1).attr("stroke-opacity", 0.5)
+        .append("title").text(`${st.name}역 ${st.first}년 개통`);
+    });
+    svgs.append("path").datum(pts).attr("d", d3.line().x(q => x(q.y)).y(q => yy(q.r))).attr("fill", "none").attr("stroke", "var(--ink)").attr("stroke-width", 2).attr("stroke-linejoin", "round");
+    pts.filter(q => land.partial && land.partial[String(q.y)]).forEach(q => svgs.append("circle").attr("cx", x(q.y)).attr("cy", yy(q.r)).attr("r", 3)
+      .attr("fill", "var(--paper)").attr("stroke", "var(--ink-2)").attr("stroke-width", 1.2).append("title").text(landPartial(q.y)));
+    const cur = pts.find(q => q.y === year);
+    const dot = svgs.append("circle").attr("r", 4).attr("fill", "var(--paper)").attr("stroke", "var(--ink)").attr("stroke-width", 2);
+    const lab = svgs.append("text").attr("font-size", 10.5).attr("fill", "var(--ink)").style("font-family", "var(--mono)").attr("paint-order", "stroke").attr("stroke", "var(--paper)").attr("stroke-width", 3);
+    function mark(q) {
+      if (!q) { dot.attr("display", "none"); lab.text(""); return; }
+      dot.attr("display", null).attr("cx", x(q.y)).attr("cy", yy(q.r));
+      const right = x(q.y) > w - 70;
+      lab.attr("x", x(q.y) + (right ? -7 : 7)).attr("y", Math.max(padT + 8, yy(q.r) - 6)).attr("text-anchor", right ? "end" : "start").text(`${q.y} ${fmtRatio(q.r)}`);
+    }
+    mark(cur);
+    svgs.append("rect").attr("x", padL).attr("y", 0).attr("width", w - padL - padR).attr("height", h).attr("fill", "transparent")
+      .on("pointermove", (ev) => { const yv = Math.round(x.invert(d3.pointer(ev)[0])); mark(pts.find(q => q.y === yv) || null); })
+      .on("pointerleave", () => mark(cur));
+  }
+
+  // 표로 보기: 그 해 법정동을 배수 순으로(펼쳐 둔 때만 다시 씀)
+  const landTab = document.getElementById("landTab");
+  function renderLandTable() {
+    if (!land || !landTab.open) return;
+    const i = landYi(year);
+    d3.select("#landTabSum").text(i < 0 ? `표로 보기 (${land.years[0]}–${land.years[land.years.length - 1]}년 자료)` : `표로 보기 — ${year}년, 서울 필지 중앙값 ㎡당 ${fmtWon(land.seoul[i])}${landPartial(year) ? " · " + landPartial(year) : ""}`);
+    const rows = i < 0 ? [] : dongFeatures.filter(f => f.properties.y <= year).map(f => ({ p: f.properties, r: landRatio(f.properties.cd, year) }))
+      .sort((a, b) => (b.r ?? -1) - (a.r ?? -1));
+    d3.select("#landRows").selectAll("tr").data(rows).join("tr").html(q => q.r == null
+      ? `<td><i style="background:transparent;border:1px solid var(--rule)"></i>${dongName(q.p)}</td><td class="n">자료 없음</td><td class="n">—</td><td class="n">—</td>`
+      : `<td><i style="background:var(--land-${landClass(q.r)})"></i>${dongName(q.p)}</td><td class="n">${fmtRatio(q.r)}</td><td class="n">${fmtWon(land.dong[q.p.cd][i])}</td><td class="n">${land.n[q.p.cd][i].toLocaleString("ko-KR")}</td>`);
+  }
+  landTab.addEventListener("toggle", renderLandTable);
+  // 범례 막대와 눈금
+  if (land) {
+    d3.select("#landBar").selectAll("i").data(d3.range(9)).join("i").style("background", k => `var(--land-${k})`)
+      .attr("title", k => k === 0 ? `서울 중앙값의 1/8 미만` : k === 8 ? `16배 이상` : `${LAND_TICKS[k - 1]}–${LAND_TICKS[k]}배`);
+    d3.select("#landTicks").selectAll("span").data(LAND_TICKS).join("span").attr("class", t => t === "1" ? "mid" : null)
+      .style("left", (t, k) => `${(k + 1) / 9 * 100}%`).text(t => t);
   }
 
   // ---------- log ----------
@@ -736,8 +975,9 @@ svg text { font-family: var(--body); }
   const slider = document.getElementById("year");
   function setYear(y, fromLog) {
     year = Math.max(1899, Math.min(2026, y)); slider.value = year;
-    if (fromLog) { d3.select("#info").attr("hidden", true); }
+    if (fromLog) { selDong = null; d3.select("#info").attr("hidden", true); }
     render();
+    if (selDong && !document.getElementById("info").hidden) showDong(selDong);
   }
   slider.addEventListener("input", () => setYear(+slider.value));
   let timer = null, speed = 1;
