@@ -185,7 +185,9 @@ meta = {"id": "kanggye1914", "title": "경성부시가강계도(京城府市街�
                  {"src": "img/kanggye1914_inset.webp", "nw": [round(inw[0], 6), round(inw[1], 6)], "se": [round(ise[0], 6), round(ise[1], 6)]}],
         "insetFit": f"창신동·숭인동 덧그림은 약도라 따로 맞춤(흥인지문·지봉로 갈림·동망봉과 성벽·종로·지봉로 선). 점 어긋남 {min(inset_pt_err)}–{max(inset_pt_err)}m, 선 어긋남 중앙값 약 {inset_line_err}m",
         "from": 1914, "to": 1935,
-        "src": "서울역사아카이브 소장유물 「경성부시가강계도」(서울역사001349). 서울역사박물관 소장, 공공누리 제1유형",
+        "src": "서울역사아카이브 소장유물 「경성부시가강계도」(서울역사001349, 십자옥 발행 1:10,000). 서울역사박물관 소장, 공공누리 제1유형",
+        "credit": "서울역사박물관 소장",   # 아카이브 상세 화면의 출처표시 예
+        "url": "https://museum.seoul.go.kr/archive/archiveNew/NR_relicView.do?mcsjgbnc=PS01003026001&mcseqno1=001349&mcseqno2=00000&cdLanguage=KOR",
         "fit": f"기준점 {len(GCP)}곳(성문·궁궐 문·성당·산꼭대기·한강철교 북단·한강통·경부선)으로 맞춤. 기준점 하나를 빼고 맞췄을 때 그 점의 어긋남 {min(loo)}–{max(loo)}m",
         "gcp": [{"name": g[0], "px": g[1], "py": g[2], "lng": g[3], "lat": g[4], "note": g[5]} for g in GCP]}
 json.dump(meta, open(os.path.join(DATA, "oldmap.json"), "w"), ensure_ascii=False, indent=1)

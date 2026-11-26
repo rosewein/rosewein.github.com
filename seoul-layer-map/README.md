@@ -45,7 +45,7 @@
 | 조선 후기 역·나루 위치(1912–1914년 같은 이름 동리 자리) | `data/joseon.json`, `src/joseon.py` | 국사편찬위원회 HGIS 「행정구역 GIS 데이터(1910–1945년)」 포인트(2026-11-26 받음) | 출처 표시(HGIS 누리집 안내) |
 | 역·원·나루 문헌 근거(『동국여지비고』 등 원문) | `data/joseon.json` | 국사편찬위원회 HGIS 「한양역사지리정보 역사지명데이터」(xlsx, 2026-11-26 받음) | 출처 표시(HGIS 누리집 안내) |
 | 원 터 표석 주소, 대로 경유지 | `src/joseon.py` | 서울신문 기사(2006-10-23 「부산에서 서울까지 다시 걷는 옛길」, 2018-06-28·2018-12-20 「서울미래유산 그랜드 투어」, 2019-11-07, 2022-02-11, 2026-07-31), 공유마당 「청파 배다리」, 서울시 한강 누리집, 경기도 웹진 「경기옛길」 | 지명·주소·경로 사실만 참고, 글은 옮기지 않음 |
-| 1914년 「경성부시가강계도」(6월 수정판) | `img/kanggye1914.webp`, `img/kanggye1914_inset.webp`, `data/oldmap.json`, `src/kanggye1914.py` | 서울역사아카이브 소장유물 「경성부시가강계도」(서울역사001349, 서울역사박물관 소장, 2026-11-26 받음) | 공공누리 제1유형(출처표시). 출처표시 예: 서울역사박물관 소장 |
+| 1914년 「경성부시가강계도」(6월 수정판) | `img/kanggye1914.webp`, `img/kanggye1914_inset.webp`, `data/oldmap.json`, `src/kanggye1914.py` | 서울역사아카이브 소장유물 [「경성부시가강계도」](https://museum.seoul.go.kr/archive/archiveNew/NR_relicView.do?mcsjgbnc=PS01003026001&mcseqno1=001349&mcseqno2=00000&cdLanguage=KOR)(서울역사001349, 십자옥 발행 1:10,000, 서울역사박물관 소장, 2026-11-26 받음) | 공공누리 제1유형(출처표시). 출처표시 예: 서울역사박물관 소장. 이용 신청서는 내지 않고 출처표시로 씀(지도 출처 줄·설명문) |
 | 법정동 경계 | `data/emd_topo.json` | [southkorea/seoul-maps](https://github.com/southkorea/seoul-maps) (통계청·행정안전부 원자료) | 저장소 README 표기: Apache 2.0 |
 | 폐역 좌표 일부 | `data/rail.json` | OpenHistoricalMap | CC0 |
 | 전차·철도·지하철 연혁, 행정구역 변천 | 연표, `data/tram.json`, `data/years.json`, `data/gu_periods.json` | 위키백과, 한국민족문화대백과사전, 서울연구원, 서울시 미디어허브, 국토교통부·서울시 보도자료 등 | 날짜와 사실 위주로 옮겼고, 출처는 지도 아래 설명에 적음 |

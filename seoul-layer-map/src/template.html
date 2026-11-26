@@ -136,6 +136,7 @@ input[type=range] { width: 100%; margin: 0; accent-color: var(--tram); height: 2
 .side .legend-land .tk span { font-size: 10px; }
 .attrib { position: absolute; right: 4px; bottom: 3px; font-size: 10.5px; color: var(--ink-2); background: var(--paper-2); background: color-mix(in srgb, var(--paper-2) 80%, transparent); padding: 1px 5px; border-radius: 3px; pointer-events: auto; }
 .attrib a { color: inherit; }
+#oldAttrib, #verLabel { white-space: nowrap; }   /* 좁은 화면에서 줄이 바뀌어도 출처·버전 덩어리는 나뉘지 않게 */
 .statstrip { display: none; }
 /* 오른쪽 판은 폭이 넉넉할 때만. 태블릿 세로 화면처럼 좁으면 칩을 지도 위 한 줄로(서울은 가로가 길어 폭을 지도에 주는 편이 크게 보임) */
 @media (max-width: 900px) {
@@ -357,7 +358,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     <button id="layBtn" class="laybtn" type="button" aria-expanded="false" aria-controls="side">레이어·범례</button>
   </div>
   <div class="info" id="info" hidden><button class="x" id="infoX" type="button" aria-label="닫기">×</button><div id="infoBody"></div></div>
-  <div class="attrib" id="attrib">선로·물길 형상 © OpenStreetMap contributors<span id="verLabel"></span></div>
+  <div class="attrib" id="attrib">선로·물길 형상 © OpenStreetMap contributors<span id="oldAttrib" hidden></span><span id="verLabel"></span></div>
 </div>
 <aside class="side" id="side" aria-label="레이어">
   <div class="scroller">
@@ -680,6 +681,9 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     const on = oldShownAt(year);
     gOld.style("display", on ? null : "none");
     gRiver.style("opacity", on ? 0.35 : null);   // 지금 한강 선이 옛 지도의 강을 덮지 않게
+    // 공공누리 제1유형: 옛 지도가 보이는 동안 출처(기관명·링크)를 지도 출처 줄에 함께 적는다
+    d3.select("#oldAttrib").property("hidden", !on)
+      .html(on ? ` · 옛 지도 <a href="${oldmap.url}" target="_blank" rel="noopener">${oldmap.credit}</a>(공공누리 제1유형)` : "");
     if (!on) return;
     // 본문과 창신·숭인동 덧그림을 따로 맞춘 이미지 두 장
     const img = gOld.selectAll("image").data(oldmap.imgs).join(en => en.append("image").attr("href", d => d.src)

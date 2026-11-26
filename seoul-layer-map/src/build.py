@@ -154,7 +154,8 @@ if (data["joseon"] or data["oldmap"]) and os.path.exists(F("method_oldmap.html")
     i = mh.index(SRC_PAR); j = mh.index("</p>", i)
     old_src = (" 조선 후기 대로·역·원·나루는 국사편찬위원회 HGIS 「행정구역 GIS 데이터(1910–1945년)」와 「한양역사지리정보 역사지명데이터」,"
                " 서울신문 기사(「부산에서 서울까지 다시 걷는 옛길」 2006, 「서울미래유산 그랜드 투어」 2018 등), 공유마당 「청파 배다리」, 서울시 한강 누리집."
-               " 옛 지도는 서울역사아카이브 「경성부시가강계도」(서울역사001349, 서울역사박물관 소장, 공공누리 제1유형).")
+               " 옛 지도는 서울역사아카이브 「경성부시가강계도」(서울역사001349, 서울역사박물관 소장, 공공누리 제1유형,"
+               ' <a href="' + (data["oldmap"] or {}).get("url", "") + '" target="_blank" rel="noopener">아카이브 상세</a>).')
     data["methodHtml"] = mh[:i] + open(F("method_oldmap.html")).read() + mh[i:j] + old_src + mh[j:]
 # 버스: 2004년 7월 개편 이후 해마다 그릴 노선(2026년 노선망에서 그 해 뒤에 생긴 노선을 뺀다)
 OLD_FROM = 1998
