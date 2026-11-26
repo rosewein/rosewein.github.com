@@ -1,9 +1,17 @@
 <title>서울 도시 연대지도</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hahmlet:wght@300;500;700&family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<!--__FONTLINKS__-->
 <style>
+/* 글꼴: 저장소 fonts/에 페이지에 쓰는 글자만 담아 둔다(src/fonts.py가 빌드 때 만듦). IBM Plex는 'Plex'가 예약된 이름이라
+   글자를 덜어 낸 것은 SLM Sans KR·SLM Mono로 이름을 바꿨다. 제목 글꼴(Hahmlet)은 h1·h2·연표 시기 제목·연도 숫자 글자만 담으므로,
+   var(--display)를 다른 곳에 새로 쓰면 build.py의 display_text()에 그 글자를 더해야 한다 */
+@font-face { font-family: "Hahmlet"; src: url("fonts/hahmlet-500.woff2?v=__FV__") format("woff2"); font-weight: 500; font-display: swap; }
+@font-face { font-family: "Hahmlet"; src: url("fonts/hahmlet-700.woff2?v=__FV__") format("woff2"); font-weight: 700; font-display: swap; }
+@font-face { font-family: "SLM Sans KR"; src: url("fonts/slm-sans-kr-400.woff2?v=__FV__") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "SLM Sans KR"; src: url("fonts/slm-sans-kr-500.woff2?v=__FV__") format("woff2"); font-weight: 500; font-display: swap; }
+@font-face { font-family: "SLM Sans KR"; src: url("fonts/slm-sans-kr-600.woff2?v=__FV__") format("woff2"); font-weight: 600; font-display: swap; }
+@font-face { font-family: "SLM Mono"; src: url("fonts/slm-mono-400.woff2?v=__FV__") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "SLM Mono"; src: url("fonts/slm-mono-500.woff2?v=__FV__") format("woff2"); font-weight: 500; font-display: swap; }
 /* Layout: 지도가 화면 대부분을 차지하는 무대, 그 아래 고정 연도 띠(슬라이더), 그 아래 연표·메모. 옛 측량도의 종이·먹·철도 붉은선을 차용 */
 :root {
   --paper: #e8ebe4;
@@ -29,8 +37,9 @@
   /* 새 건물: 한 색상(남색) 8단계, 밝음→어두움 = 적음→많음(1% 미만은 칠하지 않음). 어두운 화면은 반대. validate_palette.js --ordinal 통과(밝은 끝 대비 2:1 이상) */
   --bld-1: #8f9fbb; --bld-2: #738cb9; --bld-3: #5878b2; --bld-4: #4265a6; --bld-5: #305294; --bld-6: #23417c; --bld-7: #193160; --bld-8: #122343;
   --display: "Hahmlet", "Noto Serif KR", "AppleMyungjo", serif;
-  --body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
-  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --body: "SLM Sans KR", "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  /* 숫자용 글꼴에는 한글이 없으므로 한글은 본문 글꼴로(전에는 운영체제 글꼴로 찍혔음) */
+  --mono: "SLM Mono", "IBM Plex Mono", "SLM Sans KR", "IBM Plex Sans KR", ui-monospace, "SFMono-Regular", Menlo, monospace;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -194,6 +203,49 @@ svg text { font-family: var(--body); }
 .legend-bus[hidden] { display: none; }   /* display: flex가 hidden 속성을 이기므로 따로 적는다 */
 .legend-bus svg { vertical-align: -2px; margin-right: 4px; }
 #busChart { display: block; width: 100%; height: 150px; }
+/* 낮은 가로 화면(휴대폰 가로 등): 지도와 재생 막대가 화면 높이 안에 다 들어오게 줄이고,
+   레이어 칩·범례(오른쪽 판이나 칩 줄)는 접어서 지도 오른쪽 위 「레이어·범례」 단추로 연다(v1.5.1, 시안 2) */
+.camera .laybtn { display: none; }
+@media (max-height: 500px) and (orientation: landscape) {
+  body[data-tab="map"] .app { min-height: 0; }
+  .mapwrap { min-height: 0; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
+  header.top { padding-top: 2px; gap: 0 14px; }
+  header.top h1 { font-size: 16px; padding-bottom: 3px; }
+  .tabs button { padding: 4px 8px 5px; font-size: 13px; }
+  .yearplate { top: 6px; }
+  .yearplate .y { font-size: clamp(30px, 10vh, 84px); }
+  .yearplate .era { margin-top: 2px; font-size: 12px; }
+  .yearplate .stat { font-size: 11px; }
+  .evpop { max-width: 300px; font-size: 12px; padding: 4px 8px; margin-top: 5px; }
+  .camera { top: 6px; gap: 4px; }
+  .camera button { padding: 3px 7px; font-size: 11.5px; }
+  .camera .laybtn { display: block; }
+  .side { position: absolute; z-index: 7; top: 6px; right: 96px; left: auto; width: min(460px, 60%); max-height: calc(100% - 12px); overflow-y: auto; display: none;
+    background: var(--paper); border: 1px solid var(--ink); border-radius: 4px; padding: 8px; order: 0; }
+  .side.chipsopen { display: block; }
+  .side .scroller { display: flex; flex-wrap: wrap; overflow: visible; gap: 6px; }
+  .side .all { display: flex; margin: 0 0 6px; }
+  .side .chips { display: flex; flex-direction: row; flex-wrap: wrap; gap: 4px; }
+  .side .chip { width: auto; flex: none; border-radius: 999px; padding: 2px 8px; }
+  .legbtn { display: none !important; }
+  .side .legends { display: block; position: static; border: 0; padding: 0; max-height: none; }
+  .timebar .wrap { padding-block: 3px; gap: 0 10px; grid-template-columns: auto 1fr auto; }
+  .timebar .speed { grid-column: 3; grid-row: 1 / span 2; }
+  .speed span { display: none; }
+  .speed button { min-height: 22px; padding: 1px 7px; }
+  .play { width: 32px; height: 32px; }
+  #ticks { height: 11px; }
+  input[type=range] { height: 18px; }
+  .scale { height: 13px; font-size: 10.5px; }
+}
+/* 높이가 낮은 데스크톱(노트북 1366×768 등): 오른쪽 판이 넘치지 않게 범례를 접고 「범례 보기」로 펼친다(v1.5.2, 시안 2).
+   높이 500px 이하 가로 화면은 위의 「레이어·범례」 팝오버가 맡으므로 빼고, 큰 화면은 그대로 */
+.lgfold { display: none; }
+@media (min-width: 901px) and (min-height: 501px) and (max-height: 800px) {
+  .lgfold { display: block; width: 100%; margin-top: 10px; font: 500 12.5px var(--body); color: var(--ink); background: none; border: 1px solid var(--ink); border-radius: 4px; padding: 5px 8px; cursor: pointer; text-align: left; }
+  .lgfold:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  .side:not(.lgshow) .legends { display: none; }
+}
 @media (prefers-reduced-motion: reduce) { .pulse { animation: none !important; } }
 @keyframes pulse { 0% { stroke-opacity: .9 } 100% { stroke-opacity: 0 } }
 .pulse { animation: pulse 1.6s ease-out infinite; }
@@ -289,9 +341,10 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     <button id="viewCore" type="button" title="도성 일대로 확대">도심</button>
     <button id="viewAll" type="button" title="현재 서울 전체">서울 전체</button>
     <button id="evToggle" type="button" aria-pressed="true" title="그 해에 일어난 일을 연도 아래에 띄움">그 해 사건</button>
+    <button id="layBtn" class="laybtn" type="button" aria-expanded="false" aria-controls="side">레이어·범례</button>
   </div>
   <div class="info" id="info" hidden><button class="x" id="infoX" type="button" aria-label="닫기">×</button><div id="infoBody"></div></div>
-  <div class="attrib" id="attrib">선로 형상 © OpenStreetMap contributors<span id="verLabel"></span></div>
+  <div class="attrib" id="attrib">선로·물길 형상 © OpenStreetMap contributors<span id="verLabel"></span></div>
 </div>
 <aside class="side" id="side" aria-label="레이어">
   <div class="scroller">
@@ -313,6 +366,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   </div>
   </div>
   <button type="button" class="legbtn" id="legBtn" aria-expanded="false" aria-controls="legends">범례</button>
+  <button class="lgfold" id="lgFold" type="button" aria-expanded="false" aria-controls="legends">범례 보기</button>
   <div class="legends" id="legends">
   <h3>범례</h3>
   <div class="legend-bus" id="busLegend" hidden>
@@ -335,6 +389,9 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     <div class="tk" id="bldTicks"></div>
     <div id="bldDotKey" hidden style="margin:4px 0 2px"><svg id="bldDotSvg" width="210" height="44" role="img" aria-label="원 크기 보기"></svg></div>
     <p id="bldNote">새 건물: 그 해까지 5년 동안 사용승인된 건물 연면적을 법정동 면적으로 나눈 값(%)입니다. 칸 하나가 두 배씩(로그 눈금)이고, 1% 미만은 칠하지 않았습니다. 지금 건축물대장에 헐려서 말소된 건물을 더한 값입니다.</p>
+  </div>
+  <div class="legend-bus" id="waterLegend">
+    <span><svg width="20" height="12" viewBox="0 0 20 12"><rect x="1" y="2" width="9" height="8" fill="var(--river)"/><path d="M12,6H19" stroke="var(--river)" stroke-width="1.8"/></svg>물길(한강 수면·하천): 지금 모습</span>
   </div>
   <p class="small" style="margin:10px 0 0">자세한 풀이는 「읽는 법」 탭에 있습니다.</p>
   </div>
@@ -439,6 +496,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     <li>마을버스: 점은 마을버스 정류장, 칠한 곳은 마을버스로만 닿는 땅(시내버스 정류장 300m 밖, 마을버스 정류장 300m 안)입니다. 2015년부터, 그 해 11월 셋째 수요일 승하차 기록으로 그렸습니다. 땅값이나 새 건물을 함께 켜면 칠한 곳을 옅게 하고 테두리를 두릅니다.</li>
     <li>땅값: 법정동마다 ㎡당 개별공시지가의 중앙값을 그 해 서울 전체 필지 중앙값으로 나눈 배수입니다. 칸 하나가 두 배씩(로그 눈금)이고, 굵은 1이 서울 중앙값입니다. 1990년부터 있고, 빗금은 그 해 자료가 없는 동입니다.</li>
     <li>새 건물: 법정동마다 그 해까지 5년 동안 사용승인된 건물 연면적을 동 면적으로 나눈 값(신축 밀도, %)입니다. 칸 하나가 두 배씩(로그 눈금)이고 1% 미만은 칠하지 않았습니다. 1960년부터 있고, 범례에서 주거나 상업·업무만 골라 볼 수 있습니다. 땅값과 함께 켜면 땅값이 면을 칠하고, 새 건물은 동마다 원(넓이 = 5년 연면적)으로 바뀝니다. 땅값 변화와 견준 그림은 「땅값과 건물」 탭에 있습니다.</li>
+    <li>물길: 한강 수면과 이름 있는 하천 28개를 OpenStreetMap(2026년 11월 추출본)에서 그렸습니다. 지금 모습이라 옛 해를 볼 때도 같게 나옵니다. 잠실·여의도 둘레의 한강처럼 그 사이 크게 바뀐 곳은 그때와 다르고, 청계천은 덮여 있던 시기에도 선이 보입니다. 지금 덮여 있는(복개된) 구간은 그리지 않았습니다.</li>
   </ul>
   <h2>이 지도를 읽는 법</h2>
   <div id="method"></div>
@@ -661,11 +719,24 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     return Math.abs(a[1] - b[1]);
   }
 
+  // 물길(지금 기준): OSM 수면 면과 이름 있는 하천 선(data/water.json, src/water.py). 자료가 없으면 예전처럼 강북·강남 구 경계를 굵게
+  function drawWater() {
+    const W8 = DATA.water;
+    if (!W8) {
+      gRiver.append("path").datum(river).attr("d", path).attr("fill", "none")
+        .attr("stroke", "var(--river)").attr("stroke-width", 0.9 * pxPerKm()).attr("stroke-linecap", "round").attr("stroke-linejoin", "round");
+      return;
+    }
+    gRiver.append("path").datum(W8.area).attr("d", path).attr("fill", "var(--river)").attr("stroke", "none");
+    gRiver.selectAll("path.wl").data(W8.lines).join("path").attr("class", "wl").attr("d", l => path(l.geom)).attr("fill", "none")
+      .attr("stroke", "var(--river)").attr("stroke-width", l => l.cls === "r" ? 1.8 : 1.1).attr("stroke-linecap", "round").attr("stroke-linejoin", "round")
+      .attr("vector-effect", "non-scaling-stroke");
+  }
+
   // ---------- static layers ----------
   function drawStatic() {
     gRiver.selectAll("*").remove();
-    gRiver.append("path").datum(river).attr("d", path).attr("fill", "none")
-      .attr("stroke", "var(--river)").attr("stroke-width", 0.9 * pxPerKm()).attr("stroke-linecap", "round").attr("stroke-linejoin", "round");
+    drawWater();
     gRiver.append("path").datum(seoulNow).attr("d", path).attr("fill", "none")
       .attr("stroke", "var(--rule)").attr("stroke-width", 1).attr("vector-effect", "non-scaling-stroke").attr("stroke-dasharray", "2 3");
     gWall.selectAll("*").remove();
@@ -982,6 +1053,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   function guPeriodOf(y) { let p = null; for (const g of DATA.guPeriods) if (g.from <= y) p = g; return p; }
 
   // ---------- camera ----------
+  const LOWQ = window.matchMedia("(max-height: 500px) and (orientation: landscape)");   // 낮은 가로 화면(CSS의 같은 조건과 짝)
   let autoCam = true;
   function setAuto(v) { autoCam = v; d3.select("#autoCam").attr("aria-pressed", v ? "true" : "false"); }
   function boundsOf(features) {
@@ -992,7 +1064,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   function zoomTo(b, dur = 750) {
     const [[x0, y0], [x1, y1]] = b;
     // 위쪽 여백: 넓은 화면은 연도 판이 왼쪽에만 있어 조금만, 좁은 화면은 판이 폭을 다 차지하므로 판의 실제 높이만큼
-    const padTop = W < 560 ? Math.min(plateBottom() + 6, H * 0.45) : Math.min(110, H * 0.22);
+    const padTop = W < 560 ? Math.min(plateBottom() + 6, H * 0.45) : LOWQ.matches ? 10 : Math.min(110, H * 0.22);   // 낮은 가로 화면은 서울이 가운데에 작게 놓여 판과 덜 겹치므로 거의 비우지 않음
     const k = Math.min(60, 0.9 / Math.max((x1 - x0) / W, (y1 - y0) / (H - padTop)));
     const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
     const t = d3.zoomIdentity.translate(W / 2 - k * cx, (H + padTop) / 2 - k * cy).scale(k);
@@ -1024,7 +1096,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     const box = document.getElementById("evPop");
     const list = evOn ? evs.filter(e => e.year === year) : [];   // evs가 이미 날짜순
     if (!list.length) { box.hidden = true; box.innerHTML = ""; lastEvYear = null; return; }
-    const maxN = W < 560 ? 1 : 4, more = list.length - maxN;   // 좁은 화면은 한 건만(판이 지도를 덜 가리게)
+    const maxN = (W < 560 || LOWQ.matches) ? 1 : 4, more = list.length - maxN;   // 좁은 화면은 한 건만(판이 지도를 덜 가리게)
     box.innerHTML = `<ul>${list.slice(0, maxN).map(e => `<li><i class="k" style="background:${e.color || KIND_COLOR[e.kind] || "var(--gu)"}"></i><span><span class="d">${e.date || e.year}</span>${e.text}${e.conf ? ` <span class="c">(${e.conf})</span>` : ""}</span></li>`).join("")}</ul>` +
       (more > 0 ? `<button type="button" class="more" data-more="1">외 ${more}건 · 연표에서 보기</button>` : "");
     box.hidden = false;
@@ -1364,7 +1436,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     const svgc = d3.select("#busChart"); svgc.selectAll("*").remove();
     const w = svgc.node().getBoundingClientRect().width, h = 150;
     svgc.attr("viewBox", `0 0 ${w} ${h}`);
-    const x = d3.scaleLinear().domain([1950, 2026]).range([44, w - 10]);
+    const x = d3.scaleLinear().domain([1950, 2026]).range([62, w - 10]);   // 왼쪽 62px은 줄 이름(「운행 대수」)과 최댓값 자리
     const rows = [{ key: "routes", label: "노선 수", y0: 8 }, { key: "buses", label: "운행 대수", y0: 78 }];
     const dr = DATA.busDrawn ? Object.entries(DATA.busDrawn).map(([y, v]) => ({ y: +y, v })).sort((a, b) => a.y - b.y) : [];
     rows.forEach(rw => {
@@ -1464,6 +1536,9 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   d3.select("#allOn").on("click", () => setAll(true));
   d3.select("#allOff").on("click", () => setAll(false));
   // 좁은 화면: 범례는 단추를 눌러 지도 위에 펼친다
+  d3.select("#layBtn").on("click", function () { const open = document.getElementById("side").classList.toggle("chipsopen"); this.setAttribute("aria-expanded", open ? "true" : "false"); });
+  document.addEventListener("keydown", (ev) => { if (ev.key === "Escape" && document.getElementById("side").classList.contains("chipsopen")) { document.getElementById("side").classList.remove("chipsopen"); const b = document.getElementById("layBtn"); b.setAttribute("aria-expanded", "false"); b.focus(); } });
+  d3.select("#lgFold").on("click", function () { const open = document.getElementById("side").classList.toggle("lgshow"); this.setAttribute("aria-expanded", open ? "true" : "false"); this.textContent = open ? "범례 접기" : "범례 보기"; });
   d3.select("#legBtn").on("click", function () { const open = document.getElementById("side").classList.toggle("legopen"); this.setAttribute("aria-expanded", open ? "true" : "false"); });
 
   // ---------- 땅값과 건물 탭 ----------
@@ -1680,9 +1755,10 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   window.addEventListener("resize", onResize);
   document.body.dataset.tab = "map";
   boot();
-  // 첫 화면: 주소에 연도나 탭이 있으면 그것을, 없으면 1914년 경계와 초기 노선이 함께 보이도록 1920년에서 시작
-  const h0 = readHash();
-  setYear(h0.year || DATA.startYear || 1920);
-  if (h0.tab !== "map") showTab(h0.tab, true);
+  // 첫 화면: 주소에 연도나 탭이 있으면 그것을, 없으면 처음(1899년)부터. 주소에 연도가 없던 첫 방문은 주소를 그대로 둔다
+  const h0 = readHash(), bare = !location.hash;
+  setYear(h0.year || DATA.startYear || 1899);
+  if (h0.tab !== "map") { showTab(h0.tab, true); syncHash(); }   // setYear가 주소를 #연도로 바꿔 놓으므로 탭 주소(#data 등)를 되돌린다
+  if (bare) { try { history.replaceState(null, "", location.pathname + location.search); } catch (e) { /* 주소를 못 바꾸는 곳 */ } }
 })();
 </script>

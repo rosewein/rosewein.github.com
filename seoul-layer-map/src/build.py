@@ -1,7 +1,7 @@
 """지도 만들기: python3 src/build.py [출력 폴더] [--fragment 조각.html]
 src/의 틀·설명문과 data/의 자료를 읽어 출력 폴더(기본: seoul-layer-map/)에 index.html을 쓴다.
 --fragment를 주면 Claude 아티팩트용 조각(<title>부터 본문 끝까지)도 그 경로에 쓴다."""
-import json, os, sys
+import json, os, re, sys
 sys.dont_write_bytecode = True   # 저장소에 __pycache__가 생기지 않게
 from paths import CODE as SRC, DATA
 def F(name):
@@ -88,7 +88,7 @@ data = {
   "topo": topo, "trams": trams, "eras": eras, "guPeriods": gu_periods, "events": events,
   "guNames": GU, "riverNorth": ["11440","11170","11200","11215"],
   "riverSouth": ["11500","11560","11590","11650","11680","11710","11740"],
-  "methodHtml": method_html, "startYear": 1920,
+  "methodHtml": method_html, "startYear": 1899,
   "rail": json.load(open(F("rail.json"))) if os.path.exists(F("rail.json")) else None,
   "metro": json.load(open(F("metro.json"))) if os.path.exists(F("metro.json")) else None,
   "bus": json.load(open(F("bus.json"))) if os.path.exists(F("bus.json")) else None,
@@ -193,15 +193,67 @@ if os.path.exists(F("village_layer.json")):
         vy[y] = {"routes": r["routes"], "nstops": r["nstops"], "only_km2": r["only_km2"], "day": r["day"], "stops": sorted(set(ids)), "only": r["only"]}
     data["village"] = {"pts": pts, "years": vy}
     print("village pts", len(pts), file=sys.stderr)
+# 물길(지금 기준): OSM 수면 면 + 이름 있는 하천 선(src/water.py가 만듦)
+if os.path.exists(F("water.json")):
+    data["water"] = json.load(open(F("water.json")))
 # 지도 버전: 레이어가 늘면 소수점을 올리고(v1.2 → v1.3), 화면·기술만 고치면 셋째 자리를 올린다(v1.3 → v1.3.1). README 「변경 기록」과 git 태그(seoul-layer-map-vX.Y)도 같이 적는다
-data["version"] = {"v": "1.5", "date": "2026-11-26"}
+data["version"] = {"v": "1.6", "date": "2026-11-26"}
+
+# 지도에서 읽지 않는 필드는 index.html에 넣기 직전에 덜어 낸다(data/*.json 원본은 그대로 둔다).
+# 근거 문장·운수회사·승하차 인원처럼 나중에 분석이나 정보창에 쓸 수 있는 기록이라 원본에서는 지우지 않는다.
+# 새로 지도에서 이 필드를 읽게 되면 여기서 빼야 한다.
+def slim(d):
+    gone = 0
+    def pop(obj, *keys):
+        nonlocal gone
+        for k in keys:
+            if k in obj: gone += len(json.dumps(obj[k], ensure_ascii=False, separators=(",", ":")).encode()); del obj[k]
+    for net in ("bus", "bus2026"):
+        N = d.get(net)
+        if not N: continue
+        pop(N, "corr", "snapshot")          # corr: 한 시점에 고정된 구간 묶음. 지도는 해마다 segs에서 다시 셈(corrFor)
+        for r in N["routes"]:
+            pop(r, "ops", "succ", "type", "riders")   # 운수회사, 뒤를 이은 노선, 노선 유형, 승하차 인원
+            if r.get("geom"): pop(r, "pts")           # 경유지 점: 선형(geom)이 없을 때만 대신 씀
+        for e in N.get("events", []): pop(e, "cnt", "cur")
+        for n in N.get("nums", []): pop(n, "src", "head", "merged_into")   # 운행 시작 연도의 근거 문장 등(연도만 씀)
+    if d.get("land"): pop(d["land"], "seoulN", "basis", "src")
+    if d.get("village"):
+        for v in d["village"]["years"].values(): pop(v, "day", "nstops")
+    for l in d["trams"]["lines"]: pop(l, "id")
+    if d.get("water"):
+        pop(d["water"], "src")
+        for l in d["water"]["lines"]: pop(l, "km")
+    return gone
+print("slim: removed", slim(data), "bytes of unused fields", file=sys.stderr)
 tpl = open(F("template.html")).read()
 out = tpl.replace("/*__DATA__*/", "const DATA = " + json.dumps(data, ensure_ascii=False, separators=(",", ":")) + ";")
-if FRAG:
-    open(FRAG, "w").write(out); print("wrote", FRAG, len(out), "chars", file=sys.stderr)
+
+# 글꼴: 페이지에 든 글자만 담아 fonts/에 만든다(src/fonts.py). 제목 글꼴은 제목·시기 이름·연도 숫자 글자만
+def display_text(html):
+    if html.count("var(--display)") != 5:   # 글꼴 설명 주석 1 + 쓰는 곳 4(h1, 연도, 연표 시기 제목, h2)
+        print("fonts: var(--display)를 쓰는 곳 수가 바뀜 — display_text()에 그 글자를 더했는지 확인", file=sys.stderr)
+    heads = "".join(re.findall(r"<h[12][^>]*>(.*?)</h[12]>", html))
+    eras = "".join(e["label"] for e in data["eras"])
+    return heads + eras + "한성부 시기 현재 시역 –·0123456789"
 sys.path.insert(0, SRC)
+from paths import FONTS, FONTSRC
+import fonts as fontmod
+fv = fontmod.build(out, display_text(out), FONTS, FONTSRC)
+out = out.replace("__FV__", fv)
+GOOGLE = ('<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hahmlet:wght@500;700'
+          '&family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">')
+PRELOAD = "\n".join(f'<link rel="preload" href="fonts/{n}?v={fv}" as="font" type="font/woff2" crossorigin>'
+                    for n in ("slm-sans-kr-400.woff2", "slm-sans-kr-500.woff2", "hahmlet-500.woff2", "hahmlet-700.woff2"))
+if FRAG:   # 아티팩트용 조각은 fonts/ 폴더가 없는 곳에서 열리므로 예전처럼 구글 폰트를 부른다(CSS에 원래 이름도 적어 둠)
+    frag = out.replace("<!--__FONTLINKS__-->", GOOGLE)
+    open(FRAG, "w").write(frag); print("wrote", FRAG, len(frag), "chars", file=sys.stderr)
+out = out.replace("<!--__FONTLINKS__-->", PRELOAD)
 from make_publish import wrap
 os.makedirs(OUT, exist_ok=True)
 doc = wrap(out)
 open(os.path.join(OUT, "index.html"), "w").write(doc)
+if os.path.abspath(OUT) != os.path.abspath(os.path.dirname(FONTS)):   # 다른 폴더로 빌드하면 글꼴도 같이 옮긴다
+    import shutil
+    shutil.copytree(FONTS, os.path.join(OUT, "fonts"), dirs_exist_ok=True)
 print("wrote", os.path.join(OUT, "index.html"), len(doc.encode()), "bytes", file=sys.stderr)

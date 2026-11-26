@@ -35,7 +35,7 @@
 | 자료 | 이 지도에서 쓴 곳 | 출처 | 이용 조건 |
 |---|---|---|---|
 | 2004년 이전 버스 노선, 2004년 이후 폐선 노선, 노선별 신설·폐선 연도, 일부 사건 설명 | `data/bus.json`, `data/dead_routes.json`, `data/route_years.json`, `src/namu_open_years.py`, `src/dead_supp.py`와 지도 안의 같은 자료 | 나무위키 「서울특별시 시내버스/2004년 개편 전 목록」 「서울특별시 시내버스/폐선」 하위 문서, 노선 문서, 「YYYY년 개업한/폐지된 버스 노선」 분류(2026년 11월 열람) | [CC BY-NC-SA 2.0 KR](https://creativecommons.org/licenses/by-nc-sa/2.0/kr/) — 출처 표시, 비영리, 동일조건 변경 허락 |
-| 도로망, 철도·지하철 선로 형상 | 모든 버스 선형, `data/metro.json`, `data/rail.json` | © OpenStreetMap contributors (BBBike 서울 추출본 2026-11-22, [kimmdr2/metroscope](https://github.com/kimmdr2/metroscope) 정리본) | [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/) |
+| 도로망, 철도·지하철 선로 형상, 물길(한강 수면·하천) | 모든 버스 선형, `data/metro.json`, `data/rail.json`, `data/water.json` | © OpenStreetMap contributors (BBBike 서울 추출본 2026-11-22, [kimmdr2/metroscope](https://github.com/kimmdr2/metroscope) 정리본) | [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/) |
 | 2026년 버스 노선(정류장 순번) | `data/bus2026.json` | 서울 열린데이터광장 「서울시 버스노선별 정류장별 승하차 인원 정보」(OA-12912, 2026-11-18분) | 서울특별시 공공데이터, 열린데이터광장 이용약관 제11조(저작자·출처 표시 조건 자유이용) |
 | 마을버스 정류장(2015–2022년) | `data/village_layer.json` | 서울 열린데이터광장 OA-12912 연간 파일(해마다 11월 셋째 수요일 하루치), 「서울시 버스노선별 표준정류장ID 연계 좌표정보」(2019-06-20) | 서울특별시 공공데이터, 열린데이터광장 이용약관 제11조(저작자·출처 표시 조건 자유이용) |
 | 버스 정류장 좌표, 노선 ID | 버스 선형, 노선 연도 판단 | [kyckang/SeoulTransitMap_data](https://github.com/kyckang/SeoulTransitMap_data) (서울시·TOPIS 원자료) | 저장소 README 표기: 공공누리 제1유형(출처 표시) |
@@ -53,7 +53,12 @@
 
 | 버전 | 날짜 | 커밋 | 바뀐 점 |
 |---|---|---|---|
-| v1.5 | 2026-11-26 | `c519636`(building-layer 브랜치) | 새 건물 레이어(1960–2026, 5년 신축 밀도). 땅값과 함께 켜면 원으로. 동 정보창에 5년 연면적·큰 개발·해마다 사용승인 막대. 「땅값과 건물」 탭: 신축 밀도와 땅값 변화의 흩뿌림 그림(주거·상업 비율 색), 중앙값 표, 관련 문서, 누르면 그 동 지도로 |
+| v1.6 | 2026-11-26 | `c519636`(building-layer 브랜치), (master에 합친 커밋) | 새 건물 레이어(1960–2026, 5년 신축 밀도). 땅값과 함께 켜면 원으로. 동 정보창에 5년 연면적·큰 개발·해마다 사용승인 막대. 「땅값과 건물」 탭: 신축 밀도와 땅값 변화의 흩뿌림 그림(주거·상업 비율 색), 중앙값 표, 관련 문서, 누르면 그 동 지도로 |
+| v1.5.2 | 2026-11-26 | `9218deb` | 높이 800px 이하 데스크톱(1366×768 노트북 등)에서 오른쪽 판이 넘쳐 범례 끝을 판 안에서 스크롤해야 보이던 것. 이런 화면에서는 범례를 접어 두고 「범례 보기」 단추로 펼침 |
+| v1.5.1 | 2026-11-26 | `d206611` | 휴대폰 가로처럼 높이가 낮은 가로 화면에서 지도와 재생 막대가 한 화면에 들어오게 줄이고, 레이어 칩·범례를 「레이어·범례」 단추로 접음. 첫 화면을 1920년에서 1899년으로 |
+| v1.5 | 2026-11-26 | `88b2414` | 물길: 한강을 OSM 수면 면으로 그리고(여의도·밤섬·노들섬·선유도가 섬으로 보임), 이름 있는 하천 28개(중랑천·안양천·탄천·홍제천·도림천 등)를 더함. 전에는 강북·강남 구가 맞닿은 경계선을 굵게 칠해 한강을 나타냈고 지류가 없었음. 지금 모습이라 옛 해에도 같게 나옴 |
+| v1.4.4 | 2026-11-26 | `19f2b6d` | 글꼴을 구글 폰트에서 받지 않고 저장소 `fonts/`에 직접 담음. 페이지에 쓰는 글자만 남긴 파일을 굵기마다 하나씩 두어(본문 94–105KB, 제목 24KB), 한글 조각 하나가 늦거나 빠지면 「서울 시내버스 규모」의 「시」「스」처럼 몇 글자만 다른 글꼴로 찍히던 것을 없앰. 숫자용 글꼴 자리의 한글도 운영체제 글꼴 대신 본문 글꼴로 |
+| v1.4.3 | 2026-11-26 | `e2a50d6`, `b0885bc` | 지도에서 읽지 않는 자료 필드(약 0.7MB)를 빌드할 때 덜어 냄. index.html 7.3MB → 6.6MB(압축 기준 1.71MB → 1.53MB). `data/` 원본은 그대로. 탭 주소(`#data` 등)로 열면 주소가 `#1920`으로 바뀌던 것, 「서울 시내버스 규모」 그림에서 줄 이름이 1950년 표시선과 겹치던 것을 고침 |
 | v1.4.2 | 2026-11-26 | `7798940` | 이전 경계 연도 글자(1914·1936·1949·1963)를 그 경계선 위, 연도 판·사건 카드·구 이름과 겹치지 않는 자리에 씀(전에는 시역을 둘러싼 상자의 모서리에 놓여 연도 판 밑에 겹쳤음) |
 | v1.4.1 | 2026-11-26 | `80c7abd`, `2433d52` | 버스 노선망을 바탕으로 깔고 그 위에 전차·철도·지하철을 그림(버스에 지하철 선과 역이 묻히던 것). 눌러서 굵게 보이는 버스 노선은 맨 위에. 서울 안에서 역·노선·정류장을 눌러도 동 정보만 나오던 것을 고침. 「읽는 법」 탭의 글 폭을 760px로 넓힘 |
 | v1.4 | 2026-11-26 | `577a5fe` | 탭으로 나눔(지도 / 연표 / 표·자료 / 읽는 법). 지도 탭은 화면을 꽉 채우고, 레이어 칩·전체 켜기·끄기·범례는 오른쪽 판으로(폭 900px 이하는 지도 위 한 줄과 범례 단추). 연표는 시기 제목과 10년 단위 바로가기를 두고, 누르면 지도 탭의 그 해로. 주소에 연도를 남김. 휴대폰은 수치를 지도 아래 띠로, 그 해 사건은 한 건만. 연도 판 글자에 바탕을 깔아 진한 땅값 색 위에서도 읽히게 |
@@ -66,6 +71,7 @@
 ## 이 저장소의 이용 조건
 
 - **코드**(`index.html`의 스타일·스크립트, `src/`의 스크립트): MIT License ([LICENSE](LICENSE))
+- **글꼴**(`fonts/`): Hahmlet(© 2020 The Hahmlet Project Authors)과 IBM Plex Sans KR·IBM Plex Mono(© 2017 IBM Corp., 예약된 글꼴 이름 "Plex"), 모두 [SIL Open Font License 1.1](fonts/OFL-IBM-Plex.txt)입니다. 원본은 [google/fonts](https://github.com/google/fonts)의 TTF이고, 이 페이지에 쓰는 글자만 남겼습니다. 글자를 덜어 낸 것은 라이선스상 수정본이라 예약된 이름을 쓸 수 없으므로 IBM Plex는 글꼴 안의 이름을 SLM Sans KR·SLM Mono로 바꿨습니다(SLM = seoul-layer-map). 라이선스 원문은 `fonts/OFL-Hahmlet.txt`, `fonts/OFL-IBM-Plex.txt`에 있습니다.
 - **데이터**(`data/`, `index.html` 안의 `DATA`): 위 표의 출처별 조건을 따릅니다. 나무위키에서 온 자료가 들어 있는 부분은 CC BY-NC-SA 2.0 KR이므로 영리 목적으로 쓸 수 없고, 고쳐서 다시 배포할 때는 같은 조건을 붙여야 합니다. OpenStreetMap에서 온 형상은 출처 "© OpenStreetMap contributors"를 밝혀야 합니다.
 
 ## 저장소 구성
@@ -77,12 +83,15 @@
 seoul-layer-map/
 ├─ index.html   지도(데이터가 들어 있는 한 파일)
 ├─ data/        index.html에 들어간 가공 데이터(JSON)
+├─ fonts/       페이지에 쓰는 글자만 담은 글꼴(woff2)과 라이선스 원문. build.py가 만듦
 └─ src/         가공·빌드 스크립트(Python)와 지도 틀(template.html), 설명문(method.html)
 ```
 
 ## 다시 만들기
 
 지도만 다시 만들 때는 저장소를 받은 뒤 `python3 seoul-layer-map/src/build.py` 한 번이면 됩니다. `src/`의 틀과 `data/`의 자료를 읽어 `seoul-layer-map/index.html`을 씁니다.
+
+글꼴은 `src/fonts.py`가 빌드 때 페이지에 든 글자를 모아 `fonts/`에 만듭니다. 글자 모음이 지난번과 같으면(`fonts/manifest.json`) 그대로 두고, 바뀌었으면 원본 TTF를 google/fonts의 고정된 커밋에서 받아(`$SLM_RAW/fonts`, sha256으로 확인) 다시 만듭니다. 이때 `pip install fonttools brotli`가 필요합니다. 새로 만들지 못하면 있던 파일을 그대로 쓰고, 빠지는 글자 수를 알려 줍니다.
 
 자료를 처음부터 다시 만드는 스크립트는 원자료(BBBike 서울 OSM 추출본, 열린데이터광장 CSV, 나무위키 문서 모음)가 있어야 돌아갑니다. 원자료는 크기와 이용 조건 때문에 넣지 않았고, 놓인 곳은 환경변수 `SLM_RAW`로 알려 줍니다(경로는 `src/paths.py` 한곳에 모여 있음). 대략의 순서는 다음과 같습니다.
 
@@ -92,9 +101,10 @@ seoul-layer-map/
 4. `route_years.py` — 2026년 노선별 운행 시작 연도
 5. `bus_dead_parse.py` → `bus_dead_route.py` — 2004년 이후 폐선 노선 복원
 6. `bus2026.py` — 폐선 노선을 넣어 다시 실행
-7. `landprice.py <zip 폴더>` — 개별공시지가 연도별 zip(37개)에서 법정동별 중앙값 `landprice.json` 만들기
-8. `building.py <csv 폴더>` — 건축물대장 표제부와 폐쇄말소대장 표제부 CSV에서 법정동·사용승인 연도별 연면적 `building.json` 만들기(보고서 `building_report.json`은 `$SLM_RAW/build`에)
-9. `build.py` — `template.html`에 데이터를 넣어 `index.html` 만들기(`make_publish.py`의 `wrap()`으로 완전한 문서로 감쌈)
+7. `water.py` — OSM 추출본에서 물길(한강 수면 면, 이름 있는 하천 선) `water.json` 만들기
+8. `landprice.py <zip 폴더>` — 개별공시지가 연도별 zip(37개)에서 법정동별 중앙값 `landprice.json` 만들기
+9. `building.py <csv 폴더>` — 건축물대장 표제부와 폐쇄말소대장 표제부 CSV에서 법정동·사용승인 연도별 연면적 `building.json` 만들기(보고서 `building_report.json`은 `$SLM_RAW/build`에)
+10. `build.py` — `template.html`에 데이터를 넣어 `index.html` 만들기(`make_publish.py`의 `wrap()`으로 완전한 문서로 감쌈)
 
 ## 한계
 
