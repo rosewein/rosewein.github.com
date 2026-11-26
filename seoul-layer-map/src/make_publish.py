@@ -8,7 +8,7 @@ m = re.match(r'\s*<title>(.*?)</title>\n', html)
 title = m.group(1); body = html[m.end():]
 k = body.index('<style>'); pre, rest = body[:k], body[k:]
 e = rest.index('</style>') + len('</style>'); style, rest = rest[:e], rest[e:]
-desc = "1899년 경인선과 전차부터 지하철·철도·버스까지, 서울의 교통망과 시역·행정구역이 바뀌어 온 과정을 연도별 레이어로 겹쳐 보는 지도"
+desc = "1899년 경인선과 전차부터 지하철·철도·버스, 1990년 이후 땅값(공시지가)까지, 서울의 교통망과 시역·행정구역, 땅값이 바뀌어 온 과정을 연도별 레이어로 겹쳐 보는 지도"
 doc = f'''<!doctype html>
 <html lang="ko">
 <head>
