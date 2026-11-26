@@ -213,7 +213,7 @@ def hist_seen(on, yrs):
 
 
 def hist_year(hist, link_id):
-    """표준노드링크 옛 판으로 본 해. (oh, hb): oh = 바로 앞 판에는 없다가 처음 나온 판의 해(개통 어림),
+    """표준노드링크 옛 판으로 본 해. (oh, hb): oh = 바로 앞 판에는 없다가 처음 나온 판의 해(개통 추정),
     hb = 늦어도 그 판에는 있었던 해. 촘촘한 기준(30m)과 느슨한 기준(70m) 가운데 이른 쪽을 쓴다.
     느슨한 기준에만 먼저 걸리면 옛 판이 선을 30m 넘게 비껴 그렸던 것으로 본다."""
     if not hist or link_id not in hist["links"]: return None, None
@@ -331,7 +331,7 @@ def main():
         if l.get("filled"): stat[("메운 링크", "")] += l["LENGTH"]
         if r: stat[("개통일 출처", r["from"] + ("" if r["from"] == "sudo" else "·" + r["쓰임"]))] += l["LENGTH"]
         stat[(l["cls"], "o" if o else "oh" if oh else "p" if p else "hb" if hb else "-")] += l["LENGTH"]
-        if oh: stat[("노드링크 개통 어림", str(oh))] += l["LENGTH"]
+        if oh: stat[("노드링크 개통 추정", str(oh))] += l["LENGTH"]
         if hb: stat[("노드링크 늦어도", str(hb))] += l["LENGTH"]
         groups[(l["ROAD_NAME"], l["cls"], o, oi, p, mid, pb if mid else None, min(l["LANES"], 6), oh, hb)].append(LineString(P))
     segs = []
@@ -354,7 +354,7 @@ def main():
         if "oi" in s: s["oi"] = re_i[s["oi"]]
     rows = [rows[o] for o in used]
     out = {"note": "큰 도로(시안). o = 개통일(oi = open 표 번호), p = 연혁도에 도시계획 도로로 그려진 첫 해(pm = 중로로 먼저 그려짐, pb = 광로·대로가 된 해),"
-                   " oh = 개통일을 못 찾은 길이 표준노드링크 옛 판에 처음 나온 해(바로 앞 판에는 없음, 개통 어림), hb = 늦어도 그 해 판에는 있었음. 선은 2026-11-11 표준노드링크(지금 모습)",
+                   " oh = 개통일을 못 찾은 길이 표준노드링크 옛 판에 처음 나온 해(바로 앞 판에는 없음, 개통 추정), hb = 늦어도 그 해 판에는 있었음. 선은 2026-11-11 표준노드링크(지금 모습)",
            "cls": CLS_NAME, "planSheets": [{k: s[k] for k in ("year", "title", "midTitle") if k in s} for s in plan["sheets"]],
            "open": [{k: r.get(k, "") for k in ("노선", "구간", "개통일", "근거", "주소", "확인", "메모")} for r in rows], "segs": segs}
     if hist: out["nlVers"] = [[v["year"], v["date"]] for v in hist["versions"]]
