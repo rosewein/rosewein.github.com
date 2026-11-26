@@ -266,7 +266,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     <button id="evToggle" type="button" aria-pressed="true" title="그 해에 일어난 일을 연도 아래에 띄움">그 해 사건</button>
   </div>
   <div class="info" id="info" hidden><button class="x" id="infoX" type="button" aria-label="닫기">×</button><div id="infoBody"></div></div>
-  <div class="attrib" id="attrib">선로 형상 © OpenStreetMap contributors<span id="verLabel"></span></div>
+  <div class="attrib" id="attrib">선로·물길 형상 © OpenStreetMap contributors<span id="verLabel"></span></div>
 </div>
 <aside class="side" id="side" aria-label="레이어">
   <div class="scroller">
@@ -302,6 +302,9 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     <div class="bar" id="landBar"></div>
     <div class="tk" id="landTicks"></div>
     <p>땅값: 서울 필지 중앙값의 몇 배인지. 칸마다 두 배, 굵은 1이 서울 중앙값 · <i class="na"></i>자료 없음</p>
+  </div>
+  <div class="legend-bus" id="waterLegend">
+    <span><svg width="20" height="12" viewBox="0 0 20 12"><rect x="1" y="2" width="9" height="8" fill="var(--river)"/><path d="M12,6H19" stroke="var(--river)" stroke-width="1.8"/></svg>물길(한강 수면·하천): 지금 모습</span>
   </div>
   <p class="small" style="margin:10px 0 0">자세한 풀이는 「읽는 법」 탭에 있습니다.</p>
   </div>
@@ -357,6 +360,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     <li>버스 노선망(마을버스 제외): 1998–2003년은 2004년 6월 노선에서 거꾸로 맞췄습니다. 2004년부터는 2026년 11월 노선에 그 사이 없어진 노선 219개를 되살려 해마다 맞췄습니다. 굵을수록 그 구간을 지나는 노선이 많습니다.</li>
     <li>마을버스: 점은 마을버스 정류장, 칠한 곳은 마을버스로만 닿는 땅(시내버스 정류장 300m 밖, 마을버스 정류장 300m 안)입니다. 2015년부터, 그 해 11월 셋째 수요일 승하차 기록으로 그렸습니다. 땅값을 함께 켜면 칠한 곳을 옅게 하고 테두리를 두릅니다.</li>
     <li>땅값: 법정동마다 ㎡당 개별공시지가의 중앙값을 그 해 서울 전체 필지 중앙값으로 나눈 배수입니다. 칸 하나가 두 배씩(로그 눈금)이고, 굵은 1이 서울 중앙값입니다. 1990년부터 있고, 빗금은 그 해 자료가 없는 동입니다.</li>
+    <li>물길: 한강 수면과 이름 있는 하천 28개를 OpenStreetMap(2026년 11월 추출본)에서 그렸습니다. 지금 모습이라 옛 해를 볼 때도 같게 나옵니다. 잠실·여의도 둘레의 한강처럼 그 사이 크게 바뀐 곳은 그때와 다르고, 청계천은 덮여 있던 시기에도 선이 보입니다. 지금 덮여 있는(복개된) 구간은 그리지 않았습니다.</li>
   </ul>
   <h2>이 지도를 읽는 법</h2>
   <div id="method"></div>
@@ -550,11 +554,24 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     return Math.abs(a[1] - b[1]);
   }
 
+  // 물길(지금 기준): OSM 수면 면과 이름 있는 하천 선(data/water.json, src/water.py). 자료가 없으면 예전처럼 강북·강남 구 경계를 굵게
+  function drawWater() {
+    const W8 = DATA.water;
+    if (!W8) {
+      gRiver.append("path").datum(river).attr("d", path).attr("fill", "none")
+        .attr("stroke", "var(--river)").attr("stroke-width", 0.9 * pxPerKm()).attr("stroke-linecap", "round").attr("stroke-linejoin", "round");
+      return;
+    }
+    gRiver.append("path").datum(W8.area).attr("d", path).attr("fill", "var(--river)").attr("stroke", "none");
+    gRiver.selectAll("path.wl").data(W8.lines).join("path").attr("class", "wl").attr("d", l => path(l.geom)).attr("fill", "none")
+      .attr("stroke", "var(--river)").attr("stroke-width", l => l.cls === "r" ? 1.8 : 1.1).attr("stroke-linecap", "round").attr("stroke-linejoin", "round")
+      .attr("vector-effect", "non-scaling-stroke");
+  }
+
   // ---------- static layers ----------
   function drawStatic() {
     gRiver.selectAll("*").remove();
-    gRiver.append("path").datum(river).attr("d", path).attr("fill", "none")
-      .attr("stroke", "var(--river)").attr("stroke-width", 0.9 * pxPerKm()).attr("stroke-linecap", "round").attr("stroke-linejoin", "round");
+    drawWater();
     gRiver.append("path").datum(seoulNow).attr("d", path).attr("fill", "none")
       .attr("stroke", "var(--rule)").attr("stroke-width", 1).attr("vector-effect", "non-scaling-stroke").attr("stroke-dasharray", "2 3");
     gWall.selectAll("*").remove();

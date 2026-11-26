@@ -153,8 +153,11 @@ if os.path.exists(F("village_layer.json")):
         vy[y] = {"routes": r["routes"], "nstops": r["nstops"], "only_km2": r["only_km2"], "day": r["day"], "stops": sorted(set(ids)), "only": r["only"]}
     data["village"] = {"pts": pts, "years": vy}
     print("village pts", len(pts), file=sys.stderr)
+# 물길(지금 기준): OSM 수면 면 + 이름 있는 하천 선(src/water.py가 만듦)
+if os.path.exists(F("water.json")):
+    data["water"] = json.load(open(F("water.json")))
 # 지도 버전: 레이어가 늘면 소수점을 올리고(v1.2 → v1.3), 화면·기술만 고치면 셋째 자리를 올린다(v1.3 → v1.3.1). README 「변경 기록」과 git 태그(seoul-layer-map-vX.Y)도 같이 적는다
-data["version"] = {"v": "1.4.4", "date": "2026-11-26"}
+data["version"] = {"v": "1.5", "date": "2026-11-26"}
 
 # 지도에서 읽지 않는 필드는 index.html에 넣기 직전에 덜어 낸다(data/*.json 원본은 그대로 둔다).
 # 근거 문장·운수회사·승하차 인원처럼 나중에 분석이나 정보창에 쓸 수 있는 기록이라 원본에서는 지우지 않는다.
@@ -178,6 +181,9 @@ def slim(d):
     if d.get("village"):
         for v in d["village"]["years"].values(): pop(v, "day", "nstops")
     for l in d["trams"]["lines"]: pop(l, "id")
+    if d.get("water"):
+        pop(d["water"], "src")
+        for l in d["water"]["lines"]: pop(l, "km")
     return gone
 print("slim: removed", slim(data), "bytes of unused fields", file=sys.stderr)
 tpl = open(F("template.html")).read()

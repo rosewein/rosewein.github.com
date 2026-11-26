@@ -33,7 +33,7 @@
 | 자료 | 이 지도에서 쓴 곳 | 출처 | 이용 조건 |
 |---|---|---|---|
 | 2004년 이전 버스 노선, 2004년 이후 폐선 노선, 노선별 신설·폐선 연도, 일부 사건 설명 | `data/bus.json`, `data/dead_routes.json`, `data/route_years.json`, `src/namu_open_years.py`, `src/dead_supp.py`와 지도 안의 같은 자료 | 나무위키 「서울특별시 시내버스/2004년 개편 전 목록」 「서울특별시 시내버스/폐선」 하위 문서, 노선 문서, 「YYYY년 개업한/폐지된 버스 노선」 분류(2026년 11월 열람) | [CC BY-NC-SA 2.0 KR](https://creativecommons.org/licenses/by-nc-sa/2.0/kr/) — 출처 표시, 비영리, 동일조건 변경 허락 |
-| 도로망, 철도·지하철 선로 형상 | 모든 버스 선형, `data/metro.json`, `data/rail.json` | © OpenStreetMap contributors (BBBike 서울 추출본 2026-11-22, [kimmdr2/metroscope](https://github.com/kimmdr2/metroscope) 정리본) | [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/) |
+| 도로망, 철도·지하철 선로 형상, 물길(한강 수면·하천) | 모든 버스 선형, `data/metro.json`, `data/rail.json`, `data/water.json` | © OpenStreetMap contributors (BBBike 서울 추출본 2026-11-22, [kimmdr2/metroscope](https://github.com/kimmdr2/metroscope) 정리본) | [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/) |
 | 2026년 버스 노선(정류장 순번) | `data/bus2026.json` | 서울 열린데이터광장 「서울시 버스노선별 정류장별 승하차 인원 정보」(OA-12912, 2026-11-18분) | 서울특별시 공공데이터, 열린데이터광장 이용약관 제11조(저작자·출처 표시 조건 자유이용) |
 | 마을버스 정류장(2015–2022년) | `data/village_layer.json` | 서울 열린데이터광장 OA-12912 연간 파일(해마다 11월 셋째 수요일 하루치), 「서울시 버스노선별 표준정류장ID 연계 좌표정보」(2019-06-20) | 서울특별시 공공데이터, 열린데이터광장 이용약관 제11조(저작자·출처 표시 조건 자유이용) |
 | 버스 정류장 좌표, 노선 ID | 버스 선형, 노선 연도 판단 | [kyckang/SeoulTransitMap_data](https://github.com/kyckang/SeoulTransitMap_data) (서울시·TOPIS 원자료) | 저장소 README 표기: 공공누리 제1유형(출처 표시) |
@@ -50,6 +50,7 @@
 
 | 버전 | 날짜 | 커밋 | 바뀐 점 |
 |---|---|---|---|
+| v1.5 | 2026-11-26 | (이 행을 넣은 커밋) | 물길: 한강을 OSM 수면 면으로 그리고(여의도·밤섬·노들섬·선유도가 섬으로 보임), 이름 있는 하천 28개(중랑천·안양천·탄천·홍제천·도림천 등)를 더함. 전에는 강북·강남 구가 맞닿은 경계선을 굵게 칠해 한강을 나타냈고 지류가 없었음. 지금 모습이라 옛 해에도 같게 나옴 |
 | v1.4.4 | 2026-11-26 | (이 행을 넣은 커밋) | 글꼴을 구글 폰트에서 받지 않고 저장소 `fonts/`에 직접 담음. 페이지에 쓰는 글자만 남긴 파일을 굵기마다 하나씩 두어(본문 94–105KB, 제목 24KB), 한글 조각 하나가 늦거나 빠지면 「서울 시내버스 규모」의 「시」「스」처럼 몇 글자만 다른 글꼴로 찍히던 것을 없앰. 숫자용 글꼴 자리의 한글도 운영체제 글꼴 대신 본문 글꼴로 |
 | v1.4.3 | 2026-11-26 | (이 행을 넣은 커밋) | 지도에서 읽지 않는 자료 필드(약 0.7MB)를 빌드할 때 덜어 냄. index.html 7.3MB → 6.6MB(압축 기준 1.71MB → 1.53MB). `data/` 원본은 그대로. 탭 주소(`#data` 등)로 열면 주소가 `#1920`으로 바뀌던 것, 「서울 시내버스 규모」 그림에서 줄 이름이 1950년 표시선과 겹치던 것을 고침 |
 | v1.4.2 | 2026-11-26 | `7798940` | 이전 경계 연도 글자(1914·1936·1949·1963)를 그 경계선 위, 연도 판·사건 카드·구 이름과 겹치지 않는 자리에 씀(전에는 시역을 둘러싼 상자의 모서리에 놓여 연도 판 밑에 겹쳤음) |
@@ -94,8 +95,9 @@ seoul-layer-map/
 4. `route_years.py` — 2026년 노선별 운행 시작 연도
 5. `bus_dead_parse.py` → `bus_dead_route.py` — 2004년 이후 폐선 노선 복원
 6. `bus2026.py` — 폐선 노선을 넣어 다시 실행
-7. `landprice.py <zip 폴더>` — 개별공시지가 연도별 zip(37개)에서 법정동별 중앙값 `landprice.json` 만들기
-8. `build.py` — `template.html`에 데이터를 넣어 `index.html` 만들기(`make_publish.py`의 `wrap()`으로 완전한 문서로 감쌈)
+7. `water.py` — OSM 추출본에서 물길(한강 수면 면, 이름 있는 하천 선) `water.json` 만들기
+8. `landprice.py <zip 폴더>` — 개별공시지가 연도별 zip(37개)에서 법정동별 중앙값 `landprice.json` 만들기
+9. `build.py` — `template.html`에 데이터를 넣어 `index.html` 만들기(`make_publish.py`의 `wrap()`으로 완전한 문서로 감쌈)
 
 ## 한계
 
