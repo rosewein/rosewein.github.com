@@ -32,7 +32,7 @@
 ## 코드 구조
 
 - `src/template.html`은 지도 틀입니다. `/*__DATA__*/` 자리에 `build.py`가 `const DATA = {...}`를 넣고, `make_publish.py`의 `wrap()`으로 완전한 문서로 감싸 `seoul-layer-map/index.html`에 씁니다. 저장소를 받은 뒤 `python3 seoul-layer-map/src/build.py` 한 번이면 됩니다(2026-11-26부터). Claude 아티팩트용 조각이 필요하면 `--fragment <경로>`를 붙입니다.
-- 그리기 그룹 순서는 `gLand, gArea, gNew, gRings, gDong, gGu, gRiver, gWall, gVillage, gTram, gRail, gMetro, gBus, gLabels, gHit`(template.html 285행 근처)입니다. 땅값(`gLand`)은 시역 채움보다 아래에 두었습니다(아래 「땅값 레이어」).
+- 그리기 그룹 순서는 `gLand, gArea, gNew, gRings, gDong, gGu, gRiver, gWall, gVillage, gHit, gBus, gTram, gRail, gMetro, gBusTop, gStLab, gLabels`(template.html 420행 근처)입니다(v1.4.1). 땅값(`gLand`)은 시역 채움보다 아래에 두었습니다(아래 「땅값 레이어」). 버스는 바탕 노선망으로 깔고 그 위에 전차·철도·지하철을 그리며, 눌러서 굵게 보이는 버스 노선과 신설·폐선 표시는 `gBusTop`에 둡니다. 동 누르기 영역 `gHit`은 면 레이어 위, 선·점 레이어 아래에 둡니다. v1.4까지는 `gHit`이 맨 위에 있어서 서울 안에서는 역·노선·정류장을 눌러도 동 정보만 나왔습니다.
 - 레이어 켜고 끄기는 `.chip[data-layer]` 단추와 `layerOn` 객체(284행 근처), 연도마다 다시 그리는 곳은 `render()`(340행 근처)입니다. 위쪽 판의 수치 한 줄은 `#statLabel`(좁은 화면은 `#statStrip`), 「읽는 법」 탭의 설명문은 `src/method.html`(DATA.methodHtml)입니다.
 - 색 토큰은 `:root`의 CSS 변수이고, 어두운 화면용 값이 따로 있습니다. 새 색을 넣을 때 두 곳 모두 정의해야 합니다.
 

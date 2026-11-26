@@ -415,8 +415,13 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   // 땅값은 면이라 맨 아래(시역 채움보다도 아래). 켜면 시역 채움은 투명하게 하고 테두리만 남긴다
   const gLand = root.append("g");
   const gArea = root.append("g"), gNew = root.append("g"), gRings = root.append("g"), gDong = root.append("g"),
-        gGu = root.append("g"), gRiver = root.append("g"), gWall = root.append("g"), gVillage = root.append("g"), gTram = root.append("g"),
-        gRail = root.append("g"), gMetro = root.append("g"), gBus = root.append("g"), gStLab = root.append("g"), gLabels = root.append("g"), gHit = root.append("g");
+        gGu = root.append("g"), gRiver = root.append("g"), gWall = root.append("g"), gVillage = root.append("g");
+  // 교통 순서(v1.4.1): 버스 노선망을 바탕으로 깔고 그 위에 전차·철도·지하철을 그린다(버스가 큰길을 거의 다 덮어 지하철 선과 역이 묻혔음).
+  // 눌러서 굵게 보이는 버스 노선과 신설·폐선 표시는 gBusTop에 따로 두어 맨 위에 그린다
+  // 동 누르기 영역(gHit)은 면 레이어 위, 선·점 레이어 아래에 둔다. 맨 위에 두면 투명한 동 면이 역·노선·정류장 누르기를 모두 가로챈다(v1.4까지 그랬음)
+  const gHit = root.append("g");
+  const gBus = root.append("g"), gTram = root.append("g"), gRail = root.append("g"), gMetro = root.append("g"), gBusTop = root.append("g"),
+        gStLab = root.append("g"), gLabels = root.append("g");
   // 버스 종점: {route, name, from, to, lon, lat, conf, source} — 자료가 들어오면 칩이 나타남
   const rail = DATA.rail || null;
   if (rail) document.getElementById("railChip").hidden = false;
@@ -526,7 +531,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   }
   function sizeBus() {
     gBus.selectAll("circle.node").attr("r", n => (3 + Math.sqrt(n.r.length) * 1.2) / kNow);
-    gBus.selectAll("path.bev").attr("transform", e => `translate(${e._p[0]},${e._p[1]}) scale(${1 / kNow})${e.t === "폐선" ? " rotate(45)" : ""}`);
+    gBusTop.selectAll("path.bev").attr("transform", e => `translate(${e._p[0]},${e._p[1]}) scale(${1 / kNow})${e.t === "폐선" ? " rotate(45)" : ""}`);
   }
   function pxPerKm() {
     const a = projection([127.0, 37.55]), b = projection([127.0, 37.55 + 1 / 111.0]);
@@ -623,7 +628,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
         .attr("stroke-dasharray", active ? null : "3 3").attr("stroke-linecap", "round").attr("stroke-linejoin", "round")
         .attr("vector-effect", "non-scaling-stroke");
       gTram.append("path").datum(t.geo).attr("d", path).attr("fill", "none").attr("stroke", "transparent")
-        .attr("stroke-width", 16).attr("vector-effect", "non-scaling-stroke").style("cursor", "pointer")
+        .attr("stroke-width", active ? 16 : 8).attr("vector-effect", "non-scaling-stroke").style("cursor", "pointer")   // 없어진 노선은 누르는 폭을 좁혀 그 위 버스 정류장을 덜 가리게
         .on("click", (ev) => { ev.stopPropagation(); showTram(t); });
     });
     gWall.style("display", layerOn.wall ? null : "none");
@@ -668,9 +673,10 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
           const d = path({ type: "LineString", coordinates: e.p || [[a.lng, a.lat], [b.lng, b.lat]] });
           const fresh = year - e.open === 0;
           if (fresh) gMetro.append("path").attr("d", d).attr("fill", "none")
-            .attr("stroke", L.color).attr("stroke-width", 9).attr("stroke-linecap", "round").attr("class", "pulse").attr("vector-effect", "non-scaling-stroke");
+            .attr("stroke", L.color).attr("stroke-width", 9).attr("stroke-linecap", "round").attr("class", "pulse").attr("vector-effect", "non-scaling-stroke").style("pointer-events", "none");
           gMetro.append("path").attr("d", d).attr("fill", "none")
-            .attr("stroke", L.color).attr("stroke-width", 2.6).attr("stroke-linecap", "round").attr("stroke-linejoin", "round").attr("vector-effect", "non-scaling-stroke");
+            .attr("stroke", L.color).attr("stroke-width", 2.6).attr("stroke-linecap", "round").attr("stroke-linejoin", "round").attr("vector-effect", "non-scaling-stroke")
+            .style("pointer-events", "none");   // 선은 누르지 않으므로 아래 버스 정류장 누르기를 막지 않게
         });
       });
       const open = metro.stations.filter(st => st.first <= year);
@@ -683,7 +689,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     }
 
     // bus: 해마다 거꾸로 맞춘 노선망(구간 굵기 = 지나는 노선 수)과 신설·폐선 노선
-    gBus.selectAll("*").remove();
+    gBus.selectAll("*").remove(); gBusTop.selectAll("*").remove();
     if (layerOn.bus && bus) {
       const net = netFor(year);
       if (net) {
@@ -739,14 +745,14 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
       const sr = selRoute ? routeOf(selRoute.net, selRoute.i) : null;
       if (sr) {
         const geo = { type: "LineString", coordinates: sr.geom || sr.pts };
-        gBus.append("path").datum(geo).attr("d", path).attr("fill", "none")
+        gBusTop.append("path").datum(geo).attr("d", path).attr("fill", "none")
           .attr("stroke", "var(--paper)").attr("stroke-width", 6.5).attr("stroke-linejoin", "round").attr("stroke-linecap", "round")
           .attr("vector-effect", "non-scaling-stroke");
-        gBus.append("path").datum(geo).attr("d", path).attr("fill", "none")
+        gBusTop.append("path").datum(geo).attr("d", path).attr("fill", "none")
           .attr("stroke", "var(--ink)").attr("stroke-width", 3).attr("stroke-linejoin", "round").attr("stroke-linecap", "round")
           .attr("vector-effect", "non-scaling-stroke");
       }
-      gBus.selectAll("path.bev").data(evs.filter(e => e.lng)).join("path").attr("class", "bev")
+      gBusTop.selectAll("path.bev").data(evs.filter(e => e.lng)).join("path").attr("class", "bev")
         .each(function (e) { e._p = projection([e.lng, e.lat]); })
         .attr("d", e => busSym(e.t))
         .attr("fill", e => e.t === "신설" ? "var(--bus)" : e.t === "폐선" ? "none" : "var(--area-new)")
