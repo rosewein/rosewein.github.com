@@ -102,6 +102,46 @@ if data["land"] and os.path.exists(F("method_land.html")):
     land_src = " 땅값은 서울 열린데이터광장 「서울시 개별공시지가 정보」(OA-1180, " + f'{data["land"]["years"][0]}~{data["land"]["years"][-1]}' + "년 파일, 원본 서울부동산정보광장)."
     assert method_html.count(SRC_AT) == 1, "method.html 출처 문단이 바뀜 — build.py의 SRC_AT을 고칠 것"
     data["methodHtml"] = method_html.replace('<p class="small">출처:', open(F("method_land.html")).read() + '<p class="small">출처:', 1).replace(SRC_AT, SRC_AT + land_src, 1)
+# 새 건물: building.py가 만든 법정동·사용승인 연도별 연면적(지금 건축물대장 + 폐쇄말소대장의 '말소').
+# 지도에는 BLD_FROM년부터 BLD_WIN년 창으로 칠하므로 창의 첫 해부터 넣고, 면적은 BLD_UNIT㎡ 단위로 줄인다
+BLD_FROM, BLD_WIN, BLD_UNIT = 1960, 5, 10
+if os.path.exists(F("building.json")):
+    bj = json.load(open(F("building.json")))
+    by0, by1 = bj["years"]; n = by1 - by0 + 1; s0 = BLD_FROM - BLD_WIN + 1 - by0
+    GRP = {"r": ["res"], "c": ["com"], "o": ["ind", "edu", "etc", "unk"]}
+    def _sum(parts):
+        return [sum(p[i] for p in parts) for i in range(n)]
+    def _pack(a, unit):
+        a = [round(v / unit) for v in a[s0:]]
+        while a and a[-1] == 0: a.pop()
+        return a
+    bd = {}
+    for cd, D in bj["dong"].items():
+        rec = {}
+        for k, cls in GRP.items():
+            rec[k] = _pack(_sum([D[w][c] for w in ("cur", "gone") for c in cls if c in D[w]] or [[0] * n]), BLD_UNIT)
+        rec["g"] = _pack(_sum(list(D["gone"].values()) or [[0] * n]), BLD_UNIT)
+        rec["x"] = _pack(D["demol"], BLD_UNIT)
+        rec["h"] = _pack([a + b for a, b in zip(D["hh"], D["hhGone"])], 1)
+        bd[cd] = {k: v for k, v in rec.items() if v}
+    big = [{"cd": b["cd"], "y": b["y"], "nm": b["nm"], "jb": b["jb"], "a": round(b["a"], -2), "hh": b["hh"], **({"g": 1} if b["gone"] else {})}
+           for b in bj["big"] if b["y"] >= by0 + s0 and (b["a"] >= 30000 or b["hh"] >= 300)]
+    data["bld"] = {"y0": by0 + s0, "y1": by1, "from": BLD_FROM, "win": BLD_WIN, "unit": BLD_UNIT, "asof": bj.get("asof", "")[:7].replace("-", "년 ") + "월" if bj.get("asof") else "",
+                   "gone": bool(bj["src"]["gone"]), "d": bd, "big": big}
+    print("bld dongs", len(bd), "big", len(big), file=sys.stderr)
+    if os.path.exists(F("method_building.html")):
+        SRC_PAR = '<p class="small">출처:'
+        assert data["methodHtml"].count(SRC_PAR) == 1, "method.html 출처 문단이 바뀜 — build.py의 SRC_PAR을 고칠 것"
+        bld_src = " 새 건물은 서울 열린데이터광장 「서울시 건축물대장 표제부」(OA-22424)와 「서울시 폐쇄말소대장 표제부」(OA-22432, 원천 서울 건축주택 종합정보시스템, " + data["bld"]["asof"] + " 기준)."
+        mb = open(F("method_building.html")).read()
+        if not data["bld"]["gone"]:   # 폐쇄말소대장을 아직 못 넣은 시험판
+            mb += '<p><b>시험판 주의</b>: 지금은 폐쇄말소대장을 아직 넣지 못해 지금 있는 건물만 칠했습니다. 그 사이 헐린 건물은 모든 해에서 빠져 있습니다.</p>'
+            bld_src = bld_src.replace("와 「서울시 폐쇄말소대장 표제부」(OA-22432, ", "(")
+        mh = data["methodHtml"].replace(SRC_PAR, mb + SRC_PAR, 1)
+        # 출처 문단에서 땅값 출처 바로 뒤(땅값이 없으면 버스 자료 뒤)에 넣는다
+        at = (SRC_AT + land_src) if data["land"] and (SRC_AT + land_src) in mh else SRC_AT
+        assert mh.count(at) == 1, "출처 문단에서 새 건물 출처를 넣을 자리를 못 찾음 — build.py를 고칠 것"
+        data["methodHtml"] = mh.replace(at, at + bld_src, 1)
 # 버스: 2004년 7월 개편 이후 해마다 그릴 노선(2026년 노선망에서 그 해 뒤에 생긴 노선을 뺀다)
 OLD_FROM = 1998
 if data["bus2026"] and os.path.exists(F("route_years.json")):
@@ -154,7 +194,7 @@ if os.path.exists(F("village_layer.json")):
     data["village"] = {"pts": pts, "years": vy}
     print("village pts", len(pts), file=sys.stderr)
 # 지도 버전: 레이어가 늘면 소수점을 올리고(v1.2 → v1.3), 화면·기술만 고치면 셋째 자리를 올린다(v1.3 → v1.3.1). README 「변경 기록」과 git 태그(seoul-layer-map-vX.Y)도 같이 적는다
-data["version"] = {"v": "1.4.2", "date": "2026-11-26"}
+data["version"] = {"v": "1.5", "date": "2026-11-26"}
 tpl = open(F("template.html")).read()
 out = tpl.replace("/*__DATA__*/", "const DATA = " + json.dumps(data, ensure_ascii=False, separators=(",", ":")) + ";")
 if FRAG:
