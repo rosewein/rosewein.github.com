@@ -154,7 +154,32 @@ if os.path.exists(F("village_layer.json")):
     data["village"] = {"pts": pts, "years": vy}
     print("village pts", len(pts), file=sys.stderr)
 # 지도 버전: 레이어가 늘면 소수점을 올리고(v1.2 → v1.3), 화면·기술만 고치면 셋째 자리를 올린다(v1.3 → v1.3.1). README 「변경 기록」과 git 태그(seoul-layer-map-vX.Y)도 같이 적는다
-data["version"] = {"v": "1.4.2", "date": "2026-11-26"}
+data["version"] = {"v": "1.4.3", "date": "2026-11-26"}
+
+# 지도에서 읽지 않는 필드는 index.html에 넣기 직전에 덜어 낸다(data/*.json 원본은 그대로 둔다).
+# 근거 문장·운수회사·승하차 인원처럼 나중에 분석이나 정보창에 쓸 수 있는 기록이라 원본에서는 지우지 않는다.
+# 새로 지도에서 이 필드를 읽게 되면 여기서 빼야 한다.
+def slim(d):
+    gone = 0
+    def pop(obj, *keys):
+        nonlocal gone
+        for k in keys:
+            if k in obj: gone += len(json.dumps(obj[k], ensure_ascii=False, separators=(",", ":")).encode()); del obj[k]
+    for net in ("bus", "bus2026"):
+        N = d.get(net)
+        if not N: continue
+        pop(N, "corr", "snapshot")          # corr: 한 시점에 고정된 구간 묶음. 지도는 해마다 segs에서 다시 셈(corrFor)
+        for r in N["routes"]:
+            pop(r, "ops", "succ", "type", "riders")   # 운수회사, 뒤를 이은 노선, 노선 유형, 승하차 인원
+            if r.get("geom"): pop(r, "pts")           # 경유지 점: 선형(geom)이 없을 때만 대신 씀
+        for e in N.get("events", []): pop(e, "cnt", "cur")
+        for n in N.get("nums", []): pop(n, "src", "head", "merged_into")   # 운행 시작 연도의 근거 문장 등(연도만 씀)
+    if d.get("land"): pop(d["land"], "seoulN", "basis", "src")
+    if d.get("village"):
+        for v in d["village"]["years"].values(): pop(v, "day", "nstops")
+    for l in d["trams"]["lines"]: pop(l, "id")
+    return gone
+print("slim: removed", slim(data), "bytes of unused fields", file=sys.stderr)
 tpl = open(F("template.html")).read()
 out = tpl.replace("/*__DATA__*/", "const DATA = " + json.dumps(data, ensure_ascii=False, separators=(",", ":")) + ";")
 if FRAG:
