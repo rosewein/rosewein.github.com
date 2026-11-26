@@ -1133,7 +1133,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     const svgc = d3.select("#busChart"); svgc.selectAll("*").remove();
     const w = svgc.node().getBoundingClientRect().width, h = 150;
     svgc.attr("viewBox", `0 0 ${w} ${h}`);
-    const x = d3.scaleLinear().domain([1950, 2026]).range([44, w - 10]);
+    const x = d3.scaleLinear().domain([1950, 2026]).range([62, w - 10]);   // 왼쪽 62px은 줄 이름(「운행 대수」)과 최댓값 자리
     const rows = [{ key: "routes", label: "노선 수", y0: 8 }, { key: "buses", label: "운행 대수", y0: 78 }];
     const dr = DATA.busDrawn ? Object.entries(DATA.busDrawn).map(([y, v]) => ({ y: +y, v })).sort((a, b) => a.y - b.y) : [];
     rows.forEach(rw => {
@@ -1276,6 +1276,6 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   // 첫 화면: 주소에 연도나 탭이 있으면 그것을, 없으면 1914년 경계와 초기 노선이 함께 보이도록 1920년에서 시작
   const h0 = readHash();
   setYear(h0.year || DATA.startYear || 1920);
-  if (h0.tab !== "map") showTab(h0.tab, true);
+  if (h0.tab !== "map") { showTab(h0.tab, true); syncHash(); }   // setYear가 주소를 #연도로 바꿔 놓으므로 탭 주소(#data 등)를 되돌린다
 })();
 </script>
