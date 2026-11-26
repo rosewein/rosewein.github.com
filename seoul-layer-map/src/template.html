@@ -233,6 +233,11 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
 :root[data-theme="dark"] { --stl-low: #4a524d; --stl-0: #1e2c3a; --stl-1: #22436a; --stl-2: #2d64a3; --stl-3: #4f8fd8; --stl-4: #96c1f1; }
 .legend-land .bar.stl { grid-template-columns: repeat(6, minmax(0, 1fr)); }
 .stspark { display: block; width: 100%; height: 96px; margin-top: 6px; }
+/* 그린벨트(개발제한구역): 초록 빗금과 테두리만(아래 레이어 색이 비치게). 어두운 화면은 밝은 초록 */
+:root { --gb: #3f6b3a; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --gb: #8fbf7f; } }
+:root[data-theme="dark"] { --gb: #8fbf7f; }
+.legend-land i.gbsw { display: inline-block; width: 18px; height: 10px; border-radius: 2px; vertical-align: -1px; margin: 0 4px 0 0; background: repeating-linear-gradient(45deg, transparent 0 3px, var(--gb) 3px 4.5px); border: 1px solid var(--gb); }
 </style>
 
 <div class="app">
@@ -275,6 +280,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     <button class="chip" type="button" data-layer="kido" aria-pressed="true"><i style="color:var(--kido)"></i>경성궤도 기동차</button>
     <button class="chip" type="button" data-layer="land" aria-pressed="false" id="landChip" hidden><i class="fill" style="background:linear-gradient(90deg,var(--land-1),var(--land-4),var(--land-7))"></i>땅값(공시지가)</button>
     <button class="chip" type="button" data-layer="stland" aria-pressed="false" id="stLandChip" hidden><i class="fill" style="background:linear-gradient(90deg,var(--stl-1),var(--stl-3))"></i>역 둘레 땅값(개통 전후)</button>
+    <button class="chip" type="button" data-layer="gb" aria-pressed="false" id="gbChip" hidden><i class="fill" style="background:repeating-linear-gradient(45deg,transparent 0 3px,var(--gb) 3px 4.5px);border-color:var(--gb)"></i>그린벨트(지금 경계)</button>
     <button class="chip" type="button" data-layer="area" aria-pressed="true"><i class="fill" style="background:var(--area)"></i>시역</button>
     <button class="chip" type="button" data-layer="rings" aria-pressed="true"><i style="color:var(--ring);border-top-style:dashed;border-top-width:2px"></i>이전 경계</button>
     <button class="chip" type="button" data-layer="gu" aria-pressed="true"><i style="color:var(--gu);border-top-width:1px"></i>구 경계</button>
@@ -305,6 +311,9 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     <div class="bar stl"><i style="background:var(--stl-low)"></i><i style="background:var(--stl-0)"></i><i style="background:var(--stl-1)"></i><i style="background:var(--stl-2)"></i><i style="background:var(--stl-3)"></i><i style="background:var(--stl-4)"></i></div>
     <div class="tk"><span style="left:16.7%">−5</span><span style="left:33.3%">+5</span><span style="left:50%">+10</span><span style="left:66.7%">+20</span><span style="left:83.3%">+40%</span></div>
     <p>역 둘레 땅값: 개통 5년 전보다, 같은 구에서 값대가 같고 역에서 1km 넘게 떨어진 땅에 견줘 얼마나 더 올랐는지. 고리는 안쪽부터 250m · 500m · 1km(더 가까운 역이 있으면 그 역 몫). 개통 앞뒤 5년은 진하게, 그 뒤엔 개통 5년 뒤 값을 옅게 · <i class="na"></i>필지 20개 미만</p>
+  </div>
+  <div class="legend-land" id="gbLegend" hidden>
+    <p><i class="gbsw"></i><span id="gbLegendText">그린벨트(개발제한구역)</span></p>
   </div>
   <p class="small" style="margin:10px 0 0">자세한 풀이는 「읽는 법」 탭에 있습니다.</p>
   </div>
@@ -439,6 +448,10 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
         gRingLab = root.append("g"), gStLab = root.append("g"), gLabels = root.append("g");
   // 역 둘레 땅값 고리: 버스 노선망 위, 전차·철도·지하철 아래(역 점과 선이 고리 위에 보이게)
   const gStLand = root.insert("g", () => gTram.node());
+  // 그린벨트: 역 둘레 땅값 고리 위에 빗금만 얹는다(고리 색이 비치게). 누르기는 막지 않음
+  const gGB = root.insert("g", () => gTram.node());
+  const gbPat = svg.select("defs").append("pattern").attr("id", "gbHatch").attr("patternUnits", "userSpaceOnUse").attr("width", 7).attr("height", 7).attr("patternTransform", "rotate(45)");
+  const gbPatLine = gbPat.append("rect").attr("width", 1.3).attr("height", 7).attr("fill", "var(--gb)").attr("fill-opacity", 0.7);
   // 버스 종점: {route, name, from, to, lon, lat, conf, source} — 자료가 들어오면 칩이 나타남
   const rail = DATA.rail || null;
   if (rail) document.getElementById("railChip").hidden = false;
@@ -447,6 +460,8 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   const bus = DATA.bus || null;
   const stLand = DATA.stationLand || null;
   if (stLand) document.getElementById("stLandChip").hidden = false;
+  const greenbelt = DATA.greenbelt || null;
+  if (greenbelt) document.getElementById("gbChip").hidden = false;
   const village = DATA.village || null;
   if (village) document.getElementById("villageChip").hidden = false;
   // 그 해 자료가 없으면(2023–2025) 그 앞의 가장 가까운 해를 쓴다
@@ -520,7 +535,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   let W = 0, H = 0, projection = d3.geoMercator(), path = d3.geoPath(projection), kNow = 1;
 
   const layerOn = { rail: true, metro: true, tram: true, kido: true, area: true, rings: true, gu: true, wall: true, dong: false, bus: true, village: true, land: false };
-  layerOn.stland = false;
+  layerOn.stland = false; layerOn.gb = false;
 
   function fit() {
     const r = svg.node().getBoundingClientRect();
@@ -538,6 +553,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     sizeBus();
     gVillage.selectAll("circle").attr("r", 1.1 / kNow);
     gStLand.selectAll("circle").attr("r", 3.2 / kNow);
+    gbPat.attr("width", 7 / kNow).attr("height", 7 / kNow); gbPatLine.attr("width", 1.3 / kNow).attr("height", 7 / kNow);
     landPat.attr("width", 6 / kNow).attr("height", 6 / kNow); landPatBg.attr("width", 6 / kNow).attr("height", 6 / kNow);
     landPatLine.attr("width", 1.2 / kNow).attr("height", 6 / kNow);
     gMetro.selectAll("circle").attr("r", st => (Object.keys(st.opens).filter(l => st.opens[l] <= year).length > 1 ? 3.4 : 2.3) / kNow);
@@ -595,6 +611,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
       .attr("fill", d => { const r = landRatio(d.properties.cd, year); return r == null ? "url(#landNA)" : `var(--land-${landClass(r)})`; });
     renderLegends();
     drawStationLand();
+    drawGreenbelt();
     // area + new area
     gArea.selectAll("*").remove(); gNew.selectAll("*").remove(); gRings.selectAll("*").remove();
     if (er) {
@@ -837,6 +854,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     d3.select("#villageLegend").attr("hidden", layerOn.village && villageYear(year) ? null : true);
     d3.select("#landLegend").attr("hidden", layerOn.land && land ? null : true);
     d3.select("#stLandLegend").attr("hidden", layerOn.stland && stLand ? null : true);
+    d3.select("#gbLegend").attr("hidden", layerOn.gb && greenbelt ? null : true);
   }
 
   function eraText(er, gp) {
@@ -1124,12 +1142,22 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     });
     if (document.getElementById("stSpark") && selSt && !document.getElementById("info").hidden) showStLand(selSt);
   }
+  // 그린벨트(개발제한구역) 지금 경계. 1971년 지정 때 경계와 2015년 전 해제 이력은 자료가 없어, 어느 해에나 지금 경계를 보인다
+  function drawGreenbelt() {
+    gGB.selectAll("*").remove();
+    if (!(layerOn.gb && greenbelt)) return;
+    gGB.append("path").attr("d", path({ type: "MultiPolygon", coordinates: greenbelt.geo })).attr("fill", "url(#gbHatch)")
+      .attr("stroke", "var(--gb)").attr("stroke-width", 1.2).attr("vector-effect", "non-scaling-stroke").style("pointer-events", "none");
+    const o = greenbelt.old, d = greenbelt.date.replace(/-/g, ".");
+    d3.select("#gbLegendText").text(`그린벨트(개발제한구역) ${d} 경계, ${greenbelt.area_km2}㎢. 1971년 지정 때와 2015년 전 해제 경계는 자료가 없어 어느 해에나 지금 경계를 보임` + (o ? ` · ${o.date.slice(0, 4)}–${greenbelt.date.slice(0, 4)}년에 풀린 땅 ${o.released_km2}㎢` : ""));
+  }
   let selSt = null;
   function showStLand(s) {
     const rel = year - s.T, inWin = rel >= -5 && rel <= 5, k = Math.max(-5, Math.min(5, rel)) + 5;
     const when = rel < -5 ? `${s.T - 5}년부터 보입니다` : rel > 5 ? `개통 5년 뒤(${s.T + 5}년)` : rel === 0 ? `${year}년(개통 해)` : `${year}년(개통 ${Math.abs(rel)}년 ${rel < 0 ? "전" : "뒤"})`;
     const vals = rel < -5 ? "" : `<div style="margin-top:4px">${when}: ` + [0, 1, 2].map(i => `${RING_LAB[i]} <b>${fmtPct(s.v[i][k])}</b>`).join(" · ") + `</div>`;
-    const dev = s.dev == null ? "" : ` · 개통 10년 사이 500m 안 필지의 ${Math.round(s.dev * 100)}%가 사라짐(재개발·택지 등으로 지번이 바뀜)`;
+    const dev = (s.dev == null ? "" : ` · 개통 10년 사이 500m 안 필지의 ${Math.round(s.dev * 100)}%가 사라짐(재개발·택지 등으로 지번이 바뀜)`)
+      + (s.gb ? ` · 500m 안 필지의 ${Math.round(s.gb * 100)}%가 지금 그린벨트 안` : "");
     showInfo(`<b>${s.name}역 둘레 땅값</b> <span class="meta">${s.lines.join("·")} · ${s.date} 개통</span>${vals}`
       + `<div class="meta">개통 5년 전(${s.T - 5}년)보다, 같은 구에서 값대가 같고 역에서 1km 넘게 떨어진 땅에 견줘 더 오른 정도(같은 필지끼리 견줌)</div>`
       + `<svg class="stspark" id="stSpark" role="img" aria-label="${s.name}역 둘레 고리별 땅값 변화"></svg>`

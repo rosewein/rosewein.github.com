@@ -1,5 +1,6 @@
 """역 둘레 땅값 레이어 자료: station_rings_ctrl.py 결과(json)를 지도용으로 줄이고 고리 모양을 붙인다.
-    python3 -I station_land_layer.py <rings_ctrl.json> [출력 json]   (출력 기본: data/station_land.json)
+    python3 -I station_land_layer.py <rings_ctrl.json> [출력 json] [--gb=<그린벨트를 넣어 돌린 rings_ctrl json>]   (출력 기본: data/station_land.json)
+- --gb를 주면 역마다 개통 5년 전 500m 안 필지 가운데 2026년 그린벨트 안인 비율(gb)을 붙인다(값은 그린벨트 필지를 넣은 계산 그대로).
 
 - 값: 같은 필지 변화에서 '비슷한 땅'(같은 구 · 개통 5년 전 값 10분위 같음 · 열린 역 1km 밖) 변화를 뺀 것(%).
   개통 해로부터 −5…+5년, 고리 0–250 · 250–500 · 500–1000m. 고리 안 필지가 20개 미만이면 null.
@@ -14,7 +15,9 @@ from shapely.geometry import Point, Polygon, MultiPolygon, MultiPoint, mapping
 from shapely.geometry.polygon import orient
 from shapely.ops import unary_union, voronoi_diagram, transform
 HERE = os.path.dirname(os.path.abspath(__file__)); DATA = os.path.join(HERE, "..", "data")
-R = json.load(open(sys.argv[1])); OUT = sys.argv[2] if len(sys.argv) > 2 else os.path.join(DATA, "station_land.json")
+pos = [a for a in sys.argv[1:] if not a.startswith("--")]; opt = dict(a[2:].split("=", 1) for a in sys.argv[1:] if a.startswith("--"))
+R = json.load(open(pos[0])); OUT = pos[1] if len(pos) > 1 else os.path.join(DATA, "station_land.json")
+GBS = {(r["name"], r["T"]): r.get("gb") for r in json.load(open(opt["gb"]))} if "gb" in opt else {}
 metro = json.load(open(os.path.join(DATA, "metro.json"))); topo = json.load(open(os.path.join(DATA, "emd_topo.json")))
 fwd = Transformer.from_crs(4326, 5186, always_xy=True).transform
 inv = Transformer.from_crs(5186, 4326, always_xy=True).transform
@@ -68,6 +71,7 @@ for r in R:
     rec = {"name": r["name"], "T": T, "date": s.get("dates", {}).get(first_line, str(T)),
            "lines": sorted(s["opens"], key=lambda l: (s["opens"][l], l)), "lng": s["lng"], "lat": s["lat"],
            "dev": None if r["dev"] is None else round(r["dev"], 3), "n500": r["n500"],
+           "gb": None if GBS.get((r["name"], T)) is None else round(GBS[(r["name"], T)], 3),
            "v": [[pct((r["years"][str(k)][f"{a}-{b}"] or {}).get("sim")) for k in range(-5, 6)] for a, b in RINGS],
            "s": [[pct((r["years"][str(k)][f"{a}-{b}"] or {}).get("seoul")) for k in range(-5, 6)] for a, b in RINGS],
            "n": [(r["years"]["5"][f"{a}-{b}"] or {}).get("n") for a, b in RINGS],
