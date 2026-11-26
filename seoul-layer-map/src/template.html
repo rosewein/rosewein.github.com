@@ -681,10 +681,14 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   if (village) document.getElementById("villageChip").hidden = false;
   // 조선 후기 대로·역·원·나루: 자료가 있으면 연도 띠가 1899년 한 칸 앞(Y0=1898)에서 시작한다. 1898은 '조선 후기' 단계를 뜻하고 실제 1898년이 아니다
   const joseon = DATA.joseon || null;
-  const oldmap = DATA.oldmap || null;   // 1914 경성부시가강계도: 웹 메르카토르로 다시 그린 이미지(img/). 처음 보일 때 불러온다
+  // 옛 지도: 해마다 그 해에 맞는 지도 한 장을 깐다(1914 경성부시가강계도, 1899–1913 실측상밀 최신경성전도). 웹 메르카토르로 다시 그린 이미지(img/)는 처음 보일 때 불러온다
+  const oldmaps = [DATA.oldmap, ...(DATA.oldmapsMore || [])].filter(Boolean).sort((a, b) => a.from - b.from);
+  const oldmap = oldmaps[0] || null;   // 옛 지도가 하나라도 있는지
+  const oldAt = y => oldmaps.find(m => y >= m.from && y <= m.to) || null;
   const hanseong = DATA.hanseong;   // 1914년 앞 한성부·경성부 경계(HGIS 1910)
   const palace = DATA.palaces;
-  if (oldmap) document.getElementById("oldmapChip").hidden = false;
+  if (oldmap) { const c = document.getElementById("oldmapChip"); c.hidden = false;
+    c.lastChild.textContent = `옛 지도(${oldmaps[0].from}–${Math.max(...oldmaps.map(m => m.to))})`; }
   if (joseon) document.getElementById("joseonChip").hidden = false;
   if (palace) document.getElementById("palaceChip").hidden = false;
   const Y0 = joseon ? 1898 : 1899;
@@ -712,30 +716,30 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
       .attr("cx", d => projection(d)[0]).attr("cy", d => projection(d)[1]).attr("r", 1.1 / kNow)
       .attr("fill", "var(--village-dot)").attr("fill-opacity", 0.75).style("pointer-events", "none");
   }
-  // 옛 지도: 1914년 6월 「경성부시가강계도」를 1914–1935년에 깐다. 웹 메르카토르 격자라 두 모서리만 투영하면 된다
+  // 옛 지도: 1914년 6월 「경성부시가강계도」를 1914–1935년에, 1907 「實測詳密 最新京城全圖」를 1899–1913년에 깐다(oldAt). 웹 메르카토르 격자라 두 모서리만 투영하면 된다
   // 진하기: 띠를 건드리기 전에는 화면 색에 맞춘 기본값(--oldmap-op), 건드리면 그 값
   let oldOpUser = null;
   const oldOpInput = document.getElementById("oldOp");
   function oldOpNow() { return oldOpUser != null ? oldOpUser : parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--oldmap-op")) || 0.9; }
   function syncOldOp() { const v = Math.round(oldOpNow() * 100); oldOpInput.value = v; d3.select("#oldOpVal").text(v + "%"); }
   oldOpInput.addEventListener("input", () => { oldOpUser = +oldOpInput.value / 100; gOld.selectAll("image").style("opacity", oldOpUser); syncOldOp(); });
-  function oldShownAt(y) { return !!(oldmap && layerOn.oldmap && y >= oldmap.from && y <= oldmap.to); }
+  function oldShownAt(y) { return !!(layerOn.oldmap && oldAt(y)); }
   function drawOld() {
-    const on = oldShownAt(year);
+    const om = layerOn.oldmap ? oldAt(year) : null, on = !!om;
     gOld.style("display", on ? null : "none");
-    gRiver.style("opacity", on ? 0.35 : null);   // 지금 한강 선이 옛 지도의 강을 덮지 않게
+    gRiver.style("opacity", on && om.dimWater !== false ? 0.35 : null);   // 지금 한강 선이 옛 지도의 강을 덮지 않게(도성만 그린 1907 지도는 한강이 없어 그대로)
     // 공공누리 제1유형: 옛 지도가 보이는 동안 출처(기관명·링크)를 지도 출처 줄에 함께 적는다
     d3.select("#oldAttrib").property("hidden", !on)
-      .html(on ? ` · 옛 지도 <a href="${oldmap.url}" target="_blank" rel="noopener">${oldmap.credit}</a>(공공누리 제1유형)` : "");
+      .html(on ? ` · 옛 지도 <a href="${om.url}" target="_blank" rel="noopener">${om.credit}</a>(공공누리 제1유형)` : "");
     if (!on) return;
-    // 본문과 창신·숭인동 덧그림을 따로 맞춘 이미지 두 장
-    const img = gOld.selectAll("image").data(oldmap.imgs).join(en => en.append("image").attr("href", d => d.src)
+    // 1914 지도는 본문과 창신·숭인동 덧그림을 따로 맞춘 두 장. 해가 바뀌어 지도가 바뀌면 이미지 주소로 갈아 끼운다
+    const img = gOld.selectAll("image").data(om.imgs, d => d.src).join(en => en.append("image").attr("href", d => d.src)
       .attr("preserveAspectRatio", "none").style("pointer-events", "none"));
     img.style("opacity", oldOpUser != null ? oldOpUser : "var(--oldmap-op)");
     syncOldOp();
     img.each(function (d) { const a = projection(d.nw), b = projection(d.se);
       d3.select(this).attr("x", a[0]).attr("y", a[1]).attr("width", b[0] - a[0]).attr("height", b[1] - a[1]); });
-    d3.select("#oldmapNote").html(`${oldmap.title}, ${oldmap.date}. ${oldmap.src}. ${oldmap.fit}. ${oldmap.insetFit || ""}`);
+    d3.select("#oldmapNote").html(`${om.title}, ${om.date}. ${om.src}. ${om.fit}. ${om.insetFit || ""}`);
   }
   // 조선 후기 대로·역·원·나루: 1899년 앞 단계에서는 진하게(이름까지), 그 뒤로는 옅게 깔아 옛 길이 뒤의 교통망과 어떻게 겹치는지만 보인다
   const JSYM = { "역": d3.symbolSquare, "원": d3.symbolCircle, "나루": d3.symbolTriangle, "문": d3.symbolDiamond };
@@ -2197,9 +2201,11 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   if (window.ResizeObserver) new ResizeObserver(onResize).observe(document.querySelector(".stage"));
   window.addEventListener("resize", onResize);
   document.body.dataset.tab = "map";
-  boot();
   // 첫 화면: 주소에 연도나 탭이 있으면 그것을, 없으면 처음(조선 후기 단계, 없으면 1899년)부터. 주소에 연도가 없던 첫 방문은 주소를 그대로 둔다
   const h0 = readHash(), bare = !location.hash;
+  // boot()가 그 해로 먼저 그리게 한다(전에는 1899년으로 한 번 그려서, 첫 화면에 안 보이는 1899–1913 옛 지도 이미지까지 받았음)
+  year = Math.max(Y0, Math.min(2026, h0.year || (joseon ? Y0 : DATA.startYear) || 1899));
+  boot();
   setYear(h0.year || (joseon ? Y0 : DATA.startYear) || 1899);   // 처음부터 보게: 조선 후기 단계가 있으면 그 칸(Y0)에서 시작(v1.7.1, 이지가 정함)
   if (h0.tab !== "map") { showTab(h0.tab, true); syncHash(); }   // setYear가 주소를 #연도로 바꿔 놓으므로 탭 주소(#data 등)를 되돌린다
   if (bare) { try { history.replaceState(null, "", location.pathname + location.search); } catch (e) { /* 주소를 못 바꾸는 곳 */ } }

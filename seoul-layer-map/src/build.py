@@ -101,6 +101,8 @@ data = {
   "joseon": json.load(open(F("joseon.json"))) if os.path.exists(F("joseon.json")) else None,
   # 옛 지도(시안): kanggye1914.py가 만든 이미지의 위치·출처. 이미지는 img/에 따로 두고 처음 보일 때 불러온다
   "oldmap": {k: v for k, v in json.load(open(F("oldmap.json"))).items() if k != "gcp"} if os.path.exists(F("oldmap.json")) else None,
+  # 다른 해의 옛 지도(oldmap1907.py 등). 지도는 해마다 그 해에 맞는 한 장을 고른다
+  "oldmapsMore": [{k: v for k, v in json.load(open(F(f))).items() if k != "gcp"} for f in ("oldmap1907.json",) if os.path.exists(F(f))],
 }
 # 땅값 설명문은 자료가 있을 때만 「이 지도를 읽는 법」에 넣는다(출처 문단 앞 + 출처 한 줄)
 if data["land"] and os.path.exists(F("method_land.html")):
@@ -168,6 +170,9 @@ if (data["joseon"] or data["oldmap"]) and os.path.exists(F("method_oldmap.html")
                " 서울신문 기사(「부산에서 서울까지 다시 걷는 옛길」 2006, 「서울미래유산 그랜드 투어」 2018 등), 공유마당 「청파 배다리」, 서울시 한강 누리집."
                " 옛 지도는 서울역사아카이브 「경성부시가강계도」(서울역사001349, 서울역사박물관 소장, 공공누리 제1유형,"
                ' <a href="' + (data["oldmap"] or {}).get("url", "") + '" target="_blank" rel="noopener">아카이브 상세</a>).')
+    for om in data["oldmapsMore"]:   # 1899–1913 옛 지도 등
+        old_src += (f' {om["from"]}–{om["to"]}년 옛 지도는 서울역사아카이브 「{om["title"].split("(")[0]}」({om["date"].split("(")[0]}, '
+                    + om["src"].split("(")[1].split(",")[0] + ', 서울역사박물관 소장, 공공누리 제1유형, <a href="' + om["url"] + '" target="_blank" rel="noopener">아카이브 상세</a>).')
     data["methodHtml"] = mh[:i] + open(F("method_oldmap.html")).read() + mh[i:j] + old_src + mh[j:]
 # 궁궐: 자료가 있을 때만 설명문을 출처 문단 앞에 넣고, 출처 문단 끝에 한 줄
 if data.get("palaces") and os.path.exists(F("method_palace.html")):

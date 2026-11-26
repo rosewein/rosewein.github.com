@@ -1,24 +1,25 @@
-"""시안: 1907 「實測詳密 最新京城全圖」(서울역사015439)를 1899–1913년 밑그림으로 깔아 보기 위한 맞춤·재투영(지도에는 아직 넣지 않음)
+"""1907 「實測詳密 最新京城全圖」(서울역사015439)를 1899–1913년 옛 지도로 깔기 위한 맞춤·재투영
 
 python3 src/oldmap1907.py   (원자료: $SLM_RAW/oldmaps/1907_실측상밀최신경성전도_서울역사015439.jpg, 아카이브 전도 이미지 1500×2109)
-→ $SLM_RAW/build/oldmap1907.webp(테두리째), oldmap1907_wall.webp(성벽에서 250m 바깥까지만), oldmap1907.json(nw·se)
+→ img/oldmap1907.webp, data/oldmap1907.json(build.py가 DATA.oldmapsMore로 넣고, 지도는 해에 맞는 옛 지도 한 장을 고른다)
+
+- 이지가 시안(가. 테두리째 / 나. 성벽 둘레만)에서 테두리째 까는 쪽을 골랐다(2026-11-27). 나 안 코드는 지웠다(커밋 aa62467에 있음).
 
 - 기준점은 성문 7곳. 경위도는 kanggye1914.py·joseon.json과 같다(돈의문은 1915년 헐린 자리).
 - 아핀 변환으로 맞춘다. 축척은 약 1:10,400(지도 표기 1:10,000), 지도가 북쪽에서 약 5° 돌아가 있다.
   어긋남 7–38m, 하나 빼고 맞추면 그 점이 11–77m 어긋남(2026-11-27).
 - 범례(凡例): 道路, 署界(붉은 점선), 坊界(검은 쇄선), 電氣鐵道(붉은 실선), 鐵道線路, 川, 池, 城壁(분홍 물결선), 山.
-- 시안 화면은 shot.py 장면 js에서 DATA.oldmap의 imgs·from·to를 바꿔 찍었다(HANDOFF 「1914년 앞 시역」).
 """
 import json, math, os
 import numpy as np
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image
 from pyproj import Transformer
-from shapely.geometry import Polygon
 import cv2
 from paths import RAW, DATA
 
 SRC = os.path.join(RAW, "oldmaps", "1907_실측상밀최신경성전도_서울역사015439.jpg")
-OUT = os.path.join(RAW, "build"); os.makedirs(OUT, exist_ok=True)
+OUT_IMG = os.path.join(os.path.dirname(DATA), "img", "oldmap1907.webp")
+URL = "https://museum.seoul.go.kr/archive/archiveNew/NR_relicView.do?mcsjgbnc=PS01003026001&mcseqno1=015439&mcseqno2=00000&cdLanguage=KOR"
 RES = 3.0  # m/px. 원본은 약 3.7m/px
 
 GCP = [  # 이름, 원본 픽셀 x, y, 경도, 위도
@@ -54,15 +55,17 @@ lon, lat = T3857i.transform(MX.ravel(), MY.ravel()); ex, ey = T5186.transform(lo
 px = np.linalg.inv(np.r_[M.T, [[0, 0, 1]]]) @ np.vstack([ex, ey, np.ones_like(ex)])
 out = cv2.remap(np.dstack([src, alpha]), px[0].reshape(ny, nx).astype(np.float32), px[1].reshape(ny, nx).astype(np.float32),
                 cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=(0, 0, 0, 0))
-im = Image.fromarray(out, "RGBA"); im.save(os.path.join(OUT, "oldmap1907.webp"), "WEBP", quality=80, method=6)
-# 안 나: 성벽(tram.json의 wall 고리)에서 250m 바깥까지만 남기고 가장자리를 흐리게
-wall = json.load(open(os.path.join(DATA, "tram.json")))["wall"]
-poly = Polygon([T3857.transform(*p) for p in wall]).buffer(250 * k)
-mask = Image.new("L", (nx, ny), 0)
-ImageDraw.Draw(mask).polygon([((x - mx0) / (mx1 - mx0) * nx, (my1 - y) / (my1 - my0) * ny) for x, y in poly.exterior.coords], fill=255)
-mask = mask.filter(ImageFilter.GaussianBlur(12))
-im.putalpha(Image.fromarray(np.minimum(np.array(im.getchannel("A")), np.array(mask))))
-im.save(os.path.join(OUT, "oldmap1907_wall.webp"), "WEBP", quality=80, method=6)
+Image.fromarray(out, "RGBA").save(OUT_IMG, "WEBP", quality=80, method=6)
 nw = T3857i.transform(mx0, my1); se = T3857i.transform(mx1, my0)
-json.dump({"nw": [round(nw[0], 6), round(nw[1], 6)], "se": [round(se[0], 6), round(se[1], 6)]}, open(os.path.join(OUT, "oldmap1907.json"), "w"))
-print(nx, ny, "→", OUT)
+lo, hi = min(loo), max(loo)
+meta = {
+    "id": "silcheuk1907", "title": "실측상밀 최신경성전도(實測詳密 最新京城全圖)",
+    "date": "1907년 11월 수정 재판(같은 해 3월 초판, 日韓書房, 저작겸발행자 森山美夫)",
+    "imgs": [{"src": "img/oldmap1907.webp", "nw": [round(nw[0], 6), round(nw[1], 6)], "se": [round(se[0], 6), round(se[1], 6)]}],
+    "from": 1899, "to": 1913, "dimWater": False,
+    "src": "서울역사아카이브 소장유물 「실측상밀 최신경성전도」(서울역사015439, 1:10,000, 도성 둘레만 그림, 붉은 점선이 5서 경계). 서울역사박물관 소장, 공공누리 제1유형",
+    "credit": "서울역사박물관 소장", "url": URL,
+    "fit": f"성문 {len(GCP)}곳(헐린 돈의문은 옛 자리)으로 아핀 맞춤. 기준점 하나를 빼고 맞췄을 때 그 점의 어긋남 {round(lo)}–{round(hi)}m. 1907년 지도라 그 앞 해에는 몇 해 뒤 모습이다",
+    "gcp": [{"name": g[0], "px": g[1], "py": g[2], "lng": g[3], "lat": g[4]} for g in GCP]}
+json.dump(meta, open(os.path.join(DATA, "oldmap1907.json"), "w"), ensure_ascii=False, indent=1)
+print(nx, ny, OUT_IMG, os.path.getsize(OUT_IMG), "bytes")
