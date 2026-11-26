@@ -31,9 +31,10 @@ python3 src/majorroads.py           data/majorroads.json
      같은 도로로 맞춘 수도권 시안 선(RAW/nodelink/sudo_roads.json)에서 45m 안이면, 가장 많이 닿은 선의 날짜를 붙인다.
      이름이 다른 길(고가 아래 길, 지하도로 위 길 등)에 날짜가 옮겨 붙지 않게 SUDO_NAME으로 짝지은 이름끼리만 맞춘다.
   3) majorroads_open.csv 가운데 쓰임이 '대신'인 줄(수도권 시안 선이 닿지 않은 링크에만).
-- p(결정): data/majorroads_plan.json(연혁도 대조). 그 해 연혁도에 광로·대로로 그려져 있고, 그 뒤 그 링크를 덮는 연혁도의
+- p(결정): data/majorroads_plan.json(연혁도 대조). 그 해 연혁도에 광로·대로(붉은 선)나 중로(초록 선)로 그려져 있고, 그 뒤 그 링크를 덮는 연혁도의
   절반 이상에서도 그려져 있으면 그 해. 결정 해가 없는 링크가 같은 이름 링크 둘 이상과 이어져 있고 그 링크들에 결정 해가 있으면
-  그 가운데 늦은 해를 붙인다(600m 이하 링크만, 다섯 번 되풀이: 그림 글자 등에 가려 빠진 짧은 틈을 메움). 연혁도는 「도시계획으로 결정된 길」이라 실제로 뚫린 해는 그 뒤일 수 있다.
+  그 가운데 늦은 해를 붙인다(600m 이하 링크만, 다섯 번 되풀이: 그림 글자 등에 가려 빠진 짧은 틈을 메움). 중로로 먼저 그려지고 나중에 광로·대로가 된 길은 pm=1, pb=광로·대로가 된 해를 함께 적는다.
+  연혁도는 「도시계획으로 결정된 길」이라 실제로 뚫린 해는 그 뒤일 수 있다.
 """
 import csv, json, os, sys, zipfile, collections
 sys.dont_write_bytecode = True
@@ -267,20 +268,22 @@ def main():
         if not add: break
         sm.update(add)
     for l in links:
-        on, miss = plan["links"].get(l["LINK_ID"], [[], years]); l["p"] = plan_year(on, miss, years)
-    # 짧은 틈 메우기
+        on, miss, *rest = plan["links"].get(l["LINK_ID"], [[], years, []])
+        l["p"] = plan_year(on, miss, years); l["pa"] = plan_year(rest[0] if rest else on, miss, years)
+    # 짧은 틈 메우기(광로·대로 해 p와 중로까지 넣은 해 pa 따로)
     nb = collections.defaultdict(list)
     for l in links:
         for n in (l["F_NODE"], l["T_NODE"]): nb[(l["ROAD_NAME"], n)].append(l)
-    for _ in range(5):
-        fill = {}
-        for l in links:
-            if l["p"] is not None or l["LENGTH"] > 600: continue
-            ps = [q["p"] for n in (l["F_NODE"], l["T_NODE"]) for q in nb[(l["ROAD_NAME"], n)] if q is not l and q["p"] is not None]
-            if len(ps) >= 2: fill[id(l)] = max(ps)
-        if not fill: break
-        for l in links:
-            if id(l) in fill: l["p"] = fill[id(l)]; l["filled"] = True
+    for key in ("p", "pa"):
+        for _ in range(5):
+            fill = {}
+            for l in links:
+                if l[key] is not None or l["LENGTH"] > 600: continue
+                ps = [q[key] for n in (l["F_NODE"], l["T_NODE"]) for q in nb[(l["ROAD_NAME"], n)] if q is not l and q[key] is not None]
+                if len(ps) >= 2: fill[id(l)] = max(ps)
+            if not fill: break
+            for l in links:
+                if id(l) in fill: l[key] = fill[id(l)]; l["filled"] = True
     stat = collections.Counter(); groups = collections.defaultdict(list)
     for l in links:
         P = np.array(l["pts"]); cx, cy = TO_LL.transform(*P.mean(0))
@@ -289,13 +292,16 @@ def main():
                 if r["쓰임"] == use and (not r["조건"] or eval(r["조건"], {}, {"x": cx, "y": cy, "rank": l["ROAD_RANK"]})): return r
         r = pick("우선") or by_key.get(sm.get(l["LINK_ID"])) or pick("대신")
         o, oi = (r["개통일"][:10], r["i"]) if r else (None, None)
-        p = l["p"]
+        # 보이는 결정 해: 중로까지 넣은 해가 더 이르면 그 해(mid = 중로로 먼저 그려짐), pb = 광로·대로가 된 해
+        # 고속·도시고속도로(x)는 중로로 계획된 길이 아니라서, 옆을 나란히 지나는 중로에 잘못 닿는 일을 막으려고 광로·대로 해만 쓴다
+        pb = l["p"]; mid = l["cls"] != "x" and l["pa"] is not None and (pb is None or l["pa"] < pb); p = l["pa"] if mid else pb
+        if mid: stat[("중로로 먼저", l["cls"])] += l["LENGTH"]
         if l.get("filled"): stat[("메운 링크", "")] += l["LENGTH"]
         if r: stat[("개통일 출처", r["from"] + ("" if r["from"] == "sudo" else "·" + r["쓰임"]))] += l["LENGTH"]
         stat[(l["cls"], "o" if o else "p" if p else "-")] += l["LENGTH"]
-        groups[(l["ROAD_NAME"], l["cls"], o, oi, p, min(l["LANES"], 6))].append(LineString(P))
+        groups[(l["ROAD_NAME"], l["cls"], o, oi, p, mid, pb if mid else None, min(l["LANES"], 6))].append(LineString(P))
     segs = []
-    for (nm, c, o, oi, p, ln), gs in groups.items():
+    for (nm, c, o, oi, p, mid, pb, ln), gs in groups.items():
         m = linemerge(gs); parts = list(getattr(m, "geoms", [m]))
         for g in parts:
             g = g.simplify(12 if c in "bm" else 8)
@@ -303,14 +309,16 @@ def main():
             s = {"n": nm, "c": c, "l": int(ln), "g": [[round(a, 5), round(b, 5)] for a, b in zip(x, y)]}
             if o: s["o"] = o; s["oi"] = oi
             if p: s["p"] = p
+            if mid: s["pm"] = 1
+            if pb: s["pb"] = pb
             segs.append(s)
     # 쓰인 개통일 줄만 남기고 번호를 다시 매긴다
     used = sorted({s["oi"] for s in segs if "oi" in s}); re_i = {o: i for i, o in enumerate(used)}
     for s in segs:
         if "oi" in s: s["oi"] = re_i[s["oi"]]
     rows = [rows[o] for o in used]
-    out = {"note": "큰 도로(시안). o = 개통일(oi = open 표 번호), p = 연혁도에 광로·대로로 결정돼 그려진 첫 해. 선은 2026-11-11 표준노드링크(지금 모습)",
-           "cls": CLS_NAME, "planSheets": [{"year": s["year"], "title": s["title"]} for s in plan["sheets"]],
+    out = {"note": "큰 도로(시안). o = 개통일(oi = open 표 번호), p = 연혁도에 도시계획 도로로 그려진 첫 해(pm = 중로로 먼저 그려짐, pb = 광로·대로가 된 해). 선은 2026-11-11 표준노드링크(지금 모습)",
+           "cls": CLS_NAME, "planSheets": [{k: s[k] for k in ("year", "title", "midTitle") if k in s} for s in plan["sheets"]],
            "open": [{k: r.get(k, "") for k in ("노선", "구간", "개통일", "근거", "주소", "확인", "메모")} for r in rows], "segs": segs}
     if os.path.exists(GONE_CSV): out["goneRows"], out["gone"] = gone_roads()
     json.dump(out, open(OUT, "w"), ensure_ascii=False, separators=(",", ":"))
