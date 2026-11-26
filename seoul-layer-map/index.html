@@ -120,6 +120,7 @@ svg text { font-family: var(--body); }
 .rt { font: 500 12px var(--mono); padding: 2px 6px; border: 1px solid var(--bus); color: var(--ink); background: var(--paper); border-radius: 3px; cursor: pointer; }
 .rt:hover, .rt:focus-visible { background: var(--bus); color: var(--paper); outline: none; }
 .legend-bus { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12.5px; color: var(--ink-2); margin: 2px 0 0; }
+.legend-bus[hidden] { display: none; }   /* display: flex가 hidden 속성을 이기므로 따로 적는다 */
 .legend-bus svg { vertical-align: -2px; margin-right: 4px; }
 #busChart { display: block; width: 100%; height: 150px; }
 @media (prefers-reduced-motion: reduce) { .pulse { animation: none !important; } }
@@ -218,7 +219,9 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     <span><svg width="20" height="12" viewBox="0 0 20 12"><path d="M1,6H19" stroke="var(--bus)" stroke-width="2.2"/></svg>새로 생긴 노선(3년 안)</span>
     <span><svg width="20" height="12" viewBox="0 0 20 12"><path d="M1,6H19" stroke="var(--ink-2)" stroke-width="2.2" stroke-dasharray="5 4"/></svg>없어진 노선(3년 안)</span>
     <span><svg width="20" height="12" viewBox="0 0 20 12"><path d="M1,6H19" stroke="var(--area-new)" stroke-width="2.2"/></svg>연장·단축·경로 변경(최근 3년)</span>
-    <span id="villageLegend" hidden><svg width="20" height="12" viewBox="0 0 20 12"><rect x="1" y="2" width="12" height="8" fill="var(--village)" fill-opacity=".5"/><circle cx="17" cy="6" r="1.6" fill="var(--village-dot)"/></svg>마을버스 정류장(점)과 마을버스로만 닿는 땅(칠한 곳: 시내버스 정류장 300m 밖, 마을버스 정류장 300m 안). 2015년부터, 그 해 11월 셋째 수요일 승하차 기록</span>
+  </div>
+  <div class="legend-bus" id="villageLegend" hidden>
+    <span><svg width="20" height="12" viewBox="0 0 20 12"><rect x="1" y="2" width="12" height="8" fill="var(--village)" fill-opacity=".5"/><circle cx="17" cy="6" r="1.6" fill="var(--village-dot)"/></svg>마을버스 정류장(점)과 마을버스로만 닿는 땅(칠한 곳: 시내버스 정류장 300m 밖, 마을버스 정류장 300m 안). 2015년부터, 그 해 11월 셋째 수요일 승하차 기록</span>
   </div>
   <div class="legend-land" id="landLegend" hidden>
     <div class="bar" id="landBar"></div>
@@ -327,14 +330,14 @@ const DATA = {"topo":{"type":"Topology","arcs":[[[40031,31959],[49,-342],[356,-3
   if (metro) document.getElementById("metroChip").hidden = false;
   const bus = DATA.bus || null;
   const village = DATA.village || null;
-  if (village) { document.getElementById("villageChip").hidden = false; document.getElementById("villageLegend").hidden = false; }
+  if (village) document.getElementById("villageChip").hidden = false;
   // 그 해 자료가 없으면(2023–2025) 그 앞의 가장 가까운 해를 쓴다
   function villageYear(y) {
     if (!village || y < 2015) return null;
     const ys = Object.keys(village.years).map(Number).filter(v => v <= y);
     return ys.length ? Math.max(...ys) : null;
   }
-  if (bus) { document.getElementById("busChip").hidden = false; document.getElementById("busLegend").hidden = false; document.getElementById("busBlock").hidden = false; }
+  if (bus) { document.getElementById("busChip").hidden = false; document.getElementById("busBlock").hidden = false; }
   if (land) { document.getElementById("landChip").hidden = false; document.getElementById("landBlock").hidden = false; }
   let selRoute = null;  // {net: "old"|"new", i}
   let selDong = null;   // 땅값 정보창을 연도에 맞춰 다시 쓰려고 기억
@@ -453,7 +456,7 @@ const DATA = {"topo":{"type":"Topology","arcs":[[[40031,31959],[49,-342],[356,-3
     if (landShown) gLand.selectAll("path")
       .attr("display", d => d.properties.y <= year ? null : "none")
       .attr("fill", d => { const r = landRatio(d.properties.cd, year); return r == null ? "url(#landNA)" : `var(--land-${landClass(r)})`; });
-    d3.select("#landLegend").attr("hidden", landOn ? null : true);
+    renderLegends();
     // area + new area
     gArea.selectAll("*").remove(); gNew.selectAll("*").remove(); gRings.selectAll("*").remove();
     if (er) {
@@ -698,6 +701,13 @@ const DATA = {"topo":{"type":"Topology","arcs":[[[40031,31959],[49,-342],[356,-3
     }
   }
 
+  // 범례: 켠 레이어의 범례만 보인다. 마을버스는 자료가 있는 해(2015–)에만
+  function renderLegends() {
+    d3.select("#busLegend").attr("hidden", layerOn.bus && bus ? null : true);
+    d3.select("#villageLegend").attr("hidden", layerOn.village && villageYear(year) ? null : true);
+    d3.select("#landLegend").attr("hidden", layerOn.land && land ? null : true);
+  }
+
   function eraText(er, gp) {
     if (!er) return "한성부 · 성저십리 포함 (1914년 이전 경계는 그리지 않음)";
     const pre = year < 1946 ? "경성부" : year < 1949 ? "서울특별자유시" : "서울특별시";
@@ -740,7 +750,7 @@ const DATA = {"topo":{"type":"Topology","arcs":[[[40031,31959],[49,-342],[356,-3
   let evOn = true, lastEvYear = null;
   function renderEvPop() {
     const box = document.getElementById("evPop");
-    const list = evOn ? evs.filter(e => e.year === year).sort((a, b) => String(a.date || a.year).localeCompare(String(b.date || b.year))) : [];
+    const list = evOn ? evs.filter(e => e.year === year) : [];   // evs가 이미 날짜순
     if (!list.length) { box.hidden = true; box.innerHTML = ""; lastEvYear = null; return; }
     const maxN = W < 560 ? 2 : 4, more = list.length - maxN;
     box.innerHTML = `<ul>${list.slice(0, maxN).map(e => `<li><i class="k" style="background:${e.color || KIND_COLOR[e.kind] || "var(--gu)"}"></i><span><span class="d">${e.date || e.year}</span>${e.text}${e.conf ? ` <span class="c">(${e.conf})</span>` : ""}</span></li>`).join("")}</ul>` +
@@ -912,7 +922,12 @@ const DATA = {"topo":{"type":"Topology","arcs":[[[40031,31959],[49,-342],[356,-3
   }
 
   // ---------- log ----------
-  const evs = DATA.events.slice().sort((a, b) => a.year - b.year || (a.sort || 0) - (b.sort || 0));
+  // 순서: 지도에 놓인 해 → 날짜 → 같은 날짜면 개통(sort 2)이 폐지(sort 3)보다 앞 → 원래 순서.
+  // 날짜는 1899.5.17과 1899.09.18처럼 자릿수가 섞여 있어 글자가 아니라 숫자로 견주고, 달·날이 없으면 그 해(그 달) 끝에 둔다
+  const dateKey = (e) => { const p = String(e.date || e.year).match(/\d+/g).map(Number); return [p[0], p[1] ?? 13, p[2] ?? 32]; };
+  const evs = DATA.events.map((e, i) => ({ e, i, k: dateKey(e) }))
+    .sort((a, b) => a.e.year - b.e.year || a.k[0] - b.k[0] || a.k[1] - b.k[1] || a.k[2] - b.k[2] || (a.e.sort || 0) - (b.e.sort || 0) || a.i - b.i)
+    .map(x => x.e);
   const li = d3.select("#log").selectAll("li").data(evs).join("li").attr("class", "ev").attr("tabindex", 0)
     .on("click", (ev, d) => setYear(d.year, true))
     .on("keydown", (ev, d) => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); setYear(d.year, true); } });
