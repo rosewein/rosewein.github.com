@@ -1,6 +1,6 @@
 # 전국 연대지도 — HANDOFF
 
-2026-11-27 기준. 이 폴더를 맡은 채팅은 이 문서를 먼저 읽고, 자세한 기록은 `docs/`에서 필요한 절만 찾아 읽는다.
+2026-11-27 기준(철도 선형 잇기 1단계 끝). 이 폴더를 맡은 채팅은 이 문서를 먼저 읽고, 자세한 기록은 `docs/`에서 필요한 절만 찾아 읽는다.
 
 ## 원본과 읽는 순서
 
@@ -14,7 +14,7 @@
 |---|---|---|
 | 고속도로 | 끝. 재정 구간표 131행, 민자 개통일 24번, 재정+민자 전국 선형(OSM 선에 날짜), 노선마다 한 줄로 줄인 단순 선형 | `docs/도로.md` |
 | 표준노드링크 판별 비교 | 러프 시안 아티팩트 「표준노드링크 판별 비교」(<https://claude.ai/artifact/ToNP7evBzkBRPCcVAktX8d>, 이지만 볼 수 있음). 페이지 소스는 `src/nodelink/site/` | `docs/도로.md` 「표준노드링크 판별 비교」 |
-| 철도 | 국철 340행·도시철도 79행 구간 사건표까지. 선에 날짜를 붙이는 일은 아직 안 함 | `docs/철도.md` |
+| 철도 | 국철 340행·도시철도 79행 구간 사건표. 선형 잇기 1단계(역 이름 → OSM 역·손 자리 대응) 끝: 모든 구간의 끝·경유 역이 자리를 얻음(손 자리 64점은 추정). 2단계(그래프·경로 배정)는 아직 | `docs/철도.md` 「선형 잇기 1단계」 |
 | 공단·택지 | 자료 후보만 적음 | `docs/자료후보.md` 「지역개발(공단·택지)」 |
 | 지도 화면 | 없음 | — |
 
@@ -24,8 +24,10 @@
 
 입력:
 - `data/rail/국철_구간사건표_20261127.csv`, `data/rail/도시철도_구간사건표_20261127.csv`
-- OSM 철도 추출: `src/rail/osm_rail.py`로 남쪽·북쪽 pbf에서 `work/rail/osm_rail_s.json`, `osm_rail_n.json`을 만든다(2026-11-27 추출 결과: 남쪽 26,905선·1,391역·474관계, 북쪽 13,598선·814역·179관계). 선마다 노드 id와 railway·usage·service·폐선 태그(abandoned:railway 등)·start_date 같은 태그가 들어 있다.
+- OSM 철도 추출: `src/rail/osm_rail.py`로 남쪽·북쪽 pbf에서 `work/rail/osm_rail_s.json`, `osm_rail_n.json`을 만든다(2026-11-27 고친 스크립트로 다시 뽑은 결과: 남쪽 26,884선·1,772역·474관계, 북쪽 13,596선·865역·179관계. 역에는 화물역·신호장(kind=service)과 폐역(kind=hist)도 들어 있다). 선마다 노드 id와 railway·usage·service·폐선 태그(abandoned:railway 등)·start_date 같은 태그가 들어 있다.
 - 고속도로 때 쓴 그래프·끝점·최단 경로 코드: `src/road/graph.py`, `src/road/assign.py`(노드 그래프, 끝점 이름 찾기, scipy dijkstra). 그대로 쓰기보다 참고한다.
+
+진행(2026-11-27): 1단계를 끝냈다. 이지가 정한 것(제안 대응은 묶어 원문 확인, 옛 역·지금 역은 옮긴 날로, 폐역은 폐선 위 자리와 손 자리로 반드시 지도에, 역이 아닌 끝은 인입선 끝처럼, 금강산선·북쪽 동해북부선은 보여 주었다 없앰)을 `src/rail/station_alias.py`에 넣었다. 국철 336줄·도시철도 79줄의 모든 점이 OSM 역이나 손 자리에 이어졌다. 손 자리 가운데 소재지 근거 없이 역 이름과 같은 지명 점에 둔 10역은 다듬어야 한다(`docs/철도.md` 「확인 못 한 것」). 다음은 2단계(그래프·경로 배정)다.
 
 순서(계획):
 1. 역 이름 잇기: 구간 칸의 양 끝을 OSM 역(railway=station·halt) 이름에 잇는다. 옛 이름 대응표를 둔다(예: 경성·남대문 → 서울, 이리 → 익산, 송정리 → 광주송정). 북쪽 역 이름은 OSM에서 조선어 표기일 수 있다.
@@ -91,12 +93,14 @@
 2. `src/rail/parse_yeonpyo.py`: 철도 통합 연표에서 개통·개량·폐지 문장을 골라 `work/rail/yp_events.json`(394건).
 3. `src/rail/make_rail_table.py`: 국철 구간 사건표 → `data/rail/`. 줄은 스크립트 안에 손으로 적혀 있고, 국토부 한글 파일과 맞춰 고친 내역은 `molit_patch.py`(make_rail_table.py가 읽어 씀)에 따로 있다.
 4. `src/rail/make_urban_table.py`: 도시철도 구간 사건표 → `data/rail/`.
-5. 국토부 파일 여는 도구: `unegg.py <egg> <폴더>`(알집 EGG 풀기, 암호 없는 파일·deflate 방식만 시험함), `hwp5html --output <폴더> <hwp>` 뒤 `xhtml_tables.py <폴더>/index.xhtml`(표 칸 읽기), `hwp5`가 오류를 내는 파일은 `hwp_rawtext.py <hwp>`.
+5. `src/rail/station_match.py`: 구간 사건표 양 끝·경유 역을 OSM 역·손 자리에 잇는다(→ `work/rail/station_match.json`, `station_manual_points.json`, `yp_renames.json`). 대응표·옮긴 날·손 자리·끝 처리는 `station_alias.py`(손으로 적는 표). 연표 CSV(RAW)를 읽는다. `src/rail/station_report.py` → `work/rail/station_match_report.md`.
+6. 국토부 파일 여는 도구: `unegg.py <egg> <폴더>`(알집 EGG 풀기, 암호 없는 파일·deflate 방식만 시험함), `hwp5html --output <폴더> <hwp>` 뒤 `xhtml_tables.py <폴더>/index.xhtml`(표 칸 읽기), `hwp5`가 오류를 내는 파일은 `hwp_rawtext.py <hwp>`.
 
 옮길 때 확인한 것(2026-11-27): 경로를 `paths.py`로 바꾼 뒤 다시 돌려 옮기기 전 결과와 바이트까지 같게 나온 것은 make_table, make_rail_table, make_urban_table, parse_yeonpyo, hw_csv_check, segs, run_jaejeong(재정 선형), merge(전국 선형·cum_len), simplify2(단순 선형)다. check.py와 plot3.py는 돌아가는 것만 봤다. osm_ex·osm_ops·osm_rail, way_first·first_ed, 표준노드링크 스크립트 전부, plot.py·plot2.py는 경로만 바꾸고 다시 돌려 보지 않았다.
 
 ## 정할 것(이지)
 
+0. 철도 손 자리 다듬기: 지명 점에 둔 폐역 자리를 무엇으로 고칠지(옛 지형도·역 터 표지 등), 금강산선 역 거리를 어느 자료로 할지(`docs/철도.md` 「확인 못 한 것」).
 1. 지도 이름(작업 이름 「전국 연대지도」).
 2. master에 합쳐 공개하는 때. 폴더 이름대로면 주소는 `rosewein.github.io/korea_layer_map/`이 된다.
 3. 버전 매기는 법.
@@ -118,3 +122,4 @@
 - 한국어 위키백과 노선 문서는 작업 공간의 웹 가져오기로 읽힌다(주소에 한글 제목을 그대로 넣음). 「중앙선_(한국철도공사)」, 「부산–김해_경전철」, 「우이신설선」, 「신림선」으로 넣은 주소는 찾지 못함(url_not_found)으로 나왔다. 실제 문서 제목이 달랐는지는 확인하지 못했다.
 - 국가기록원 「기록으로 보는 한국」(`theme.archives.go.kr`)과 서울시 「내 손안에 서울」(`mediahub.seoul.go.kr`)은 작업 공간의 웹 가져오기로 읽힌다.
 - 작업 공간에서 git 태그는 올리지 못한다. 태그는 GitHub 화면의 Releases에서 만든다.
+- 웹 가져오기는 한국어 위키백과(ko.wikipedia.org)는 주소를 바로 넣어도 열리지만, 일본어 위키백과는 승인 요청이 떴다(2026-11-27). 영어 위키백과는 검색 결과에 나온 주소로 열었다. 북한 역의 옛 이름은 영어 위키백과 노선 문서 표의 「Former Name」 칸에 잘 정리돼 있다.
