@@ -4,7 +4,7 @@
 
 ## v2.0 통합(v2-integration 브랜치, 2026년 11월 27일)
 
-`v2-integration`은 원격 master v1.8(`52f9a61`)에서 만든 통합 브랜치입니다. 멈출 지점에 선 네 갈래를 차례로 받았고(roads는 멈출 지점 뒤에 올라온 「읽는 법」 문단 커밋 `8abf2dc`까지, 이지가 정함), 물길(`waterways` `3bf37eb`)을 마지막 레이어로 받았습니다(2026-11-27 14:19). 그 뒤 이지가 정한 대로 v2.0 준비를 마쳤습니다(머리 `1ed6689`, 14:51). 남은 것은 버전 v2.0 커밋과 master로 올리기뿐이고, 둘 다 이지가 확인한 뒤에 합니다. 버전은 아직 v1.8입니다. 원격 master는 그사이 수도권 갈래가 `metropolitan_layer_map/` 폴더만 더해 `bb9db1c`가 됐고, `git merge-tree`로 v2-integration과 시험으로 합쳐 보면 충돌이 없습니다. 프로젝트 문서 「v2.0 통합 분석」의 「갱신 기록」에 커밋마다 한 줄씩 있습니다.
+`v2-integration`은 원격 master v1.8(`52f9a61`)에서 만든 통합 브랜치입니다. 멈출 지점에 선 네 갈래를 차례로 받았고(roads는 멈출 지점 뒤에 올라온 「읽는 법」 문단 커밋 `8abf2dc`까지, 이지가 정함), 물길(`waterways` `3bf37eb`)을 마지막 레이어로 받았습니다(2026-11-27 14:19). 그 뒤 이지가 정한 대로 v2.0 준비를 마쳤고(`d0aa109`–`1ed6689`), 이지가 확인해 버전 커밋(`852b815`, v2.0 2026-11-27, README 「변경 기록」)을 만들어 원격 master(`bb9db1c`, 수도권 갈래가 `metropolitan_layer_map/`만 더한 상태)에 합쳐 올렸습니다(`34b23fc`, 15:00). 합친 master의 `seoul-layer-map/`은 `v2-integration`과 같고, `metropolitan_layer_map/`은 그대로입니다. `v2-integration`도 master까지 앞으로 감았습니다. 태그 `seoul-layer-map-v2.0`은 작업 공간에서 만들었지만 원격에 올리기가 막혀(작업 공간 프록시가 HTTP 403) 원격에 없습니다. 프로젝트 문서 「v2.0 통합 분석」의 「갱신 기록」에 커밋마다 한 줄씩 있습니다.
 
 ### 받은 갈래와 합침 커밋
 
@@ -18,6 +18,7 @@
 | 5 | `roads` 다시(`8abf2dc`, 「읽는 법」 큰 도로 설명 문단) | `4fe67c7` | 없음(충돌은 index.html·fonts/뿐) | 20 | 8.88MB / 2.11MB |
 | 6 | `waterways`(`3bf37eb`, 연대별 물길·물길 사건 카드, 마지막 레이어) | `66d0a35` | README 1곳(OSM 줄은 한 줄 그대로, 그 아래 물길 출처 세 줄) | 20 | 9.05MB / 2.15MB |
 | — | v2.0 준비(아래 「이지가 정한 것과 고친 것」) | `d0aa109`, `75c9e94`, `c2a9638`, `1ed6689` | — | 20 | 9.06MB / 2.16MB |
+| — | 버전 v2.0, master에 합침 | `852b815`, `34b23fc` | 없음(원격 master와 충돌 없음) | 20 | 9.06MB / 2.16MB |
 
 - 충돌은 diff3(기준 줄까지 보이게)로 펼쳐 덩어리마다 손으로 정한 규칙으로 풀었습니다. 양쪽을 기계적으로 이어 붙이지 않았습니다. 가장 큰 덩어리(`const JSYM` 뒤에 큰 도로 코드 83줄과 궁궐·1914년 앞 시역·5서 코드 147줄이 함께 들어간 곳)는 두 덩어리의 줄 수가 각 갈래 파일에서 `JSYM`과 `drawJoseon()` 사이 줄 수와 같은 것을 보고 괄호 짝이 맞는지 확인했습니다.
 - 지금 모양: `layerOn`은 한 줄(`… oldmap: true, stland: false, gb: false, urban: false, roads: true, palace: true }`)이고 그 아래 `GB_FROM` 줄. 어두운 화면 색 두 줄은 궁궐 변수가 `--joseon-2` 뒤, 구획정리·큰 도로 변수가 `color-scheme` 앞. 지도 출처 줄은 `#toast` 다음 `#oldAttrib`·`#upAttrib`·`#verLabel`을 담은 한 줄. README OpenStreetMap 출처는 한 줄(궁역·궁궐 건물 자리와 `water.json`의 역 둘레 땅값 쓰임을 함께 적음).
@@ -49,11 +50,11 @@
 
 ### 다음 할 일
 
-1. 이지가 확인하면 `src/build.py`의 `data["version"]`을 v2.0으로, README 「변경 기록」에 v2.0 줄을 쓰고 빌드해 커밋.
-2. master로 올리기 전에 무엇을 올리는지 이지에게 한 번 더 확인. 원격 master(`bb9db1c`, 수도권 폴더만 더함)와는 충돌이 없음.
-3. master가 바뀌면 프로젝트 문서 「프로젝트 인수인계」의 「지도의 현재 상태」를 고침.
-4. 역 둘레 땅값 분석(채팅 A2)이 `station_land.json`을 다시 만들면 `land-parcel-trace`를 다시 받기(14:52 확인 때 그대로).
-5. v2.0 뒤로 넘긴 것: 같은 원도(GR_89)를 urban-plan과 roads가 따로 맞춘 변환 두 벌, 이 HANDOFF가 220KB 넘게 커진 것(레이어별 문서로 나눌지), 큰 도로 갈래가 남긴 일(판정 문턱 등).
+1. (끝남, 15:00) 버전 v2.0 커밋 `852b815`, master에 합침 `34b23fc`.
+2. 태그 `seoul-layer-map-v2.0`: 이지가 GitHub에서 `34b23fc`에 붙이거나, 태그를 올릴 수 있는 환경에서 올리기.
+3. 멈춘 갈래(`land-parcel-trace`·`urban-plan`·`roads`·`old-maps`·`waterways`·`map-ui`·`building-layer`)를 이어 갈 때는 먼저 master v2.0을 받아 맞추기. 「새 채팅 시작 문구」의 「v2.0 뒤에 멈춘 갈래를 이어 갈 때 쓰는 문구」도 그때 master v2.0에 맞춰 고치기.
+4. 역 둘레 땅값 분석(채팅 A2)이 `station_land.json`을 다시 만들면 master v2.0 위에서 받기.
+5. v2.0 뒤로 넘긴 것: 같은 원도(GR_89)를 urban-plan과 roads가 따로 맞춘 변환 두 벌, 이 HANDOFF가 240KB로 커진 것(레이어별 문서로 나눌지), 큰 도로 갈래가 남긴 일(판정 문턱 등).
 
 ### 확인 못 한 것
 
