@@ -120,14 +120,17 @@ if data["land"] and os.path.exists(F("method_land.html")):
     land_src = " 땅값은 서울 열린데이터광장 「서울시 개별공시지가 정보」(OA-1180, " + f'{data["land"]["years"][0]}~{data["land"]["years"][-1]}' + "년 파일, 원본 서울부동산정보광장)."
     assert method_html.count(SRC_AT) == 1, "method.html 출처 문단이 바뀜 — build.py의 SRC_AT을 고칠 것"
     data["methodHtml"] = method_html.replace('<p class="small">출처:', open(F("method_land.html")).read() + '<p class="small">출처:', 1).replace(SRC_AT, SRC_AT + land_src, 1)
+    land_tail = land_src   # 출처 문단의 땅값 묶음 끝. 아래 갈래 출처는 설명 문단 차례(땅값 → 역 둘레 땅값 → 그린벨트 → 새 건물)대로 이 뒤에 붙인다(v2.0, 이지가 정함)
 # 역 둘레 땅값 설명문: 땅값 설명 뒤, 출처는 땅값 출처 뒤에 한 줄
 if data["stationLand"] and data["land"] and os.path.exists(F("method_station_land.html")):
     st_src = " 역 둘레 땅값의 필지 위치는 V-World 「연속지적도형정보」(2026-11-08·2016-01-13분)와 「토지이동이력정보」(2026-10-31분)로 찾음(둘 다 V-World 표기 CC BY)."
-    data["methodHtml"] = data["methodHtml"].replace('<p class="small">출처:', open(F("method_station_land.html")).read() + '<p class="small">출처:', 1).replace(land_src, land_src + st_src, 1)
+    data["methodHtml"] = data["methodHtml"].replace('<p class="small">출처:', open(F("method_station_land.html")).read() + '<p class="small">출처:', 1).replace(land_tail, land_tail + st_src, 1)
+    land_tail += st_src
 # 그린벨트 설명과 출처 한 줄(역 둘레 땅값 설명 뒤)
 if data["greenbelt"] and data["land"] and os.path.exists(F("method_greenbelt.html")):
     gb_src = f" 그린벨트는 V-World 「용도지역지구정보」의 「개발제한구역」({data['greenbelt']['date']}분, 라이선스 표기 없음)."
-    data["methodHtml"] = data["methodHtml"].replace('<p class="small">출처:', open(F("method_greenbelt.html")).read() + '<p class="small">출처:', 1).replace(land_src, land_src + gb_src, 1)
+    data["methodHtml"] = data["methodHtml"].replace('<p class="small">출처:', open(F("method_greenbelt.html")).read() + '<p class="small">출처:', 1).replace(land_tail, land_tail + gb_src, 1)
+    land_tail += gb_src
 # 새 건물: building.py가 만든 법정동·사용승인 연도별 연면적(지금 건축물대장 + 폐쇄말소대장의 '말소').
 # 지도에는 BLD_FROM년부터 BLD_WIN년 창으로 칠하므로 창의 첫 해부터 넣고, 면적은 BLD_UNIT㎡ 단위로 줄인다
 BLD_FROM, BLD_WIN, BLD_UNIT = 1960, 5, 10
@@ -175,7 +178,7 @@ if os.path.exists(F("building.json")):
             bld_src = bld_src.replace("와 「서울시 폐쇄말소대장 표제부」(OA-22432, ", "(")
         mh = data["methodHtml"].replace(SRC_PAR, mb + SRC_PAR, 1)
         # 출처 문단에서 땅값 출처 바로 뒤(땅값이 없으면 버스 자료 뒤)에 넣는다
-        at = (SRC_AT + land_src) if data["land"] and (SRC_AT + land_src) in mh else SRC_AT
+        at = (SRC_AT + land_tail) if data["land"] and (SRC_AT + land_tail) in mh else SRC_AT   # 땅값 묶음(땅값·역 둘레 땅값·그린벨트) 뒤
         assert mh.count(at) == 1, "출처 문단에서 새 건물 출처를 넣을 자리를 못 찾음 — build.py를 고칠 것"
         data["methodHtml"] = mh.replace(at, at + bld_src, 1)
 # 옛 지도(조선 후기 대로·역·원·나루, 1914 경성부시가강계도): 자료가 있을 때만 설명문을 출처 문단 앞에 넣고, 출처 문단 끝에 한 줄
