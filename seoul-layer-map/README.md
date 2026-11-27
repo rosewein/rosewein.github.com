@@ -18,6 +18,8 @@
 | 마을버스 | 2015–2026 | 마을버스 정류장과 마을버스로만 걸어서 닿는 땅(시내버스 정류장 300m 밖, 마을버스 정류장 300m 안) |
 | 땅값(공시지가) | 1990–2026 | 법정동별 ㎡당 개별공시지가 중앙값이 그 해 서울 전체 필지 중앙값의 몇 배인지. 두 배 간격 9단계(로그 눈금) |
 | 새 건물 | 1960–2026 | 법정동마다 그 해까지 5년 동안 사용승인된 건물 연면적 ÷ 동 면적(신축 밀도, %). 두 배 간격 8단계(로그 눈금), 주거·상업·업무만 골라 보기. 지금 대장에 헐려 말소된 건물을 더함. 땅값과 함께 켜면 원(넓이 = 5년 연면적) |
+| 역 둘레 땅값(개통 전후) | 1990–2026 | 1995–2018년에 연 지하철역 95곳 둘레 250m·500m·1km 고리마다, 개통 5년 전보다 '비슷한 땅'(같은 구·같은 값대·역 1km 밖)에 견줘 얼마나 더 올랐는지(같은 필지끼리 견줌). 개통 5년 전부터 보이고, 개통 5년 뒤부터는 그때 값을 옅게 남김. 강·하천 수면은 뺌. 땅값(공시지가)과는 함께 켜지 않음 |
+| 그린벨트(지금 경계) | 1971–2026 | 2026년 11월 개발제한구역 경계를 첫 지정 해인 1971년부터 보임(지정 때 경계는 자료 없음) |
 | 땅값과 건물(탭) | 1995–2026 | 법정동마다 5년 신축 밀도와 같은 5년 땅값 배수 변화를 견준 흩뿌림 그림, 역 신설·용도로 나눈 중앙값 표 |
 | 연표 | 1899–2026 | 위 레이어의 사건을 한 줄로 |
 
@@ -35,11 +37,11 @@
 | 자료 | 이 지도에서 쓴 곳 | 출처 | 이용 조건 |
 |---|---|---|---|
 | 2004년 이전 버스 노선, 2004년 이후 폐선 노선, 노선별 신설·폐선 연도, 일부 사건 설명 | `data/bus.json`, `data/dead_routes.json`, `data/route_years.json`, `src/namu_open_years.py`, `src/dead_supp.py`와 지도 안의 같은 자료 | 나무위키 「서울특별시 시내버스/2004년 개편 전 목록」 「서울특별시 시내버스/폐선」 하위 문서, 노선 문서, 「YYYY년 개업한/폐지된 버스 노선」 분류(2026년 11월 열람) | [CC BY-NC-SA 2.0 KR](https://creativecommons.org/licenses/by-nc-sa/2.0/kr/) — 출처 표시, 비영리, 동일조건 변경 허락 |
-| 도로망, 철도·지하철 선로 형상, 물길(한강 수면·하천), 성문·산꼭대기 자리 | 모든 버스 선형, `data/metro.json`, `data/rail.json`, `data/water.json`, `data/joseon.json`(대로 근사선·성문), `src/kanggye1914.py`(옛 지도 기준점) | © OpenStreetMap contributors (BBBike 서울 추출본 2026-11-22, [kimmdr2/metroscope](https://github.com/kimmdr2/metroscope) 정리본) | [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/) |
+| 도로망, 철도·지하철 선로 형상, 물길(한강 수면·하천), 성문·산꼭대기 자리 | 모든 버스 선형, `data/metro.json`, `data/rail.json`, `data/water.json`(역 둘레 땅값 고리에서 수면을 빼는 데도 씀, `data/station_land.json`), `data/joseon.json`(대로 근사선·성문), `src/kanggye1914.py`(옛 지도 기준점) | © OpenStreetMap contributors (BBBike 서울 추출본 2026-11-22, [kimmdr2/metroscope](https://github.com/kimmdr2/metroscope) 정리본) | [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/) |
 | 2026년 버스 노선(정류장 순번) | `data/bus2026.json` | 서울 열린데이터광장 「서울시 버스노선별 정류장별 승하차 인원 정보」(OA-12912, 2026-11-18분) | 서울특별시 공공데이터, 열린데이터광장 이용약관 제11조(저작자·출처 표시 조건 자유이용) |
 | 마을버스 정류장(2015–2022년) | `data/village_layer.json` | 서울 열린데이터광장 OA-12912 연간 파일(해마다 11월 셋째 수요일 하루치), 「서울시 버스노선별 표준정류장ID 연계 좌표정보」(2019-06-20) | 서울특별시 공공데이터, 열린데이터광장 이용약관 제11조(저작자·출처 표시 조건 자유이용) |
 | 버스 정류장 좌표, 노선 ID | 버스 선형, 노선 연도 판단 | [kyckang/SeoulTransitMap_data](https://github.com/kyckang/SeoulTransitMap_data) (서울시·TOPIS 원자료) | 저장소 README 표기: 공공누리 제1유형(출처 표시) |
-| 지하철역 좌표 | `data/metro.json` | 서울시 역사마스터 정보([sudo-happy/data-archive](https://github.com/sudo-happy/data-archive) 정리본) | 서울시 공공데이터(출처 표시). 정리본 저장소의 라이선스 표기는 찾지 못함 |
+| 지하철역 좌표 | `data/metro.json`, 역 둘레 땅값의 노선별 승강장 자리(`src/station_platforms.py`, 결과는 `data/station_land.json`의 고리 중심) | 서울시 역사마스터 정보([sudo-happy/data-archive](https://github.com/sudo-happy/data-archive) 정리본) | 서울시 공공데이터(출처 표시). 정리본 저장소의 라이선스 표기는 찾지 못함 |
 | 지하철역 좌표 일부(8호선 동구릉·장자호수공원·구리, 5호선 미사) | `data/metro_extra.json` | OpenStreetMap 역 자리([kimmdr2/metroscope](https://github.com/kimmdr2/metroscope) `data/network.json`, 2026-10-12 생성). 역사마스터에 없거나(별내선) 선로에서 떨어진(미사) 역. v1.7.2 | © OpenStreetMap contributors, [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/) |
 | 개별공시지가 | `data/landprice.json`, `src/landprice.py` | 서울 열린데이터광장 「서울시 개별공시지가 정보」(OA-1180) 1990–2026년 연도별 파일(2026-11-26 받음, 원본 서울부동산정보광장) | 데이터셋 페이지 표기: 이용허락범위 제한 없음. 공공데이터포털의 같은 자료(15052418) 표기는 공공누리 제1유형(출처 표시) |
 | 건축물대장 표제부, 폐쇄말소대장 표제부(새 건물) | `data/building.json`, `src/building.py` | 서울 열린데이터광장 「서울시 건축물대장 표제부」(OA-22424)와 「서울시 폐쇄말소대장 표제부」(OA-22432), 2026-11-26 받음, 원천 서울 건축주택 종합정보시스템 | 데이터셋 페이지 표기: 이용허락범위 제한 없음. 공공데이터포털의 같은 자료(15049335) 표기는 공공누리 제1유형(출처 표시) |
@@ -49,6 +51,8 @@
 | 역·원·나루 문헌 근거(『동국여지비고』 등 원문) | `data/joseon.json` | 국사편찬위원회 HGIS 「한양역사지리정보 역사지명데이터」(xlsx, 2026-11-26 받음) | 출처 표시(HGIS 누리집 안내) |
 | 원 터 표석 주소, 대로 경유지 | `src/joseon.py` | 서울신문 기사(2006-10-23 「부산에서 서울까지 다시 걷는 옛길」, 2018-06-28·2018-12-20 「서울미래유산 그랜드 투어」, 2019-11-07, 2022-02-11, 2026-07-31), 공유마당 「청파 배다리」, 서울시 한강 누리집, 경기도 웹진 「경기옛길」 | 지명·주소·경로 사실만 참고, 글은 옮기지 않음 |
 | 1914년 「경성부시가강계도」(6월 수정판) | `img/kanggye1914.webp`, `img/kanggye1914_inset.webp`, `data/oldmap.json`, `src/kanggye1914.py` | 서울역사아카이브 소장유물 [「경성부시가강계도」](https://museum.seoul.go.kr/archive/archiveNew/NR_relicView.do?mcsjgbnc=PS01003026001&mcseqno1=001349&mcseqno2=00000&cdLanguage=KOR)(서울역사001349, 십자옥 발행 1:10,000, 서울역사박물관 소장, 2026-11-26 받음) | 공공누리 제1유형(출처표시). 출처표시 예: 서울역사박물관 소장. 이용 신청서는 내지 않고 출처표시로 씀(지도 출처 줄·설명문) |
+| 연속지적도형정보, 토지이동이력정보 | 역 둘레 땅값에서 필지 위치를 찾는 데만 씀(`src/cad_points.py`, `src/cad_points2016.py`, `src/parcel_lineage.py`, `src/parcel_locations.py`). 지도에는 역별 고리 값(`data/station_land.json`)만 들어감 | V-World 「연속지적도형정보」(dsId=23) 서울 2026-11-08분·2016-01-13분, 「토지이동이력정보」(dsId=13) 서울 2026-10-31분(2026-11-26 받음, 로그인 필요) | V-World 데이터셋 페이지 표기: CC BY |
+| 개발제한구역(그린벨트) | `data/greenbelt.json`, `src/greenbelt_layer.py`(서울만 잘라 8m로 단순화), 역 둘레 땅값의 그린벨트 비율(`src/gb_flags.py`) | V-World 「용도지역지구정보」(dsId=24)의 「개발제한구역지관리/개발제한구역」 전국 SHP, 2026-11-09분과 2016-03-05분(2026-11-26 받음, 로그인 필요) | V-World 데이터셋 페이지 표기: 라이선스 지정 없음. 같은 내용의 「(연속주제)_개발제한구역지정관리/개발제한구역」(dsId=30261) 표기는 CC BY-NC-ND |
 | 법정동 경계 | `data/emd_topo.json` | [southkorea/seoul-maps](https://github.com/southkorea/seoul-maps) (통계청·행정안전부 원자료) | 저장소 README 표기: Apache 2.0 |
 | 폐역 좌표 일부 | `data/rail.json` | OpenHistoricalMap | CC0 |
 | 전차·철도·지하철 연혁, 행정구역 변천 | 연표, `data/tram.json`, `data/years.json`, `data/gu_periods.json` | 위키백과, 한국민족문화대백과사전, 서울연구원, 서울시 미디어허브, 국토교통부·서울시 보도자료 등 | 날짜와 사실 위주로 옮겼고, 출처는 지도 아래 설명에 적음 |

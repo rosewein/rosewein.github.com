@@ -100,12 +100,24 @@ data = {
   # 옛 지도(시안): kanggye1914.py가 만든 이미지의 위치·출처. 이미지는 img/에 따로 두고 처음 보일 때 불러온다
   "oldmap": {k: v for k, v in json.load(open(F("oldmap.json"))).items() if k != "gcp"} if os.path.exists(F("oldmap.json")) else None,
 }
+# 역 둘레 땅값(개통 전후): station_land_layer.py가 만든 역별 고리 값과 모양. 파일이 없으면 칩이 나타나지 않음
+data["stationLand"] = json.load(open(F("station_land.json"))) if os.path.exists(F("station_land.json")) else None
+# 그린벨트(개발제한구역) 지금 경계: greenbelt_layer.py가 V-World 용도지역지구정보에서 서울만 잘라 만든 것
+data["greenbelt"] = json.load(open(F("greenbelt.json"))) if os.path.exists(F("greenbelt.json")) else None
 # 땅값 설명문은 자료가 있을 때만 「이 지도를 읽는 법」에 넣는다(출처 문단 앞 + 출처 한 줄)
 if data["land"] and os.path.exists(F("method_land.html")):
     SRC_AT = "연계 좌표정보」(2019년 6월 20일)."   # 출처 문단에서 버스 자료 다음, 나무위키 연혁 앞
     land_src = " 땅값은 서울 열린데이터광장 「서울시 개별공시지가 정보」(OA-1180, " + f'{data["land"]["years"][0]}~{data["land"]["years"][-1]}' + "년 파일, 원본 서울부동산정보광장)."
     assert method_html.count(SRC_AT) == 1, "method.html 출처 문단이 바뀜 — build.py의 SRC_AT을 고칠 것"
     data["methodHtml"] = method_html.replace('<p class="small">출처:', open(F("method_land.html")).read() + '<p class="small">출처:', 1).replace(SRC_AT, SRC_AT + land_src, 1)
+# 역 둘레 땅값 설명문: 땅값 설명 뒤, 출처는 땅값 출처 뒤에 한 줄
+if data["stationLand"] and data["land"] and os.path.exists(F("method_station_land.html")):
+    st_src = " 역 둘레 땅값의 필지 위치는 V-World 「연속지적도형정보」(2026-11-08·2016-01-13분)와 「토지이동이력정보」(2026-10-31분)로 찾음(둘 다 V-World 표기 CC BY)."
+    data["methodHtml"] = data["methodHtml"].replace('<p class="small">출처:', open(F("method_station_land.html")).read() + '<p class="small">출처:', 1).replace(land_src, land_src + st_src, 1)
+# 그린벨트 설명과 출처 한 줄(역 둘레 땅값 설명 뒤)
+if data["greenbelt"] and data["land"] and os.path.exists(F("method_greenbelt.html")):
+    gb_src = f" 그린벨트는 V-World 「용도지역지구정보」의 「개발제한구역」({data['greenbelt']['date']}분, 라이선스 표기 없음)."
+    data["methodHtml"] = data["methodHtml"].replace('<p class="small">출처:', open(F("method_greenbelt.html")).read() + '<p class="small">출처:', 1).replace(land_src, land_src + gb_src, 1)
 # 새 건물: building.py가 만든 법정동·사용승인 연도별 연면적(지금 건축물대장 + 폐쇄말소대장의 '말소').
 # 지도에는 BLD_FROM년부터 BLD_WIN년 창으로 칠하므로 창의 첫 해부터 넣고, 면적은 BLD_UNIT㎡ 단위로 줄인다
 BLD_FROM, BLD_WIN, BLD_UNIT = 1960, 5, 10
