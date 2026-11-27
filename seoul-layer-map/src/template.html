@@ -56,6 +56,10 @@
   --river: #2b475a; --tram: #ff6a5c; --kido: #b796e6; --area: #7d6f3c; --area-new: #d0a648;
   --ring: #9a9880; --wall: #c3ccc4; --gu: #8e9a91; --focus: #6fb2ec; --bus: #ff5cb8; --rail: #c9d1ca; --village: #9fbf2a; --village-dot: #c8e05a; --land-0: #3b2a1b; --land-1: #5a3817; --land-2: #784919; --land-3: #935c24; --land-4: #ad7138; --land-5: #c38853; --land-6: #d7a273; --land-7: #e6bd99; --land-8: #f0d9c7; --chg-0: #9ad6cc; --chg-1: #5f9f96; --chg-2: #3f6f69; --chg-3: #4a4946; --chg-4: #7d5636; --chg-5: #b97a44; --chg-6: #f2b47e; --bld-1: #41506c; --bld-2: #4a628e; --bld-3: #5675af; --bld-4: #6589cb; --bld-5: #799ee2; --bld-6: #91b3f1; --bld-7: #adc9fb; --bld-8: #d3dff3; --joseon: #6cc3b6; --joseon-2: #a8e6dc; --oldmap-op: .62; color-scheme: dark;
 }
+/* 연대별 물길(waterways 갈래): 덮인(복개) 물길 점선. 물길과 같은 색상의 진한 단계. 다른 갈래와 부딪치지 않게 따로 둔 블록 */
+:root { --river-cov: #5f8ba3; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --river-cov: #6f9bb5; } }
+:root[data-theme="dark"] { --river-cov: #6f9bb5; }
 * { box-sizing: border-box; }
 body { background: var(--paper); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.55; }
 .wrap { max-width: 1080px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
@@ -861,16 +865,56 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
         .attr("stroke", "var(--river)").attr("stroke-width", 0.9 * pxPerKm()).attr("stroke-linecap", "round").attr("stroke-linejoin", "round");
       return;
     }
-    gRiver.append("path").datum(W8.area).attr("d", path).attr("fill", "var(--river)").attr("stroke", "none");
-    gRiver.selectAll("path.wl").data(W8.lines).join("path").attr("class", "wl").attr("d", l => path(l.geom)).attr("fill", "none")
+    gRiver.append("path").datum(W8.area).attr("d", path).attr("fill", "var(--river)").attr("stroke", "none").attr("clip-path", waterHistClip());
+    gRiver.selectAll("path.wl").data(W8.lines.filter(l => !waterHistOwns(l.name))).join("path").attr("class", "wl").attr("d", l => path(l.geom)).attr("fill", "none")
       .attr("stroke", "var(--river)").attr("stroke-width", l => l.cls === "r" ? 1.8 : 1.1).attr("stroke-linecap", "round").attr("stroke-linejoin", "round")
       .attr("vector-effect", "non-scaling-stroke");
+  }
+  // 연대별 물길(waterways 갈래, 시안): 지금 물길(water.json)은 그대로 두고, 해에 따라 바뀌는 곳만 data/water_hist.json에 따로 둔다(src/water_hist.py).
+  // 그리는 곳은 gRiver 안의 gRiverYr(drawStatic이 지금 물길 바로 뒤, 서울 경계 점선 앞에 만듦). 그래서 옛 지도가 보이는 해에
+  // drawOld()가 gRiver를 옅게 하는 것을 그대로 따르고, 경계 점선은 해마다 지우지 않는다. 지금은 청계천 복개 구간만 있다
+  const waterHist = DATA.waterHist || null;
+  let gRiverYr = null;
+  function waterHistOwns(nm) { return !!(waterHist && waterHist.replaces.includes(nm)); }
+  function waterCovered(s, y) { return !!(s.c && y >= s.c && y < s.o); }
+  // 지금 수면에서 바뀐 곳(복개 띠 등)을 잘라 낼 clipPath: 큰 네모에서 띠를 뺀 모양(evenodd). 띠 안의 수면은 drawWaterYr가 해에 따라 그린다
+  function waterHistClip() {
+    if (!waterHist || !waterHist.hole) return null;
+    let cp = svg.select("#waterHistClip");
+    if (cp.empty()) cp = svg.append("defs").append("clipPath").attr("id", "waterHistClip");
+    cp.selectAll("*").remove();
+    cp.append("path").attr("clip-rule", "evenodd").attr("d", "M-1e5,-1e5H1e5V1e5H-1e5Z" + path(waterHist.hole));
+    return "url(#waterHistClip)";
+  }
+  function drawWaterYr() {
+    if (!gRiverYr || !waterHist) return;
+    const st = window.WH_STYLE || "hide";   // 시안 비교용: hide(가 숨김) / dash(나 점선) / faint(다 옅게)
+    const segs = waterHist.cgc.segs;
+    // 수면 조각(복원된 청계천 물길 면): 열린 해에만. 옅게(다) 보기에서는 덮인 해에도 옅게
+    gRiverYr.selectAll("path.wa").data(segs.filter(s => s.a)).join("path").attr("class", "wa").attr("d", s => path(s.a))
+      .attr("fill", "var(--river)").attr("stroke", "none")
+      .attr("display", s => waterCovered(s, year) && st !== "faint" ? "none" : null)
+      .attr("fill-opacity", s => waterCovered(s, year) ? 0.3 : null);
+    gRiverYr.selectAll("path.wy").data(segs).join("path").attr("class", "wy").attr("d", s => path({ type: "LineString", coordinates: s.g })).attr("fill", "none")
+      .attr("stroke", s => waterCovered(s, year) && st === "dash" ? "var(--river-cov)" : "var(--river)").attr("stroke-linecap", "round").attr("stroke-linejoin", "round").attr("vector-effect", "non-scaling-stroke")
+      .attr("display", s => waterCovered(s, year) && st === "hide" ? "none" : null)
+      .attr("stroke-width", s => waterCovered(s, year) && st === "dash" ? 2 : 1.8)
+      .attr("stroke-dasharray", s => waterCovered(s, year) && st === "dash" ? "0.1 4.5" : null)
+      .attr("stroke-opacity", s => waterCovered(s, year) && st === "faint" ? 0.3 : null);
+    // 범례: 덮인 구간이 있는 해에만 한 줄(범례 틀은 그대로 두고 이 줄만 덧붙임)
+    const cov = segs.filter(s => waterCovered(s, year)), km = cov.reduce((a, s) => a + s.m, 0) / 1000;
+    let nt = d3.select("#waterYrNote");
+    if (nt.empty()) nt = d3.select("#waterLegend").append("span").attr("id", "waterYrNote");
+    const key = st === "dash" ? `<svg width="20" height="12" viewBox="0 0 20 12"><path d="M2,6H19" stroke="var(--river-cov)" stroke-width="2" stroke-dasharray="0.1 4.5" stroke-linecap="round"/></svg>`
+      : st === "faint" ? `<svg width="20" height="12" viewBox="0 0 20 12"><path d="M2,6H19" stroke="var(--river)" stroke-width="1.8" stroke-opacity=".3"/></svg>` : "";
+    nt.property("hidden", !cov.length).html(cov.length ? `${key}청계천 ${km.toFixed(1)}km 덮임(복개)${st === "hide" ? ", 그리지 않음" : ""} · ${year < 2003 ? "2005년 복원" : "복원 공사 중(2003–2005)"}` : "");
   }
 
   // ---------- static layers ----------
   function drawStatic() {
     gRiver.selectAll("*").remove();
     drawWater();
+    gRiverYr = gRiver.append("g"); drawWaterYr();
     gRiver.append("path").datum(seoulNow).attr("d", path).attr("fill", "none")
       .attr("stroke", "var(--rule)").attr("stroke-width", 1).attr("vector-effect", "non-scaling-stroke").attr("stroke-dasharray", "2 3");
     gWall.selectAll("*").remove();
@@ -1000,6 +1044,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     }
     gArea.style("display", layerOn.area ? null : "none"); gNew.style("display", layerOn.area ? null : "none");
     gRings.style("display", layerOn.rings ? null : "none");
+    drawWaterYr();   // 연대별 물길(청계천 복개 등)
 
     // gu
     gGu.selectAll("*").remove();

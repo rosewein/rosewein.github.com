@@ -221,6 +221,9 @@ if os.path.exists(F("village_layer.json")):
 # 물길(지금 기준): OSM 수면 면 + 이름 있는 하천 선(src/water.py가 만듦)
 if os.path.exists(F("water.json")):
     data["water"] = json.load(open(F("water.json")))
+# 연대별 물길(waterways 갈래): 해에 따라 바뀌는 곳만 따로(src/water_hist.py가 만듦). water.json은 그대로 둔다
+if os.path.exists(F("water_hist.json")):
+    data["waterHist"] = json.load(open(F("water_hist.json")))
 # 지도 버전: 레이어가 늘면 소수점을 올리고(v1.2 → v1.3), 화면·기술만 고치면 셋째 자리를 올린다(v1.3 → v1.3.1). README 「변경 기록」과 git 태그(seoul-layer-map-vX.Y)도 같이 적는다
 data["version"] = {"v": "1.8", "date": "2026-11-26"}
 
