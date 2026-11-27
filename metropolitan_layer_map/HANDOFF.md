@@ -1,11 +1,12 @@
 # 수도권 도시 연대지도 — 인수인계
 
-2026-11-27 기준(v1.0 공개). 이 지도를 이어서 작업하는 채팅은 이 문서를 먼저 읽고, 필요한 절만 `docs/구상.md`·`docs/버스.md`에서 찾아 본다. 지도 소개·출처 표·변경 기록은 `README.md`에 있다.
+2026-11-27 기준(master는 v1.0 공개, 브랜치는 v1.1). 이 지도를 이어서 작업하는 채팅은 이 문서를 먼저 읽고, 필요한 절만 `docs/구상.md`·`docs/버스.md`에서 찾아 본다. 지도 소개·출처 표·변경 기록은 `README.md`에 있다.
 
 ## 지금 상태
 
 - 저장소 `rosewein/rosewein.github.com`의 작업 브랜치 `metropolitan-layer-map`, 폴더 `metropolitan_layer_map/`. 고치는 일은 이 브랜치에서 하고, master에는 이지가 화면을 확인한 뒤 합친다.
-- 공개: 2026-11-27 14:45 이지 확인을 받아 master를 `bb9db1c`로 앞으로 당겨(fast-forward) v1.0을 공개했다. <https://rosewein.github.io/metropolitan_layer_map/>에서 제목·첫 문단·「v1.0 · 2026-11-27」 줄이 나오는 것을 확인했다. 이 HANDOFF 갱신 커밋은 브랜치에만 있고 다음에 master에 합칠 때 함께 올라간다. master에 올리기 전에는 무엇을 올리는지 이지에게 한 번 더 확인한다.
+- 공개: 2026-11-27 14:45 이지 확인을 받아 master를 `bb9db1c`로 앞으로 당겨(fast-forward) v1.0을 공개했다. <https://rosewein.github.io/metropolitan_layer_map/>에서 제목·첫 문단·「v1.0 · 2026-11-27」 줄이 나오는 것을 확인했다. master에 올리기 전에는 무엇을 올리는지 이지에게 한 번 더 확인한다.
+- v1.1(탭 구조, 국철 철도 기호, 경부선 영등포 남쪽 선형)은 브랜치에 올렸고, master에는 아직 합치지 않았다(이지 확인 기다림).
 - 작업 공간에서 push하려면 세션에 저장소 쓰기 권한이 있어야 한다(없으면 git 프록시가 403으로 막음). 2026-11-27에는 이지가 허용해 줘서 올렸다.
 - 같은 저장소에서 「서울 도시 연대지도」 v2.0 통합이 `v2-integration` 브랜치에서 진행 중이다(2026-11-27 14:19 `66d0a35`까지 확인, master에는 아직 안 들어옴). 이 폴더만 더하는 것이라 파일이 부딪치지는 않지만, master에 합치는 때는 이지와 맞춘다.
 - 처음 만든 곳은 claude.ai 아티팩트(https://claude.ai/artifact/KYtRcKmEQWUzJBxEYaL9Mp, 2026-11-27 판 `1795754017-f029`, 공개 링크로 공유됨)이다. 아티팩트 제목은 아직 「수도권 도시 연대지도 시안」이다. 저장소로 옮긴 뒤로는 저장소가 원본이고, 아티팩트를 함께 고칠지는 이지가 정한다.
@@ -19,12 +20,13 @@
 - 보는 사람이 느끼는 게 바뀌는 것(레이어 순서·색·배치)은 고치기 전에 시안을 먼저 보여 준다.
 - 새 자료를 넣으면 `README.md` 출처 표와 지도 아래 「지금 자료로 닿는 범위」 표·출처 문단에 이용 조건과 함께 적는다.
 - GitHub에 올리는 것은 이지가 하자고 할 때만 한다.
-- 버전(2026-11-27 이지가 정함): 공개한 판이 v1.0. 레이어를 더하거나 화면이 크게 바뀌면 둘째 자리(v1.1), 화면·기술만 고치면 셋째 자리(v1.0.1)를 올린다. 「서울 도시 연대지도」와 같은 규칙이다. 버전은 `index.html` 출처 문단 아래 줄(「v1.0 · 2026-11-27 · 변경 기록」)에 손으로 적고, README 「변경 기록」 표에 버전·날짜·커밋·바뀐 점을 한 줄 적는다.
+- 버전(2026-11-27 이지가 정함): 공개한 판이 v1.0. 레이어를 더하거나 화면이 크게 바뀌면 둘째 자리(v1.1), 화면·기술만 고치면 셋째 자리(v1.0.1)를 올린다. 「서울 도시 연대지도」와 같은 규칙이다. 버전은 `index.html` 「자료 범위·출처」 탭 맨 아래 줄(「v1.1 · 2026-11-27 · 변경 기록」)에 손으로 적고, README 「변경 기록」 표에 버전·날짜·커밋·바뀐 점을 한 줄 적는다.
 
 ## 새 작업 공간에서 시작하는 법
 
 1. 저장소를 받고 `metropolitan-layer-map` 브랜치로 옮긴다. 저장소가 크므로 `git clone --filter=blob:none --no-checkout --branch metropolitan-layer-map` 뒤 `git sparse-checkout set metropolitan_layer_map`으로 이 폴더만 꺼내면 된다.
-2. 지도만 고칠 때는 `index.html`을 바로 고친다. 화면 확인은 이 폴더에서 `python3 -m http.server 8765`를 띄우고 Playwright로 찍는다. 작업 공간은 cdnjs와 구글 글꼴에 닿지 못하므로 npm으로 받은 d3(`npm i d3@7.8.5`, `d3/dist/d3.min.js`)를 `**/d3.min.js` 요청에 가로채 넣고, 글꼴 요청은 막아 둔다(대체 글꼴로 찍힘). 밝은·어두운 화면과 휴대폰 폭(390px)을 모두 찍는다.
+2. 지도만 고칠 때는 `index.html`을 바로 고친다. 화면 확인은 이 폴더에서 `python3 -m http.server 8765`를 띄우고 Playwright로 찍는다. 작업 공간은 cdnjs와 구글 글꼴에 닿지 못하므로 npm으로 받은 d3(`npm i d3@7.8.5`, `d3/dist/d3.min.js`)를 `**/d3.min.js` 요청에 가로채 넣고, 글꼴 요청은 막아 둔다(대체 글꼴로 찍힘). 밝은·어두운 화면과 휴대폰 폭(390px)을 모두 찍는다. v1.1부터 탭이 셋이라(주소 `#read`·`#data`로 바로 열림) 탭마다 찍고, 이지 화면 크기(약 2545×1270)도 함께 본다.
+   - 페이지 구조(v1.1): `.app` 안에 `header.top`(제목·탭), `#pane-map`(`.mapwrap` = `.mapcol`[지도 `#fig`·연도 띠] + `aside.side`[레이어 단추·범례]), `#pane-read`(`.topics` 주제 묶음), `#pane-data`(적용 범위 표·출처·버전). 숨은 탭에서는 지도 크기가 0이라 `layout()`이 건너뛰고, 지도 탭으로 돌아오면 ResizeObserver가 다시 그린다.
 3. 자료를 다시 만들 때는 `sh src/setup_workdirs.sh`로 스크립트를 `/home/claude/sudo`·`/home/claude/sudo2`에 복사한다. 스크립트가 이 절대 경로를 그대로 쓰기 때문이다(경로를 한 파일로 모으는 정리는 아직 안 함, 「다음 할 일」). 다 고친 뒤 `sh src/collect_back.sh`로 고친 스크립트와 페이지를 저장소로 되가져온다. 페이지에 손으로 고친 것(v1.0의 첫 문단·출처·터미널 점 등)은 스크립트로 다시 만들지 않으므로, 자료만 바꿀 때 `index.html`을 덮어쓰지 않게 주의한다.
 4. 원자료는 저장소에 없다. 이지의 다운로드 폴더(데스크톱 앱 연결)에서 아래 자리로 옮긴다.
    - `/home/claude/raw/hgis_adm/adm.gpkg`(HGIS 1910–1945), `/home/claude/raw/hgis_5575/`(HGIS 1955–1975), `/home/claude/raw/hgis_rail/rail.gpkg`(HGIS 철도망)
@@ -38,11 +40,11 @@
 
 ## 스크립트 순서
 
-- 경계·전철: `sudo/build_data.py` → `sudo2/build2.py` → `build_sea.py` → `build_land0.py` → `build_pre1910.py` → `build_water.py` → `build_jigu.py` → `build_tidal.py` → `build_hw.py` → `build_art.py` → `build_hw_page.py` → `build_joseon.py` → `merge_joseon.py`. 역 개통일은 `sudo/sudo_dates.py`, 고속도로 구간 개통일은 `sudo2/hw_segments.py`.
+- 경계·전철: `sudo/build_data.py` → `sudo2/build2.py` → `build_sea.py` → `build_land0.py` → `build_pre1910.py` → `build_water.py` → `build_jigu.py` → `build_tidal.py` → `build_hw.py` → `build_art.py` → `build_hw_page.py` → `build_joseon.py` → `merge_joseon.py` → `gyeongbu_osm.py <page data.json>`(v1.1, 경부선 영등포 남쪽의 HGIS 미완성 선형을 지금 선로로 바꿈. 경계·전철 자료를 다시 만들면 이것도 다시 돌린다). 역 개통일은 `sudo/sudo_dates.py`, 고속도로 구간 개통일은 `sudo2/hw_segments.py`.
 - 광역버스: `sudo2/bus/busgraph.py` → `pick_routes.py`·`pick_ic_seoul.py` → `run_routes.py`·`run_extra.py` → `route_years_bus.py` → `namu/decide_68.py`·`apply_68.py`(→ `years_bus.json`) → 없어진 노선·2004년 전 노선 `closed/build_closed.py`(입력 `closed/new_closed.json`, `pre2004/pre2004_entries.json`) → `agg_bus.py`(→ page `data.json`의 `bus`).
 - 시외버스: `bus/siwoe/siwoe_entries.json` → `closed/build_closed.py siwoe_entries.json siwoe` → `siwoe/agg_siwoe.py`(→ `sw`).
 - 터미널: `bus/siwoe/terminals.py`(→ `tm`). 방면별 평균 방위 `tm[].dr[].b`는 v1.0부터 페이지에서 쓰지 않는다.
-- `patch_page_*.py`는 페이지에 레이어를 처음 넣을 때 한 번만 돌린 것이라 다시 돌리지 않는다(`patch_page_tm.py`가 넣은 화살표는 v1.0에서 뺐다).
+- `patch_page_*.py`는 페이지에 레이어를 처음 넣을 때 한 번만 돌린 것이라 다시 돌리지 않는다(`patch_page_tm.py`가 넣은 화살표는 v1.0에서 뺐다). `src/patch_page_tabs.py`는 v1.0 페이지를 탭 구조로 바꾼 한 번짜리 변환이다.
 
 ## 조사 도구 메모
 
@@ -65,6 +67,18 @@
 - 이번에 첫 문단과 출처 문단에 더한 사실은 적용 범위 표와 `docs/`에 이미 적혀 있던 것을 옮긴 것이고, 원문을 다시 열어 대조하지는 않았다.
 - 화면은 대체 글꼴로 찍었다(작업 공간에서 구글 글꼴이 막힘). 실제 글꼴로는 이지 화면에서 확인한다.
 - 지도 아래 「변경 기록」 링크(`master/metropolitan_layer_map#변경-기록`)가 GitHub 폴더 화면의 그 절로 바로 가는지는 공개 뒤 열어 보지 못했다.
+
+## v1.1 정리(2026-11-27)
+
+한 일:
+- 이지가 넓은 화면(2560×1440)에서 첫 문단이 자리를 차지해 범례가 안 보이고, 글이 폭을 어중간하게 쓴다고 해서, 서울 지도 v1.4처럼 탭 셋(지도 / 읽는 법 / 자료 범위·출처)으로 나눴다. 시안(지도 탭 꽉 채움 + 오른쪽 판 320px, 읽는 법 주제별 묶음 두 단, 자료 탭 넓은 표)을 보이고 이지가 「이렇게 가자」고 정했다.
+- 「읽는 법」 탭: 첫 문단 문장과 지도 아래 설명문 셋을 주제 일곱 묶음(행정구역 경계, 1975년 뒤 경계, 국철, 전철, 조선 후기 대로, 광역버스, 시외버스와 터미널)으로 나눴다. 문장은 그대로 옮기고, 「지도 아래 표」를 「「자료 범위·출처」 탭의 표」로 고치고, 국철 묶음과 터미널 점 안내 한 문장을 새로 썼다.
+- 국철 전체를 철도 기호로, 경부선 영등포 남쪽을 지금 선로 모양으로 바꿨다(`docs/구상.md` 「국철 철도 기호와 경부선 영등포 남쪽」).
+- 화면 확인: 2545×1270 밝은 화면(세 탭), 1440×800 밝은·어두운 화면, 390px 휴대폰(지도·읽는 법), 1930·1960·2026년 영등포–수원 확대, 경부선 조각 정보창 두 가지. 탭을 오갔다 돌아와도 지도가 다시 그려지고, 페이지 오류는 없었다.
+
+확인 못 한 것:
+- 경부선 병점–오산 사이 옛 선로 자리.
+- 실제 글꼴(구글 글꼴)로 본 화면. 휴대폰 실기기에서 탭과 오른쪽 판이 어떻게 보이는지.
 
 ## 정할 것(이지)
 
