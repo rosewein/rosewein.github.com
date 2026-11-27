@@ -14,6 +14,7 @@
 |---|---|---|
 | 고속도로 | 끝. 재정 구간표 131행, 민자 개통일 24번, 재정+민자 전국 선형(OSM 선에 날짜), 노선마다 한 줄로 줄인 단순 선형 | `docs/도로.md` |
 | 표준노드링크 판별 비교 | 러프 시안 아티팩트 「표준노드링크 판별 비교」(<https://claude.ai/artifact/ToNP7evBzkBRPCcVAktX8d>, 이지만 볼 수 있음). 페이지 소스는 `src/nodelink/site/` | `docs/도로.md` 「표준노드링크 판별 비교」 |
+| 철도 역 자리 대응 | 러프 시안 아티팩트 「철도 역 자리 대응」(<https://claude.ai/artifact/4FLJCKyvMfa6kxBh6u5ssf>, 이지만 볼 수 있음). 1단계 결과를 연도별로 보는 지도(선은 역 자리끼리 곧게). 페이지 소스는 `src/rail/site/`(`build_data.py` → `data.json`·`base.json`) | `docs/철도.md` 「선형 잇기 1단계」 |
 | 철도 | 국철 340행·도시철도 79행 구간 사건표. 선형 잇기 1단계(역 이름 → OSM 역·손 자리 대응) 끝: 모든 구간의 끝·경유 역이 자리를 얻음(손 자리 64점은 추정). 2단계(그래프·경로 배정)는 아직 | `docs/철도.md` 「선형 잇기 1단계」 |
 | 공단·택지 | 자료 후보만 적음 | `docs/자료후보.md` 「지역개발(공단·택지)」 |
 | 지도 화면 | 없음 | — |
@@ -93,6 +94,7 @@
 2. `src/rail/parse_yeonpyo.py`: 철도 통합 연표에서 개통·개량·폐지 문장을 골라 `work/rail/yp_events.json`(394건).
 3. `src/rail/make_rail_table.py`: 국철 구간 사건표 → `data/rail/`. 줄은 스크립트 안에 손으로 적혀 있고, 국토부 한글 파일과 맞춰 고친 내역은 `molit_patch.py`(make_rail_table.py가 읽어 씀)에 따로 있다.
 4. `src/rail/make_urban_table.py`: 도시철도 구간 사건표 → `data/rail/`.
+6. `src/rail/site/build_data.py`: 1단계 결과로 시안 페이지 데이터(`site/data.json`, `site/base.json`)를 만든다. 페이지는 d3(cdnjs)와 IBM Plex Sans KR(Google Fonts)을 불러 쓴다.
 5. `src/rail/station_match.py`: 구간 사건표 양 끝·경유 역을 OSM 역·손 자리에 잇는다(→ `work/rail/station_match.json`, `station_manual_points.json`, `yp_renames.json`). 대응표·옮긴 날·손 자리·끝 처리는 `station_alias.py`(손으로 적는 표). 연표 CSV(RAW)를 읽는다. `src/rail/station_report.py` → `work/rail/station_match_report.md`.
 6. 국토부 파일 여는 도구: `unegg.py <egg> <폴더>`(알집 EGG 풀기, 암호 없는 파일·deflate 방식만 시험함), `hwp5html --output <폴더> <hwp>` 뒤 `xhtml_tables.py <폴더>/index.xhtml`(표 칸 읽기), `hwp5`가 오류를 내는 파일은 `hwp_rawtext.py <hwp>`.
 

@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>철도 역 자리 대응</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+/* VOICE work: 연구 메모에 딸린 시안, 숫자와 지도가 먼저(표준노드링크 판별 비교 페이지와 같은 집안)
+   IDEA 철도 연표를 해마다 넘기며 역 자리 대장(臺帳)을 펼쳐 보는 열람대
+   PICTURE 전국 OSM 선로 위에, 그해까지 열린 구간을 역 자리끼리 곧게 이은 선과 역 자리 점
+   COLOUR 흰 바탕, 먹색 선로, 철로 적갈색 한 색상의 밝기 단계(그해 사건 진하게, 앞서 열린 구간 옅게)
+   TYPE IBM Plex Sans KR
+   LAYOUT 넓은 화면은 지도 왼쪽, 연도·범례·그해 사건 오른쪽 / 휴대폰은 제목, 지도, 연도, 목록 순 */
+:root{color-scheme:light dark;--bg:light-dark(#ffffff,#111315);--ink:light-dark(#17181b,#eceae7);--mute:light-dark(#5e6168,#a3a29f);--rule:light-dark(#e4e3e1,#2c2d30);--panel:light-dark(#f5f4f2,#18191c);--acc:light-dark(#a3301b,#f2876a);--acc2:light-dark(#e3a898,#7d3a2c);--net:light-dark(#2d3036,#cfd1d4);--warn:light-dark(#8a4b00,#f0b35e)}
+:root[data-theme=light]{color-scheme:light}
+:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.55 "IBM Plex Sans KR",system-ui,sans-serif;overflow-x:clip;word-break:keep-all;overflow-wrap:anywhere}
+.band{padding:clamp(24px,3.5vw,44px) max(4vw,16px)}
+.wrap{max-width:1240px;margin:0 auto}
+h1{font-size:clamp(30px,4vw,44px);line-height:1.08;letter-spacing:-.02em;margin:0 0 12px;text-wrap:balance}
+h2{font-size:24px;line-height:1.2;margin:0 0 8px;letter-spacing:-.01em}
+.lead{max-width:66ch;margin:0}
+.figs{display:grid;grid-template-columns:repeat(auto-fit,minmax(10em,1fr));gap:12px 24px;margin:22px 0 0;padding:14px 0 0;border-top:1px solid var(--rule)}
+.figs div{font-size:14px;color:var(--mute)}
+.figs b{display:block;font-size:clamp(20px,2.4vw,26px);color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap}
+.main{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);gap:24px;align-items:start}
+.fig{position:relative;height:min(80vh,780px);min-height:440px;background:var(--panel);border-radius:6px;overflow:hidden}
+.fig canvas{position:absolute;inset:0;width:100%;height:100%;cursor:grab;touch-action:none}
+.tip{position:absolute;pointer-events:none;background:var(--bg);color:var(--ink);border:1px solid var(--rule);border-radius:4px;padding:6px 9px;font-size:13px;line-height:1.45;max-width:260px;display:none;box-shadow:0 2px 8px rgb(0 0 0 / .12)}
+.hint{position:absolute;left:12px;bottom:10px;font-size:13px;color:var(--mute);background:color-mix(in srgb,var(--panel) 85%,transparent);padding:2px 6px;border-radius:3px}
+.yr{font-size:clamp(44px,6vw,64px);line-height:1;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;margin:0}
+.yrsub{font-size:14px;color:var(--mute);margin:4px 0 0}
+.ctl{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:10px 0 0}
+.ctl input[type=range]{flex:1 1 180px;accent-color:var(--acc);height:44px}
+.ticks{display:flex;justify-content:space-between;font-size:13px;color:var(--mute);margin-top:-6px}
+button{font:inherit;font-size:15px;min-height:44px;min-width:44px;padding:0 14px;border:1px solid var(--rule);background:var(--bg);color:var(--ink);border-radius:6px;cursor:pointer}
+button:hover{border-color:var(--acc)}
+button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.opts{display:flex;flex-direction:column;gap:2px;margin:12px 0 0}
+.opts label{display:flex;align-items:center;gap:8px;min-height:36px;font-size:15px}
+.opts input{width:18px;height:18px;accent-color:var(--acc)}
+.key{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 10px;font-size:14px;color:var(--mute);margin:14px 0 0;padding:12px 0 0;border-top:1px solid var(--rule)}
+.key svg{width:28px;height:14px;overflow:visible}
+.sub{font-size:14px;color:var(--mute);margin:16px 0 4px}
+.list{list-style:none;margin:0;padding:0;max-height:300px;overflow:auto;border-bottom:1px solid var(--rule)}
+.list li{display:grid;grid-template-columns:4.2em minmax(0,1fr);gap:8px;padding:6px 2px;border-top:1px solid var(--rule);font-size:14px}
+.list .d{color:var(--mute);font-variant-numeric:tabular-nums;white-space:nowrap}
+.list .e{color:var(--acc);font-weight:600}
+.det{font-size:14px;margin:12px 0 0;padding:10px 12px;background:var(--panel);border-radius:6px}
+.det b{font-size:16px}
+.det ul{margin:6px 0 0;padding-left:18px}
+.tag{display:inline-block;font-size:13px;padding:0 6px;border:1px solid var(--rule);border-radius:3px;color:var(--mute);white-space:nowrap}
+.tag.est{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 45%,transparent)}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{padding:7px 10px;border-bottom:1px solid var(--rule);text-align:left;vertical-align:top}
+th{font-weight:600;color:var(--mute)}
+td.n{white-space:nowrap}
+td.c{font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--mute)}
+td a{color:var(--acc);text-decoration:underline;text-underline-offset:2px;cursor:pointer}
+.notes{max-width:72ch;margin:0;padding-left:20px}
+.notes li{margin:0 0 6px}
+.foot{font-size:13px;color:var(--mute);margin:18px 0 0}
+@media(max-width:900px){.main{grid-template-columns:minmax(0,1fr)}.fig{height:min(70vh,620px)}}
+@media(max-width:600px){.fig{min-height:380px}table{font-size:13px}.stack thead{display:none}.stack tr{display:grid;padding-block:8px;border-bottom:1px solid var(--rule)}.stack td{display:flex;justify-content:space-between;gap:12px;border:0;padding:2px 0;text-align:right}.stack td::before{content:attr(data-l);color:var(--mute);text-align:left;flex:none}}
+</style>
+</head>
+<body>
+<header class="band"><div class="wrap">
+<h1>철도 역 자리 대응</h1>
+<p class="lead" id="lead">구간 사건표의 양 끝과 경유 역이 모두 OSM 역이나 손으로 넣은 자리를 얻었다. 그 가운데 추정 자리는 다듬어야 한다. 지도의 선은 아직 역 자리끼리 곧게 이은 것이고, OSM 선로를 따라가게 하는 일은 2단계에서 한다.</p>
+<div class="figs" id="figs"></div>
+</div></header>
+
+<section class="band" style="padding-top:0"><div class="wrap main">
+<div class="fig" id="fig"><canvas id="cv"></canvas><div class="tip" id="tip"></div><div class="hint">끌어서 옮기고, 휠이나 두 손가락으로 확대</div></div>
+<aside>
+<p class="yr" id="yr">1943</p>
+<p class="yrsub" id="yrsub"></p>
+<div class="ctl"><button id="play" type="button" aria-label="해마다 넘기기">▶</button><input id="year" type="range" min="1899" max="2026" step="1" value="1943" aria-label="연도"></div>
+<div class="ticks"><span>1899</span><span>1945</span><span>1990</span><span>2026</span></div>
+<div class="opts">
+<label><input type="checkbox" id="oBase" checked> OSM 선로(지금 선)</label>
+<label><input type="checkbox" id="oHist" checked> OSM 폐선·운휴 선</label>
+<label><input type="checkbox" id="oAll"> 쓰인 역 자리 모두(연도와 상관없이)</label>
+</div>
+<div class="key">
+<svg viewBox="0 0 28 14"><line x1="0" y1="7" x2="28" y2="7" stroke="var(--acc)" stroke-width="4"/></svg><span>그해 열리거나 고친 구간(고친 구간은 열려 있던 선을 따라 칠함)</span>
+<svg viewBox="0 0 28 14"><line x1="0" y1="7" x2="28" y2="7" stroke="var(--acc2)" stroke-width="2.5"/></svg><span>앞서 열려 그해 남아 있는 구간</span>
+<svg viewBox="0 0 28 14"><line x1="0" y1="7" x2="28" y2="7" stroke="var(--acc)" stroke-width="2" stroke-dasharray="4 3"/></svg><span>그해 닫힌 구간(폐지·운행 중단·이설 전 선)</span>
+<svg viewBox="0 0 28 14"><circle cx="14" cy="7" r="3.5" fill="var(--acc)"/></svg><span>OSM 역 이름이 그대로 맞은 자리</span>
+<svg viewBox="0 0 28 14"><circle cx="14" cy="7" r="4" fill="var(--acc2)" stroke="var(--acc)" stroke-width="1.5"/></svg><span>이름을 바꿔 이은 자리(연표·위키백과 등)</span>
+<svg viewBox="0 0 28 14"><circle cx="14" cy="7" r="4.5" fill="none" stroke="var(--acc)" stroke-width="1.8" stroke-dasharray="2.5 2"/></svg><span>추정 자리(손 자리·추정 대응)</span>
+</div>
+<p class="sub" id="evh">이 해의 사건</p>
+<ul class="list" id="ev"></ul>
+<div class="det" id="det">점을 누르면 그 역 자리를 쓴 줄과 근거가 여기 나온다.</div>
+</aside>
+</div></section>
+
+<section class="band" style="border-top:1px solid var(--rule)"><div class="wrap">
+<h2>다듬어야 할 추정 자리</h2>
+<p class="sub" style="margin-top:0">소재지 근거가 약한 손 자리와 추정 대응이다. 이름을 누르면 지도가 그 자리로 간다.</p>
+<div class="scroll"><table class="stack" id="est"><thead><tr><th>역 자리</th><th>위도, 경도</th><th>근거</th><th>쓰인 줄</th></tr></thead><tbody></tbody></table></div>
+</div></section>
+
+<section class="band" style="border-top:1px solid var(--rule)"><div class="wrap">
+<h2>시안에서 쓴 간단한 규칙</h2>
+<ul class="notes">
+<li>선은 개통 줄의 역 자리를 차례로 곧게 이은 것이다. 굽은 선로, 이설 전후 선형의 차이는 아직 보이지 않는다.</li>
+<li>복선·전철화처럼 고친 줄과 닫힌 줄은 그해 열려 있던 곧은 선들을 따라 길을 찾아 칠했다. 길을 못 찾으면 양 끝을 곧게 이었다.</li>
+<li>구간이 닫히는 날은 같은 노선의 폐지·운행 중단·이설 전 줄이 그 구간의 양 끝을 모두 품을 때만 붙였다. 이 규칙에 걸리지 않은 폐선은 지도에 계속 남는다.</li>
+<li>북쪽 구간은 자료 범위대로 1945-08-15에 닫았다. 남북에 걸친 구간과 38선·휴전선 처리는 2단계에서 한다.</li>
+<li id="spec"></li>
+</ul>
+<p class="foot">자료: korea-layer-map 브랜치 `src/rail/station_match.py`·`station_alias.py`(2026-11-27), OSM 2026-11-24 추출(ODbL). 이 페이지의 소스는 `src/rail/site/`.</p>
+</div></section>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script>
+{
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const probe=document.createElement("i");probe.style.display="none";document.body.appendChild(probe);
+const css=n=>{probe.style.color=`var(${n})`;return getComputedStyle(probe).color};
+const CL={osm:"OSM 역 이름 그대로",ren:"이름을 바꿔 이음",est:"추정 자리"};
+const cv=$("cv"),fig=$("fig"),tip=$("tip"),ctx=cv.getContext("2d");
+let D=null,B=null,year=1943,tf=d3.zoomIdentity,W=0,H=0,dpr=1,base={s:1,ox:0,oy:0},vis=[],timer=null;
+const K=Math.cos(37.5*Math.PI/180);
+function fit(){const lo0=124.3,lo1=130.9,la0=33.0,la1=43.0;const s=Math.min(W/((lo1-lo0)*K),H/(la1-la0))*0.96;base={s,ox:(W-(lo1-lo0)*K*s)/2-lo0*K*s,oy:(H-(la1-la0)*s)/2+la1*s}}
+const px=(lon,lat)=>[tf.applyX(lon*K*base.s+base.ox),tf.applyY(-lat*base.s+base.oy)];
+const yEnd=y=>y+"-12-31",yOf=d=>+d.slice(0,4);
+function state(){const e=yEnd(year),b=year+"-01-01",out={cur:[],old:[],cls:[],hl:[],pts:new Set()},net=[];
+  for(const s of D.segs){const y=yOf(s.d);
+    if(s.k!=="open")continue;
+    if(s.d<=e&&(!s.x||s.x>=b))net.push(s);
+    if(s.d>e)continue;
+    if(s.x&&s.x<=e){if(yOf(s.x)===year)out.cls.push(s);continue}
+    (y===year?out.cur:out.old).push(s);s.p.forEach(p=>out.pts.add(p))}
+  for(const s of D.segs)if(s.k!=="open"&&yOf(s.d)===year)route(s,net,s.k==="close"?out.cls:out.hl,out.pts);
+  return out}
+function route(s,net,into,pts){/* 고치거나 닫힌 구간은 그해 열려 있던 곧은 선을 따라 길을 찾아 칠하고, 없으면 곧게 */
+  const adj=new Map(),L=(a,b)=>Math.hypot((D.P[a].lon-D.P[b].lon)*K,D.P[a].lat-D.P[b].lat);
+  for(const c of net)for(let i=1;i<c.p.length;i++){const a=c.p[i-1],b=c.p[i];if(a===b)continue;
+    for(const[u,v]of[[a,b],[b,a]]){if(!adj.has(u))adj.set(u,[]);adj.get(u).push(v)}}
+  for(let i=1;i<s.p.length;i++){const a=s.p[i-1],t=s.p[i],dist=new Map([[a,0]]),prev=new Map(),q=[a];
+    while(q.length){q.sort((x,y)=>dist.get(x)-dist.get(y));const u=q.shift();if(u===t)break;
+      for(const v of adj.get(u)||[]){const d=dist.get(u)+L(u,v);if(!dist.has(v)||d<dist.get(v)){dist.set(v,d);prev.set(v,u);q.push(v)}}}
+    if(dist.has(t)&&dist.get(t)<L(a,t)*2.5+0.05){const path=[t];let u=t;while(prev.has(u)){u=prev.get(u);path.unshift(u)}into.push({p:path,via:true})}
+    else into.push({p:[a,t],straight:true});
+    pts.add(a);pts.add(t)}}
+function poly(s){ctx.beginPath();s.p.forEach((id,i)=>{const p=D.P[id];const[x,y]=px(p.lon,p.lat);i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.stroke()}
+function drawBase(arr,col,a,w,dash){ctx.strokeStyle=col;ctx.globalAlpha=a;ctx.lineWidth=w;ctx.setLineDash(dash);
+  ctx.beginPath();for(const f of arr){let x=f[0],y=f[1];let[q,r]=px(x/1e4,y/1e4);ctx.moveTo(q,r);for(let i=2;i<f.length;i+=2){x+=f[i];y+=f[i+1];[q,r]=px(x/1e4,y/1e4);ctx.lineTo(q,r)}}ctx.stroke();ctx.globalAlpha=1;ctx.setLineDash([])}
+function draw(){if(!D)return;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);
+  const net=css("--net"),acc=css("--acc"),acc2=css("--acc2"),bg=css("--bg"),z=Math.max(1,Math.sqrt(tf.k));
+  if(B&&$("oBase").checked)drawBase(B.live,net,.2,.8,[]);
+  if(B&&$("oHist").checked)drawBase(B.hist,net,.45,.9,[3,3]);
+  const st=state();ctx.lineCap="round";ctx.lineJoin="round";
+  ctx.strokeStyle=acc2;ctx.lineWidth=2*z;st.old.forEach(poly);
+  ctx.strokeStyle=acc;ctx.lineWidth=2*z;ctx.setLineDash([5,4]);st.cls.forEach(poly);ctx.setLineDash([]);
+  ctx.lineWidth=3.6*z;st.cur.forEach(poly);st.hl.forEach(poly);
+  vis=$("oAll").checked?D.pts:D.pts.filter(p=>st.pts.has(p.id));
+  for(const p of vis){const[x,y]=px(p.lon,p.lat);if(x<-10||y<-10||x>W+10||y>H+10)continue;ctx.beginPath();
+    if(p.c==="osm"){ctx.arc(x,y,2.6*z,0,7);ctx.fillStyle=acc;ctx.fill()}
+    else if(p.c==="ren"){ctx.arc(x,y,3.4*z,0,7);ctx.fillStyle=acc2;ctx.fill();ctx.lineWidth=1.5;ctx.strokeStyle=acc;ctx.stroke()}
+    else{ctx.arc(x,y,4.2*z,0,7);ctx.fillStyle=bg;ctx.fill();ctx.setLineDash([2.5,2]);ctx.lineWidth=1.8;ctx.strokeStyle=acc;ctx.stroke();ctx.setLineDash([])}}
+  if(tf.k>3.5){ctx.font="13px 'IBM Plex Sans KR',sans-serif";ctx.fillStyle=css("--ink");ctx.strokeStyle=bg;ctx.lineWidth=3;
+    for(const p of vis){const[x,y]=px(p.lon,p.lat);if(x<0||y<0||x>W||y>H)continue;ctx.strokeText(p.nm,x+6,y-5);ctx.fillText(p.nm,x+6,y-5)}}
+  const nOpen=st.old.length+st.cur.filter(s=>s.k==="open").length;
+  $("yr").textContent=year;$("yrsub").textContent=`그해 말에 남아 있는 구간 ${nOpen}개, 역 자리 ${st.pts.size}곳`;
+  list(st)}
+function list(st){const ev=D.segs.filter(s=>yOf(s.d)===year).concat(D.segs.filter(s=>s.x&&yOf(s.x)===year&&s.k==="open").map(s=>({...s,d:s.x,e:"닫힘(규칙)"})));
+  const sp=D.specials.filter(s=>yOf(s.d)===year).map(s=>({...s,r:s.t[0]+s.n,e:s.e,s:s.s}));
+  const all=ev.concat(sp).sort((a,b)=>a.d<b.d?-1:1);
+  $("evh").textContent=`${year}년의 사건 ${all.length}건`;
+  $("ev").innerHTML=all.length?all.map(s=>`<li><span class="d">${esc(s.d.slice(5)||"—")}</span><span>${esc(s.l)} ${esc(s.s)} <span class="e">${esc(s.e)}</span></span></li>`).join(""):`<li><span class="d">—</span><span>이 해에는 사건이 없다.</span></li>`}
+function near(mx,my){let best=null,bd=144;for(const p of vis){const[x,y]=px(p.lon,p.lat);const d=(x-mx)**2+(y-my)**2;if(d<bd){bd=d;best=p}}return best}
+function show(p){const u=p.u;$("det").innerHTML=`<b>${esc(p.nm)}</b> <span class="tag ${p.c==="est"?"est":""}">${esc(CL[p.c])}</span><div style="color:var(--mute)">${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}</div><ul>${u.map(x=>`<li>${esc(x.r)} ${esc(x.d)} ${esc(x.s)} ${esc(x.e)} — ‘${esc(x.q)}’ ${esc(x.h)}${x.why?`<br><span style="color:var(--mute)">${esc(x.why)}</span>`:""}</li>`).join("")}</ul>`}
+function size(){const r=fig.getBoundingClientRect();W=r.width;H=r.height;dpr=window.devicePixelRatio||1;cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);fit();draw()}
+const zoom=d3.zoom().scaleExtent([1,60]).on("zoom",e=>{tf=e.transform;draw()});
+d3.select(cv).call(zoom);
+cv.addEventListener("mousemove",e=>{const r=cv.getBoundingClientRect(),p=near(e.clientX-r.left,e.clientY-r.top);
+  if(!p){tip.style.display="none";return}
+  tip.innerHTML=`<b>${esc(p.nm)}</b><br>${esc(CL[p.c])} · ${p.u.length}줄${p.u[0].why?`<br><span style="color:var(--mute)">${esc(p.u[0].why).slice(0,120)}</span>`:""}`;
+  tip.style.display="block";tip.style.left=Math.min(e.clientX-r.left+12,W-270)+"px";tip.style.top=Math.max(e.clientY-r.top-10,4)+"px"});
+cv.addEventListener("mouseleave",()=>tip.style.display="none");
+cv.addEventListener("click",e=>{const r=cv.getBoundingClientRect(),p=near(e.clientX-r.left,e.clientY-r.top);if(p)show(p)});
+$("year").addEventListener("input",e=>{year=+e.target.value;draw()});
+["oBase","oHist","oAll"].forEach(id=>$(id).addEventListener("change",draw));
+$("play").addEventListener("click",()=>{if(timer){clearInterval(timer);timer=null;$("play").textContent="▶";return}
+  if(year>=2026)year=1899;$("play").textContent="❚❚";timer=setInterval(()=>{year++;$("year").value=year;draw();if(year>=2026){clearInterval(timer);timer=null;$("play").textContent="▶"}},450)});
+function goTo(id){const p=D.P[id];if(!p)return;$("oAll").checked=true;const k=12;const x=p.lon*K*base.s+base.ox,y=-p.lat*base.s+base.oy;
+  d3.select(cv).call(zoom.transform,d3.zoomIdentity.translate(W/2-k*x,H/2-k*y).scale(k));show(p);fig.scrollIntoView({block:"nearest"})}
+const ro=new ResizeObserver(size);ro.observe(fig);
+new MutationObserver(draw).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change",draw);
+Promise.all([fetch("data.json").then(r=>r.json()),fetch("base.json").then(r=>r.json())]).then(([d,b])=>{
+  D=d;B=b;D.P=Object.fromEntries(D.pts.map(p=>[p.id,p]));
+  const U=D.pts.flatMap(p=>p.u.map(u=>({c:p.c,u}))),cnt=c=>U.filter(x=>x.c===c).length;
+  const nr=new Set(D.segs.map(s=>s.r)).size+D.specials.length;
+  $("figs").innerHTML=[[`${nr}줄`,"구간 사건표(국철·도시철도)"],[U.length,"이은 역 점(양 끝·경유)"],[cnt("osm"),CL.osm],[cnt("ren"),CL.ren],[cnt("est"),"추정 자리(다듬을 것)"],[`${D.pts.length}곳`,"서로 다른 역 자리"]].map(([v,l])=>`<div><b>${esc(v)}</b>${esc(l)}</div>`).join("");
+  const est=D.pts.filter(p=>p.c==="est").sort((a,b)=>a.nm.localeCompare(b.nm,"ko"));
+  $("est").querySelector("tbody").innerHTML=est.map(p=>{const w=p.u.find(u=>/손 자리|추정/.test(u.h))||p.u[0];return `<tr><td class="n" data-l="역 자리"><a data-id="${esc(p.id)}">${esc(p.nm)}</a></td><td class="c" data-l="위도, 경도">${p.lat.toFixed(4)}, ${p.lon.toFixed(4)}</td><td data-l="근거">${esc(w.why)}</td><td class="c" data-l="쓰인 줄">${esc([...new Set(p.u.map(u=>u.r))].join(", "))}</td></tr>`}).join("");
+  $("est").addEventListener("click",e=>{const a=e.target.closest("a[data-id]");if(a)goTo(a.dataset.id)});
+  $("spec").textContent="역 두 개로 적혀 있지 않은 줄은 지도에 그리지 않고 그해 사건 목록에만 넣었다: "+D.specials.map(s=>`${s.d} ${s.l} ${s.s}(${s.e})`).join(", ")+".";
+  size()}).catch(()=>{$("lead").textContent="데이터 파일(data.json·base.json)을 읽지 못했다."});
+}
+</script>
+</body>
+</html>
