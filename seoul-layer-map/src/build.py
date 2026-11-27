@@ -96,16 +96,41 @@ data = {
   # 땅값: landprice.py가 만든 법정동별 ㎡당 공시지가 중앙값(1990–). 파일이 없으면 칩이 나타나지 않음
   "land": json.load(open(F("landprice.json"))) if os.path.exists(F("landprice.json")) else None,
   # 조선 후기 대로·역·원·나루(시안): joseon.py가 만든다. 있으면 연도 띠 맨 앞에 '조선 후기' 단계가 생긴다
+  "palaces": json.load(open(F("palace_geo.json"))) if os.path.exists(F("palace_geo.json")) else None,
+  "hanseong": json.load(open(F("hanseong1910.json"))) if os.path.exists(F("hanseong1910.json")) else None,
+  # 1903·1907 옛 지도의 도성 안 5서 경계(seogye.py). 1899–1910년 도성 안은 이 선, 밖은 HGIS 1910년 5부 선
+  "seogye": json.load(open(F("seogye.json"))) if os.path.exists(F("seogye.json")) else None,
+  # 「조선 후기」 단계의 한성부 바깥 경계 근사선(joseon_bound.py, 시안 두 개)
+  "joseonBound": json.load(open(F("joseon_bound.json"))) if os.path.exists(F("joseon_bound.json")) else None,
   "joseon": json.load(open(F("joseon.json"))) if os.path.exists(F("joseon.json")) else None,
   # 옛 지도(시안): kanggye1914.py가 만든 이미지의 위치·출처. 이미지는 img/에 따로 두고 처음 보일 때 불러온다
   "oldmap": {k: v for k, v in json.load(open(F("oldmap.json"))).items() if k != "gcp"} if os.path.exists(F("oldmap.json")) else None,
+  # 큰 도로(시안, roads 브랜치): majorroads.py가 만든다. 선·해와 팝업에 쓸 개통일 표·연혁도 제목
+  "majorroads": (lambda m: {k: m[k] for k in ("cls", "planSheets", "open", "segs", "gone", "goneRows", "nlVers") if k in m})(json.load(open(F("majorroads.json")))) if os.path.exists(F("majorroads.json")) else None,
+  # 다른 해의 옛 지도(oldmap1903.py·oldmap1907.py). 지도는 해마다 그 해에 맞는 한 장을 고른다
+  "oldmapsMore": [{k: v for k, v in json.load(open(F(f))).items() if k != "gcp"} for f in ("oldmap1903.json", "oldmap1907.json") if os.path.exists(F(f))],
 }
+# 역 둘레 땅값(개통 전후): station_land_layer.py가 만든 역별 고리 값과 모양. 파일이 없으면 칩이 나타나지 않음
+data["stationLand"] = json.load(open(F("station_land.json"))) if os.path.exists(F("station_land.json")) else None
+# 그린벨트(개발제한구역) 지금 경계: greenbelt_layer.py가 V-World 용도지역지구정보에서 서울만 잘라 만든 것
+data["greenbelt"] = json.load(open(F("greenbelt.json"))) if os.path.exists(F("greenbelt.json")) else None
 # 땅값 설명문은 자료가 있을 때만 「이 지도를 읽는 법」에 넣는다(출처 문단 앞 + 출처 한 줄)
 if data["land"] and os.path.exists(F("method_land.html")):
     SRC_AT = "연계 좌표정보」(2019년 6월 20일)."   # 출처 문단에서 버스 자료 다음, 나무위키 연혁 앞
     land_src = " 땅값은 서울 열린데이터광장 「서울시 개별공시지가 정보」(OA-1180, " + f'{data["land"]["years"][0]}~{data["land"]["years"][-1]}' + "년 파일, 원본 서울부동산정보광장)."
     assert method_html.count(SRC_AT) == 1, "method.html 출처 문단이 바뀜 — build.py의 SRC_AT을 고칠 것"
     data["methodHtml"] = method_html.replace('<p class="small">출처:', open(F("method_land.html")).read() + '<p class="small">출처:', 1).replace(SRC_AT, SRC_AT + land_src, 1)
+    land_tail = land_src   # 출처 문단의 땅값 묶음 끝. 아래 갈래 출처는 설명 문단 차례(땅값 → 역 둘레 땅값 → 그린벨트 → 새 건물)대로 이 뒤에 붙인다(v2.0, 이지가 정함)
+# 역 둘레 땅값 설명문: 땅값 설명 뒤, 출처는 땅값 출처 뒤에 한 줄
+if data["stationLand"] and data["land"] and os.path.exists(F("method_station_land.html")):
+    st_src = " 역 둘레 땅값의 필지 위치는 V-World 「연속지적도형정보」(2026-11-08·2016-01-13분)와 「토지이동이력정보」(2026-10-31분)로 찾음(둘 다 V-World 표기 CC BY)."
+    data["methodHtml"] = data["methodHtml"].replace('<p class="small">출처:', open(F("method_station_land.html")).read() + '<p class="small">출처:', 1).replace(land_tail, land_tail + st_src, 1)
+    land_tail += st_src
+# 그린벨트 설명과 출처 한 줄(역 둘레 땅값 설명 뒤)
+if data["greenbelt"] and data["land"] and os.path.exists(F("method_greenbelt.html")):
+    gb_src = f" 그린벨트는 V-World 「용도지역지구정보」의 「개발제한구역」({data['greenbelt']['date']}분, 라이선스 표기 없음)."
+    data["methodHtml"] = data["methodHtml"].replace('<p class="small">출처:', open(F("method_greenbelt.html")).read() + '<p class="small">출처:', 1).replace(land_tail, land_tail + gb_src, 1)
+    land_tail += gb_src
 # 새 건물: building.py가 만든 법정동·사용승인 연도별 연면적(지금 건축물대장 + 폐쇄말소대장의 '말소').
 # 지도에는 BLD_FROM년부터 BLD_WIN년 창으로 칠하므로 창의 첫 해부터 넣고, 면적은 BLD_UNIT㎡ 단위로 줄인다
 BLD_FROM, BLD_WIN, BLD_UNIT = 1960, 5, 10
@@ -153,7 +178,7 @@ if os.path.exists(F("building.json")):
             bld_src = bld_src.replace("와 「서울시 폐쇄말소대장 표제부」(OA-22432, ", "(")
         mh = data["methodHtml"].replace(SRC_PAR, mb + SRC_PAR, 1)
         # 출처 문단에서 땅값 출처 바로 뒤(땅값이 없으면 버스 자료 뒤)에 넣는다
-        at = (SRC_AT + land_src) if data["land"] and (SRC_AT + land_src) in mh else SRC_AT
+        at = (SRC_AT + land_tail) if data["land"] and (SRC_AT + land_tail) in mh else SRC_AT   # 땅값 묶음(땅값·역 둘레 땅값·그린벨트) 뒤
         assert mh.count(at) == 1, "출처 문단에서 새 건물 출처를 넣을 자리를 못 찾음 — build.py를 고칠 것"
         data["methodHtml"] = mh.replace(at, at + bld_src, 1)
 # 옛 지도(조선 후기 대로·역·원·나루, 1914 경성부시가강계도): 자료가 있을 때만 설명문을 출처 문단 앞에 넣고, 출처 문단 끝에 한 줄
@@ -166,7 +191,61 @@ if (data["joseon"] or data["oldmap"]) and os.path.exists(F("method_oldmap.html")
                " 서울신문 기사(「부산에서 서울까지 다시 걷는 옛길」 2006, 「서울미래유산 그랜드 투어」 2018 등), 공유마당 「청파 배다리」, 서울시 한강 누리집."
                " 옛 지도는 서울역사아카이브 「경성부시가강계도」(서울역사001349, 서울역사박물관 소장, 공공누리 제1유형,"
                ' <a href="' + (data["oldmap"] or {}).get("url", "") + '" target="_blank" rel="noopener">아카이브 상세</a>).')
+    for om in data["oldmapsMore"]:   # 1899–1913 옛 지도 등
+        old_src += (f' {om["from"]}–{om["to"]}년 옛 지도는 서울역사아카이브 「{om["title"].split("(")[0]}」({om["date"].split("(")[0]}, '
+                    + om["src"].split("(")[1].split(",")[0] + ', 서울역사박물관 소장, 공공누리 제1유형, <a href="' + om["url"] + '" target="_blank" rel="noopener">아카이브 상세</a>).')
     data["methodHtml"] = mh[:i] + open(F("method_oldmap.html")).read() + mh[i:j] + old_src + mh[j:]
+# 큰 도로(시안, roads 브랜치): 자료가 있을 때만 설명문(method_roads.html)을 출처 문단 앞에 넣고, 출처 문단 끝에 한 줄
+if data.get("majorroads"):
+    SRC_PAR = '<p class="small">출처:'
+    mh = data["methodHtml"]
+    assert mh.count(SRC_PAR) == 1, "method.html 출처 문단이 바뀜 — build.py의 SRC_PAR을 고칠 것"
+    i = mh.index(SRC_PAR); j = mh.index("</p>", i)
+    road_src = (" 큰 도로는 국가교통정보센터 「전국표준노드링크」(2026-11-11 판, 차로 수·도로등급. 개통일을 못 찾은 길은 2008–2025년 옛 판 18개에 처음 실린 해로 추정), 서울 열린데이터광장 「서울시 소통 돌발 도로 분류 정보」(OA-15059, 2025),"
+                " 서울특별시 『서울 도시계획 연혁』(1977·1991) 도로 연혁도(그림은 싣지 않고 도시계획가로로 결정된 해를 판단하는 데만 씀), 개통일은 「수도권 도시 연대지도 시안」 정리(한국어 위키백과 노선 문서 연혁, 국가기록원 「고속도로 연표」, 서울시 보도 등)와 서울시·국가기록원·건설교통부 보도자료 등. 없어진 고가도로(아현·삼일·서울역·청계)는 서울시 보도자료와 국가기록원 「기록으로 보는 한국」 고가도로, 선은 OSM의 지금 길·물길을 따라 그린 근사.")
+    if os.path.exists(F("majorroads_topo.json")):
+        road_src += (" 개통일을 못 찾은 큰 도로가 처음 보인 판은 국토지리정보원 1:25,000 지형도(국토정보맵 「종이지도」 1970–2000년대 판, 공공누리 제1유형)에서 길 색을 기계로 읽어 잼"
+                     "(지도 그림은 싣지 않음. 판의 해는 공공데이터포털 「구지형도 지도메타데이터」와 개통일 아는 길로 어림).")
+    road_par = open(F("method_roads.html")).read() if os.path.exists(F("method_roads.html")) else ""
+    data["methodHtml"] = mh[:i] + road_par + mh[i:j] + road_src + mh[j:]
+# 큰 도로 옛 지형도(시안, roads 브랜치): majorroads_topo.py가 만든 판별 있음·없음을 개통일 없는 링크에 붙인다.
+# tg = 처음 보인 판 번호, tn = 바로 앞 판에 분명히 없었으면 그 번호(사이가 정해짐). 처음 보인 판 뒤에 「없음」이 나오면 쓰지 않음
+if data.get("majorroads") and os.path.exists(F("majorroads_topo.json")):
+    topo = json.load(open(F("majorroads_topo.json")))
+    data["majorroads"]["topoEds"] = topo["eds"]
+    key = lambda sg: ",".join(json.dumps(v) for v in sg["g"][0]) + "|" + ",".join(json.dumps(v) for v in sg["g"][-1])
+    n_tg = 0
+    for sg in data["majorroads"]["segs"]:
+        st = topo["segs"].get(key(sg))
+        if not st or sg.get("o") or sg.get("oh"): continue
+        i = st.find("1")
+        if i < 0 or "0" in st[i + 1:]: continue
+        sg["tg"] = i; n_tg += 1
+        # 1970년대 판의 「없음」은 믿지 않는다: 도심 시가지 칠이 주황빛이라 길 색과 섞여 종로·한강대로 같은 오래된 길도 없음으로 나옴(2026-11-27 확인)
+        if i > 1 and st[i - 1] == "0": sg["tn"] = i - 1
+    print(f"큰 도로 옛 지형도: 처음 보인 판을 붙인 링크 {n_tg}개")
+# 궁궐: 자료가 있을 때만 설명문을 출처 문단 앞에 넣고, 출처 문단 끝에 한 줄
+if data.get("palaces") and os.path.exists(F("method_palace.html")):
+    SRC_PAR = '<p class="small">출처:'
+    mh = data["methodHtml"]
+    i = mh.index(SRC_PAR); j = mh.index("</p>", i)
+    pal_src = (" 궁궐 사건은 『조선왕조실록』(국사편찬위원회 조선왕조실록 누리집, 날짜·사실만 참고), 국가유산청 궁능유적본부 궁궐 누리집 연혁,"
+               " 국가기록원 「1968년 광화문 복원」「조선총독부건물 철거」, 한국민족문화대백과사전 「경희궁」「덕수궁」, 서울시 「내 손안에 서울」 기사,"
+               " 신문 기사(서울신문·세계일보·아주경제) 등. 궁역·건물 자리는 OpenStreetMap.")
+    data["methodHtml"] = mh[:i] + open(F("method_palace.html")).read() + mh[i:j] + pal_src + mh[j:]
+# 1914년 앞 시역(HGIS 1910년 경계): 자료가 있을 때만 설명문을 출처 문단 앞에 넣고, 출처 문단 끝에 한 줄
+if data.get("hanseong") and os.path.exists(F("method_hanseong.html")):
+    SRC_PAR = '<p class="small">출처:'
+    mh = data["methodHtml"]
+    i = mh.index(SRC_PAR); j = mh.index("</p>", i)
+    hs_src = (" 1914년 앞 한성부·경성부 경계는 국사편찬위원회 HGIS 「행정구역 GIS 데이터(1910–1945년)」 폴리곤."
+              " 성저십리 경계 서술은 서울역사편찬원 『조선시대 다스림으로 본 성저십리』(서울역사 중점연구 5, 2019),"
+              " 조선 후기 단계의 한성부 강역은 규장각한국학연구원 소장 『대동지지』(古4790-37) 원문 텍스트."
+              " 여의도의 소속은 한국민족문화대백과사전 「여의도」.")
+    mh = mh[:i] + open(F("method_hanseong.html")).read() + mh[i:j] + hs_src + mh[j:]
+    # method.html의 「1914년 이전 … 그 경계는 이 지도에 그리지 않았습니다」는 이제 그리므로 뺀다(설명문이 대신함)
+    OLD_P = re.search(r'<p><b>1914년 이전</b>[^<]*그리지 않았습니다\.</p>\n?', mh)
+    data["methodHtml"] = mh.replace(OLD_P.group(0), "", 1) if OLD_P else mh
 # 버스: 2004년 7월 개편 이후 해마다 그릴 노선(2026년 노선망에서 그 해 뒤에 생긴 노선을 뺀다)
 OLD_FROM = 1998
 if data["bus2026"] and os.path.exists(F("route_years.json")):
@@ -218,11 +297,70 @@ if os.path.exists(F("village_layer.json")):
         vy[y] = {"routes": r["routes"], "nstops": r["nstops"], "only_km2": r["only_km2"], "day": r["day"], "stops": sorted(set(ids)), "only": r["only"]}
     data["village"] = {"pts": pts, "years": vy}
     print("village pts", len(pts), file=sys.stderr)
+# 토지구획정리 지구: urbanplan_gr91.py가 1991판 『서울 도시계획 연혁』 연혁도에서 다시 그린 면과 오른쪽 표
+if os.path.exists(F("urbanplan_gr91.json")):
+    uj = json.load(open(F("urbanplan_gr91.json")))
+    # credit·url: 지구가 보이는 동안 지도 오른쪽 아래 출처 줄에 붙는 한 줄(옛 지도와 같은 방식)
+    data["urban"] = {"src": uj["src"],
+                     "credit": "서울특별시 『서울 도시계획 연혁』(1991)", "url": "https://urban.seoul.go.kr/view/html/PMNU1050200000",
+                     "features": [{k: f[k] for k in ("key", "nos", "names", "year", "date", "lab", "geom", "note", "areaTbl", "areaDrawn")} for f in uj["features"]],
+                     "table": [{k: r[k] for k in ("no", "name", "areaTbl", "notice", "date", "feature") if k in r} for r in uj["table"]]}
+# 토지구획정리 지구: 자료가 있을 때만 설명문(method_urban.html)을 출처 문단 앞에 넣고, 출처 문단 끝에 한 줄(안 2, 이지가 고름)
+if data.get("urban") and os.path.exists(F("method_urban.html")):
+    SRC_PAR = '<p class="small">출처:'
+    mh = data["methodHtml"]
+    assert mh.count(SRC_PAR) == 1, "method.html 출처 문단이 바뀜 — build.py의 SRC_PAR을 고칠 것"
+    i = mh.index(SRC_PAR); j = mh.index("</p>", i)
+    up_src = (" 토지구획정리 지구는 서울특별시 『서울 도시계획 연혁』(1991) 연혁도 「토지구획정리사업」(1989년 12월 말 현재,"
+              ' 서울도시공간포털 <a href="https://urban.seoul.go.kr/view/html/PMNU1050200000" target="_blank" rel="noopener">연혁집</a>에서 받음)의'
+              " 색칠된 면 경계를 다시 그렸고(그림은 싣지 않음), 지구명·면적·고시는 같은 연혁도의 표를 옮겼습니다."
+              " 저작권법 제24조의2(공공저작물의 자유이용)에 따라 이용했고, 문제가 있으면 내리겠습니다."
+              ' 사업 설명은 서울시 도시정비과 <a href="https://news.seoul.go.kr/citybuild/?p=29639" target="_blank" rel="noopener">「토지구획정리사업 홈페이지 오픈」</a>(2014).')
+    data["methodHtml"] = mh[:i] + open(F("method_urban.html")).read() + mh[i:j] + up_src + mh[j:]
 # 물길(지금 기준): OSM 수면 면 + 이름 있는 하천 선(src/water.py가 만듦)
 if os.path.exists(F("water.json")):
     data["water"] = json.load(open(F("water.json")))
+# 연대별 물길(waterways 갈래): 해에 따라 바뀌는 곳만 따로(src/water_hist.py가 만듦). water.json은 그대로 둔다
+if os.path.exists(F("water_hist.json")):
+    data["waterHist"] = json.load(open(F("water_hist.json")))
+    events += data["waterHist"].pop("events", [])   # 청계천 복개·복원 등 물길 사건(카드·연표·눈금)
+# 새 레이어의 큰 사건(궁궐·큰 도로·토지구획정리·그린벨트): data/layer_events.json(v2.0 통합 때 이지가 고름, 2026-11-27)
+# 그 레이어 자료가 있을 때만 넣고, 해·날짜가 레이어가 쓰는 표(사건표·고가도로·개통일·연혁도 표)와 같은지 여기서 맞춰 본다.
+# src·pid·road·urban은 맞춰 보는 데만 쓰고 index.html에는 넣지 않는다
+if os.path.exists(F("layer_events.json")):
+    import csv as _csv
+    LEV_NEED = {"palace": "palaces", "roads": "majorroads", "urban": "urban", "gb": "greenbelt"}
+    LEV_COLOR = {"palace": "var(--palace-2)", "roads": "var(--road-x)", "urban": "var(--up)", "gb": "var(--gb)"}
+    pal_y = {r["id"]: int(r["지도 해"]) for r in _csv.DictReader(open(F("palace_events.csv"), encoding="utf-8-sig"))}
+    rd = {"gone": {r["이름"]: r for r in _csv.DictReader(open(F("majorroads_gone.csv"), encoding="utf-8-sig"))},
+          "open": {}}
+    for r in _csv.DictReader(open(F("majorroads_open.csv"), encoding="utf-8-sig")): rd["open"].setdefault(r["노선"], []).append(r)
+    up_tbl = {r["no"]: r for r in (data["urban"]["table"] if data.get("urban") else [])}
+    iso = lambda e: e["date"].replace(".", "-")
+    n_lev = 0
+    for e in json.load(open(F("layer_events.json"))):
+        if not data.get(LEV_NEED[e["kind"]]): continue
+        if "pid" in e: assert pal_y[e["pid"]] == e["year"], f'{e["pid"]}: 사건표 지도 해 {pal_y[e["pid"]]} ≠ {e["year"]}'
+        if "road" in e:
+            t, name, col = e["road"]
+            rows = [rd["gone"][name]] if t == "gone" else rd["open"][name]
+            assert any(r[col] == iso(e) for r in rows), f'{name} {col}: 표에 {iso(e)} 없음'
+        if "urban" in e:
+            for no in e["urban"]: assert up_tbl[no]["date"] == iso(e), f'구획정리 {no}: 표 고시일 {up_tbl[no]["date"]} ≠ {iso(e)}'
+        ev = {k: e[k] for k in ("year", "date", "kind", "text", "conf") if k in e}
+        ev.update(sort=4, color=LEV_COLOR[e["kind"]]); events.append(ev); n_lev += 1
+    print("layer events", n_lev, file=sys.stderr)
+    if n_lev:   # 「읽는 법」: 레이어 설명 문단들 뒤, 출처 문단 바로 앞에 한 문단
+        SRC_PAR = '<p class="small">출처:'
+        assert data["methodHtml"].count(SRC_PAR) == 1, "method.html 출처 문단이 바뀜 — build.py의 SRC_PAR을 고칠 것"
+        data["methodHtml"] = data["methodHtml"].replace(SRC_PAR,
+            "<p><b>연표와 그 해 사건</b>에는 교통·시역의 일과 함께 궁궐, 큰 도로, 토지구획정리 지구, 그린벨트에서 큰 일만 골라 넣었습니다."
+            " 궁궐은 1899년 뒤에 궁 전체나 주요 전각에 생긴 일(거처 이동, 이름, 쓰임 바뀜, 헐림, 큰불, 복원 시작) 가운데 실록이나 공공기관 연혁으로 확인한 것,"
+            " 큰 도로는 고가도로 네 곳의 개통·철거와 고속도로·도시고속도로의 첫 개통, 토지구획정리는 1937·1966·1971년의 큰 고시, 그린벨트는 1971년 첫 지정입니다."
+            " 근거는 각 레이어 설명과 같습니다. 큰 도로 개통일 가운데 검색 결과 요약으로만 확인한 것은 「확인 덜 됨」으로 적었고,"
+            " 내부순환도로 서쪽 구간과 북부간선도로는 개통일을 찾지 못해 자동차전용도로 지정 공고일을 적었습니다.</p>" + SRC_PAR, 1)
 # 지도 버전: 레이어가 늘면 소수점을 올리고(v1.2 → v1.3), 화면·기술만 고치면 셋째 자리를 올린다(v1.3 → v1.3.1). README 「변경 기록」과 git 태그(seoul-layer-map-vX.Y)도 같이 적는다
-data["version"] = {"v": "1.8", "date": "2026-11-26"}
+data["version"] = {"v": "2.0", "date": "2026-11-27"}
 
 # 지도에서 읽지 않는 필드는 index.html에 넣기 직전에 덜어 낸다(data/*.json 원본은 그대로 둔다).
 # 근거 문장·운수회사·승하차 인원처럼 나중에 분석이나 정보창에 쓸 수 있는 기록이라 원본에서는 지우지 않는다.
