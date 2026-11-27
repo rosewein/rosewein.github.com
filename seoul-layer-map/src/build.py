@@ -192,7 +192,7 @@ if (data["joseon"] or data["oldmap"]) and os.path.exists(F("method_oldmap.html")
         old_src += (f' {om["from"]}–{om["to"]}년 옛 지도는 서울역사아카이브 「{om["title"].split("(")[0]}」({om["date"].split("(")[0]}, '
                     + om["src"].split("(")[1].split(",")[0] + ', 서울역사박물관 소장, 공공누리 제1유형, <a href="' + om["url"] + '" target="_blank" rel="noopener">아카이브 상세</a>).')
     data["methodHtml"] = mh[:i] + open(F("method_oldmap.html")).read() + mh[i:j] + old_src + mh[j:]
-# 큰 도로(시안, roads 브랜치): 자료가 있을 때만 출처 문단 끝에 한 줄(레이어 설명 문단은 시안을 정한 뒤 씀)
+# 큰 도로(시안, roads 브랜치): 자료가 있을 때만 설명문(method_roads.html)을 출처 문단 앞에 넣고, 출처 문단 끝에 한 줄
 if data.get("majorroads"):
     SRC_PAR = '<p class="small">출처:'
     mh = data["methodHtml"]
@@ -203,7 +203,8 @@ if data.get("majorroads"):
     if os.path.exists(F("majorroads_topo.json")):
         road_src += (" 개통일을 못 찾은 큰 도로가 처음 보인 판은 국토지리정보원 1:25,000 지형도(국토정보맵 「종이지도」 1970–2000년대 판, 공공누리 제1유형)에서 길 색을 기계로 읽어 잼"
                      "(지도 그림은 싣지 않음. 판의 해는 공공데이터포털 「구지형도 지도메타데이터」와 개통일 아는 길로 어림).")
-    data["methodHtml"] = mh[:j] + road_src + mh[j:]
+    road_par = open(F("method_roads.html")).read() if os.path.exists(F("method_roads.html")) else ""
+    data["methodHtml"] = mh[:i] + road_par + mh[i:j] + road_src + mh[j:]
 # 큰 도로 옛 지형도(시안, roads 브랜치): majorroads_topo.py가 만든 판별 있음·없음을 개통일 없는 링크에 붙인다.
 # tg = 처음 보인 판 번호, tn = 바로 앞 판에 분명히 없었으면 그 번호(사이가 정해짐). 처음 보인 판 뒤에 「없음」이 나오면 쓰지 않음
 if data.get("majorroads") and os.path.exists(F("majorroads_topo.json")):
