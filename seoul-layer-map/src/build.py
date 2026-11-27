@@ -96,11 +96,19 @@ data = {
   # 땅값: landprice.py가 만든 법정동별 ㎡당 공시지가 중앙값(1990–). 파일이 없으면 칩이 나타나지 않음
   "land": json.load(open(F("landprice.json"))) if os.path.exists(F("landprice.json")) else None,
   # 조선 후기 대로·역·원·나루(시안): joseon.py가 만든다. 있으면 연도 띠 맨 앞에 '조선 후기' 단계가 생긴다
+  "palaces": json.load(open(F("palace_geo.json"))) if os.path.exists(F("palace_geo.json")) else None,
+  "hanseong": json.load(open(F("hanseong1910.json"))) if os.path.exists(F("hanseong1910.json")) else None,
+  # 1903·1907 옛 지도의 도성 안 5서 경계(seogye.py). 1899–1910년 도성 안은 이 선, 밖은 HGIS 1910년 5부 선
+  "seogye": json.load(open(F("seogye.json"))) if os.path.exists(F("seogye.json")) else None,
+  # 「조선 후기」 단계의 한성부 바깥 경계 근사선(joseon_bound.py, 시안 두 개)
+  "joseonBound": json.load(open(F("joseon_bound.json"))) if os.path.exists(F("joseon_bound.json")) else None,
   "joseon": json.load(open(F("joseon.json"))) if os.path.exists(F("joseon.json")) else None,
   # 옛 지도(시안): kanggye1914.py가 만든 이미지의 위치·출처. 이미지는 img/에 따로 두고 처음 보일 때 불러온다
   "oldmap": {k: v for k, v in json.load(open(F("oldmap.json"))).items() if k != "gcp"} if os.path.exists(F("oldmap.json")) else None,
   # 큰 도로(시안, roads 브랜치): majorroads.py가 만든다. 선·해와 팝업에 쓸 개통일 표·연혁도 제목
   "majorroads": (lambda m: {k: m[k] for k in ("cls", "planSheets", "open", "segs", "gone", "goneRows", "nlVers") if k in m})(json.load(open(F("majorroads.json")))) if os.path.exists(F("majorroads.json")) else None,
+  # 다른 해의 옛 지도(oldmap1903.py·oldmap1907.py). 지도는 해마다 그 해에 맞는 한 장을 고른다
+  "oldmapsMore": [{k: v for k, v in json.load(open(F(f))).items() if k != "gcp"} for f in ("oldmap1903.json", "oldmap1907.json") if os.path.exists(F(f))],
 }
 # 역 둘레 땅값(개통 전후): station_land_layer.py가 만든 역별 고리 값과 모양. 파일이 없으면 칩이 나타나지 않음
 data["stationLand"] = json.load(open(F("station_land.json"))) if os.path.exists(F("station_land.json")) else None
@@ -180,6 +188,9 @@ if (data["joseon"] or data["oldmap"]) and os.path.exists(F("method_oldmap.html")
                " 서울신문 기사(「부산에서 서울까지 다시 걷는 옛길」 2006, 「서울미래유산 그랜드 투어」 2018 등), 공유마당 「청파 배다리」, 서울시 한강 누리집."
                " 옛 지도는 서울역사아카이브 「경성부시가강계도」(서울역사001349, 서울역사박물관 소장, 공공누리 제1유형,"
                ' <a href="' + (data["oldmap"] or {}).get("url", "") + '" target="_blank" rel="noopener">아카이브 상세</a>).')
+    for om in data["oldmapsMore"]:   # 1899–1913 옛 지도 등
+        old_src += (f' {om["from"]}–{om["to"]}년 옛 지도는 서울역사아카이브 「{om["title"].split("(")[0]}」({om["date"].split("(")[0]}, '
+                    + om["src"].split("(")[1].split(",")[0] + ', 서울역사박물관 소장, 공공누리 제1유형, <a href="' + om["url"] + '" target="_blank" rel="noopener">아카이브 상세</a>).')
     data["methodHtml"] = mh[:i] + open(F("method_oldmap.html")).read() + mh[i:j] + old_src + mh[j:]
 # 큰 도로(시안, roads 브랜치): 자료가 있을 때만 출처 문단 끝에 한 줄(레이어 설명 문단은 시안을 정한 뒤 씀)
 if data.get("majorroads"):
@@ -209,6 +220,28 @@ if data.get("majorroads") and os.path.exists(F("majorroads_topo.json")):
         # 1970년대 판의 「없음」은 믿지 않는다: 도심 시가지 칠이 주황빛이라 길 색과 섞여 종로·한강대로 같은 오래된 길도 없음으로 나옴(2026-11-27 확인)
         if i > 1 and st[i - 1] == "0": sg["tn"] = i - 1
     print(f"큰 도로 옛 지형도: 처음 보인 판을 붙인 링크 {n_tg}개")
+# 궁궐: 자료가 있을 때만 설명문을 출처 문단 앞에 넣고, 출처 문단 끝에 한 줄
+if data.get("palaces") and os.path.exists(F("method_palace.html")):
+    SRC_PAR = '<p class="small">출처:'
+    mh = data["methodHtml"]
+    i = mh.index(SRC_PAR); j = mh.index("</p>", i)
+    pal_src = (" 궁궐 사건은 『조선왕조실록』(국사편찬위원회 조선왕조실록 누리집, 날짜·사실만 참고), 국가유산청 궁능유적본부 궁궐 누리집 연혁,"
+               " 국가기록원 「1968년 광화문 복원」「조선총독부건물 철거」, 한국민족문화대백과사전 「경희궁」「덕수궁」, 서울시 「내 손안에 서울」 기사,"
+               " 신문 기사(서울신문·세계일보·아주경제) 등. 궁역·건물 자리는 OpenStreetMap.")
+    data["methodHtml"] = mh[:i] + open(F("method_palace.html")).read() + mh[i:j] + pal_src + mh[j:]
+# 1914년 앞 시역(HGIS 1910년 경계): 자료가 있을 때만 설명문을 출처 문단 앞에 넣고, 출처 문단 끝에 한 줄
+if data.get("hanseong") and os.path.exists(F("method_hanseong.html")):
+    SRC_PAR = '<p class="small">출처:'
+    mh = data["methodHtml"]
+    i = mh.index(SRC_PAR); j = mh.index("</p>", i)
+    hs_src = (" 1914년 앞 한성부·경성부 경계는 국사편찬위원회 HGIS 「행정구역 GIS 데이터(1910–1945년)」 폴리곤."
+              " 성저십리 경계 서술은 서울역사편찬원 『조선시대 다스림으로 본 성저십리』(서울역사 중점연구 5, 2019),"
+              " 조선 후기 단계의 한성부 강역은 규장각한국학연구원 소장 『대동지지』(古4790-37) 원문 텍스트."
+              " 여의도의 소속은 한국민족문화대백과사전 「여의도」.")
+    mh = mh[:i] + open(F("method_hanseong.html")).read() + mh[i:j] + hs_src + mh[j:]
+    # method.html의 「1914년 이전 … 그 경계는 이 지도에 그리지 않았습니다」는 이제 그리므로 뺀다(설명문이 대신함)
+    OLD_P = re.search(r'<p><b>1914년 이전</b>[^<]*그리지 않았습니다\.</p>\n?', mh)
+    data["methodHtml"] = mh.replace(OLD_P.group(0), "", 1) if OLD_P else mh
 # 버스: 2004년 7월 개편 이후 해마다 그릴 노선(2026년 노선망에서 그 해 뒤에 생긴 노선을 뺀다)
 OLD_FROM = 1998
 if data["bus2026"] and os.path.exists(F("route_years.json")):
