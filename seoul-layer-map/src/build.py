@@ -324,6 +324,41 @@ if os.path.exists(F("water.json")):
 if os.path.exists(F("water_hist.json")):
     data["waterHist"] = json.load(open(F("water_hist.json")))
     events += data["waterHist"].pop("events", [])   # 청계천 복개·복원 등 물길 사건(카드·연표·눈금)
+# 새 레이어의 큰 사건(궁궐·큰 도로·토지구획정리·그린벨트): data/layer_events.json(v2.0 통합 때 이지가 고름, 2026-11-27)
+# 그 레이어 자료가 있을 때만 넣고, 해·날짜가 레이어가 쓰는 표(사건표·고가도로·개통일·연혁도 표)와 같은지 여기서 맞춰 본다.
+# src·pid·road·urban은 맞춰 보는 데만 쓰고 index.html에는 넣지 않는다
+if os.path.exists(F("layer_events.json")):
+    import csv as _csv
+    LEV_NEED = {"palace": "palaces", "roads": "majorroads", "urban": "urban", "gb": "greenbelt"}
+    LEV_COLOR = {"palace": "var(--palace-2)", "roads": "var(--road-x)", "urban": "var(--up)", "gb": "var(--gb)"}
+    pal_y = {r["id"]: int(r["지도 해"]) for r in _csv.DictReader(open(F("palace_events.csv"), encoding="utf-8-sig"))}
+    rd = {"gone": {r["이름"]: r for r in _csv.DictReader(open(F("majorroads_gone.csv"), encoding="utf-8-sig"))},
+          "open": {}}
+    for r in _csv.DictReader(open(F("majorroads_open.csv"), encoding="utf-8-sig")): rd["open"].setdefault(r["노선"], []).append(r)
+    up_tbl = {r["no"]: r for r in (data["urban"]["table"] if data.get("urban") else [])}
+    iso = lambda e: e["date"].replace(".", "-")
+    n_lev = 0
+    for e in json.load(open(F("layer_events.json"))):
+        if not data.get(LEV_NEED[e["kind"]]): continue
+        if "pid" in e: assert pal_y[e["pid"]] == e["year"], f'{e["pid"]}: 사건표 지도 해 {pal_y[e["pid"]]} ≠ {e["year"]}'
+        if "road" in e:
+            t, name, col = e["road"]
+            rows = [rd["gone"][name]] if t == "gone" else rd["open"][name]
+            assert any(r[col] == iso(e) for r in rows), f'{name} {col}: 표에 {iso(e)} 없음'
+        if "urban" in e:
+            for no in e["urban"]: assert up_tbl[no]["date"] == iso(e), f'구획정리 {no}: 표 고시일 {up_tbl[no]["date"]} ≠ {iso(e)}'
+        ev = {k: e[k] for k in ("year", "date", "kind", "text", "conf") if k in e}
+        ev.update(sort=4, color=LEV_COLOR[e["kind"]]); events.append(ev); n_lev += 1
+    print("layer events", n_lev, file=sys.stderr)
+    if n_lev:   # 「읽는 법」: 레이어 설명 문단들 뒤, 출처 문단 바로 앞에 한 문단
+        SRC_PAR = '<p class="small">출처:'
+        assert data["methodHtml"].count(SRC_PAR) == 1, "method.html 출처 문단이 바뀜 — build.py의 SRC_PAR을 고칠 것"
+        data["methodHtml"] = data["methodHtml"].replace(SRC_PAR,
+            "<p><b>연표와 그 해 사건</b>에는 교통·시역의 일과 함께 궁궐, 큰 도로, 토지구획정리 지구, 그린벨트에서 큰 일만 골라 넣었습니다."
+            " 궁궐은 1899년 뒤에 궁 전체나 주요 전각에 생긴 일(거처 이동, 이름, 쓰임 바뀜, 헐림, 큰불, 복원 시작) 가운데 실록이나 공공기관 연혁으로 확인한 것,"
+            " 큰 도로는 고가도로 네 곳의 개통·철거와 고속도로·도시고속도로의 첫 개통, 토지구획정리는 1937·1966·1971년의 큰 고시, 그린벨트는 1971년 첫 지정입니다."
+            " 근거는 각 레이어 설명과 같습니다. 큰 도로 개통일 가운데 검색 결과 요약으로만 확인한 것은 「확인 덜 됨」으로 적었고,"
+            " 내부순환도로 서쪽 구간과 북부간선도로는 개통일을 찾지 못해 자동차전용도로 지정 공고일을 적었습니다.</p>" + SRC_PAR, 1)
 # 지도 버전: 레이어가 늘면 소수점을 올리고(v1.2 → v1.3), 화면·기술만 고치면 셋째 자리를 올린다(v1.3 → v1.3.1). README 「변경 기록」과 git 태그(seoul-layer-map-vX.Y)도 같이 적는다
 data["version"] = {"v": "1.8", "date": "2026-11-26"}
 
