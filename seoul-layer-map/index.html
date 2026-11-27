@@ -1697,10 +1697,7 @@ const DATA = {"topo":{"type":"Topology","arcs":[[[40031,31959],[49,-342],[356,-3
     moveBusCursor && moveBusCursor();
     renderLandTable();
     renderEvPop();
-    drawRingLabels();
-    drawPalaceLabels();
-    drawStationLabels();
-    drawUrbanLabels();   // 역 이름을 쓴 뒤에 그 자리를 피해 지구 이름을 쓴다
+    drawMapLabels();
     // log highlight
     d3.selectAll("#log .ev").attr("class", d => "ev " + (d.year === year ? "now" : d.year < year ? "past" : "future"));
     d3.selectAll("#decades button").classed("cur", d => Math.floor(year / 10) * 10 === d);
@@ -1802,7 +1799,7 @@ const DATA = {"topo":{"type":"Topology","arcs":[[[40031,31959],[49,-342],[356,-3
     if (!ev.target.closest("[data-more]")) return;
     showTab("log");   // 연표 탭을 열면 그 해 항목으로 내려간다
   });
-  d3.select("#evToggle").on("click", function () { evOn = !evOn; this.setAttribute("aria-pressed", evOn ? "true" : "false"); renderEvPop(); drawRingLabels(); drawPalaceLabels(); drawStationLabels(); });
+  d3.select("#evToggle").on("click", function () { evOn = !evOn; this.setAttribute("aria-pressed", evOn ? "true" : "false"); renderEvPop(); drawMapLabels(); });
 
   // ---------- 지도 위 글자가 피할 자리 ----------
   // 화면 좌표(지도 SVG 기준) 상자 [x0, y0, x1, y1]. 연도·시기·수치 글자는 글자가 차지한 폭만(상자째 잡으면 판 전체 폭이 막힘),
@@ -1876,7 +1873,10 @@ const DATA = {"topo":{"type":"Topology","arcs":[[[40031,31959],[49,-342],[356,-3
   const ST_LABEL_PXKM = 30;
   let guLabs = [];
   let stLabRaf = null;
-  function scheduleStLabels() { if (stLabRaf) return; stLabRaf = requestAnimationFrame(() => { stLabRaf = null; drawRingLabels(); drawPalaceLabels(); drawStationLabels(); drawUrbanLabels(); }); }
+  // 지도 위 글자를 쓰는 곳은 이 함수 하나다(render·확대·이동·「그 해 사건」·「옮겨 간 건물 보기」가 모두 부름).
+  // 차례: 이전 경계 연도 → 궁궐 → 역 이름 → 토지구획정리 지구 이름. 뒤에 쓰는 글자가 앞에서 놓은 글자 자리를 피한다
+  function drawMapLabels() { drawRingLabels(); drawPalaceLabels(); drawStationLabels(); drawUrbanLabels(); }
+  function scheduleStLabels() { if (stLabRaf) return; stLabRaf = requestAnimationFrame(() => { stLabRaf = null; drawMapLabels(); }); }
   function drawStationLabels() {
     gStLab.selectAll("*").remove();
     if (pxPerKm() * kNow < ST_LABEL_PXKM) return;
@@ -2336,7 +2336,7 @@ const DATA = {"topo":{"type":"Topology","arcs":[[[40031,31959],[49,-342],[356,-3
   d3.selectAll("#palaceLegend .bseg button, #palMove button").on("click", function () {
     palMove = !palMove;
     d3.selectAll("#palaceLegend .bseg button, #palMove button").attr("aria-pressed", palMove ? "true" : "false");
-    drawPalace(); drawPalaceLabels(); drawStationLabels();
+    drawPalace(); drawMapLabels();
   });
   // 전체 켜기·끄기: 자료가 있어 보이는 칩만
   function setAll(on) {
