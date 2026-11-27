@@ -94,3 +94,45 @@
     return JSON.stringify({ name, ed, W, H, miss });
   };
 })();
+
+// ---- 2026-11-27 덧붙임: 크롬이 파일마다 저장 위치를 물어서, 구역 이미지를 한 파일(slm_water_bundle.json)로 묶어 받는다 ----
+// 쓰는 법(국토정보맵 종이지도 화면에서, WT.init() 뒤):
+//   WT.Z = { jamsil: [127.055,37.495,127.125,37.545], jeoja: [127.010,37.525,127.050,37.545], yeouido: [126.895,37.510,126.955,37.545], nanji: [126.860,37.555,126.905,37.585] };
+//   WT.OFF = { PC050K_1945: { w: [-80,-330], e: [-80,-315] }, PT025K_1970: [160,-335], PT025K_1980: [190,-310], PT025K_1990: [185,-320] };
+//   for (const z in WT.Z) for (const ed in WT.OFF) await WT.cropUrl(z, ed, 4);   // 한 번에 45초를 넘기면 구역별로 나눠 부른다
+//   WT.bundle();   // 다운로드 폴더에 slm_water_bundle.json(16장, 약 70 MB)
+// 어긋남 재기: WT.offset(ed, 점들, 600, 20)으로 거칠게 찾고 WT.fine(ed, 점들, dx, dy)로 5 m 간격 다시. 점은 1914년 이전 개통·현존 철도(data/rail.json)
+(function () {
+  const WT = window.WT;
+  WT.off = (ed, z) => { const o = WT.OFF[ed]; return Array.isArray(o) ? o : (WT.Z[z][2] <= 127.0 ? o.w : o.e); };
+  WT.fine = function (ed, pts, cx, cy, R = 40, step = 5) {
+    const score = (dx, dy) => { let n = 0, v = 0; for (const p of pts) { const c = WT.px(ed, p[0] + dx, p[1] + dy); if (c) { v++; if (WT.dark(c)) n++; } } return v ? n / v : 0; };
+    let best = [cx, cy, score(cx, cy)];
+    for (let dx = cx - R; dx <= cx + R; dx += step) for (let dy = cy - R; dy <= cy + R; dy += step) { const s = score(dx, dy); if (s > best[2]) best = [dx, dy, s]; }
+    return { dx: best[0], dy: best[1], hit: +best[2].toFixed(3) };
+  };
+  WT.grid = async function (ed, box, m, dx, dy) {
+    const p0 = ol.proj.fromLonLat([box[0], box[1]], WT.proj), p1 = ol.proj.fromLonLat([box[2], box[3]], WT.proj);
+    const x0 = Math.round(Math.min(p0[0], p1[0])), y0 = Math.round(Math.min(p0[1], p1[1])), x1 = Math.round(Math.max(p0[0], p1[0])), y1 = Math.round(Math.max(p0[1], p1[1]));
+    await WT.load(ed, x0 + dx - 50, y0 + dy - 50, x1 + dx + 50, y1 + dy + 50);
+    const W = Math.round((x1 - x0) / m), H = Math.round((y1 - y0) / m), px = new Uint8Array(W * H * 3);
+    for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) { const c = WT.px(ed, x0 + (i + 0.5) * m + dx, y1 - (j + 0.5) * m + dy) || [255, 255, 255], q = (j * W + i) * 3; px[q] = c[0]; px[q + 1] = c[1]; px[q + 2] = c[2]; }
+    return { x0, y0, x1, y1, m, W, H, px };
+  };
+  WT.B = WT.B || {};
+  WT.cropUrl = async function (name, ed, m) {
+    const o = WT.off(ed, name), g = await WT.grid(ed, WT.Z[name], m, o[0], o[1]);
+    const cv = document.createElement("canvas"); cv.width = g.W; cv.height = g.H;
+    const cx = cv.getContext("2d"), im = cx.createImageData(g.W, g.H);
+    for (let k = 0, q = 0; k < g.W * g.H; k++, q += 3) { im.data[4 * k] = g.px[q]; im.data[4 * k + 1] = g.px[q + 1]; im.data[4 * k + 2] = g.px[q + 2]; im.data[4 * k + 3] = 255; }
+    cx.putImageData(im, 0, 0);
+    WT.B[name + "|" + ed] = { name, ed, box: WT.Z[name], crs: "EPSG:5179", x0: g.x0, y0: g.y0, x1: g.x1, y1: g.y1, m, W: g.W, H: g.H, dx: o[0], dy: o[1], png: cv.toDataURL("image/png") };
+    return g.W + "x" + g.H;
+  };
+  WT.bundle = function () {
+    const meta = { made: new Date().toISOString(), src: "국토정보맵 역사지도 종이지도(NGII), 타일 z" + WT.z + " 해상도 " + WT.res.toFixed(3) + " m", offsetsMeasuredOn: "1914년 이전 개통·현존 철도선(경부·경인·경원) 표본점과 지형도 검은 선의 겹침", items: Object.values(WT.B) };
+    const blob = new Blob([JSON.stringify(meta)], { type: "application/json" });
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "slm_water_bundle.json"; document.body.appendChild(a); a.click(); a.remove();
+    return +(blob.size / 1048576).toFixed(1) + " MB";
+  };
+})();

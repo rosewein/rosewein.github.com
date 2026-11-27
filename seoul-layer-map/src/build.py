@@ -224,6 +224,7 @@ if os.path.exists(F("water.json")):
 # 연대별 물길(waterways 갈래): 해에 따라 바뀌는 곳만 따로(src/water_hist.py가 만듦). water.json은 그대로 둔다
 if os.path.exists(F("water_hist.json")):
     data["waterHist"] = json.load(open(F("water_hist.json")))
+    events += data["waterHist"].pop("events", [])   # 청계천 복개·복원 등 물길 사건(카드·연표·눈금)
 # 지도 버전: 레이어가 늘면 소수점을 올리고(v1.2 → v1.3), 화면·기술만 고치면 셋째 자리를 올린다(v1.3 → v1.3.1). README 「변경 기록」과 git 태그(seoul-layer-map-vX.Y)도 같이 적는다
 data["version"] = {"v": "1.8", "date": "2026-11-26"}
 

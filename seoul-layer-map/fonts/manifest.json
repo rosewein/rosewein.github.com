@@ -1,16 +1,16 @@
 {
- "key": "7c1935ffb1",
+ "key": "7d569f660e",
  "source": "google/fonts@6ebe737e44fd64ee736bbc6feed6136a6dbfd222",
  "chars": {
-  "page": 1116,
+  "page": 1119,
   "display": 174
  },
  "bytes": {
   "hahmlet-500.woff2": 28348,
   "hahmlet-700.woff2": 29184,
-  "slm-sans-kr-400.woff2": 103636,
-  "slm-sans-kr-500.woff2": 116304,
-  "slm-sans-kr-600.woff2": 115916,
+  "slm-sans-kr-400.woff2": 103648,
+  "slm-sans-kr-500.woff2": 116784,
+  "slm-sans-kr-600.woff2": 115988,
   "slm-mono-400.woff2": 10984,
   "slm-mono-500.woff2": 11204
  }

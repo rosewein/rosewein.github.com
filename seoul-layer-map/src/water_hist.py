@@ -49,6 +49,19 @@ PLAN = [
      "1970-11-20 착공, 1977-12-31 완공(청계천박물관 연표)", "A"),
     ("끝", None, None, "신답철교–중랑천", "복개 구간 밖(늘 열림)", ""),
 ]
+# 그 해 사건 카드(연도 판 아래)와 연표에 넣을 청계천 사건. 색은 물길 색(--river-cov)
+EV_COLOR = "var(--river-cov)"
+EVENTS = [
+    (1937, "1937", "청계천 태평로–광교 복개 시작(1942년까지)", "구간은 자료마다 다름"),
+    (1955, "1955", "청계천 광교 상류 138.5m 복개", None),
+    (1958, "1958.05.25", "청계천 복개 공사 착공(광통교–오간수문)", None),
+    (1961, "1961.12.05", "청계천 복개도로 준공(광통교–동대문 오간수문)", None),
+    (1965, "1965", "청계천 청계6가–8가(신설동) 복개 시작(1967년까지)", "연도는 자료마다 다름"),
+    (1970, "1970.11.20", "청계천 신설동–신답철교 복개 착공", None),
+    (1977, "1977.12.31", "청계천 복개 완공(신설동–마장동 신답철교)", None),
+    (2003, "2003.07.01", "청계천 복원 공사 착공", None),
+    (2005, "2005.10.01", "청계천 복원 완료(태평로–신답철교 5.84km)", None),
+]
 BAND = 45     # 복개 띠 반폭(m)
 fw = Transformer.from_crs(4326, 5179, always_xy=True).transform
 bw = Transformer.from_crs(5179, 4326, always_xy=True).transform
@@ -106,6 +119,31 @@ def cut(line, acc, s0, s1):
     return pts
 
 
+ZONES = os.path.join(DATA, "water_zones.json")
+
+
+def zones_from(area, bands):
+    """한강 네 곳(src/water_zones.py가 만든 data/water_zones.json): 구역 안 지금 수면(now)과, 판마다 「지금은 물인데 그때는 물이 아니던 곳」(gone, 빗금).
+    구역 자리를 bands에 더해 지금 수면에서 잘라 낸다(지도는 해에 맞는 판의 물길이나, 2000년부터는 now를 그린다)"""
+    if not os.path.exists(ZONES): return None
+    zj = json.load(open(ZONES)); out = {"src": zj["src"], "list": [], "events": [{k: v for k, v in e.items() if k != "src"} for e in zj.get("events", [])]}
+    for z in zj["zones"]:
+        b = z["box"]; Z = to_m(shapely.box(*b))
+        now = area.intersection(Z)
+        ps = []
+        for p in z["periods"]:
+            old = to_m(shape(p["old"]))
+            gone = now.difference(old.buffer(25)).buffer(-12).buffer(12)       # 자리 어긋남(수십 m)으로 생기는 기슭 띠는 버린다
+            gone = unary_union([g for g in getattr(gone, "geoms", [gone]) if g.area >= 1e4]).simplify(5)
+            q = {k: p[k] for k in ("from", "to", "ed", "label", "note")}
+            q.update({"old": p["old"], "gone": gj(gone) if not gone.is_empty else None})
+            ps.append(q)
+            print(f"  {z['name']} {p['from']}–{p['to']}: 빗금 {gone.area / 1e4:.0f} ha", file=sys.stderr)
+        out["list"].append({"id": z["id"], "name": z["name"], "now": gj(now.simplify(3)), "periods": ps})
+        bands.append(Z)
+    return out
+
+
 def main():
     w = json.load(open(WATER))
     ln = [l for l in w["lines"] if l["name"] == "청계천"]
@@ -130,10 +168,13 @@ def main():
             print(f"  {what}: {s0:.0f}–{s1:.0f}m ({s1 - s0:.0f}m) 덮임 {c}–{o}, 수면 {piece.area / 1e4:.2f}ha", file=sys.stderr)
         segs.append(seg)
         s0 = s1
+    zones = zones_from(area, bands)
     hole = unary_union(bands).buffer(0.5).simplify(2)
     out = {"cgc": {"name": "청계천", "segs": segs, "reopen": REOPEN, "src": list(SRC.values()),
                    "note": "선은 OSM 지금 물길(복원된 청계천)이다. 복개 전 물길과 자리가 조금 다를 수 있다"},
-           "replaces": ["청계천"], "hole": gj(hole)}
+           "replaces": ["청계천"], "hole": gj(hole), "zones": zones,
+           "events": (zones.pop("events") if zones else []) + [dict({"year": y, "date": d, "kind": "water", "text": t, "sort": 4, "color": EV_COLOR}, **({"conf": c} if c else {}))
+                      for y, d, t, c in EVENTS]}
     s = json.dumps(out, ensure_ascii=False, separators=(",", ":"))
     open(OUT, "w").write(s)
     print("wrote", OUT, len(s.encode()), "bytes", file=sys.stderr)

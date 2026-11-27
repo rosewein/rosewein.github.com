@@ -890,6 +890,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     if (!gRiverYr || !waterHist) return;
     // 시안 비교용: hide(가 숨김) / dash(나 점선) / faint(다 옅게) / casing(라 복개천 두 줄 점선) / road(마 복개도로 띠). WH_EMPH(바): 바뀐 해부터 5년 굵게
     const st = window.WH_STYLE || "casing", emph = !!window.WH_EMPH;
+    drawWaterZones();
     const segs = waterHist.cgc.segs;
     const cov = s => waterCovered(s, year);
     const fresh = s => emph && s.c && ((year >= s.c && year < s.c + 5) || (year >= s.o && year < s.o + 5));
@@ -926,6 +927,32 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
       : st === "casing" ? sv('<path d="M1,6H21" stroke="var(--river-cov)" stroke-width="6.5" stroke-dasharray="5 3"/><path d="M1,6H21" stroke="var(--paper)" stroke-width="3.5"/>')
       : st === "road" ? sv('<path d="M1,6H21" stroke="var(--water-road)" stroke-width="5.5"/><path d="M2,6H20" stroke="var(--river-cov)" stroke-width="1.6" stroke-dasharray="0.1 4" stroke-linecap="round"/>') : "";
     nt.property("hidden", !cs.length).html(cs.length ? `${key}청계천 ${km.toFixed(1)}km 덮임(복개)${st === "hide" ? ", 그리지 않음" : ""} · ${year < 2003 ? "2005년 복원" : "복원 공사 중(2003–2005)"}` : "");
+  }
+
+  // 한강 네 곳(잠실·저자도·여의도와 밤섬·난지도): 구역 상자 안은 지금 수면을 잘라 내고(waterHistClip), 해에 맞는 옛 지형도 판의 물길(old)을 그린다.
+  // 빗금(gone)은 지금은 물이지만 그 판에서는 모래톱·땅이던 곳. 2000년부터는 지금 수면(now)을 그대로 그린다(src/water_zones.py, water_hist.py)
+  const waterZones = waterHist && waterHist.zones ? waterHist.zones.list : [];
+  const waterZoneAt = (z, y) => z.periods.find(p => (p.from == null || y >= p.from) && y < p.to) || null;
+  let waterHatch = null;
+  function sizeWaterHatch(k) { if (waterHatch) waterHatch.pat.attr("width", 5 / k).attr("height", 5 / k), waterHatch.line.attr("width", 1 / k).attr("height", 5 / k); }
+  if (waterZones.length) {
+    const pat = svg.select("defs").append("pattern").attr("id", "waterGone").attr("patternUnits", "userSpaceOnUse").attr("patternTransform", "rotate(-45)");
+    waterHatch = { pat, line: pat.append("rect").attr("fill", "var(--river)") };
+    sizeWaterHatch(1);
+    zoom.on("zoom.waterHatch", ev => sizeWaterHatch(ev.transform.k));   // 확대해도 빗금 굵기·간격이 같게(지도 zoom 처리 줄은 건드리지 않고 따로 붙임)
+  }
+  function drawWaterZones() {
+    if (!waterZones.length) return;
+    const at = waterZones.map(z => ({ z, p: waterZoneAt(z, year) }));
+    gRiverYr.selectAll("path.wz").data(at).join("path").attr("class", "wz").attr("d", d => path(d.p ? d.p.old : d.z.now))
+      .attr("fill", "var(--river)").attr("stroke", "none");
+    gRiverYr.selectAll("path.wg").data(at.filter(d => d.p && d.p.gone)).join("path").attr("class", "wg").attr("d", d => path(d.p.gone))
+      .attr("fill", "url(#waterGone)").attr("fill-opacity", 0.75).attr("stroke", "none");
+    let nt = d3.select("#waterZoneNote");
+    if (nt.empty()) nt = d3.select("#waterLegend").append("span").attr("id", "waterZoneNote");
+    const on = at.filter(d => d.p);
+    const short = l => l.replace(/ 판 지형도.*$/, "").replace("1910–30", "1910–30년");
+    nt.property("hidden", !on.length).html(on.length ? `<svg width="22" height="12" viewBox="0 0 22 12"><defs><pattern id="wgKey" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)"><rect width="1" height="4" fill="var(--river)"/></pattern></defs><rect x="1" y="1" width="20" height="10" fill="url(#wgKey)" stroke="var(--river)" stroke-width=".6"/></svg>한강 옛 물길(그 무렵 지형도): ${on.map(d => `${d.z.name} ${short(d.p.label)}`).join(" · ")}. 빗금은 지금은 물, 그때는 모래톱·땅` : "");
   }
 
   // ---------- static layers ----------
