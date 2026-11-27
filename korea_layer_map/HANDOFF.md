@@ -94,9 +94,9 @@
 2. `src/rail/parse_yeonpyo.py`: 철도 통합 연표에서 개통·개량·폐지 문장을 골라 `work/rail/yp_events.json`(394건).
 3. `src/rail/make_rail_table.py`: 국철 구간 사건표 → `data/rail/`. 줄은 스크립트 안에 손으로 적혀 있고, 국토부 한글 파일과 맞춰 고친 내역은 `molit_patch.py`(make_rail_table.py가 읽어 씀)에 따로 있다.
 4. `src/rail/make_urban_table.py`: 도시철도 구간 사건표 → `data/rail/`.
-6. `src/rail/site/build_data.py`: 1단계 결과로 시안 페이지 데이터(`site/data.json`, `site/base.json`)를 만든다. 페이지는 d3(cdnjs)와 IBM Plex Sans KR(Google Fonts)을 불러 쓴다.
 5. `src/rail/station_match.py`: 구간 사건표 양 끝·경유 역을 OSM 역·손 자리에 잇는다(→ `work/rail/station_match.json`, `station_manual_points.json`, `yp_renames.json`). 대응표·옮긴 날·손 자리·끝 처리는 `station_alias.py`(손으로 적는 표). 연표 CSV(RAW)를 읽는다. `src/rail/station_report.py` → `work/rail/station_match_report.md`.
-6. 국토부 파일 여는 도구: `unegg.py <egg> <폴더>`(알집 EGG 풀기, 암호 없는 파일·deflate 방식만 시험함), `hwp5html --output <폴더> <hwp>` 뒤 `xhtml_tables.py <폴더>/index.xhtml`(표 칸 읽기), `hwp5`가 오류를 내는 파일은 `hwp_rawtext.py <hwp>`.
+6. `src/rail/site/build_data.py`: 1단계 결과로 시안 페이지 데이터(`site/data.json`, `site/base.json`)를 만든다. 페이지는 d3(cdnjs)와 IBM Plex Sans KR(Google Fonts)을 불러 쓴다.
+7. 국토부 파일 여는 도구: `unegg.py <egg> <폴더>`(알집 EGG 풀기, 암호 없는 파일·deflate 방식만 시험함), `hwp5html --output <폴더> <hwp>` 뒤 `xhtml_tables.py <폴더>/index.xhtml`(표 칸 읽기), `hwp5`가 오류를 내는 파일은 `hwp_rawtext.py <hwp>`.
 
 옮길 때 확인한 것(2026-11-27): 경로를 `paths.py`로 바꾼 뒤 다시 돌려 옮기기 전 결과와 바이트까지 같게 나온 것은 make_table, make_rail_table, make_urban_table, parse_yeonpyo, hw_csv_check, segs, run_jaejeong(재정 선형), merge(전국 선형·cum_len), simplify2(단순 선형)다. check.py와 plot3.py는 돌아가는 것만 봤다. osm_ex·osm_ops·osm_rail, way_first·first_ed, 표준노드링크 스크립트 전부, plot.py·plot2.py는 경로만 바꾸고 다시 돌려 보지 않았다.
 
