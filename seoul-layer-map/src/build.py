@@ -230,6 +230,26 @@ if os.path.exists(F("village_layer.json")):
         vy[y] = {"routes": r["routes"], "nstops": r["nstops"], "only_km2": r["only_km2"], "day": r["day"], "stops": sorted(set(ids)), "only": r["only"]}
     data["village"] = {"pts": pts, "years": vy}
     print("village pts", len(pts), file=sys.stderr)
+# 토지구획정리 지구: urbanplan_gr91.py가 1991판 『서울 도시계획 연혁』 연혁도에서 다시 그린 면과 오른쪽 표
+if os.path.exists(F("urbanplan_gr91.json")):
+    uj = json.load(open(F("urbanplan_gr91.json")))
+    # credit·url: 지구가 보이는 동안 지도 오른쪽 아래 출처 줄에 붙는 한 줄(옛 지도와 같은 방식)
+    data["urban"] = {"src": uj["src"],
+                     "credit": "서울특별시 『서울 도시계획 연혁』(1991)", "url": "https://urban.seoul.go.kr/view/html/PMNU1050200000",
+                     "features": [{k: f[k] for k in ("key", "nos", "names", "year", "date", "lab", "geom", "note", "areaTbl", "areaDrawn")} for f in uj["features"]],
+                     "table": [{k: r[k] for k in ("no", "name", "areaTbl", "notice", "date", "feature") if k in r} for r in uj["table"]]}
+# 토지구획정리 지구: 자료가 있을 때만 설명문(method_urban.html)을 출처 문단 앞에 넣고, 출처 문단 끝에 한 줄(안 2, 이지가 고름)
+if data.get("urban") and os.path.exists(F("method_urban.html")):
+    SRC_PAR = '<p class="small">출처:'
+    mh = data["methodHtml"]
+    assert mh.count(SRC_PAR) == 1, "method.html 출처 문단이 바뀜 — build.py의 SRC_PAR을 고칠 것"
+    i = mh.index(SRC_PAR); j = mh.index("</p>", i)
+    up_src = (" 토지구획정리 지구는 서울특별시 『서울 도시계획 연혁』(1991) 연혁도 「토지구획정리사업」(1989년 12월 말 현재,"
+              ' 서울도시공간포털 <a href="https://urban.seoul.go.kr/view/html/PMNU1050200000" target="_blank" rel="noopener">연혁집</a>에서 받음)의'
+              " 색칠된 면 경계를 다시 그렸고(그림은 싣지 않음), 지구명·면적·고시는 같은 연혁도의 표를 옮겼습니다."
+              " 저작권법 제24조의2(공공저작물의 자유이용)에 따라 이용했고, 문제가 있으면 내리겠습니다."
+              ' 사업 설명은 서울시 도시정비과 <a href="https://news.seoul.go.kr/citybuild/?p=29639" target="_blank" rel="noopener">「토지구획정리사업 홈페이지 오픈」</a>(2014).')
+    data["methodHtml"] = mh[:i] + open(F("method_urban.html")).read() + mh[i:j] + up_src + mh[j:]
 # 물길(지금 기준): OSM 수면 면 + 이름 있는 하천 선(src/water.py가 만듦)
 if os.path.exists(F("water.json")):
     data["water"] = json.load(open(F("water.json")))
