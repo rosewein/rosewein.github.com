@@ -98,6 +98,8 @@ data = {
   # 조선 후기 대로·역·원·나루(시안): joseon.py가 만든다. 있으면 연도 띠 맨 앞에 '조선 후기' 단계가 생긴다
   "palaces": json.load(open(F("palace_geo.json"))) if os.path.exists(F("palace_geo.json")) else None,
   "hanseong": json.load(open(F("hanseong1910.json"))) if os.path.exists(F("hanseong1910.json")) else None,
+  # 1903·1907 옛 지도의 도성 안 5서 경계(seogye.py). 1899–1910년 도성 안은 이 선, 밖은 HGIS 1910년 5부 선
+  "seogye": json.load(open(F("seogye.json"))) if os.path.exists(F("seogye.json")) else None,
   "joseon": json.load(open(F("joseon.json"))) if os.path.exists(F("joseon.json")) else None,
   # 옛 지도(시안): kanggye1914.py가 만든 이미지의 위치·출처. 이미지는 img/에 따로 두고 처음 보일 때 불러온다
   "oldmap": {k: v for k, v in json.load(open(F("oldmap.json"))).items() if k != "gcp"} if os.path.exists(F("oldmap.json")) else None,

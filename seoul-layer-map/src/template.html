@@ -686,6 +686,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   const oldmap = oldmaps[0] || null;   // 옛 지도가 하나라도 있는지
   const oldAt = y => oldmaps.find(m => y >= m.from && y <= m.to) || null;
   const hanseong = DATA.hanseong;   // 1914년 앞 한성부·경성부 경계(HGIS 1910)
+  const seogye = DATA.seogye;       // 1903·1907 옛 지도의 5서 경계(도성 안)
   const palace = DATA.palaces;
   if (oldmap) { const c = document.getElementById("oldmapChip"); c.hidden = false;
     c.lastChild.textContent = `옛 지도(${oldmaps[0].from}–${Math.max(...oldmaps.map(m => m.to))})`; }
@@ -875,9 +876,17 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
       .attr("fill", "var(--area)").attr("fill-opacity", fillOff || stage ? 0 : 0.32)
       .attr("stroke", "var(--ink)").attr("stroke-width", stage ? 1.2 : 1.6).attr("stroke-dasharray", stage ? "5 4" : null)
       .attr("vector-effect", "non-scaling-stroke");
-    gGu.append("path").datum(hanseong[ph].mesh).attr("d", path).attr("fill", "none").attr("stroke", "var(--gu)")
+    gGu.append("path").datum(ph === "bu1910" && seoSet(year) ? seogye.hgisOutside : hanseong[ph].mesh).attr("d", path).attr("fill", "none").attr("stroke", "var(--gu)")
       .attr("stroke-width", 0.9).attr("stroke-dasharray", stage ? "3 3" : null).attr("vector-effect", "non-scaling-stroke");
     hanseong[ph].labels.forEach(l => { const c = projection(l.p); labels.push({ x: c[0], y: c[1], t: l.name, fs: 10.5, cls: "gu" }); });
+  }
+  // 1899–1910년 도성 안 5서 경계(署界): 1899–1906년은 1903 「韓國京城全圖」, 1907–1910년은 1907 「實測詳密 最新京城全圖」에서 따라 그린 선.
+  // 도성 안에서는 이 선만 그리고 HGIS 1910년 5부 선은 도성 밖만 그린다(drawHanseong, 이지가 시안 「나」를 고름, 2026-11-27). 선은 도성 안 여덟 구간뿐이다(seogye.py)
+  const seoSet = (y) => !seogye ? null : seogye.sets.find(s => y >= s.from && y <= s.to) || null;
+  function drawSeo() {
+    const st = seoSet(year); if (!st || hsPhase(year) !== "bu1910") return;
+    gGu.append("path").datum({ type: "MultiLineString", coordinates: st.lines.map(l => l.coords) }).attr("d", path)
+      .attr("fill", "none").attr("stroke", "var(--gu)").attr("stroke-width", 1.1).attr("vector-effect", "non-scaling-stroke");
   }
   function drawJoseon() {
     gJoseon.selectAll("*").remove();
@@ -1254,6 +1263,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
       });
     }
     drawHanseong(er, fillOff, labels);
+    if (!er) drawSeo();
     gGu.style("display", layerOn.gu ? null : "none");
 
     // trams
