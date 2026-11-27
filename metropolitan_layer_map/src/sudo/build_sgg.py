@@ -1,7 +1,13 @@
+import os as _os, sys as _sys  # paths.py 찾기: 이 파일 폴더에서 위로 올라감(저장소 src/, 작업 공간 $MLM_SUDO·$MLM_SUDO2)
+_d = _os.path.dirname(_os.path.abspath(__file__))
+while _d != _os.path.dirname(_d) and not _os.path.isfile(_os.path.join(_d, 'paths.py')):
+    _d = _os.path.dirname(_d)
+_sys.path.insert(1, _d)
+from paths import EXT  # noqa: E402
 import json, shapely
 from shapely.geometry import shape, mapping
 from shapely.ops import unary_union
-sel=open('/home/claude/ext/sel.txt').read().split()
+sel=open(f'{EXT}/sel.txt').read().split()
 def grp(s): return '서울' if '서울' in s else '인천' if '인천' in s else '경기'
 snaps=[]
 for d in sel:

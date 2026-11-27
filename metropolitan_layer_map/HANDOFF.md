@@ -6,9 +6,9 @@
 
 - 저장소 `rosewein/rosewein.github.com`의 작업 브랜치 `metropolitan-layer-map`, 폴더 `metropolitan_layer_map/`. 고치는 일은 이 브랜치에서 하고, master에는 이지가 화면을 확인한 뒤 합친다.
 - 공개: 2026-11-27 14:45 이지 확인을 받아 master를 `bb9db1c`로 앞으로 당겨(fast-forward) v1.0을 공개했다. <https://rosewein.github.io/metropolitan_layer_map/>에서 제목·첫 문단·「v1.0 · 2026-11-27」 줄이 나오는 것을 확인했다. master에 올리기 전에는 무엇을 올리는지 이지에게 한 번 더 확인한다.
-- v1.1(탭 구조, 국철 철도 기호, 경부선 영등포 남쪽 선형)은 2026-11-27 15시 10분쯤 이지 확인을 받아 공개했다. 그사이 master에 서울 지도 v2.0(`34b23fc`)과 그 HANDOFF(`8ad9071`)가 먼저 올라와 있어서, 작업 브랜치에 master를 받아 합친 병합 커밋(`40e0893`)을 만들고 master를 그 끝으로 당겼다. v1.1 커밋 번호 `da63616`은 그대로다. 공개 주소에 쿼리를 붙여(`index.html?v=1.1`) 열어 탭 글자와 「국철 선로와 철도 기호」 소제목이 나오는 것을 확인했다. 쿼리 없는 주소는 한동안 v1.0이 보였다(GitHub Pages 캐시로 추정).
+- v1.1(탭 구조, 국철 철도 기호, 경부선 영등포 남쪽 선형)은 2026-11-27 15시 10분쯤 이지 확인을 받아 공개했다. 그사이 master에 서울 지도 v2.0(`34b23fc`)과 그 HANDOFF(`8ad9071`)가 먼저 올라와 있어서, 작업 브랜치에 master를 받아 합친 병합 커밋(`40e0893`)을 만들고 master를 그 끝으로 당겼다. v1.1 커밋 번호 `da63616`은 그대로다. 공개 주소에 쿼리를 붙여(`index.html?v=1.1`) 열어 탭 글자와 「국철 선로와 철도 기호」 소제목이 나오는 것을 확인했다. 쿼리 없는 주소는 한동안 v1.0이 보였다. 16시쯤 이지의 크롬에서 쿼리 없는 주소를 열어 「v1.1 · 2026-11-27」 줄과 탭 셋이 나오는 것을 확인했다(응답의 Last-Modified 06:12:05 GMT). claude.ai의 WebFetch 도구는 그 뒤에도 v1.0을 보였는데, 도구 쪽 캐시로 본다(앞 채팅에서 같은 주소를 받아 둔 적이 있음).
 - master에 합칠 때 master가 그사이 움직였으면, 작업 브랜치에 master를 받아 합친 뒤 master를 그 끝으로 당긴다. 커밋 번호가 바뀌지 않아 README 변경 기록의 커밋 칸을 고칠 일이 없다.
-- 작업 공간에서 push하려면 세션에 저장소 쓰기 권한이 있어야 한다(없으면 git 프록시가 403으로 막음). 2026-11-27에는 이지가 허용해 줘서 올렸다.
+- 작업 공간에서 push하려면 세션에 저장소 쓰기 권한이 있어야 한다(없으면 git 프록시가 403으로 막음). 쓰기 권한은 채팅(세션)마다 새로 붙여야 하고, GitHub 설정이 풀리는 것은 아니다. 2026-11-27에 두 번 겪은 바로는, 이지가 올리자고 한 메시지에서 저장소 연결(add_repo, push)을 요청하면 붙고, 그런 말이 없는 메시지에서 요청하면 세션의 자동 승인 판정(auto mode classifier)이 「Unauthorized Access」로 막는다(판정 기준은 확인 못 함, 두 번 본 일로 짐작). 그래서 읽기만 할 때는 읽기로만 받고(공개 저장소라 권한 없이 됨), 올릴 일이 생기면 이지에게 먼저 묻고 올리자는 답을 받은 뒤 쓰기 권한을 요청한다. 쓰기 권한으로 붙인 저장소는 `/home/claude/rosewein.github.com`에 받는다.
 - 같은 저장소의 「서울 도시 연대지도」는 2026-11-27 15:00 v2.0이 master에 합쳐졌다(`34b23fc`). 두 지도는 폴더가 달라 파일이 부딪치지 않는다. 함께 쓰는 것은 같은 master와, 수도권 스크립트가 서울 지도의 `data/metro.json`·`metro_dates.json`·`rail.json`·`joseon.json`을 읽는 한 방향 의존뿐이다(네 파일은 2026-11-27 서울 v2.0까지 수도권 첫 판 뒤로 바뀌지 않음).
 - 처음 만든 곳은 claude.ai 아티팩트(https://claude.ai/artifact/KYtRcKmEQWUzJBxEYaL9Mp, 2026-11-27 판 `1795754017-f029`, 공개 링크로 공유됨)이다. 아티팩트 제목은 아직 「수도권 도시 연대지도 시안」이다. 저장소로 옮긴 뒤로는 저장소가 원본이고, 아티팩트를 함께 고칠지는 이지가 정한다.
 - 페이지 제목·머리글은 「수도권 도시 연대지도」(2026-11-27 이지가 정함). 「시안」 표기는 페이지·`data.json`·README·docs·스크립트 주석에서 모두 뺐고, `docs/구상.md`의 아티팩트 제목 한 곳에만 남아 있다.
@@ -28,7 +28,7 @@
 1. 저장소를 받고 `metropolitan-layer-map` 브랜치로 옮긴다. 저장소가 크므로 `git clone --filter=blob:none --no-checkout --branch metropolitan-layer-map` 뒤 `git sparse-checkout set metropolitan_layer_map`으로 이 폴더만 꺼내면 된다.
 2. 지도만 고칠 때는 `index.html`을 바로 고친다. 화면 확인은 이 폴더에서 `python3 -m http.server 8765`를 띄우고 Playwright로 찍는다. 작업 공간은 cdnjs와 구글 글꼴에 닿지 못하므로 npm으로 받은 d3(`npm i d3@7.8.5`, `d3/dist/d3.min.js`)를 `**/d3.min.js` 요청에 가로채 넣고, 글꼴 요청은 막아 둔다(대체 글꼴로 찍힘). 밝은·어두운 화면과 휴대폰 폭(390px)을 모두 찍는다. v1.1부터 탭이 셋이라(주소 `#read`·`#data`로 바로 열림) 탭마다 찍고, 이지 화면 크기(약 2545×1270)도 함께 본다.
    - 페이지 구조(v1.1): `.app` 안에 `header.top`(제목·탭), `#pane-map`(`.mapwrap` = `.mapcol`[지도 `#fig`·연도 띠] + `aside.side`[레이어 단추·범례]), `#pane-read`(`.topics` 주제 묶음), `#pane-data`(적용 범위 표·출처·버전). 숨은 탭에서는 지도 크기가 0이라 `layout()`이 건너뛰고, 지도 탭으로 돌아오면 ResizeObserver가 다시 그린다.
-3. 자료를 다시 만들 때는 `sh src/setup_workdirs.sh`로 스크립트를 `/home/claude/sudo`·`/home/claude/sudo2`에 복사한다. 스크립트가 이 절대 경로를 그대로 쓰기 때문이다(경로를 한 파일로 모으는 정리는 아직 안 함, 「다음 할 일」). 다 고친 뒤 `sh src/collect_back.sh`로 고친 스크립트와 페이지를 저장소로 되가져온다. 페이지에 손으로 고친 것(v1.0의 첫 문단·출처·터미널 점 등)은 스크립트로 다시 만들지 않으므로, 자료만 바꿀 때 `index.html`을 덮어쓰지 않게 주의한다.
+3. 자료를 다시 만들 때는 `sh src/setup_workdirs.sh`로 스크립트를 작업 폴더(기본 `/home/claude/sudo`·`/home/claude/sudo2`)에 복사한다. 스크립트가 읽고 쓰는 자리는 `src/paths.py` 한 곳에 모았고(2026-11-27), 기본값은 처음 작업 공간의 경로다. 자리가 다르면 환경변수(`MLM_HOME`, `MLM_SUDO`, `MLM_SUDO2`, `MLM_RAW`, `MLM_EXT`, `MLM_SEOUL`, `MLM_UPLOADS`, `MLM_VENDOR`)로 바꾸고, `python3 src/paths.py`로 지금 값을 본다. 스크립트는 자기 폴더에서 위로 올라가며 `paths.py`를 찾으므로, setup이 두 작업 폴더 바로 아래에 `paths.py`를 복사해 둔다. 상대 경로를 쓰는 곳이 남아 있어(`sudo/build_data.py`의 `page/data.json`, `sudo/build_sgg.py`의 `vers.pkl`, `sudo2/hgis_extract.py`·`build2.py`·`build_pre1910.py`의 `hgis.pkl`, `sudo2/bus/run_extra.py`의 `routes_*.json`) 스크립트는 자기 폴더에서 돌린다. 다 고친 뒤 `sh src/collect_back.sh`로 고친 스크립트와 페이지를 저장소로 되가져온다(`paths.py` 사본은 가져오지 않음). 페이지에 손으로 고친 것(v1.0의 첫 문단·출처·터미널 점 등)은 스크립트로 다시 만들지 않으므로, 자료만 바꿀 때 `index.html`을 덮어쓰지 않게 주의한다.
 4. 원자료는 저장소에 없다. 이지의 다운로드 폴더(데스크톱 앱 연결)에서 아래 자리로 옮긴다.
    - `/home/claude/raw/hgis_adm/adm.gpkg`(HGIS 1910–1945), `/home/claude/raw/hgis_5575/`(HGIS 1955–1975), `/home/claude/raw/hgis_rail/rail.gpkg`(HGIS 철도망)
    - `/home/claude/ext/vuski_admdongkor/`, `/home/claude/ext/kimmdr2_metroscope/`(GitHub에서 받음)
@@ -36,7 +36,7 @@
    - `/home/claude/raw/osm/*.geojsonseq`: Geofabrik `south-korea-261124.osm.pbf`·`north-korea-261124.osm.pbf`에서 osmium-tool로 뽑은 것. 뽑은 범위와 태그는 `docs/구상.md` 각 절에 있고, 명령 자체는 스크립트로 남기지 않았다.
    - `/home/claude/raw/jigu/`(택지정보시스템 zip 넷)
    - `/mnt/user-data/uploads/Downloads/`의 경기 BMS·인천 BIS·국토교통부 전국 버스정류장 CSV(cp949)
-   - 서울 안 국철·조선 후기 대로는 같은 저장소 `seoul-layer-map/data/`(`rail.json`, `metro.json`, `metro_dates.json`, `joseon.json`)를 `/home/claude/repo/` 아래에 받아 읽는다.
+   - 서울 안 국철·조선 후기 대로는 같은 저장소 `seoul-layer-map/data/`(`rail.json`, `metro.json`, `metro_dates.json`, `joseon.json`)를 읽는다. 기본 자리는 `/home/claude/repo/seoul-layer-map/data/`이고 `MLM_SEOUL`로 바꾼다. 처음에는 `build_joseon.py`만 다른 사본(`/home/claude/repo/rg/seoul-layer-map/data/joseon.json`)을 읽었는데, 경로를 모으며 같은 자리로 맞췄다(네 파일은 서울 v2.0까지 바뀌지 않음, 「지금 상태」).
 5. 큰 중간 파일(버스 도로 그래프 `busgraph.npz` 41MB, 경로 `paths_*.pkl`, HGIS 추출 `hgis.pkl`, 연도별 경계 `gj/`)은 저장소에 넣지 않았다. 버스 경로를 다시 이으려면 `busgraph.py`부터 다시 돌린다(약 7분).
 
 ## 스크립트 순서
@@ -67,7 +67,7 @@
 확인 못 한 것:
 - 이번에 첫 문단과 출처 문단에 더한 사실은 적용 범위 표와 `docs/`에 이미 적혀 있던 것을 옮긴 것이고, 원문을 다시 열어 대조하지는 않았다.
 - 화면은 대체 글꼴로 찍었다(작업 공간에서 구글 글꼴이 막힘). 실제 글꼴로는 이지 화면에서 확인한다.
-- 지도 아래 「변경 기록」 링크(`master/metropolitan_layer_map#변경-기록`)가 GitHub 폴더 화면의 그 절로 바로 가는지는 공개 뒤 열어 보지 못했다.
+- 지도 아래 「변경 기록」 링크(`master/metropolitan_layer_map#변경-기록`)가 GitHub 폴더 화면의 그 절로 바로 가는지는 공개 뒤 열어 보지 못했다(→ 2026-11-27 오후에 확인, 그 절로 감).
 
 ## v1.1 정리(2026-11-27)
 
@@ -81,25 +81,37 @@
 - 경부선 병점–오산 사이 옛 선로 자리.
 - 실제 글꼴(구글 글꼴)로 본 화면. 휴대폰 실기기에서 탭과 오른쪽 판이 어떻게 보이는지.
 
+## 2026-11-27 오후 정리
+
+한 일:
+- 공개 주소 확인: 쿼리 없는 주소가 v1.1인 것(위 「지금 상태」), 지도 아래 「변경 기록」 링크가 GitHub 폴더 화면의 「변경 기록」 절로 바로 가는 것을 이지의 크롬에서 열어 확인했다.
+- 스크립트 경로 정리: 스크립트 34개의 절대 경로 문자열을 `src/paths.py`의 이름(`SUDO`, `SUDO2`, `PAGE_DATA`, `RAW`, `EXT`, `SEOUL`, `UPLOADS`, `VENDOR` 등)으로 바꾸고, 파일 머리에 `paths.py`를 찾는 여섯 줄을 넣었다. `setup_workdirs.sh`·`collect_back.sh`도 같은 환경변수를 따르게 했다. 페이지(`index.html`·`data.json`)는 바뀌지 않아 버전은 그대로 v1.1이다.
+- 경로 정리 확인: 바꾸기 전후 40개 스크립트의 AST를, 경로 이름을 기본값 문자열로 되돌려 대조했고 모두 같았다(일부러 바꾼 `build_joseon.py`의 서울 `joseon.json` 자리 한 곳 제외). 스크립트를 자료로 다시 돌려 보지는 않았다(원자료가 이 작업 공간에 없음). 임시 폴더(`MLM_HOME`)로 setup → 작업 폴더에서 한 줄 고침 → collect_back을 돌려 고친 줄만 돌아오고 `paths.py` 사본·`.pkl`은 돌아오지 않는 것, 저장소와 작업 폴더 양쪽에서 깊은 폴더(`sudo2/bus/closed/`)의 스크립트가 맞는 `paths.py`를 찾는 것을 확인했다.
+- `data.json` 받는 양: GitHub Pages가 `Content-Encoding: gzip`으로 보내 실제 전송은 1,730,290바이트(약 1.7MB), 풀면 6,889,704바이트(약 6.9MB)였다(이지의 크롬에서 `fetch`로 잼). 페이지 `index.html`은 전송 약 26KB. 항목별로 떼어 압축해 본 크기(어림)는 `sgg` 1.94MB → 485KB, `sido` 1.42MB → 344KB, `bus` 0.73MB → 185KB, `jigu` 0.61MB → 141KB, `water` 0.56MB → 143KB, `rivers` 0.50MB → 142KB.
+- 터미널 방면 나침반 시안 둘을 만들어 이지에게 보였다. 정보창 머리 바로 아래에 236×176 SVG를 넣고, 아홉 방면 막대의 길이·밝기는 그해까지 기사에 나온 행선지 수(1–2·3–7·8곳 넘음, `--bus2`·`--bus3`·`--bus4`), 그해보다 뒤에 처음 나오는 방면은 짧은 점선, 한 번도 안 나온 방면은 둘레 눈금만. A안은 아홉 방면을 지도 방향 순서대로 40°씩 고르게 놓은 도식(31°에서 시작, 열한 곳 평균 방위와의 제곱 오차가 가장 작게 돌림), B안은 터미널마다 평균 방위(`tm[].dr[].b`). B안은 방위가 가까운 안양·수원, 성남·이천의 이름이 겹친다. 시안 만드는 스크립트는 저장소에 넣지 않았다(정해지면 페이지에 바로 넣음).
+
+확인 못 한 것:
+- 경로를 바꾼 스크립트를 실제 자료로 다시 돌린 결과(AST 대조로 같은 일을 하는 것만 확인).
+- 나침반 시안의 실제 글꼴·휴대폰 실기기 모습. 휴대폰 폭에서는 정보창 높이(화면의 46%) 때문에 나침반 아래쪽이 한 번 스크롤해야 보인다.
+
 ## 정할 것(이지)
 
 1. 저장소를 나누는 때와 방법(위 「저장소 나누기 메모」).
 2. claude.ai 아티팩트를 계속 함께 고칠지, 저장소만 고칠지. 아티팩트 제목의 「시안」을 뺄지.
 3. 갈래를 나눠 작업할 때 버전 번호를 붙이는 때. 서울 지도에서는 브랜치에서 먼저 적은 번호를 master가 먼저 써서 합칠 때 바꾼 일이 두 번 있었다. 브랜치에서는 번호 없이 '다음 판'으로 적고 master에 합칠 때 붙이는 안을 제안해 두었다(정하지 않음).
-4. 터미널 방면을 정보창 안에 작은 나침반 그림(아홉 방면 막대)으로 보일지(v1.1 후보).
+4. 터미널 방면을 정보창 안에 작은 나침반 그림(아홉 방면 막대)으로 보일지. 2026-11-27 시안 둘을 보였다(위 「2026-11-27 오후 정리」). 이지 결정 기다림.
 
 ## 저장소 나누기 메모
 
 - 이지가 v1.1 공개 뒤 저장소를 차차 나누기로 했다(2026-11-27). 수도권 지도를 `rosewein/metropolitan_layer_map` 같은 저장소로 옮겨 GitHub Pages(프로젝트 사이트)로 여는 안이다. 이 세션에서는 새 저장소를 만들 수 없어서, 저장소 만들기와 Pages 켜기는 이지가 GitHub에서 한다.
 - 주소: 프로젝트 사이트 주소는 `username.github.io/저장소이름`이라 이름을 같게 하면 지금 주소와 같다. 다만 개인 사이트 저장소에 같은 이름의 폴더가 남아 있으면 부딪친다. Stack Overflow 질문 25396383(변환된 사본으로 봄)에 GitHub 지원팀은 「충돌한다」고 답했고, 직접 실험한 두 사람은 프로젝트 저장소가 우선했다고 적었다. 공식 문서로는 확인하지 못했다. 그래서 옮길 때는 새 저장소를 먼저 켜 두고 확인한 뒤 이 폴더를 지우는 순서를 생각하고 있다(추정, 시험 필요).
-- 옮길 때 할 일: 폴더 이력은 `git subtree split --prefix=metropolitan_layer_map`으로 가져갈 수 있다. 수도권 스크립트가 서울 자료(위 네 파일)를 읽는 경로를 서울 저장소에서 받도록 바꾼다(「다음 할 일」의 스크립트 경로 정리와 함께). README의 `../seoul-layer-map/` 상대 경로는 절대 주소로 바꾼다.
+- 옮길 때 할 일: 폴더 이력은 `git subtree split --prefix=metropolitan_layer_map`으로 가져갈 수 있다. 수도권 스크립트가 서울 자료(위 네 파일)를 읽는 자리는 `MLM_SEOUL`로 서울 저장소를 받은 곳의 `seoul-layer-map/data`를 가리키면 된다(2026-11-27 경로 정리로 스크립트는 고칠 필요 없음). README의 `../seoul-layer-map/` 상대 경로는 절대 주소로 바꾼다.
 
 ## 다음 할 일
 
 - README 「변경 기록」 v1.0 줄의 커밋 칸 `9549462`는 master에서도 같다(fast-forward로 합침). 다음 판부터도 커밋 번호가 바뀌지 않게 합치면 커밋 칸을 고칠 일이 없다.
-- 스크립트 경로를 한 파일(예: `src/paths.py`, 환경변수로 원자료 자리를 받음)로 모으기.
 - 시외버스 터미널: 신촌·불광동·상봉의 문 연 날·닫은 날, 1985-08 구의 102개 노선 기사 다시 확인, 동아·경향 등 다른 신문, 2000년 뒤.
 - 시외버스 노선: 노선 면허·고시 원문, 빠진 노선(부천, 인천–신촌 1998 등).
 - 광역버스: 생긴 해를 못 찾은 13개, 2004년 뒤 서울 9xxx 번호가 끝난 해.
 - 그 밖에 `docs/구상.md` 「확인 못 한 것」(1974년 전 국철 서울 밖 구간, 간선도로 날짜, 옛 물길 등).
-- 공개 전 점검: `data.json`이 6.9MB라 휴대폰에서 처음 열 때 받는 양을 확인한다.
+- `data.json` 줄이기(정하지 않음): GitHub Pages가 gzip으로 보내서 실제로 받는 양은 약 1.7MB다(2026-11-27 측정, 위 「2026-11-27 오후 정리」). 줄인다면 시·군·구 경계 `sgg`와 시·도 `sido`(압축 뒤 합쳐 약 0.8MB, 전체의 절반쯤)를 TopoJSON처럼 공유 경계로 바꾸는 것이 가장 크다. 좌표는 대부분 소수 넷째 자리(약 10m)라, 자릿수를 줄이면 확대(최대 14배) 때 경계가 거칠어질 수 있어 시험이 필요하다.

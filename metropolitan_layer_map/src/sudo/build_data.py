@@ -1,7 +1,13 @@
+import os as _os, sys as _sys  # paths.py 찾기: 이 파일 폴더에서 위로 올라감(저장소 src/, 작업 공간 $MLM_SUDO·$MLM_SUDO2)
+_d = _os.path.dirname(_os.path.abspath(__file__))
+while _d != _os.path.dirname(_d) and not _os.path.isfile(_os.path.join(_d, 'paths.py')):
+    _d = _os.path.dirname(_d)
+_sys.path.insert(1, _d)
+from paths import EXT, SEOUL, SUDO  # noqa: E402
 import json, pickle, re
 from shapely.geometry import shape, mapping, LineString, MultiLineString
 from shapely.ops import unary_union
-sel=open('/home/claude/ext/sel.txt').read().split()
+sel=open(f'{EXT}/sel.txt').read().split()
 def grp(s): return '서울' if '서울' in s else '인천' if '인천' in s else '경기'
 snaps=[]
 for d in sel:
@@ -65,10 +71,10 @@ snapmeta=[{'d':f'{d[:4]}-{d[4:6]}-{d[6:]}','y':int(d[:4])} for d in sel]
 
 # ---------- metro ----------
 import importlib.util
-spec=importlib.util.spec_from_file_location('sd','/home/claude/sudo/sudo_dates.py'); sd=importlib.util.module_from_spec(spec); spec.loader.exec_module(sd)
-m=json.load(open('/home/claude/repo/seoul-layer-map/data/metro.json'))
-md=json.load(open('/home/claude/repo/seoul-layer-map/data/metro_dates.json'))
-n=json.load(open('/home/claude/ext/kimmdr2_metroscope/data/network.json'))
+spec=importlib.util.spec_from_file_location('sd',f'{SUDO}/sudo_dates.py'); sd=importlib.util.module_from_spec(spec); spec.loader.exec_module(sd)
+m=json.load(open(f'{SEOUL}/metro.json'))
+md=json.load(open(f'{SEOUL}/metro_dates.json'))
+n=json.load(open(f'{EXT}/kimmdr2_metroscope/data/network.json'))
 def al(ln,nm): return sd.ALIAS.get((ln,nm)) or sd.ALIAS.get(('*',nm)) or nm
 rec={}   # (line,name)->dict(d,y,inf,src,conf,note)
 for s0 in m['stations']:

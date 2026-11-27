@@ -1,6 +1,12 @@
 """광역버스 노선마다 생긴 해를 나무위키 「YYYY년 개업한 버스 노선」 분류(2026-11-27 열람)에서 찾아 붙인다 → years_bus.json"""
+import os as _os, sys as _sys  # paths.py 찾기: 이 파일 폴더에서 위로 올라감(저장소 src/, 작업 공간 $MLM_SUDO·$MLM_SUDO2)
+_d = _os.path.dirname(_os.path.abspath(__file__))
+while _d != _os.path.dirname(_d) and not _os.path.isfile(_os.path.join(_d, 'paths.py')):
+    _d = _os.path.dirname(_d)
+_sys.path.insert(1, _d)
+from paths import EXT, SUDO2  # noqa: E402
 import json, re, pickle, collections
-D = '/home/claude/sudo2/bus/'
+D = f'{SUDO2}/bus/'
 CITY = ['인천','수원','성남','고양','용인','부천','안산','안양','남양주','화성','평택','의정부','시흥','파주','김포','광명','경기광주','군포','하남','오산','이천','양주','구리','안성','포천','의왕','여주','동두천','과천','가평','양평','연천','서울']
 ent = collections.defaultdict(list)  # (city, num) -> [(year, title)]
 byn = collections.defaultdict(list)  # num -> [(city, year, title)]
@@ -23,7 +29,7 @@ for ln in open(D + 'namu/open_mp.tsv', encoding='utf-8'):
 oc = pickle.load(open('/tmp/origin_city.pkl', 'rb'))
 import pyarrow.parquet as pq, shapely, shapely.wkb
 from shapely.prepared import prep
-_t = pq.read_table('/home/claude/ext/vuski_admdongkor/parquet/simplified/sgg_20261001_light.parquet').to_pandas()
+_t = pq.read_table(f'{EXT}/vuski_admdongkor/parquet/simplified/sgg_20261001_light.parquet').to_pandas()
 _cg = collections.defaultdict(list)
 for row in _t.itertuples():
     g = shapely.wkb.loads(row.geometry)

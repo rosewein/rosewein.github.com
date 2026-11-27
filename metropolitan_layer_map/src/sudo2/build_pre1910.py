@@ -1,12 +1,18 @@
 # 1899–1910년 5월 보정: 1910-05-10 HGIS 군·면 경계 + 1906 칙령 제49호(지방구역정리) + 1908 양평군 출범
+import os as _os, sys as _sys  # paths.py 찾기: 이 파일 폴더에서 위로 올라감(저장소 src/, 작업 공간 $MLM_SUDO·$MLM_SUDO2)
+_d = _os.path.dirname(_os.path.abspath(__file__))
+while _d != _os.path.dirname(_d) and not _os.path.isfile(_os.path.join(_d, 'paths.py')):
+    _d = _os.path.dirname(_d)
+_sys.path.insert(1, _d)
+from paths import PAGE_DATA, RAW, SUDO2  # noqa: E402
 import json, pickle, sqlite3, shapely.wkb
 from shapely.ops import unary_union
 from build2_util import geo, lab, rnd
 from shapely.geometry import mapping
-BASE='/home/claude/sudo2/data_base_v5.json'; OUT='/home/claude/sudo/page/data.json'
+BASE=f'{SUDO2}/data_base_v5.json'; OUT=PAGE_DATA
 d=json.load(open(BASE))
 h45,_=pickle.load(open('hgis.pkl','rb'))
-c=sqlite3.connect('/home/claude/raw/hgis_adm/adm.gpkg')
+c=sqlite3.connect(f'{RAW}/hgis_adm/adm.gpkg')
 def gg(b):
     flags=b[3]; n={0:0,1:32,2:48,3:48,4:64}[(flags>>1)&7]
     return shapely.wkb.loads(bytes(b[8+n:])).buffer(0)

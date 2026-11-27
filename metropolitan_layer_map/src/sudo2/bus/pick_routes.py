@@ -1,8 +1,14 @@
 """경기 BMS(2023-09)에서 서울로 들어가는 광역 노선(M·G·P·네 자리 번호)을 골라, 서울 쪽으로 가는 한 방향 정류소 좌표열을 만든다."""
+import os as _os, sys as _sys  # paths.py 찾기: 이 파일 폴더에서 위로 올라감(저장소 src/, 작업 공간 $MLM_SUDO·$MLM_SUDO2)
+_d = _os.path.dirname(_os.path.abspath(__file__))
+while _d != _os.path.dirname(_d) and not _os.path.isfile(_os.path.join(_d, 'paths.py')):
+    _d = _os.path.dirname(_d)
+_sys.path.insert(1, _d)
+from paths import SUDO2, UPLOADS  # noqa: E402
 import csv, io, re, pickle, json, collections, math
 import shapely
 from shapely.prepared import prep
-D = '/mnt/user-data/uploads/Downloads/'
+D = f'{UPLOADS}/'
 S, nm, R = pickle.load(open('/tmp/bms.pkl', 'rb'))
 sido = pickle.load(open('/tmp/sido.pkl', 'rb')); seoul = sido['seoul']; ps = prep(seoul)
 prep_all = prep(shapely.unary_union([sido['seoul'], sido['incheon'], sido['gg']]).buffer(0.01))
@@ -79,5 +85,5 @@ for r in keep:  # 표시 이름: 변형 가운데 기본 번호가 있으면 그
 print('후보', len(out), '→ 남김', len(keep))
 c = collections.Counter(r['base'][0] if r['base'][0] in 'MGP' else 'num' for r in keep); print(c)
 miss = sum(r['n'] - r['nok'] for r in keep); tot = sum(r['n'] for r in keep); print('좌표 없는 정류소', miss, '/', tot)
-json.dump(keep, open('/home/claude/sudo2/bus/routes_gg.json', 'w'), ensure_ascii=False)
+json.dump(keep, open(f'{SUDO2}/bus/routes_gg.json', 'w'), ensure_ascii=False)
 for r in sorted(keep, key=lambda r: r['name'])[:300:6]: print(r['name'], r['o'], '→', r['e'], r['far'], r['nok'], '/', r['n'], r.get('variants', ''))

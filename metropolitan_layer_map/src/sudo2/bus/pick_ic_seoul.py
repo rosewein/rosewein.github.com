@@ -1,8 +1,14 @@
 """인천 면허(BIS 노선별경유노드 2024-08)와 서울 면허(승하차 파일 2026-11) 광역버스를 경기와 같은 틀로 만든다 → routes_ic.json, routes_se.json"""
+import os as _os, sys as _sys  # paths.py 찾기: 이 파일 폴더에서 위로 올라감(저장소 src/, 작업 공간 $MLM_SUDO·$MLM_SUDO2)
+_d = _os.path.dirname(_os.path.abspath(__file__))
+while _d != _os.path.dirname(_d) and not _os.path.isfile(_os.path.join(_d, 'paths.py')):
+    _d = _os.path.dirname(_d)
+_sys.path.insert(1, _d)
+from paths import SUDO2, UPLOADS  # noqa: E402
 import csv, io, json, pickle, re, math, collections
 import shapely
 from shapely.prepared import prep
-D = '/mnt/user-data/uploads/Downloads/'
+D = f'{UPLOADS}/'
 S, nm, R = pickle.load(open('/tmp/bms.pkl', 'rb'))
 N = pickle.load(open('/tmp/moct_node.pkl', 'rb'))
 by = pickle.load(open('/tmp/ic_by.pkl', 'rb')); IC = pickle.load(open('/tmp/ic_map.pkl', 'rb'))
@@ -61,7 +67,7 @@ for rid, name in IC.items():
     out.append(dict(id='IC' + rid, name=name, base=name, dir='ic', n=len(v), nok=len(part), far=round(far, 1),
                     o=stops[0][2] if stops else '', e=stops[-1][2] if stops else '', reg='인천',
                     pts=[(round(q[0], 6), round(q[1], 6)) for q in part], sn=[q[2] for q in part]))
-json.dump(out, open('/home/claude/sudo2/bus/routes_ic.json', 'w'), ensure_ascii=False)
+json.dump(out, open(f'{SUDO2}/bus/routes_ic.json', 'w'), ensure_ascii=False)
 print('인천', len(out), [(r['name'], r['o'], r['e'], len(r['pts'])) for r in out][:30])
 # 서울 면허 9xxx: 승하차 파일(정류장 순번은 역명 괄호 안 다섯 자리)
 rows = list(csv.reader(io.StringIO(open(D + '서울시 버스노선별 정류장별 승하차 인원 정보.csv', 'rb').read().decode('cp949'))))[1:]
@@ -84,5 +90,5 @@ for name, v in SR.items():
     part, far = cut(seq)
     se.append(dict(id='SE' + name, name=name, base=name, dir='se', n=len(v), nok=len(part), far=round(far, 1), o=part[0][2], e=part[-1][2], reg='서울',
                    pts=[(round(q[0], 6), round(q[1], 6)) for q in part], sn=[q[2] for q in part], miss=miss))
-json.dump(se, open('/home/claude/sudo2/bus/routes_se.json', 'w'), ensure_ascii=False)
+json.dump(se, open(f'{SUDO2}/bus/routes_se.json', 'w'), ensure_ascii=False)
 print('서울', [(r['name'], r['o'], r['e'], len(r['pts']), r['miss'], r['far']) for r in se])

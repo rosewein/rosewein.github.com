@@ -1,9 +1,15 @@
 # hw.json(구간 날짜를 붙인 선)과 hw_segments.SEG를 지도 data.json에 합침
+import os as _os, sys as _sys  # paths.py 찾기: 이 파일 폴더에서 위로 올라감(저장소 src/, 작업 공간 $MLM_SUDO·$MLM_SUDO2)
+_d = _os.path.dirname(_os.path.abspath(__file__))
+while _d != _os.path.dirname(_d) and not _os.path.isfile(_os.path.join(_d, 'paths.py')):
+    _d = _os.path.dirname(_d)
+_sys.path.insert(1, _d)
+from paths import PAGE_DATA, SUDO2  # noqa: E402
 import json,sys
-sys.path.insert(0,'/home/claude/sudo2')
+sys.path.insert(0,SUDO2)
 from hw_segments import SEG,SRC
-P='/home/claude/sudo/page/data.json'
-d=json.load(open(P)); h=json.load(open('/home/claude/sudo2/hw.json'))
+P=PAGE_DATA
+d=json.load(open(P)); h=json.load(open(f'{SUDO2}/hw.json'))
 RN={'경부':'경부고속도로','경인':'경인고속도로','외곽':'수도권제1순환고속도로(옛 서울외곽순환고속도로)','서해안':'서해안고속도로','영동':'영동고속도로',
  '제2경인':'제2경인고속도로','중부':'중부고속도로','제2중부':'제2중부고속도로','중부내륙':'중부내륙고속도로','평택제천':'평택제천고속도로',
  '세종포천':'세종포천고속도로','서울양양':'서울양양고속도로','광주원주':'광주원주고속도로','공항':'인천국제공항고속도로','평택시흥':'평택시흥고속도로',
@@ -31,7 +37,7 @@ for rt,ss in SEG.items():
         rows.append([dd,lab,s[0],s[1],NOTE.get((rt,dd),'')])
     sec[rt]=sorted(rows)
 # 경부 한남–양재(OSM에서 trunk)는 build_art.py가 뽑아 hwx로 넘김
-A=json.load(open('/home/claude/sudo2/art.json'))
+A=json.load(open(f'{SUDO2}/art.json'))
 sec['경부']=[[r[0],('서울(반포)–수원신갈' if r[0]=='1968-12-21' else r[1])]+r[2:] for r in sec['경부']]
 sec['경부'].append(['1969-12-26','한남대교(제3한강교)–반포','국가기록원 「고속도로 연표」','https://theme.archives.go.kr/next/gyeongbu/roadChronological01.do','연표에 「제3한강교 준공 개통(서울~부산간 고속도로 시작 기점)」. 한남–양재 구간은 지금 OSM에서 고속도로가 아닌 자동차전용도로로 표시됨'])
 sec['경부'].sort()

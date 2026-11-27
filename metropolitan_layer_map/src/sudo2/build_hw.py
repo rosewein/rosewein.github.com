@@ -1,6 +1,12 @@
 # 고속도로: OSM(Geofabrik 2026-11-24) highway=motorway 선형 + 구간별 처음 개통일(hw_segments.py)
+import os as _os, sys as _sys  # paths.py 찾기: 이 파일 폴더에서 위로 올라감(저장소 src/, 작업 공간 $MLM_SUDO·$MLM_SUDO2)
+_d = _os.path.dirname(_os.path.abspath(__file__))
+while _d != _os.path.dirname(_d) and not _os.path.isfile(_os.path.join(_d, 'paths.py')):
+    _d = _os.path.dirname(_d)
+_sys.path.insert(1, _d)
+from paths import RAW, SUDO2  # noqa: E402
 import json,re,sys,math
-sys.path.insert(0,'/home/claude/sudo2')
+sys.path.insert(0,SUDO2)
 from hw_segments import SEG, SRC
 from build2_util import rnd
 import networkx as nx
@@ -14,7 +20,7 @@ NAMES=[('경부고속도로','경부'),('제2경인','제2경인'),('인천대�
  ('제2중부','제2중부'),('중부내륙','중부내륙'),('중부고속도로','중부'),('평택제천','평택제천'),('세종포천','세종포천'),('서울양양','서울양양'),('광주원주','광주원주'),('인천국제공항','공항'),
  ('평택시흥','평택시흥'),('용인서울','용인서울'),('오산화성','오산화성'),('평택화성','평택화성'),('익산평택','익산평택'),('수도권제2순환','제2순환'),('중앙고속도로','중앙'),('평택파주고속도로 지선','수원광명')]
 J=defaultdict(list); WAYS=[]; ORPH=[]
-for ln in open('/home/claude/raw/osm/mw.geojsonseq'):
+for ln in open(f'{RAW}/osm/mw.geojsonseq'):
     ln=ln.strip('\x1e\n ')
     if not ln: continue
     f=json.loads(ln); p=f['properties']; g=shape(f['geometry'])
@@ -169,6 +175,6 @@ for (rt,d0,sk),gs in grp.items():
     for l in ls:
         l=l.simplify(0.0002)
         out.append({'r':rt,'d':d0,'s':sk,'p':rnd(list(l.coords))})
-json.dump({'hw':out,'src':SRC},open('/home/claude/sudo2/hw.json','w'),ensure_ascii=False)
+json.dump({'hw':out,'src':SRC},open(f'{SUDO2}/hw.json','w'),ensure_ascii=False)
 from collections import Counter
 print(len(out), Counter((o['r'],o['d']) for o in out).most_common(80))

@@ -1,9 +1,15 @@
 """정류소 순서를 방향 도로 그래프 위 경로로 잇는다(탐욕 방식: 정류소마다 후보 노드 중 앞 정류소에서 가장 싸게 닿는 곳)."""
+import os as _os, sys as _sys  # paths.py 찾기: 이 파일 폴더에서 위로 올라감(저장소 src/, 작업 공간 $MLM_SUDO·$MLM_SUDO2)
+_d = _os.path.dirname(_os.path.abspath(__file__))
+while _d != _os.path.dirname(_d) and not _os.path.isfile(_os.path.join(_d, 'paths.py')):
+    _d = _os.path.dirname(_d)
+_sys.path.insert(1, _d)
+from paths import SUDO2  # noqa: E402
 import numpy as np, math
 from scipy.sparse import csr_matrix
 from scipy.sparse.csgraph import dijkstra
 from scipy.spatial import cKDTree
-Z = np.load('/home/claude/sudo2/bus/busgraph.npz')
+Z = np.load(f'{SUDO2}/bus/busgraph.npz')
 X, Y, U, V, Dk, C, COST = Z['x'], Z['y'], Z['u'], Z['v'], Z['d'], Z['c'], Z['cost']
 N = len(X)
 W = Dk * COST[C]

@@ -1,8 +1,14 @@
 """나무위키 노선 글(기점 - 경유지 - … - 종점)의 지명을 전국 버스정류장 이름으로 찾아 좌표 순서로 바꾼다.
 같은 이름이 여러 곳이면 앞 지점에 가장 가까운 것을 고른다(첫 지점은 기점 주소의 시·군 안에서)."""
+import os as _os, sys as _sys  # paths.py 찾기: 이 파일 폴더에서 위로 올라감(저장소 src/, 작업 공간 $MLM_SUDO·$MLM_SUDO2)
+_d = _os.path.dirname(_os.path.abspath(__file__))
+while _d != _os.path.dirname(_d) and not _os.path.isfile(_os.path.join(_d, 'paths.py')):
+    _d = _os.path.dirname(_d)
+_sys.path.insert(1, _d)
+from paths import UPLOADS  # noqa: E402
 import csv, re, math, collections, pickle, os
 
-FN = '/mnt/user-data/uploads/Downloads/국토교통부_전국 버스정류장 위치정보_20261109.csv'
+FN = f'{UPLOADS}/국토교통부_전국 버스정류장 위치정보_20261109.csv'
 CACHE = '/tmp/stops_capital.pkl'
 
 def norm(s):

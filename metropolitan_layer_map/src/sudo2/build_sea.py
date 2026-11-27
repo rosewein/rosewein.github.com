@@ -1,9 +1,15 @@
+import os as _os, sys as _sys  # paths.py 찾기: 이 파일 폴더에서 위로 올라감(저장소 src/, 작업 공간 $MLM_SUDO·$MLM_SUDO2)
+_d = _os.path.dirname(_os.path.abspath(__file__))
+while _d != _os.path.dirname(_d) and not _os.path.isfile(_os.path.join(_d, 'paths.py')):
+    _d = _os.path.dirname(_d)
+_sys.path.insert(1, _d)
+from paths import EXT, PAGE_DATA, RAW  # noqa: E402
 import json, pyarrow.parquet as pq, shapely, shapely.wkb
 from shapely.geometry import shape, box, mapping, MultiPolygon
 from shapely.geometry.polygon import orient
 from shapely.ops import unary_union, polylabel
 FR=box(123.8,35.6,130.0,39.6)
-t=pq.read_table('/home/claude/ext/vuski_admdongkor/parquet/simplified/sido_20261001_light.parquet').to_pylist()
+t=pq.read_table(f'{EXT}/vuski_admdongkor/parquet/simplified/sido_20261001_light.parquet').to_pylist()
 parts=[]; labs=[]
 for r in t:
     if any(k in r['sidonm'] for k in ('서울','인천','경기')): continue
@@ -19,7 +25,7 @@ for r in t:
     if any(k in r['sidonm'] for k in ('서울','인천','경기')):
         g=shapely.wkb.loads(r['geometry']).buffer(0).intersection(IN)
         if not g.is_empty: parts.append(g)
-ne=json.load(open('/home/claude/raw/ne/ne_10m_admin_0_countries.geojson'))
+ne=json.load(open(f'{RAW}/ne/ne_10m_admin_0_countries.geojson'))
 prk=[f for f in ne['features'] if f['properties'].get('ADM0_A3')=='PRK'][0]
 pg=shape(prk['geometry']).buffer(0.012).intersection(FR)
 parts.append(pg)
@@ -40,7 +46,7 @@ def og(g):
             return [rnd(x) for x in o]
         return o
     return {'type':m['type'],'coordinates':rnd(m['coordinates'])}
-d=json.load(open('/home/claude/sudo/page/data.json'))
+d=json.load(open(PAGE_DATA))
 d['nb']=og(land); d['nbLabels']=labs
-json.dump(d,open('/home/claude/sudo/page/data.json','w'),ensure_ascii=False,separators=(',',':'))
+json.dump(d,open(PAGE_DATA,'w'),ensure_ascii=False,separators=(',',':'))
 print(labs, len(json.dumps(d['nb'])))

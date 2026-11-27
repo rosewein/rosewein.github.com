@@ -1,12 +1,18 @@
+import os as _os, sys as _sys  # paths.py 찾기: 이 파일 폴더에서 위로 올라감(저장소 src/, 작업 공간 $MLM_SUDO·$MLM_SUDO2)
+_d = _os.path.dirname(_os.path.abspath(__file__))
+while _d != _os.path.dirname(_d) and not _os.path.isfile(_os.path.join(_d, 'paths.py')):
+    _d = _os.path.dirname(_d)
+_sys.path.insert(1, _d)
+from paths import PAGE, SUDO, VENDOR  # noqa: E402
 import sys, threading, http.server, functools, json
 from playwright.sync_api import sync_playwright
-ROOT='/home/claude/sudo/page'; OUT='/home/claude/sudo/shots'
+ROOT=PAGE; OUT=f'{SUDO}/shots'
 import os; os.makedirs(OUT,exist_ok=True)
 class H(http.server.SimpleHTTPRequestHandler):
     def log_message(self,*a): pass
 srv=http.server.ThreadingHTTPServer(('127.0.0.1',8766),functools.partial(H,directory=ROOT))
 threading.Thread(target=srv.serve_forever,daemon=True).start()
-D3=open('/home/claude/vendor/node_modules/d3/dist/d3.min.js').read()
+D3=open(f'{VENDOR}/node_modules/d3/dist/d3.min.js').read()
 scenes=json.loads(sys.argv[1])
 with sync_playwright() as p:
     b=p.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--no-sandbox'])

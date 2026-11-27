@@ -1,4 +1,10 @@
 """시외버스 터미널·정류장과 그곳에서 나가던 방면(조선일보 기사로 확인한 행선지) → page data.json의 tm"""
+import os as _os, sys as _sys  # paths.py 찾기: 이 파일 폴더에서 위로 올라감(저장소 src/, 작업 공간 $MLM_SUDO·$MLM_SUDO2)
+_d = _os.path.dirname(_os.path.abspath(__file__))
+while _d != _os.path.dirname(_d) and not _os.path.isfile(_os.path.join(_d, 'paths.py')):
+    _d = _os.path.dirname(_d)
+_sys.path.insert(1, _d)
+from paths import PAGE_DATA  # noqa: E402
 import json, math
 C = '조선일보'
 # 행선지 자리(어림, 방위를 잡는 데만 씀)
@@ -86,7 +92,7 @@ for t in T:
         dest = sorted([[n, max(v[0], t['a']), min(v[1], t['z'])] for n, v in o.items()], key=lambda r: (r[1], r[0]))
         dirs.append(dict(k=k, nm=DN[k], b=round(b, 4), ds=dest))
     out.append(dict(n=t['n'], k=t['k'], p=[t['x'], t['y']], a=t['a'], z=t['z'], sc=t['sc'], src=t['src'], nt=t['nt'], dr=dirs))
-pg = '/home/claude/sudo/page/data.json'
+pg = PAGE_DATA
 D = json.load(open(pg, encoding='utf-8')); D['tm'] = out
 open(pg, 'w', encoding='utf-8').write(json.dumps(D, ensure_ascii=False, separators=(',', ':')))
 print(len(out), sum(len(t['dr']) for t in out), 'arrows')

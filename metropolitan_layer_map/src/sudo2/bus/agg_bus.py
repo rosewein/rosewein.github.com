@@ -1,21 +1,27 @@
 """노선 경로를 도로 구간(무방향)별로 모아, 지나는 노선 묶음이 같은 구간끼리 이은 선(chain)을 만든다 → bus_gg.json"""
+import os as _os, sys as _sys  # paths.py 찾기: 이 파일 폴더에서 위로 올라감(저장소 src/, 작업 공간 $MLM_SUDO·$MLM_SUDO2)
+_d = _os.path.dirname(_os.path.abspath(__file__))
+while _d != _os.path.dirname(_d) and not _os.path.isfile(_os.path.join(_d, 'paths.py')):
+    _d = _os.path.dirname(_d)
+_sys.path.insert(1, _d)
+from paths import SUDO2  # noqa: E402
 import json, pickle, collections, numpy as np
 import shapely
-Z = np.load('/home/claude/sudo2/bus/busgraph.npz'); X, Y = Z['x'], Z['y']
-rs = json.load(open('/home/claude/sudo2/bus/routes_gg.json')) + json.load(open('/home/claude/sudo2/bus/routes_ic.json')) + json.load(open('/home/claude/sudo2/bus/routes_se.json'))
-YB = json.load(open('/home/claude/sudo2/bus/years_bus.json'))
+Z = np.load(f'{SUDO2}/bus/busgraph.npz'); X, Y = Z['x'], Z['y']
+rs = json.load(open(f'{SUDO2}/bus/routes_gg.json')) + json.load(open(f'{SUDO2}/bus/routes_ic.json')) + json.load(open(f'{SUDO2}/bus/routes_se.json'))
+YB = json.load(open(f'{SUDO2}/bus/years_bus.json'))
 DUP = {'232000061'}  # 경기 BMS에도 있는 강화–신촌 3000번(인천 면허 자료로 그림)
 rs = [r for r in rs if r['id'] not in DUP]
 # 그리지 않는 것: 같은 노선의 옛 등록·보조 운행분(drop), 생긴 해를 못 찾았고 BMS 등록이 2020년 이전이라 지금 다니는지 모르는 것(hide)
 rs = [r for r in rs if not YB.get(r['id'], {}).get('drop') and not YB.get(r['id'], {}).get('hide')]
 # 없어진 노선: 나무위키 폐선 문서의 경유지를 이은 근사선(closed/build_closed.py)
-RC = json.load(open('/home/claude/sudo2/bus/closed/routes_closed.json')) + json.load(open('/home/claude/sudo2/bus/closed/routes_pre2004.json'))
+RC = json.load(open(f'{SUDO2}/bus/closed/routes_closed.json')) + json.load(open(f'{SUDO2}/bus/closed/routes_pre2004.json'))
 XID = {r['id'] for r in RC}
 for r in RC: YB[r['id']] = dict(y=r['y'], z=r['z'], how=r.get('how') or '폐선 문서 경유지', src=r['src'], note=r.get('note'))
 rs = rs + RC
-P = pickle.load(open('/home/claude/sudo2/bus/paths_all.pkl', 'rb'))
-P.update(pickle.load(open('/home/claude/sudo2/bus/closed/paths_closed.pkl', 'rb')))
-P.update(pickle.load(open('/home/claude/sudo2/bus/closed/paths_pre2004.pkl', 'rb')))
+P = pickle.load(open(f'{SUDO2}/bus/paths_all.pkl', 'rb'))
+P.update(pickle.load(open(f'{SUDO2}/bus/closed/paths_closed.pkl', 'rb')))
+P.update(pickle.load(open(f'{SUDO2}/bus/closed/paths_pre2004.pkl', 'rb')))
 E = collections.defaultdict(set)
 brk = {}
 for ri, r in enumerate(rs):
@@ -60,7 +66,7 @@ def ymeta(r):
 meta = [dict(n=r['name'], o=r['o'], e=r['e'], v=r.get('variants', []), b=brk[i], **ymeta(r)) for i, r in enumerate(rs)]
 # 출발점(바깥 끝)
 starts = [[round(r['pts'][0][0], 5), round(r['pts'][0][1], 5)] for r in rs]
-json.dump(dict(ch=chains, rt=meta, st=starts), open('/home/claude/sudo2/bus/bus_gg.json', 'w'), ensure_ascii=False, separators=(',', ':'))
+json.dump(dict(ch=chains, rt=meta, st=starts), open(f'{SUDO2}/bus/bus_gg.json', 'w'), ensure_ascii=False, separators=(',', ':'))
 cnt = collections.Counter(len(c['r']) for c in chains)
 print('chains', len(chains), 'max routes on a chain', max(cnt), 'breaks', sum(brk.values()))
-import os; print(os.path.getsize('/home/claude/sudo2/bus/bus_gg.json') // 1024, 'KB')
+import os; print(os.path.getsize(f'{SUDO2}/bus/bus_gg.json') // 1024, 'KB')

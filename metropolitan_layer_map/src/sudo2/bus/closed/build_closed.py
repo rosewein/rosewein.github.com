@@ -1,7 +1,13 @@
 """없어진 광역버스(나무위키 폐선 문서의 기점–경유지–종점 글)를 정류장 이름 → 좌표 → 버스 도로 그래프 경로로 바꾼다.
 결과: routes_closed.json(노선 메타·찾은 점), paths_closed.pkl(노드 경로)"""
+import os as _os, sys as _sys  # paths.py 찾기: 이 파일 폴더에서 위로 올라감(저장소 src/, 작업 공간 $MLM_SUDO·$MLM_SUDO2)
+_d = _os.path.dirname(_os.path.abspath(__file__))
+while _d != _os.path.dirname(_d) and not _os.path.isfile(_os.path.join(_d, 'paths.py')):
+    _d = _os.path.dirname(_d)
+_sys.path.insert(1, _d)
+from paths import SUDO2  # noqa: E402
 import json, re, pickle, sys
-sys.path.insert(0, '/home/claude/sudo2/bus')
+sys.path.insert(0, f'{SUDO2}/bus')
 import geo_names as g
 
 ROAD = re.compile(r'(고속도로|고속화도로|국지도|국도|대로$|로$|JC$|TG$|톨게이트|영업소|IC$|IC\)|나들목|대교$|교차로$|지하차도|고가차도|터널$)')
@@ -30,9 +36,9 @@ def run(entries):
     return out, paths
 
 if __name__ == '__main__':
-    inp = sys.argv[1] if len(sys.argv) > 1 else '/home/claude/sudo2/bus/closed/new_closed.json'
+    inp = sys.argv[1] if len(sys.argv) > 1 else f'{SUDO2}/bus/closed/new_closed.json'
     tag = sys.argv[2] if len(sys.argv) > 2 else 'closed'
     E = json.load(open(inp))
     out, paths = run(E)
-    json.dump(out, open(f'/home/claude/sudo2/bus/closed/routes_{tag}.json', 'w'), ensure_ascii=False)
-    pickle.dump(paths, open(f'/home/claude/sudo2/bus/closed/paths_{tag}.pkl', 'wb'))
+    json.dump(out, open(f'{SUDO2}/bus/closed/routes_{tag}.json', 'w'), ensure_ascii=False)
+    pickle.dump(paths, open(f'{SUDO2}/bus/closed/paths_{tag}.pkl', 'wb'))

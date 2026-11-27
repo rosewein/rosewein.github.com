@@ -1,18 +1,24 @@
 # 신도시·택지: 택지정보시스템(국토교통부·LX) 지구경계 SHP(EPSG:5186) + 지구정보·지구단계정보 CSV, 2026-10 고시월(2026-11-26 생성)
+import os as _os, sys as _sys  # paths.py 찾기: 이 파일 폴더에서 위로 올라감(저장소 src/, 작업 공간 $MLM_SUDO·$MLM_SUDO2)
+_d = _os.path.dirname(_os.path.abspath(__file__))
+while _d != _os.path.dirname(_d) and not _os.path.isfile(_os.path.join(_d, 'paths.py')):
+    _d = _os.path.dirname(_d)
+_sys.path.insert(1, _d)
+from paths import PAGE_DATA, RAW, SUDO2  # noqa: E402
 import json, sys, shapefile, pandas as pd, shapely
 from shapely.geometry import shape, mapping, MultiPolygon, Point
 from shapely.geometry.polygon import orient
 from shapely.ops import transform, unary_union
 from pyproj import Transformer
-sys.path.insert(0,'/home/claude/sudo2'); from build2_util import rnd
-J='/home/claude/raw/jigu/'
+sys.path.insert(0,SUDO2); from build2_util import rnd
+J=f'{RAW}/jigu/'
 I=pd.read_csv(J+'지구정보_전국_20261126/BLS5_DSTRC_INFO.csv',encoding='cp949',dtype=str).set_index('지구지정번호')
 M=pd.read_csv(J+'지구단계정보_전국_20261126/BLS5_DSTRC_MASTER.csv',encoding='cp949',dtype=str).set_index('지구지정번호')
 P=pd.read_csv(J+'부분준공정보_전국_20261126/BLS5_DSTRC_PART.csv',encoding='cp949',dtype=str)
 pfirst=P.groupby('지구지정번호')['부분준공일자'].min().to_dict()
 tr=Transformer.from_crs(5186,4326,always_xy=True).transform
 r=shapefile.Reader(J+'지구경계_전국_20261126_5186/the_geom',encoding='cp949')
-d=json.load(open('/home/claude/sudo/page/data.json'))
+d=json.load(open(PAGE_DATA))
 ST=d['stations']
 def D(s):
     s=(s or '').strip() if isinstance(s,str) else ''
@@ -75,7 +81,7 @@ for o in out:
 out.sort(key=lambda o:-o['ar'])
 d['jigu']=out
 d['src']['jigu']=['택지정보시스템 자료제공(국토교통부·한국국토정보공사), 2026-10 고시월','https://openapi.jigu.go.kr/main.do']
-json.dump(d,open('/home/claude/sudo/page/data.json','w'),ensure_ascii=False,separators=(',',':'))
+json.dump(d,open(PAGE_DATA,'w'),ensure_ascii=False,separators=(',',':'))
 print(len(out),'skipped',skipped[:10],len(json.dumps(out)))
 import collections
 print(collections.Counter(o['d0'][:3] for o in out))

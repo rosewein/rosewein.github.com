@@ -1,5 +1,11 @@
 """시외버스 터미널·정류장과 나가는 방면 화살표 레이어(한 번만 돌림)"""
-p='/home/claude/sudo/page/index.html'; s=open(p,encoding='utf-8').read()
+import os as _os, sys as _sys  # paths.py 찾기: 이 파일 폴더에서 위로 올라감(저장소 src/, 작업 공간 $MLM_SUDO·$MLM_SUDO2)
+_d = _os.path.dirname(_os.path.abspath(__file__))
+while _d != _os.path.dirname(_d) and not _os.path.isfile(_os.path.join(_d, 'paths.py')):
+    _d = _os.path.dirname(_d)
+_sys.path.insert(1, _d)
+from paths import PAGE_HTML  # noqa: E402
+p=PAGE_HTML; s=open(p,encoding='utf-8').read()
 def rep(a,b,n=1):
     global s
     assert s.count(a)==n,(a[:80],s.count(a)); s=s.replace(a,b)

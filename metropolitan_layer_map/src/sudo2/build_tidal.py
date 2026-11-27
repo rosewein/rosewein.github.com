@@ -1,15 +1,21 @@
 # 시화 간석지: 1994년 1월 시화방조제 물막이 뒤 드러난 간석지가 SGIS 행정경계에 들어 있지 않아 바다로 보이던 문제를 메움
 # 범위 = 반월특수지역 세 구역(택지정보 지구경계) − OSM 수면(시화호·탄도호·수로 등 natural=water). OSM에서 이 범위 안에 해안선이 없음을 확인함
+import os as _os, sys as _sys  # paths.py 찾기: 이 파일 폴더에서 위로 올라감(저장소 src/, 작업 공간 $MLM_SUDO·$MLM_SUDO2)
+_d = _os.path.dirname(_os.path.abspath(__file__))
+while _d != _os.path.dirname(_d) and not _os.path.isfile(_os.path.join(_d, 'paths.py')):
+    _d = _os.path.dirname(_d)
+_sys.path.insert(1, _d)
+from paths import PAGE_DATA, RAW, SUDO2  # noqa: E402
 import json, sys, shapely
 from shapely.geometry import shape, mapping, MultiPolygon
 from shapely.geometry.polygon import orient
 from shapely.ops import unary_union
-sys.path.insert(0,'/home/claude/sudo2'); from build2_util import rnd
-P='/home/claude/sudo/page/data.json'
+sys.path.insert(0,SUDO2); from build2_util import rnd
+P=PAGE_DATA
 d=json.load(open(P))
 R=unary_union([shape(o['geo']).buffer(0) for o in d['jigu'] if o['c'] in ('41390MX2010001','41390MX2010005','41390KW2017001')])
 W=[];coast=[]
-for ln in open('/home/claude/raw/osm/sh.geojsonseq'):
+for ln in open(f'{RAW}/osm/sh.geojsonseq'):
     ln=ln.strip('\x1e\n ')
     if not ln: continue
     f=json.loads(ln); p=f['properties']

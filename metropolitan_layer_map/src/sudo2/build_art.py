@@ -1,6 +1,12 @@
 # 간선도로 레이어: OSM trunk·primary 지금 선형(바탕) + 날짜를 찾은 자동차전용도로(구간 개통일)
-# 입력: /home/claude/raw/osm/art.geojsonseq (sudo_bb에서 highway=trunk,primary,secondary)
-# 출력: /home/claude/sudo2/art.json
+# 입력: RAW/osm/art.geojsonseq (sudo_bb에서 highway=trunk,primary,secondary)
+# 출력: SUDO2/art.json (RAW·SUDO2는 src/paths.py)
+import os as _os, sys as _sys  # paths.py 찾기: 이 파일 폴더에서 위로 올라감(저장소 src/, 작업 공간 $MLM_SUDO·$MLM_SUDO2)
+_d = _os.path.dirname(_os.path.abspath(__file__))
+while _d != _os.path.dirname(_d) and not _os.path.isfile(_os.path.join(_d, 'paths.py')):
+    _d = _os.path.dirname(_d)
+_sys.path.insert(1, _d)
+from paths import RAW, SUDO2  # noqa: E402
 import json, math
 from collections import defaultdict
 from shapely.geometry import shape, LineString
@@ -102,7 +108,7 @@ RN = {'서부간선지하도로': '서부간선지하도로', '분당수서로':
 
 base = []; segs = defaultdict(list); hwx = defaultdict(list)
 sec_used = defaultdict(set)
-for ln in open('/home/claude/raw/osm/art.geojsonseq'):
+for ln in open(f'{RAW}/osm/art.geojsonseq'):
     ln = ln.strip('\x1e\n ')
     if not ln: continue
     f = json.loads(ln); p = f['properties']
@@ -138,7 +144,7 @@ bl = merged(base, 0.0003)
 out['base'] = bl
 for d0, gs in hwx.items():
     for p in merged(gs, 0.00015): out['hwx'].append({'r': '경부', 'd': d0, 'p': p})
-json.dump(out, open('/home/claude/sudo2/art.json', 'w'), ensure_ascii=False, separators=(',', ':'))
+json.dump(out, open(f'{SUDO2}/art.json', 'w'), ensure_ascii=False, separators=(',', ':'))
 print('seg', len(out['seg']), sum(len(o['p']) for o in out['seg']), 'base', len(bl), sum(len(p) for p in bl), 'hwx', len(out['hwx']))
 for nm in R: print(nm, [r[0] for r in out['sec'][nm]], 'unused', [R[nm][i][0] for i in range(len(R[nm])) if i not in sec_used[nm]])
-import os; print(os.path.getsize('/home/claude/sudo2/art.json'))
+import os; print(os.path.getsize(f'{SUDO2}/art.json'))

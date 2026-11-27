@@ -1,14 +1,20 @@
 # 강: OSM(Geofabrik 2026-11-24 추출본)에서 water=river 면과 waterway=river 선만 뽑음. 호수·저수지는 생긴 해를 정리하기 전이라 뺌
+import os as _os, sys as _sys  # paths.py 찾기: 이 파일 폴더에서 위로 올라감(저장소 src/, 작업 공간 $MLM_SUDO·$MLM_SUDO2)
+_d = _os.path.dirname(_os.path.abspath(__file__))
+while _d != _os.path.dirname(_d) and not _os.path.isfile(_os.path.join(_d, 'paths.py')):
+    _d = _os.path.dirname(_d)
+_sys.path.insert(1, _d)
+from paths import PAGE_DATA, RAW, SUDO2  # noqa: E402
 import json, sys
 from shapely.geometry import shape, box, mapping, MultiPolygon, LineString, MultiLineString
 from shapely.geometry.polygon import orient
 from shapely.ops import unary_union, linemerge
-sys.path.insert(0,'/home/claude/sudo2')
+sys.path.insert(0,SUDO2)
 from build2_util import rnd
 FR=box(124.7,36.1,129.3,39.1)
 CORE=box(125.9,36.75,128.1,38.45)
 polys=[]; lines={}
-for ln in open('/home/claude/raw/osm/w.geojsonseq'):
+for ln in open(f'{RAW}/osm/w.geojsonseq'):
     ln=ln.strip('\x1e\n ')
     if not ln: continue
     f=json.loads(ln); p=f['properties']; g=f['geometry']
@@ -48,7 +54,7 @@ for nm,gs in lines.items():
         if x.length<((0.004 if nm else 0.03) if core else (0.05 if nm else 1e9)): continue
         if not core: x=x.simplify(0.001)
         L.append({'n':nm,'p':rnd(list(x.coords))})
-d=json.load(open('/home/claude/sudo/page/data.json'))
+d=json.load(open(PAGE_DATA))
 m=mapping(W); d['water']={'type':m['type'],'coordinates':rnd(m['coordinates'])}; d['rivers']=L
-json.dump(d,open('/home/claude/sudo/page/data.json','w'),ensure_ascii=False,separators=(',',':'))
+json.dump(d,open(PAGE_DATA,'w'),ensure_ascii=False,separators=(',',':'))
 print(len(ps), len(json.dumps(d['water'])), len(L), len(json.dumps(L)))

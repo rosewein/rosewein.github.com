@@ -1,9 +1,15 @@
+import os as _os, sys as _sys  # paths.py 찾기: 이 파일 폴더에서 위로 올라감(저장소 src/, 작업 공간 $MLM_SUDO·$MLM_SUDO2)
+_d = _os.path.dirname(_os.path.abspath(__file__))
+while _d != _os.path.dirname(_d) and not _os.path.isfile(_os.path.join(_d, 'paths.py')):
+    _d = _os.path.dirname(_d)
+_sys.path.insert(1, _d)
+from paths import RAW  # noqa: E402
 import sqlite3, shapely.wkb, json, pickle
 from shapely.ops import unary_union
 def geom(b):
     flags=b[3]; env=(flags>>1)&7; el={0:0,1:32,2:48,3:48,4:64}[env]
     return shapely.wkb.loads(bytes(b[8+el:])).buffer(0)
-A='/home/claude/raw/hgis_adm/adm.gpkg'; B='/home/claude/raw/hgis_5575/1955-1970행정구역_GIS_데이터.gpkg'
+A=f'{RAW}/hgis_adm/adm.gpkg'; B=f'{RAW}/hgis_5575/1955-1970행정구역_GIS_데이터.gpkg'
 c=sqlite3.connect(A)
 h45=[]
 for key,name,typ,b,e,up,tr,ref,g in c.execute('select key,name,type,begin,"end",up_key,trust,reference,geom from "행정구역_GIS_폴리곤" where lv=2 and up_key=\'2\''):

@@ -2,10 +2,16 @@
 - y·z·how·src·note를 덮어씀
 - DROP: 같은 노선의 옛 등록·보조 운행분이라 그리지 않음(drop 사유 기록)
 - 생긴 해를 못 찾았고 BMS 마지막 등록이 2020년 이전인 노선은 hide(지금 다니는지 확인 못 함)"""
+import os as _os, sys as _sys  # paths.py 찾기: 이 파일 폴더에서 위로 올라감(저장소 src/, 작업 공간 $MLM_SUDO·$MLM_SUDO2)
+_d = _os.path.dirname(_os.path.abspath(__file__))
+while _d != _os.path.dirname(_d) and not _os.path.isfile(_os.path.join(_d, 'paths.py')):
+    _d = _os.path.dirname(_d)
+_sys.path.insert(1, _d)
+from paths import SUDO2  # noqa: E402
 import json, pickle, sys
-sys.path.insert(0, '/home/claude/sudo2/bus/namu')
+sys.path.insert(0, f'{SUDO2}/bus/namu')
 from decide_68 import D, Z, DROP
-YB = json.load(open('/home/claude/sudo2/bus/namu/years_bus_before_68.json'))
+YB = json.load(open(f'{SUDO2}/bus/namu/years_bus_before_68.json'))
 S, N, R = pickle.load(open('/tmp/bms.pkl', 'rb'))
 for rid, d in D.items():
     e = YB.setdefault(rid, {})
@@ -25,7 +31,7 @@ for rid, e in YB.items():
         last = max(r['등록일자'][:10] for r in R[rid])
         if last < '2020':
             e['hide'] = f'생긴 해 못 찾음, BMS 마지막 등록 {last[:4]}년(지금 다니는지 확인 못 함)'; hide.append((rid, e.get('name'), last))
-json.dump(YB, open('/home/claude/sudo2/bus/years_bus.json', 'w'), ensure_ascii=False, indent=0)
+json.dump(YB, open(f'{SUDO2}/bus/years_bus.json', 'w'), ensure_ascii=False, indent=0)
 import collections
 print('how', collections.Counter(e.get('how') for e in YB.values() if not e.get('drop') and not e.get('hide')))
 print('z', sum(1 for e in YB.values() if e.get('z')), 'drop', sum(1 for e in YB.values() if e.get('drop')), 'hide', len(hide))

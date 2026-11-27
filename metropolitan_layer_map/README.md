@@ -51,8 +51,9 @@
 ## 폴더
 
 - `index.html`, `data.json`: 지도(d3 7.8.5를 cdnjs에서 읽음). v1.1부터 탭 셋(지도 / 읽는 법 / 자료 범위·출처)으로 나뉜다.
-- `src/sudo/`, `src/sudo2/`: 자료를 만드는 스크립트와 사람이 정한 작은 자료(노선 연도 결정 `bus/namu/decide_68.py`, 시외버스 노선표 `bus/siwoe/siwoe_entries.json`, 터미널 표 `bus/siwoe/terminals.py` 등). 스크립트는 처음 작업 공간의 절대 경로를 그대로 쓴다(`HANDOFF.md` 「새 작업 공간에서 시작하는 법」).
-- `src/setup_workdirs.sh`, `src/collect_back.sh`: 작업 경로로 복사하기, 작업 경로에서 되가져오기.
+- `src/sudo/`, `src/sudo2/`: 자료를 만드는 스크립트와 사람이 정한 작은 자료(노선 연도 결정 `bus/namu/decide_68.py`, 시외버스 노선표 `bus/siwoe/siwoe_entries.json`, 터미널 표 `bus/siwoe/terminals.py` 등). 스크립트가 읽고 쓰는 자리는 `src/paths.py`에서 가져온다(`HANDOFF.md` 「새 작업 공간에서 시작하는 법」).
+- `src/paths.py`: 작업 폴더·원자료·서울 지도 자료의 자리를 한곳에 모은 것(2026-11-27). 기본값은 처음 작업 공간의 경로(`/home/claude/…`)이고, 환경변수(`MLM_HOME`, `MLM_RAW`, `MLM_SEOUL` 등)로 바꿀 수 있다. `python3 src/paths.py`로 지금 값을 볼 수 있다.
+- `src/setup_workdirs.sh`, `src/collect_back.sh`: 작업 경로로 복사하기, 작업 경로에서 되가져오기. `paths.py`와 같은 환경변수를 따른다.
 - `docs/`: 레이어별 기록(claude.ai 프로젝트 「서울 도시 연대지도」의 문서 「수도권 연대지도 구상」「수도권 연대지도 버스」를 2026-11-27에 옮긴 것).
 
 ## 변경 기록

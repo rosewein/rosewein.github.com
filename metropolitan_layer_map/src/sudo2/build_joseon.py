@@ -1,6 +1,12 @@
 # 조선 후기 대로(수도권): 서울 안은 「서울 도시 연대지도」 joseon.json의 선을 그대로 쓰고,
 # 서울 밖은 경유지를 지금 도로(OSM trunk·primary·secondary·tertiary·unclassified, 자동차전용도로 제외) 위 최단 경로로 잇는다.
 # 경유지 자리: 국사편찬위원회 HGIS 1912–1914년 동리·부군 포인트(그 이름을 가진 마을 자리). 몇 곳은 어림(추정).
+import os as _os, sys as _sys  # paths.py 찾기: 이 파일 폴더에서 위로 올라감(저장소 src/, 작업 공간 $MLM_SUDO·$MLM_SUDO2)
+_d = _os.path.dirname(_os.path.abspath(__file__))
+while _d != _os.path.dirname(_d) and not _os.path.isfile(_os.path.join(_d, 'paths.py')):
+    _d = _os.path.dirname(_d)
+_sys.path.insert(1, _d)
+from paths import RAW, SEOUL, SUDO2  # noqa: E402
 import json, math
 import numpy as np
 from scipy.sparse import csr_matrix
@@ -8,7 +14,7 @@ from scipy.sparse.csgraph import dijkstra
 from scipy.spatial import cKDTree
 from shapely.geometry import LineString
 
-SJ = json.load(open('/home/claude/repo/rg/seoul-layer-map/data/joseon.json'))
+SJ = json.load(open(f'{SEOUL}/joseon.json'))
 SR = {r['id']: r for r in SJ['roads']}
 HG = 'HGIS 1912–1914 동리'
 # 경유지: id -> (lat, lng, 이름, 자리 잡은 법, 종류)
@@ -98,7 +104,7 @@ def nid(c):
     return i
 COST['track'] = 1.3; COST['residential'] = 1.4; COST['living_street'] = 1.5
 import itertools
-for ln in itertools.chain(open('/home/claude/raw/osm/rd.geojsonseq'), open('/home/claude/raw/osm/kprd.geojsonseq'), open('/home/claude/raw/osm/res.geojsonseq')):
+for ln in itertools.chain(open(f'{RAW}/osm/rd.geojsonseq'), open(f'{RAW}/osm/kprd.geojsonseq'), open(f'{RAW}/osm/res.geojsonseq')):
     ln = ln.strip('\x1e\n ')
     if not ln: continue
     f = json.loads(ln); p = f['properties']; g = f['geometry']
@@ -185,5 +191,5 @@ for sid, name, no, legs, srcs, conf, note in ROADS:
 # 서울 지도 점(역·원·나루·문)
 for p in SJ['points']:
     out['pts'].append({'n': p['name'], 'k': p['kind'], 'x': p['lng'], 'y': p['lat'], 'pos': p.get('pos', ''), 'src': p.get('src', ''), 'seoul': True})
-json.dump(out, open('/home/claude/sudo2/joseon_sudo.json', 'w'), ensure_ascii=False, separators=(',', ':'))
+json.dump(out, open(f'{SUDO2}/joseon_sudo.json', 'w'), ensure_ascii=False, separators=(',', ':'))
 print('pts', len(out['pts']), 'bytes', len(json.dumps(out, ensure_ascii=False, separators=(',', ':'))))

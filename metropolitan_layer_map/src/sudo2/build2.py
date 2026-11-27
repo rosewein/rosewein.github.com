@@ -1,9 +1,15 @@
+import os as _os, sys as _sys  # paths.py 찾기: 이 파일 폴더에서 위로 올라감(저장소 src/, 작업 공간 $MLM_SUDO·$MLM_SUDO2)
+_d = _os.path.dirname(_os.path.abspath(__file__))
+while _d != _os.path.dirname(_d) and not _os.path.isfile(_os.path.join(_d, 'paths.py')):
+    _d = _os.path.dirname(_d)
+_sys.path.insert(1, _d)
+from paths import PAGE_DATA, RAW, SEOUL  # noqa: E402
 import json, pickle, re, sqlite3, shapely.wkb
 from shapely.geometry import mapping, LineString, Polygon, MultiPolygon
 from shapely.geometry.polygon import orient
 from shapely.ops import unary_union, polylabel
 h45,h55=pickle.load(open('hgis.pkl','rb'))
-old=json.load(open('/home/claude/sudo/page/data.json'))
+old=json.load(open(PAGE_DATA))
 def rnd(o):
     if isinstance(o,(list,tuple)):
         if o and isinstance(o[0],(int,float)): return [round(o[0],4),round(o[1],4)]
@@ -149,7 +155,7 @@ for c in old['counts']:
     etc=(' · '+'·'.join(c['경기기타'])) if c['경기기타'] else ''
     ct.append(f"서울 {c['서울']}구 · {ic} · 경기 {c['경기시']}시 {c['경기군']}군{etc}")
 # ---- pre-1974 rail ----
-rc=sqlite3.connect('/home/claude/raw/hgis_rail/rail.gpkg')
+rc=sqlite3.connect(f'{RAW}/hgis_rail/rail.gpkg')
 def rg(b):
     flags=b[3]; env=(flags>>1)&7; el={0:0,1:32,2:48,3:48,4:64}[env]
     return shapely.wkb.loads(bytes(b[8+el:]))
@@ -164,7 +170,7 @@ for sp,grp,g in rc.execute('select sp_id,group_id,geom from "철도망_GIS_LINE"
     lines=[G] if G.geom_type=='LineString' else list(G.geoms)
     for ln in lines:
         rail0.append({'l':l,'d0':d0,'d1':d1,'todo':todo,'s':'hgis','p':rnd(ln.simplify(0.0002).coords[:])})
-r=json.load(open('/home/claude/repo/seoul-layer-map/data/rail.json'))
+r=json.load(open(f'{SEOUL}/rail.json'))
 skip={'경인선','경부선','경부고속철도','경의선(용산선 지하)'}
 for s in r['segs']:
     if s['line'] in skip or 'p' not in s: continue
@@ -172,5 +178,5 @@ for s in r['segs']:
 print('rail0',len(rail0))
 data=dict(old); data.update({'snaps':snaps,'sgg':out,'sido':sido_out,'labels':labels,'ct':ct,'rail0':rail0,'fixnotes':SRC_FIX})
 for k in ('counts',): data.pop(k,None)
-json.dump(data,open('/home/claude/sudo/page/data.json','w'),ensure_ascii=False,separators=(',',':'))
+json.dump(data,open(PAGE_DATA,'w'),ensure_ascii=False,separators=(',',':'))
 for s,t in zip(snaps[:off+1],ct[:off+1]): print(s['d'],s['src'],t)
