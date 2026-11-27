@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>수도권 도시 연대지도 시안</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hahmlet:wght@500;700&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* VOICE: 연구 시안. 차분한 지도 도판, 꾸밈 없이 자료가 닿는 곳과 비는 곳을 그대로 보여 줌
+   IDEA: 지도첩의 한 장 — 「서울 도시 연대지도」와 같은 종이·잉크, 연도 띠가 붙은 행정구역 변천 도판
+   PICTURE: 서울·인천·경기 시·군·구 면(황토색 밝기 3단계)과 전철 선, 그 해 바뀐 곳은 파란 테두리
+   COLOUR and TYPE: 본 지도의 종이 #e8ebe4·잉크 #1e2420, 황토 한 색상 밝기 단계, Hahmlet 제목 + IBM Plex Sans KR
+   LAYOUT: 제목 → 큰 지도(연도·수치는 지도 위) → 연도 띠 → 레이어 칩(자료 없는 칩 포함) → 자료 범위 표 */
+:root{
+  --bg:#e8ebe4;--bg2:#dde2da;--ink:#1e2420;--ink2:#4d5852;--rule:#b8c0b7;
+  --k0:#efe6c8;--k1:#dccb8f;--k2:#c2a65c;--edge:#8d8667;--sido:#2f3833;--focus:#1f6fb2;--halo:#e8ebe4;
+  --off:#c9cec6;--rail:#2a2f2c;--line38:#b0252d;--sea:#cbdadf;--nb:#dfe3dc;--river:#8fb1c1;--jg:#8b3a74;--js:#2a7f72;--hwc:#59615b;--hwf:#fbfcf8;--bus1:#e9a89f;--bus2:#d46d5f;--bus3:#b53b2d;--bus4:#7f2218;
+  --display:"Hahmlet","Noto Serif KR","AppleMyungjo",serif;
+  --body:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){
+  --bg:#111714;--bg2:#18201c;--ink:#e2e7e1;--ink2:#a2ada5;--rule:#334039;
+  --k0:#2a291c;--k1:#4b4426;--k2:#7a6a36;--edge:#857d5b;--sido:#c3ccc4;--focus:#6fb2ec;--halo:#111714;--off:#2c3631;--rail:#c9d1ca;--line38:#ff6a5c;--sea:#122029;--nb:#252c27;--river:#3b6377;--jg:#e597cf;--js:#6cc7b8;--hwc:#a3aea6;--hwf:#18201c;--bus1:#6a312b;--bus2:#a04a3f;--bus3:#de7262;--bus4:#ffa799;color-scheme:dark}}
+:root[data-theme=dark]{
+  --bg:#111714;--bg2:#18201c;--ink:#e2e7e1;--ink2:#a2ada5;--rule:#334039;
+  --k0:#2a291c;--k1:#4b4426;--k2:#7a6a36;--edge:#857d5b;--sido:#c3ccc4;--focus:#6fb2ec;--halo:#111714;--off:#2c3631;--rail:#c9d1ca;--line38:#ff6a5c;--sea:#122029;--nb:#252c27;--river:#3b6377;--jg:#e597cf;--js:#6cc7b8;--hwc:#a3aea6;--hwf:#18201c;--bus1:#6a312b;--bus2:#a04a3f;--bus3:#de7262;--bus4:#ffa799;color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 var(--body);overflow-x:clip;word-break:keep-all;overflow-wrap:anywhere}
+.band{padding:clamp(20px,3.5vw,44px) max(4vw,16px)}
+.wrap{max-width:1240px;margin:0 auto}
+h1{font:700 clamp(28px,4.4vw,44px)/1.08 var(--display);margin:0 0 10px;text-wrap:balance}
+h2{font:700 24px/1.2 var(--display);margin:0 0 12px}
+.lede{max-width:68ch;color:var(--ink2);margin:0}
+.fig{position:relative;height:clamp(440px,70vh,820px);background:var(--sea);border-block:1px solid var(--rule);overflow:hidden;touch-action:none}
+.fig>svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+.yr{position:absolute;left:max(4vw,14px);top:12px;pointer-events:none;max-width:calc(100% - 90px);padding:6px 10px 8px;margin-left:-10px;border-radius:10px;background:color-mix(in srgb,var(--bg2) 84%,transparent)}
+.yr b{display:block;font:700 clamp(44px,7vw,72px)/1 var(--display);letter-spacing:-.01em}
+.yr span{display:block;font-size:13px;color:var(--ink2)}
+.yr .ct{font-size:14px;color:var(--ink);font-weight:500;margin-top:4px}
+.zoom{position:absolute;right:12px;top:12px;display:flex;flex-direction:column;gap:6px}
+.zoom button,.ctl button{width:44px;height:44px;border-radius:8px;border:1px solid var(--rule);background:var(--bg);color:var(--ink);font:600 20px/1 var(--body);cursor:pointer}
+button:focus-visible,input:focus-visible,.chip:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.card{position:absolute;left:12px;right:12px;bottom:12px;max-width:380px;background:var(--bg);border:1px solid var(--rule);border-radius:10px;padding:12px 44px 12px 14px;font-size:14px;line-height:1.5;box-shadow:0 6px 20px rgba(0,0,0,.14);display:none;max-height:46%;overflow:auto}
+.card.on{display:block}
+.card h3{font:700 18px/1.25 var(--display);margin:0 0 4px}
+.card .x{position:absolute;right:4px;top:4px;width:40px;height:40px;border:0;background:none;color:var(--ink2);font-size:22px;cursor:pointer}
+.card ul{margin:6px 0 0;padding:0;list-style:none}
+.card li{padding:3px 0;border-top:1px dashed var(--rule)}
+.card a.bk{color:var(--ink);font-weight:600}
+.card li.hi a.bk{color:var(--bus3)}
+.card .now{font-weight:600}
+.card small{color:var(--ink2)}
+.lc{display:inline-block;width:12px;height:4px;border-radius:2px;margin-right:6px;vertical-align:middle}
+.ctl{display:flex;align-items:center;gap:12px;padding:12px max(4vw,16px) 4px}
+.ctl input[type=range]{flex:1;accent-color:var(--focus);height:44px}
+.ticks{position:relative;height:20px;margin:0 calc(max(4vw,16px) + 8px) 0 calc(max(4vw,16px) + 64px);font-size:12px;color:var(--ink2)}.ticks span{position:absolute;top:0;transform:translateX(-50%);white-space:nowrap}
+.chips{display:flex;flex-wrap:wrap;gap:8px;padding:14px max(4vw,16px) 4px}
+.chip{display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:6px 12px;border-radius:20px;border:1px solid var(--rule);background:var(--bg);color:var(--ink);font:500 14px/1.2 var(--body);cursor:pointer}
+.chip[aria-pressed=false]{color:var(--ink2);background:transparent}
+.chip[aria-pressed=false] i{opacity:.35}
+.chip i{display:inline-block;width:18px;height:12px;border-radius:3px;flex:none}
+.chip.none{cursor:default;border-style:dashed;color:var(--ink2);background:transparent}
+.chip.none em{font-style:normal;font-size:12px;padding:1px 6px;border-radius:8px;background:var(--off);color:var(--ink2)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;padding:8px max(4vw,16px) 0;font-size:13px;color:var(--ink2)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:16px;height:12px;border-radius:2px;border:1px solid var(--edge)}
+table{border-collapse:collapse;width:100%;font-size:15px}
+th,td{text-align:left;vertical-align:top;padding:10px 10px 10px 0;border-bottom:1px solid var(--rule)}
+th{font-weight:600;font-size:13px;color:var(--ink2)}
+td:first-child{font-weight:600;white-space:nowrap}
+.st{display:inline-block;font-size:12px;font-weight:600;padding:1px 8px;border-radius:9px;white-space:nowrap}
+.st.y{background:var(--k1);color:var(--ink)}.st.p{background:var(--k0);color:var(--ink);border:1px solid var(--edge)}.st.n{background:var(--off);color:var(--ink2)}
+.note{font-size:14px;color:var(--ink2);max-width:76ch}
+a{color:var(--focus)}
+@media(max-width:600px){table{font-size:13px}.stack thead{display:none}.stack tr{display:grid;padding-block:10px;border-bottom:1px solid var(--rule)}.stack td{display:flow-root;border:0;padding:3px 0;padding-inline-start:6.5em;text-align:start;white-space:normal}.stack td::before{content:attr(data-l);float:inline-start;width:6em;margin-inline-start:-6.5em;white-space:normal;font-weight:600;color:var(--ink2)}.stack td:empty{display:none}.ticks span.mn{display:none}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<script>new MutationObserver(()=>{for(const c of document.querySelectorAll('.stack td:not([data-l])')){let i=0,p=c;while(p=p.previousElementSibling)i+=p.colSpan;c.dataset.l=c.closest('table').rows[0].cells[i]?.textContent||''}}).observe(document,{childList:true,subtree:true})</script>
+</head>
+<body>
+<header class="band"><div class="wrap">
+  <h1>수도권 도시 연대지도 — 자료 시안</h1>
+  <p class="lede">지금 손에 있는 자료만으로 1899–2026년 서울·인천·경기의 행정구역 경계와 철도·전철, 신도시·택지 지구, 고속도로·자동차전용도로를 겹쳐 본 러프 시안입니다. 연도 띠 맨 앞 「조선 후기」 단계부터 조선 후기 대로를 지금 도로 위 근사선으로 그렸고, 1911년 도로규칙 뒤로는 흐리게, 1938년 조선도로령으로 국도 노선이 처음 지정된 뒤로는 옛길 자리만 가늘게 남겼습니다. 광역버스는 서울로 들어가는 경기·인천·서울 면허 노선을 서울 방향만 도로 위로 이어, 노선마다 생긴 해부터 그해 같은 길을 다니던 노선 수로 굵기를 정했습니다. 1899–1910년과 1945–1955년은 HGIS 경계에 행정구역 변경 법령을 맞춰 보정했고(점선 테두리).</p>
+</div></header>
+
+<section class="fig" id="fig" aria-label="수도권 지도">
+  <svg id="map" role="img" aria-label="연도별 수도권 시·군·구 경계와 전철 노선"></svg>
+  <div class="yr" aria-live="polite"><b id="yrBig">2026</b><span id="yrDate"></span><span class="ct" id="yrCount"></span><span id="yrNew"></span></div>
+  <div class="zoom"><button id="zin" aria-label="확대">+</button><button id="zout" aria-label="축소">−</button><button id="zre" aria-label="처음 범위로" style="font-size:14px">⤢</button></div>
+  <div class="card" id="card" role="dialog" aria-live="polite"><button class="x" id="cardX" aria-label="닫기">×</button><div id="cardBody"></div></div>
+</section>
+<div class="ctl"><button id="play" aria-label="재생">▶</button><input type="range" id="year" min="1898" max="2026" value="2026" step="1" aria-label="연도"></div>
+<div class="ticks" id="ticks"></div>
+<div class="chips" id="chips">
+  <button class="chip" data-l="js" aria-pressed="true"><i style="background:var(--js);height:3px"></i>조선 후기 대로 · 1910년까지 진하게</button>
+  <button class="chip" data-l="sgg" aria-pressed="true"><i style="background:var(--k1);border:1px solid var(--edge)"></i>행정구역 경계 1899–2026</button>
+  <button class="chip" data-l="chg" aria-pressed="true"><i style="border:2px solid var(--focus)"></i>그 시점에 생기거나 바뀐 곳</button>
+  <button class="chip" data-l="r0" aria-pressed="true"><i style="background:var(--rail);height:3px"></i>국철 1899–(일부)</button>
+  <button class="chip" data-l="mD" aria-pressed="true"><i style="background:linear-gradient(90deg,#0052A4 0 33%,#00A84D 0 66%,#EF7C1C 0)"></i>전철 1974–2026</button>
+  <button class="chip" data-l="w" aria-pressed="true"><i style="background:var(--sea);border:1px solid var(--river)"></i>강 · 지금 물길</button>
+  <button class="chip" data-l="l38" aria-pressed="true"><i style="border-top:2px dashed var(--line38);height:0"></i>38선 1945–1953</button>
+  <button class="chip" data-l="jg" aria-pressed="true"><i style="background:color-mix(in srgb,var(--jg) 30%,transparent);border:1px solid var(--jg)"></i>신도시·택지 지구 1977–</button>
+  <button class="chip" data-l="hw" aria-pressed="true"><i style="background:var(--hwf);border:1.5px solid var(--hwc);height:7px"></i>고속도로 1968–</button>
+  <button class="chip" data-l="ar" aria-pressed="true"><i style="background:var(--hwf);border:1px solid var(--hwc);height:5px"></i>자동차전용도로 1969–</button>
+  <button class="chip" data-l="arb" aria-pressed="true"><i style="background:var(--ink2);opacity:.45;height:1px"></i>국도·주요 도로 · 지금 모습</button>
+  <button class="chip" data-l="bus" aria-pressed="true"><i style="background:var(--bus3);height:4px"></i>광역버스 · 생긴 해부터 없어진 해까지</button>
+  <button class="chip" data-l="sw" aria-pressed="true"><i style="background:none;border-radius:0;border-top:2px dashed var(--bus3);height:0"></i>시외버스 1963–1990 · 신문 기사로 확인한 해만</button>
+  <button class="chip" data-l="tm" aria-pressed="true"><i style="background:var(--bus4);border-radius:50%;width:10px;height:10px"></i>시외버스 터미널·정류장 · 나가던 방면</button>
+</div>
+<div class="legend">
+  <span><i class="sw" style="background:var(--k0)"></i>군·출장소</span>
+  <span><i class="sw" style="background:var(--k1);border-style:dashed"></i>보정 구간(1945–1955)</span>
+  <span><i class="sw" style="background:var(--k1)"></i>시·부(일반구 포함)</span>
+  <span><i class="sw" style="background:var(--k2)"></i>한성부·서울, 특별시·광역시의 구</span>
+  <span><i class="sw" style="background:none;border:0;border-top:2px solid var(--sido);height:0;width:18px"></i>시·도 경계</span>
+  <span><i class="sw" style="background:var(--sea);border-color:var(--rule)"></i>바다</span>
+  <span><i class="sw" style="background:var(--sea);border-color:var(--river)"></i>강(지금 물길)</span>
+  <span><i class="sw" style="background:repeating-linear-gradient(45deg,var(--k0) 0 3px,color-mix(in srgb,var(--edge) 45%,var(--k0)) 3px 4px);border:1px dashed var(--edge)"></i>시화 간석지(1994~, 행정경계 자료 밖)</span>
+  <span><i class="sw" style="background:color-mix(in srgb,var(--jg) 12%,transparent);border:1px dashed var(--jg)"></i>택지·개발지구(지정 뒤 준공 전)</span>
+  <span><i class="sw" style="background:color-mix(in srgb,var(--jg) 24%,transparent);border:1px dashed var(--jg)"></i>택지·개발지구(부분 준공 뒤)</span>
+  <span><i class="sw" style="background:color-mix(in srgb,var(--jg) 40%,transparent);border-color:var(--jg)"></i>택지·개발지구(준공 뒤)</span>
+  <span><i class="sw" style="background:var(--hwf);border:1.5px solid var(--hwc);height:7px"></i>고속도로(구간이 열린 해부터)</span>
+  <span><i class="sw" style="background:var(--hwf);border:1px solid var(--hwc);height:5px"></i>자동차전용도로·도시고속화도로(구간이 열린 해부터)</span>
+  <span><i class="sw" style="background:var(--focus);border:1.5px solid var(--hwc);height:7px"></i>그해 연 도로 구간</span>
+  <span><i class="sw" style="background:none;border:0;border-top:1px solid var(--ink2);opacity:.5;height:0;width:18px"></i>국도·주요 도로(지금 모습, 모든 해 같음)</span>
+  <span><i class="sw" style="background:none;border:0;border-top:2.5px solid var(--js);height:0;width:18px"></i>조선 후기 대로(지금 도로 위 근사선) — 1910년까지 진하게, 1911–1938년 흐리게(도로규칙·신작로 시기), 1939년부터 옛길 자리만 가늘게</span>
+  <span><i class="sw" style="background:none;border:0;border-top:1.5px dashed var(--js);height:0;width:18px"></i>나룻배로 건넘</span>
+  <span><i class="sw" style="background:none;border:0;border-top:1.5px solid var(--bus1);height:0;width:18px"></i><i class="sw" style="background:none;border:0;border-top:2.5px solid var(--bus2);height:0;width:18px"></i><i class="sw" style="background:none;border:0;border-top:3.5px solid var(--bus3);height:0;width:18px"></i><i class="sw" style="background:none;border:0;border-top:4.5px solid var(--bus4);height:0;width:18px"></i>광역버스가 지나는 길(그해 다니던 노선 1–2·3–7·8–19·20개 넘음) — 노선마다 생긴 해부터 없어진 해까지, 서울로 들어가는 방향만, 정류소·경유지를 도로 위로 이은 근사선</span>
+  <span><i class="sw" style="background:none;border:0;border-top:2px dashed var(--bus3);height:0;width:18px"></i>서울 시외버스 터미널·정류장에서 경기·인천으로 가던 시외버스 노선(1963–1990) — 신문 기사에 그 노선이 나온 해 사이만, 노선마다 한 줄, 서울 쪽 끝·경유지를 지금 도로 위로 이은 근사선</span>
+  <span><i class="sw" style="background:var(--bus4);border:1.5px solid var(--bg);border-radius:50%;width:10px;height:10px"></i><i class="sw" style="background:var(--bg);border:1.5px solid var(--bus4);border-radius:50%;width:10px;height:10px"></i>시외버스 터미널(채운 점)·정류장(빈 점)과 그곳에서 나가던 방면(화살표) — 신문 기사로 확인한 해 동안, 화살표 굵기는 그해까지 기사에 함께 나온 그 방면 행선지 수(1–2·3–7·8곳 넘음)</span>
+  <span><i class="sw" style="background:var(--nb);border-color:var(--rule)"></i>이웃 시·도와 북한(지금 경계)</span>
+  <span>지도를 누르면 시·군·구, 역, 택지 지구, 고속도로·자동차전용도로의 내력과 그 길을 지나는 광역버스·시외버스 노선, 시외버스 터미널에서 나가던 방면이 나옵니다. 역 점은 확대하면 보입니다</span>
+</div>
+
+<section class="band"><div class="wrap">
+  <h2>지금 자료로 닿는 범위</h2>
+  <table class="stack">
+    <thead><tr><th>레이어</th><th>상태</th><th>그린 범위</th><th>출처·조건</th><th>비는 곳</th></tr></thead>
+    <tbody id="cov"></tbody>
+  </table>
+  <p class="note">전철은 구간마다 개통한 해부터 그립니다. 구간 개통 뒤 사이에 새로 생긴 역(예: 1호선 금정·부개, 4호선 산본·수리산)은 선로를 앞 해부터 그리고 역 점만 그 역이 생긴 해부터 보입니다. 안산선(1988)·과천선(1993)처럼 처음엔 다른 계통으로 다니다 4호선이 된 구간도 선로가 생긴 해부터 4호선 색으로 그렸습니다.</p>
+  <p class="note">행정구역 경계는 시기마다 자료가 다릅니다. 1910–1945년은 국사편찬위원회 HGIS의 부·군 경계, 1955–1975년은 같은 HGIS의 시·군·구 경계, 1975년 말부터는 admdongkor 경계입니다. 1945–1955년은 HGIS에 경계 자료가 없어서, 1945년 8월과 1955년 9월 경계를 양 끝에 두고 그 사이 행정구역 변경 날짜(서울 분리 1946, 서울 확장·수원시·인천시 1949, 휴전 1953, 연천 수복 1954)에 맞춰 바꿔 끼웠습니다. 이 구간은 테두리를 점선으로 그렸고, 누르면 어떤 근거로 이었는지 나옵니다. 1899–1910년도 HGIS에 경계 자료가 없어서, 1910년 5월 HGIS 군·면 경계를 바탕으로 1906년 9월 칙령 제49호 「지방구역정리건」의 면 이관과 1908년 양평군 출범을 거꾸로 되짚어 채웠습니다(점선 테두리). 1906년 전에는 광주의 초부면처럼 다른 군 안에 떨어져 있던 비입지도 보입니다. 바다와 땅의 경계는 그해 행정구역 경계를 그대로 따르므로, 인천·시화 등에서 매립으로 땅이 늘어난 모습이 시기별로 드러납니다. 다만 1910–1945년 해안선은 HGIS가 일제강점기 지형도로 그린 것이라 지금 해안선과 어긋나는 곳도 있습니다.</p>
+  <p class="note">1975년 말 이후 경계는 2000년 전에는 5년 간격 자료라서, 그 사이에 생긴 변화가 다음 시점에 한꺼번에 나타납니다. '바뀐 곳'은 직전 시점보다 면적 기준으로 6% 넘게 달라진 경우만 표시했습니다. 자료를 만든 쪽의 단순화 정도 차이도 섞일 수 있어서, 실제 경계 조정인지는 따로 확인해야 합니다. 강원·충청·북한 쪽 땅은 지금 경계로 옅게 깔아 두었고, 휴전선 아래 내륙에서 그해 경계가 비는 띠(비무장지대 남쪽, 1963년 강원도 철원군에서 연천군으로 넘어온 신서면 등)도 같은 색으로 채웠습니다. 서해의 먼 섬(백령·대청·연평)은 화면 밖입니다.</p>
+  <p class="note">출처: 1910–1945·1955–1975 경계와 1899–1945 경인선·경부선 선형 — 국사편찬위원회 역사지리정보시스템(HGIS) 개방데이터셋(공공누리 출처표시). 1945–1955 보정 날짜 — 서울특별시 미디어허브, 수원시·인천광역시 누리집, 한국민족문화대백과사전, 신문 기사. 서울 안 국철 — 「서울 도시 연대지도」 정리값. 1975년 이후 시·군·구 경계 — 통계청 통계지리정보서비스(SGIS) 행정동 경계를 가공한 <a href="https://github.com/vuski/admdongkor">vuski/admdongkor</a>(CC BY 4.0, 원자료 공공누리 제1유형). 전철 선로·역 위치 — © OpenStreetMap contributors, <a href="https://github.com/kimmdr2/metroscope">kimmdr2/metroscope</a> 정리본(ODbL). 역 개통일 — 서울 쪽은 <a href="https://rosewein.github.io/seoul-layer-map/">「서울 도시 연대지도」</a>의 정리값, 서울 밖은 나무위키 노선 문서(CC BY-NC-SA 2.0 KR)와 국토교통부·건설교통부 보도자료, 인천시, 신문 기사(역을 누르면 출처가 나옴). 이웃 시·도 땅 — admdongkor 2026년 시도 경계, 북한 — Natural Earth(공공 도메인). 강 — © OpenStreetMap contributors(ODbL), Geofabrik 추출본. 신도시·택지 지구 — 택지정보시스템 자료제공(국토교통부·한국국토정보공사, 이용허락범위 제한 없음). 고속도로 선형 — © OpenStreetMap contributors(ODbL), Geofabrik 추출본(2026-11-24). 고속도로 구간 개통일 — 국가기록원 「고속도로 연표」, 한국어 위키백과 노선 문서(CC BY-SA 4.0), 신문·정부 보도자료(구간을 누르면 출처가 나옴). 자동차전용도로·국도 선형 — © OpenStreetMap contributors(ODbL), Geofabrik 추출본. 자동차전용도로 구간 개통일 — 한국어 위키백과 노선 문서(CC BY-SA 4.0), 서울특별시 보도, 신문 기사(구간을 누르면 출처가 나옴). 조선 후기 대로 — 서울 안은 「서울 도시 연대지도」 정리값, 서울 밖 경유지는 경기옛길 안내와 서울신문 옛길 연재, 경유지 자리는 국사편찬위원회 HGIS 1912–1914 동리 포인트(공공누리 출처표시)와 OSM 지명, 선은 © OpenStreetMap contributors(ODbL) 도로 위 최단 경로. 대로가 흐려지는 시점(1911년 도로규칙, 1938년 조선도로령) — 국가기록원 <a href="https://theme.archives.go.kr/next/koreaOfRecord/nationalHighway.do">「추억의 일반국도 국도」</a>. 광역버스 노선·정류소 순서 — 경기도 버스운송관리시스템 「노선 경유정류소」「노선 정보 검증」(2023-09, <a href="https://www.data.go.kr/data/15124068/fileData.do">공공데이터포털</a>·경기데이터드림, 이용허락범위 제한 없음), 인천광역시 버스정보시스템 <a href="https://www.data.go.kr/data/15134389/fileData.do">「노선별경유노드 현황」</a>(2024-08, 이용허락범위 제한 없음)과 <a href="https://www.incheon.go.kr/traffic/TR060002/2205815">「시내버스 노선현황」</a>(2024-08-31, 공공누리 출처표시), 서울시 「버스노선별 정류장별 승하차 인원 정보」(서울 열린데이터광장, 공공누리 제1유형), 인천 교차로 노드 — 국가교통정보센터 표준노드링크(2024-11-29), 노선이 생긴 해·없어진 해와 없어진 노선의 경유지 — 나무위키 「YYYY년 개업한 버스 노선」「YYYY년 폐지된 버스 노선」「경기도의 폐지된 직행좌석버스」 분류, 노선 문서와 시·군별 「버스 목록/폐선」·「서울특별시 시내버스/2004년 개편 전 목록」 문서(CC BY-NC-SA 2.0 KR), 정류소 좌표 — 국토교통부 <a href="https://www.data.go.kr/data/15067528/fileData.do">「전국 버스정류장 위치정보」</a>(2026-11-09, 이용허락범위 제한 없음), 경로 — © OpenStreetMap contributors(ODbL) 도로 위 최단 경로. 1963–1990년 시외버스 노선과 해 — 조선일보 기사(<a href="https://newslibrary.chosun.com/">조선 뉴스 라이브러리 100</a>, 기사 저작권은 조선일보에 있어 노선의 두 끝과 해만 옮김; 노선을 누르면 기사 날짜가 나옴). 시외버스 터미널·정류장과 나가던 방면 — 같은 조선일보 기사(1963–1999), 터미널 점을 누르면 기사 날짜와 행선지가 나옴.</p>
+</div></section>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script>
+{
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const CONF={s:'「서울 도시 연대지도」 정리값',a:'출처 두 곳 이상 일치',b:'출처 한 곳',c:'역별 기록이 없거나 출처가 엇갈려 구간 개통일로 둠'};
+const WHY={'처음':'이 이름으로 처음 보임','경계':'경계가 달라짐','소속':'소속 시·도가 바뀜','다시':'이 이름이 다시 보임','자료':'경계 자료가 바뀜'};
+const SRCN={h45:'HGIS 1910–1945',fix0:'보정 구간(1899–1910)',fix:'보정 구간(1945–1955)',h55:'HGIS 1955–1975',adm:'admdongkor(SGIS 가공)'};
+const Y0=1898,Y1=2026;   // 1898 = 「조선 후기」 단계
+const fig=$('fig'),svg=d3.select('#map');
+const root=svg.append('g'),gNb=root.append('g'),gS=root.append('g'),gW=root.append('g').attr('pointer-events','none'),gJ=root.append('g'),gChg=root.append('g'),gSido=root.append('g'),gJs=root.append('g'),gArB=root.append('g').attr('pointer-events','none'),gArt=root.append('g'),gHW=root.append('g'),gBus=root.append('g'),gSw=root.append('g'),gTm=root.append('g'),g38=root.append('g'),gR0=root.append('g'),gD=root.append('g'),gSt=root.append('g');
+const gLab=svg.append('g').attr('pointer-events','none');
+let D=null,Y=Y1,idx=-1,pidx=-1,k=1,T=d3.zoomIdentity,proj=null,path=null,timer=null,sel=null;
+const on={sgg:true,chg:true,mD:true,r0:true,l38:true,w:true,jg:true,hw:true,ar:true,arb:true,js:true,bus:true,sw:true,tm:true};
+let busHi=null;
+
+fetch('data.json').then(r=>r.json()).then(d=>{D=d;init()}).catch(e=>{console.error(e);$('yrDate').textContent='자료 파일을 읽지 못했습니다.'});
+
+function snapOf(y){let i=-1;for(let j=0;j<D.snaps.length;j++){if(D.snaps[j].y<=y)i=j;else break}return i}
+function init(){
+  const tk=[1898,1910,1945,1955,1975,2000,2026],mob=new Set([1898,1945,1975,2026]);
+  $('ticks').innerHTML=tk.map(y=>`<span class="${mob.has(y)?'':'mn'}" style="left:${((y-Y0)/(Y1-Y0)*100).toFixed(2)}%${y===Y0?';transform:translateX(-25%)':''}">${y===Y0?'조선 후기':y}</span>`).join('');
+  D.lineColor=Object.fromEntries(D.lines.map(l=>[l.n,l.c]));
+  gNb.append('path').attr('fill','var(--nb)').attr('stroke','none').attr('pointer-events','none');
+  {const pt=svg.append('defs').append('pattern').attr('id','hatchTF').attr('width',5).attr('height',5).attr('patternUnits','userSpaceOnUse').attr('patternTransform','rotate(45)');
+   pt.append('rect').attr('width',5).attr('height',5).attr('fill','var(--k0)');
+   pt.append('line').attr('x1',0).attr('y1',0).attr('x2',0).attr('y2',5).attr('stroke','var(--edge)').attr('stroke-width',1).attr('stroke-opacity',.45);}
+  gNb.append('path').attr('class','tidal').attr('fill','url(#hatchTF)').attr('stroke','var(--edge)').attr('stroke-width',.5).attr('stroke-dasharray','2 2').attr('vector-effect','non-scaling-stroke').attr('pointer-events','none');
+  gNb.append('path').attr('class','land0').attr('fill','var(--k0)').attr('stroke','var(--edge)').attr('stroke-width',.6).attr('stroke-opacity',.8).attr('vector-effect','non-scaling-stroke').attr('pointer-events','none');
+  gS.selectAll('path').data(D.sgg).join('path')
+    .attr('fill',v=>['var(--k0)','var(--k1)','var(--k2)','var(--nb)'][v.k]).attr('stroke','var(--edge)').attr('stroke-width',v=>v.src.startsWith('fix')?1:.6)
+    .attr('stroke-dasharray',v=>v.src.startsWith('fix')?'4 3':null)
+    .attr('vector-effect','non-scaling-stroke').attr('stroke-opacity',.8).style('cursor','pointer')
+    .on('click',(e,v)=>{e.stopPropagation();showSgg(v)});
+  gW.append('path').attr('class','wpoly').attr('fill','var(--sea)').attr('stroke','none');
+  gW.selectAll('path.wl').data(D.rivers).join('path').attr('class','wl').attr('fill','none').attr('stroke','var(--river)').attr('stroke-width',.9).attr('stroke-linejoin','round').attr('stroke-linecap','round').attr('vector-effect','non-scaling-stroke');
+  gJ.selectAll('path').data(D.jigu||[]).join('path').attr('fill','var(--jg)').attr('stroke','var(--jg)').attr('vector-effect','non-scaling-stroke').attr('stroke-linejoin','round').style('cursor','pointer')
+    .on('click',(e,o)=>{e.stopPropagation();showJigu(o)});
+  gChg.selectAll('path').data(D.sgg).join('path').attr('fill','none').attr('stroke','var(--focus)').attr('stroke-width',2.2).attr('vector-effect','non-scaling-stroke').attr('pointer-events','none');
+  gSido.selectAll('path').data(D.sido).join('path').attr('fill','none').attr('stroke','var(--sido)').attr('stroke-width',1.6).attr('vector-effect','non-scaling-stroke').attr('stroke-linejoin','round');
+  {const J=D.joseon||{roads:[],pts:[]},segs=[];J.roads.forEach((r,i)=>r.segs.forEach(sg=>segs.push({r:i,f:!!sg.ferry,p:sg.p})));
+   gJs.selectAll('path.jl').data(segs).join('path').attr('class','jl').attr('fill','none').attr('stroke','var(--js)').attr('stroke-width',d=>d.f?1.4:2.3).attr('stroke-dasharray',d=>d.f?'4 3':null).attr('stroke-linecap','round').attr('stroke-linejoin','round').attr('vector-effect','non-scaling-stroke').attr('pointer-events','none');
+   gJs.selectAll('path.jh').data(segs).join('path').attr('class','jh').attr('fill','none').attr('stroke','transparent').attr('stroke-width',10).attr('vector-effect','non-scaling-stroke').style('cursor','pointer').on('click',(e,d)=>{e.stopPropagation();showJs(J.roads[d.r])});
+   gJs.selectAll('circle').data(J.pts).join('circle').attr('fill','var(--bg)').attr('stroke','var(--js)').attr('stroke-width',1.3).attr('vector-effect','non-scaling-stroke').style('cursor','pointer').on('click',(e,p)=>{e.stopPropagation();showJsPt(p)});}
+  gArB.selectAll('path').data((D.art&&D.art.base)||[]).join('path').attr('fill','none').attr('stroke','var(--ink2)').attr('stroke-opacity',.32).attr('stroke-width',.55).attr('stroke-linejoin','round').attr('vector-effect','non-scaling-stroke');
+  {const A=(D.art&&D.art.seg)||[];
+   gArt.selectAll('path.hc').data(A).join('path').attr('class','hc').attr('fill','none').attr('stroke','var(--hwc)').attr('stroke-width',2.6).attr('stroke-linejoin','round').attr('stroke-linecap','round').attr('vector-effect','non-scaling-stroke').attr('pointer-events','none');
+   gArt.selectAll('path.hf').data(A).join('path').attr('class','hf').attr('fill','none').attr('stroke-linejoin','round').attr('stroke-linecap','round').attr('vector-effect','non-scaling-stroke').attr('pointer-events','none');
+   gArt.selectAll('path.hh').data(A).join('path').attr('class','hh').attr('fill','none').attr('stroke','transparent').attr('stroke-width',10).attr('vector-effect','non-scaling-stroke').style('cursor','pointer')
+     .on('click',(e,o)=>{e.stopPropagation();showRoad(o,D.art,'자동차전용도로·도시고속화도로')});}
+  {const H=(D.hw&&D.hw.seg)||[];
+   gHW.selectAll('path.hc').data(H).join('path').attr('class','hc').attr('fill','none').attr('stroke','var(--hwc)').attr('stroke-width',3.6).attr('stroke-linejoin','round').attr('stroke-linecap','round').attr('vector-effect','non-scaling-stroke').attr('pointer-events','none');
+   gHW.selectAll('path.hf').data(H).join('path').attr('class','hf').attr('fill','none').attr('stroke-linejoin','round').attr('stroke-linecap','round').attr('vector-effect','non-scaling-stroke').attr('pointer-events','none');
+   gHW.selectAll('path.hh').data(H).join('path').attr('class','hh').attr('fill','none').attr('stroke','transparent').attr('stroke-width',12).attr('vector-effect','non-scaling-stroke').style('cursor','pointer')
+     .on('click',(e,o)=>{e.stopPropagation();showRoad(o,D.hw,'고속도로')});}
+  if(D.bus){const B=D.bus;
+   gBus.selectAll('path.bl').data(B.ch).join('path').attr('class','bl').attr('fill','none').attr('stroke',c=>busCol(c.r.length)).attr('stroke-width',c=>busW(c.r.length)).attr('stroke-linecap','round').attr('stroke-linejoin','round').attr('vector-effect','non-scaling-stroke').attr('pointer-events','none');
+   gBus.selectAll('circle').data(B.st).join('circle').attr('fill','var(--bg)').attr('stroke','var(--bus3)').attr('stroke-width',1.1).attr('vector-effect','non-scaling-stroke').attr('pointer-events','none');
+   gBus.selectAll('path.bh').data(B.ch).join('path').attr('class','bh').attr('fill','none').attr('stroke','transparent').attr('stroke-width',10).attr('vector-effect','non-scaling-stroke').style('cursor','pointer')
+     .on('click',(e,c)=>{e.stopPropagation();showBus(c)});}
+  drawSw();
+  drawTm();
+  g38.append('path').attr('class','l38').attr('fill','none').attr('stroke','var(--line38)').attr('stroke-width',1.6).attr('stroke-dasharray','6 4').attr('vector-effect','non-scaling-stroke');
+  g38.append('text').attr('class','t38').attr('fill','var(--line38)').attr('font-size',12).attr('font-weight',600).text('38선');
+  gR0.selectAll('path').data(D.rail0).join('path').attr('fill','none').attr('stroke','var(--rail)').attr('stroke-width',e=>e.todo?1.2:1.8).attr('stroke-dasharray',e=>e.todo?'2 3':null).attr('stroke-opacity',.85).attr('vector-effect','non-scaling-stroke').style('cursor','pointer')
+    .on('click',(ev,e)=>{ev.stopPropagation();showRail(e)});
+  gD.selectAll('path').data(D.dedges).join('path').attr('fill','none').attr('stroke',e=>D.lineColor[e.l]||'#888').attr('stroke-width',2.2).attr('stroke-linecap','round').attr('vector-effect','non-scaling-stroke');
+  gSt.selectAll('circle').data(D.stations).join('circle').attr('stroke-width',1).attr('vector-effect','non-scaling-stroke').style('cursor','pointer')
+    .on('click',(e,s)=>{e.stopPropagation();showSt(s)});
+  svg.on('click',()=>closeCard());
+  coverage();
+  layout();
+  new ResizeObserver(()=>layout()).observe(fig);
+}
+const zoom=d3.zoom().scaleExtent([1,14]).on('zoom',e=>{T=e.transform;k=T.k;root.attr('transform',T);styleZoom();placeLabels()});
+svg.call(zoom).on('dblclick.zoom',null);
+$('zin').onclick=()=>svg.transition().duration(250).call(zoom.scaleBy,1.6);
+$('zout').onclick=()=>svg.transition().duration(250).call(zoom.scaleBy,1/1.6);
+$('zre').onclick=()=>svg.transition().duration(300).call(zoom.transform,d3.zoomIdentity);
+
+function layout(){
+  if(!D)return;
+  const W=fig.clientWidth,H=fig.clientHeight,small=W<600;
+  const box={type:'Feature',geometry:{type:'Polygon',coordinates:[[[126.15,36.88],[126.15,38.3],[127.86,38.3],[127.86,36.88],[126.15,36.88]]]}};
+  proj=d3.geoMercator().fitExtent([[small?8:W*.18,small?130:20],[W-(small?8:60),H-12]],box);
+  path=d3.geoPath(proj);
+  zoom.extent([[0,0],[W,H]]).translateExtent([[-W*.3,-H*.3],[W*1.3,H*1.3]]);
+  gNb.select('path').attr('d',path(D.nb));
+  gNb.select('.land0').attr('d',path(D.land0));
+  if(D.tidal)gNb.select('.tidal').attr('d',path(D.tidal.geo));
+  gS.selectAll('path').attr('d',v=>path(v.geo));
+  gChg.selectAll('path').attr('d',v=>path(v.geo));
+  gW.select('.wpoly').attr('d',path(D.water));
+  gJ.selectAll('path').attr('d',o=>path(o.geo));
+  gSido.selectAll('path').attr('d',v=>path(v.geo));
+  const line=p=>'M'+p.map(c=>proj(c).map(n=>n.toFixed(1)).join(',')).join('L');
+  gR0.selectAll('path').attr('d',e=>line(e.p));
+  gW.selectAll('path.wl').attr('d',e=>line(e.p));
+  gD.selectAll('path').attr('d',e=>line(e.p));
+  gHW.selectAll('path').attr('d',e=>line(e.p));
+  gBus.selectAll('path').attr('d',e=>line(e.p));
+  gSw.selectAll('path').attr('d',e=>line(e.p));
+  gTm.selectAll('path.tl,path.tx').attr('d',a=>line(a.ln));
+  gTm.selectAll('path.th').attr('d',a=>line(a.hd)+'Z');
+  gTm.selectAll('circle').attr('cx',t=>proj(t.p)[0]).attr('cy',t=>proj(t.p)[1]);
+  gSw.selectAll('circle').attr('cx',o=>proj(o.p[0])[0]).attr('cy',o=>proj(o.p[0])[1]);
+  gBus.selectAll('circle').attr('cx',p=>proj(p)[0]).attr('cy',p=>proj(p)[1]);
+  gArt.selectAll('path').attr('d',e=>line(e.p));
+  gArB.selectAll('path').attr('d',e=>line(e));
+  gJs.selectAll('path').attr('d',e=>line(e.p));
+  gJs.selectAll('circle').attr('cx',p=>proj([p.x,p.y])[0]).attr('cy',p=>proj([p.x,p.y])[1]);
+  g38.select('.l38').attr('d',line([[125.6,38],[128.2,38]]));
+  const p38=proj([127.6,38]);g38.select('.t38').attr('x',p38[0]).attr('y',p38[1]-6);
+  gSt.selectAll('circle').attr('cx',s=>proj([s.x,s.y])[0]).attr('cy',s=>proj([s.x,s.y])[1]);
+  render();
+}
+// 조선 후기 대로의 세기: 1910년까지 진하게(대로 체계), 1911–1938 흐리게(도로규칙·신작로 시기), 1939년부터 옛길 자리만
+function jsLv(y){return y<=1910?2:(y<=1938?1:0)}
+function railOn(e){const a=`${Y}-12-31`,b=`${Y}-01-01`;return e.d0<=a&&(!e.d1||e.d1>=b)}
+function render(){
+  if(!D||!path)return;
+  const stage=Y===Y0;
+  idx=stage?0:snapOf(Y);pidx=stage?-1:snapOf(Y-1);
+  const S=idx>=0?D.snaps[idx]:null;
+  gS.style('display',on.sgg?null:'none');
+  gNb.select('.land0').style('display',idx<0?null:'none');
+  gNb.select('.tidal').style('display',D.tidal&&Y>=D.tidal.y0?null:'none');
+  gS.selectAll('path').style('display',v=>idx>=0&&v.fr<=idx&&idx<=v.to?null:'none');
+  const isChg=v=>idx>=0&&pidx>=0&&v.fr>pidx&&v.fr<=idx&&v.to>=idx&&v.why!=='자료';
+  const chg=D.sgg.filter(isChg);
+  gW.style('display',on.w?null:'none');
+  const jDone=o=>o.d1&&+o.d1.slice(0,4)<=Y, jPart=o=>o.pc&&+o.pc.slice(0,4)<=Y;
+  gJ.style('display',on.jg?null:'none');
+  gJ.selectAll('path').style('display',o=>+o.d0.slice(0,4)<=Y?null:'none')
+    .attr('fill-opacity',o=>jDone(o)?.4:(jPart(o)?.24:.12)).attr('stroke-opacity',.9).attr('stroke-width',o=>jDone(o)?1.1:.9).attr('stroke-dasharray',o=>jDone(o)?null:'3 2');
+  gChg.style('display',on.chg?null:'none');
+  gChg.selectAll('path').style('display',v=>isChg(v)?null:'none');
+  gSido.selectAll('path').style('display',v=>idx>=0&&v.fr<=idx&&idx<=v.to?null:'none');
+  g38.style('display',on.l38&&Y>=1945&&Y<=1952?null:'none');
+  const jl=jsLv(Y);
+  gArB.style('display',on.arb&&!(on.js&&jl===2)?null:'none');
+  gJs.style('display',on.js?null:'none').style('opacity',jl===2?1:(jl===1?.55:.4));
+  gJs.selectAll('path.jl').attr('stroke-width',d=>jl===0?(d.f?1:1.5):(d.f?1.4:2.3));
+  gJs.selectAll('circle').style('display',jl===0?'none':null);
+  gJs.selectAll('path.jh').style('pointer-events',jl===0?'none':null);
+  gArt.style('display',on.ar?null:'none');
+  gArt.selectAll('path').style('display',o=>+o.d.slice(0,4)<=Y?null:'none');
+  gArt.selectAll('path.hf').attr('stroke',o=>+o.d.slice(0,4)===Y?'var(--focus)':'var(--hwf)').attr('stroke-width',o=>+o.d.slice(0,4)===Y?1.4:1);
+  gArt.selectAll('path.hc').attr('stroke-width',o=>+o.d.slice(0,4)===Y?3.2:2.6);
+  gHW.style('display',on.hw?null:'none');
+  const hwOn=o=>+o.d.slice(0,4)<=Y, hwNew=o=>+o.d.slice(0,4)===Y;
+  gHW.selectAll('path').style('display',o=>hwOn(o)?null:'none');
+  gHW.selectAll('path.hf').attr('stroke',o=>hwNew(o)?'var(--focus)':'var(--hwf)').attr('stroke-width',o=>hwNew(o)?2.2:1.5);
+  gHW.selectAll('path.hc').attr('stroke-width',o=>hwNew(o)?4.4:3.6);
+  gBus.style('display',on.bus&&D.bus?null:'none');
+  if(D.bus&&on.bus){
+    gBus.selectAll('path.bl').each(function(c){const n=busN(c);c._n=n;d3.select(this).style('display',n>0?null:'none').attr('stroke-width',busW(Math.max(n,1))).attr('stroke',busHi!=null&&c.r.includes(busHi)?'var(--bus4)':busCol(n))});
+    gBus.selectAll('path.bh').style('display',c=>c._n>0?null:'none');
+    gBus.selectAll('circle').style('display',(p,i)=>busOn(i)?null:'none');
+  }
+  styleSw();
+  styleTm();
+  gR0.style('display',on.r0?null:'none');
+  gR0.selectAll('path').style('display',e=>railOn(e)?null:'none');
+  gD.style('display',on.mD?null:'none');
+  gD.selectAll('path').style('display',e=>e.y<=Y?null:'none');
+  styleZoom();
+  $('yrBig').textContent=stage?'조선 후기':Y;
+  if(stage){
+    $('yrDate').textContent='경계: 1906년 칙령 제49호 전 경계(되짚음)를 빌려 씀';
+    $('yrCount').textContent=D.ct[0];$('yrNew').textContent='대로는 경유지를 지금 도로 위로 이은 근사선';
+  }else if(S){
+    $('yrDate').textContent=`경계: ${SRCN[S.src]} · ${S.lab||'기준일 '+S.d}`;
+    $('yrCount').textContent=D.ct[idx];
+    $('yrNew').textContent=pidx<0?'경계 자료의 첫해':(D.snaps[pidx].src!==S.src&&!(D.snaps[pidx].src==='h45'&&S.src==='fix')?'경계 자료가 바뀐 해라 지난해와 비교하지 않음':(chg.length?`지난해보다 생기거나 바뀐 곳 ${chg.length}곳`:'지난해와 경계가 같음'));
+  }else{
+    $('yrDate').textContent='1910년 5월 전에는 행정구역 경계 자료가 없습니다';
+    $('yrCount').textContent='';$('yrNew').textContent='땅 모양은 1910년 5월 경계에서 빌려 그렸습니다';
+  }
+  placeLabels();
+  if(sel&&sel.t==='g')showSgg(sel.v,true);
+}
+function styleZoom(){
+  if(!D)return;const show=k>=2.8;const rs=Math.min(2+0.3*(k-2.8),3.4)/k;
+  gJs.selectAll('circle').attr('r',Math.min(2.6,1.4+0.25*k)/k);
+  gBus.selectAll('circle').attr('r',Math.min(2.4,1.2+0.2*k)/k);
+  gSw.selectAll('circle').attr('r',Math.min(2.6,1.3+0.2*k)/k);
+  gTm.selectAll('circle').attr('r',Math.min(5,3.6+0.25*k)/k);
+  gSt.selectAll('circle').style('display',s=>show&&on.mD&&s.f!=null&&s.f<=Y?null:'none')
+    .attr('fill','var(--bg)').attr('stroke','var(--ink)').attr('r',rs);
+}
+function placeLabels(){
+  if(!D||!proj)return;
+  const NB=[['강원',127.8,37.95],['충남',127.12,36.9],['충북',127.58,36.93]].concat(Y>=1954?[['북한',126.55,38.15]]:[]);
+  const L=idx<0?[]:D.labels[idx],hi=k>=2.4,W=fig.clientWidth,H=fig.clientHeight;
+  const k0=new Set(L.filter(l=>l[3]===0).map(l=>l[0]));
+  let cand=L.filter(l=>hi?(l[3]===0||(l[3]===2&&!k0.has(l[0]))):(l[3]<=1));
+  cand=cand.map(l=>{const p=T.apply(proj([l[1],l[2]]));const big=l[3]===1;const fs=big?17:(l[3]===0?13:12);return{t:l[0],x:p[0],y:p[1],fs,big,a:l[4]+(big?1e4:0)}})
+    .concat(NB.map(n=>{const p=T.apply(proj([n[1],n[2]]));return{t:n[0],x:p[0],y:p[1],fs:12,nb:true,a:-1}}))
+    .filter(o=>o.x>-40&&o.x<W+40&&o.y>-20&&o.y<H+20).sort((a,b)=>b.a-a.a);
+  const placed=[];const keep=[];
+  for(const o of cand){const w=o.t.length*o.fs*.98+6,h=o.fs+4;const b=[o.x-w/2,o.y-h/2,o.x+w/2,o.y+h/2];
+    if(placed.some(q=>!(b[2]<q[0]||b[0]>q[2]||b[3]<q[1]||b[1]>q[3])))continue;placed.push(b);keep.push(o)}
+  gLab.selectAll('text').data(keep,o=>o.t+o.big).join('text').attr('x',o=>o.x).attr('y',o=>o.y).attr('text-anchor','middle').attr('dominant-baseline','central')
+    .attr('font-size',o=>o.fs).attr('font-weight',o=>o.big?700:500).attr('font-family',o=>o.big?'var(--display)':'var(--body)')
+    .attr('fill',o=>o.nb?'var(--ink2)':'var(--ink)').attr('font-style',o=>o.nb?'italic':null).attr('stroke',o=>o.nb?'none':'var(--halo)').attr('stroke-width',3).attr('paint-order','stroke').attr('stroke-linejoin','round').text(o=>o.t);
+}
+function card(html){$('cardBody').innerHTML=html;$('card').classList.add('on')}
+function closeCard(){$('card').classList.remove('on');sel=null;if(busHi!=null)hiBus(null);if(swHi!=null){swHi=null;styleSw()}if(tmSel){tmSel=null;styleTm()}}
+$('cardX').onclick=e=>{e.stopPropagation();closeCard()};
+const TRN={1:'HGIS 신뢰도 1(확실)',2:'HGIS 신뢰도 2(유력)',3:'HGIS 신뢰도 3(추정)',4:'HGIS 신뢰도 4(뜻 설명 없음)'};
+function showSgg(v){
+  const S=D.snaps;sel={t:'g',v};
+  const hist=D.sgg.filter(o=>o.g===v.g&&o.n===v.n).sort((a,b)=>a.fr-b.fr);
+  const nm=v.sub?`${v.c} ${v.sub}`:v.n;
+  const li=hist.map(o=>{const cur=o.fr<=idx&&idx<=o.to;
+    const head=o.fr===0?'이 지도의 첫 시점부터':`${S[o.fr-1].d} 자료와 ${S[o.fr].d} 자료 사이에 ${WHY[o.why]}`;
+    const notes=(o.notes||[]).filter(n=>n[1]).map(n=>`<br><small>${esc(SRCN[n[0]]||n[0])}: ${esc(n[1])}</small>`).join('');
+    const till=o.to<S.length-1?`${S[o.to+1].d} 전까지`:'지금까지';
+    return `<li class="${cur?'now':''}">${esc(S[o.fr].d)}부터 ${esc(till)} · ${esc(SRCN[o.src]||'')}<br><small>${esc(head)}</small>${o.tr?`<br><small>${esc(TRN[o.tr]||'')}</small>`:''}${notes}</li>`}).join('');
+  const lastTo=hist[hist.length-1].to;
+  const tail=lastTo<S.length-1?`<li><small>${esc(S[lastTo+1].d)} 자료에는 이 이름이 없습니다.</small></li>`:'';
+  const kind=['군·출장소','시·부','한성부·서울 또는 특별시·광역시의 구','이웃 도의 면'][v.k];
+  card(`<h3>${esc(nm)}</h3><small>${esc(v.s)} · ${kind}</small><ul>${li}${tail}</ul>`);
+}
+function showJigu(o){
+  sel={t:'j',v:o};
+  const yr=s=>s?s.replace(/-/g,'.'):'';
+  const n=v=>v==null?'':v.toLocaleString('ko-KR');
+  const rows=[
+    [o.d0k==='지구지정'?'지구 지정':(o.note?o.d0k:o.d0k+'(지구 지정일 없음)'),yr(o.d0)],
+    ['준공',o.d1?yr(o.d1):`준공 전 · 지금 단계: ${o.step||'확인 못 함'}`],
+    o.pc?['첫 부분준공',yr(o.pc)]:null,
+    ['면적',`${o.ar}㎢`],
+    o.pop?['계획인구',`${n(o.pop)}명`]:null,
+    o.ho?['건설 호수',`${n(o.ho)}호`]:null,
+    ['근거 법령',o.law||'—'],
+    ...(o.ph||[]).map(([k,v])=>[k,v]),
+    ['가장 먼저 연 전철역(지구 둘레 500m 안)',o.st?`${o.st[0]}역 · ${o.st[1]} · ${yr(o.st[2])}`:'없음'],
+    ['위치',o.loc||'—'],
+  ].filter(Boolean);
+  card(`<h3>${esc(o.n)}</h3><small>${esc(o.k)} 택지·개발지구 · 지구지정번호 ${esc(o.c)}</small><ul>${rows.map(([k,v])=>`<li><small>${esc(k)}</small><br>${esc(v)}</li>`).join('')}</ul>${o.note?`<p><small>${esc(o.note)}</small></p>`:''}<small>출처: <a href="https://openapi.jigu.go.kr/main.do" target="_blank" rel="noopener">택지정보시스템 자료제공</a>(국토교통부·한국국토정보공사), 2026년 10월 고시분. 경계는 지금(마지막 고시) 모양이라 지정 당시와 다를 수 있습니다.</small>`);
+}
+function showRoad(o,H,kind){
+  sel={t:'h',v:o};
+  const rows=H.sec[o.r]||[],dt=s=>s.replace(/-/g,'.');
+  const li=rows.map(([d,lab,sn,su,nt])=>`<li class="${d===o.d?'now':''}">${esc(dt(d))} · ${esc(lab)}<br><small>${su?`<a href="${esc(su)}" target="_blank" rel="noopener">${esc(sn)}</a>`:esc(sn)}${nt?' · '+esc(nt):''}</small></li>`).join('');
+  card(`<h3>${esc(H.rn[o.r]||o.r)}</h3><small>${esc(kind)} · 누른 구간: ${esc(dt(o.d))} 개통 · 아래는 이 지도 안에서 구간이 열린 날짜</small><ul>${li}</ul><small>선형은 지금 모습(© OpenStreetMap contributors, ODbL)을 모든 해에 같게 그렸습니다. 나들목·다리 이름은 지금 이름입니다.</small>`);
+}
+function showJs(r){
+  sel={t:'j2',v:r};
+  const src=r.src.map(([n,u])=>`<a href="${esc(u)}" target="_blank" rel="noopener">${esc(n)}</a>`).join('<br>');
+  card(`<h3>${esc(r.name)}</h3><small>${esc(r.no)} · 확인 정도 ${esc(r.conf)} · 경유지를 지금 도로 위 최단 경로로 이은 근사선(옛길 자체가 아님)</small><ul><li><small>경유지</small><br>${esc(r.via.join(' – '))}</li><li><small>서울 안(「서울 도시 연대지도」 정리)</small><br><small>${esc(r.seoul_src)}</small></li><li><small>서울 밖 경유지 근거</small><br><small>${src}</small></li>${r.note?`<li><small>${esc(r.note)}</small></li>`:''}</ul><small>${jsLv(Y)===2?'1910년까지는 대로 체계 그대로라 진하게 그렸습니다.':'1911년 4월 도로규칙으로 1~3등 도로가 지정되고 신작로가 놓이던 때라 흐리게 그렸습니다. 1938년 12월 조선도로령으로 국도 노선이 처음 지정된 뒤로는 옛길 자리만 가늘게 남깁니다.'}</small><br><small>경유지 자리는 국사편찬위원회 HGIS 1912–1914년 동리·부군 포인트(그 이름을 가진 마을 자리)를 주로 썼고, 몇 곳은 OSM 지명 점이나 어림입니다.</small>`);
+}
+// 광역버스: 같은 노선 묶음이 지나는 도로 구간마다 한 선. 굵기·밝기는 노선 수
+function busW(n){return 0.55+0.62*Math.sqrt(n)}
+function busY(i){const r=D.bus.rt[i];return r.y||r.d}
+function busOn(i){const r=D.bus.rt[i];return busY(i)<=Y&&!(r.z&&Y>r.z)}
+function busN(c){let n=0;for(const i of c.r)if(busOn(i))n++;return n}
+function busCol(n){return n>=20?'var(--bus4)':n>=8?'var(--bus3)':n>=3?'var(--bus2)':'var(--bus1)'}
+function hiBus(ri){
+  busHi=ri;
+  gBus.selectAll('path.bl').attr('stroke-opacity',c=>ri==null||c.r.includes(ri)?1:.15).attr('stroke',c=>ri!=null&&c.r.includes(ri)?'var(--bus4)':busCol(c._n||busN(c)));
+  gBus.selectAll('circle').style('opacity',(p,i)=>ri==null||i===ri?1:.15);
+  document.querySelectorAll('#cardBody li[data-ri]').forEach(el=>el.classList.toggle('hi',+el.dataset.ri===ri));
+}
+function showBus(c){
+  sel={t:'b',v:c};const B=D.bus;
+  const HOW={'시·번호':'나무위키 개업 연도 분류','M·P 번호':'나무위키 개업 연도 분류','번호·지나는 시':'나무위키 개업 연도 분류(다른 시 문서)','문서 역사':'나무위키 노선 문서 역사 절','계열 문서':'나무위키 같은 계열 번호 문서(추정)','문서 역사(사람이 읽음)':'나무위키 노선 문서·폐선 목록의 역사 절','문서 역사(늦어도)':'나무위키 역사 절(그해에 이미 있었다는 서술, 시작은 더 이를 수 있음)','문서 역사(연대만)':'나무위키 역사 절(연대만 나와 그 안의 한 해로 잡음)','계열 노선 연도':'본 노선이 생긴 해(지선의 시작은 못 찾음)','폐선 문서 경유지':'없어진 노선 · 나무위키 폐선 문서의 경유지를 이은 근사선'};
+  const all=c.r.map(i=>[i,B.rt[i]]).sort((a,b)=>busY(a[0])-busY(b[0])||a[1].n.localeCompare(b[1].n,'ko',{numeric:true}));
+  const now=all.filter(([i])=>busOn(i)), later=all.filter(([i])=>busY(i)>Y), gone=all.filter(([i,r])=>r.z&&Y>r.z);
+  const yl=r=>(r.y?`${r.y}년부터`:`생긴 해 못 찾음 · 자료 시점 ${r.d}년부터 그림`)+(r.z?` ${r.z}년까지(이듬해부터 없음)`:'')+(r.y?` · ${HOW[r.yh]||r.yh}`:'')+(r.x&&r.yh!=='폐선 문서 경유지'?' · 없어진 노선, 나무위키 경유지 글을 이은 근사선':'')+(r.nt?` · ${r.nt}`:'');
+  const li=now.map(([i,r])=>`<li data-ri="${i}"><a href="#" class="bk" data-ri="${i}">${esc(r.n)}</a> <small>${esc(r.reg)} · ${esc(r.o)} → ${esc(r.e)}<br>${esc(yl(r))}${r.ys?' 「'+esc(r.ys)+'」':''}${r.v&&r.v.length?' · 같이 센 변형 '+esc(r.v.join(', ')):''}</small></li>`).join('');
+  card(`<h3>${Y}년에 광역버스 ${now.length}개 노선이 지나는 길</h3><small>서울로 들어가는 방향만 · 번호를 누르면 그 노선만 진하게 보입니다${later.length?` · 이 길에 뒤에 생기는 노선 ${later.length}개`:''}${gone.length?` · 이 길에서 그 전에 없어진 노선 ${gone.length}개`:''}</small><ul>${li}</ul><small>경로는 지금(경기 2023년 9월·인천 2024년 8월·서울 2026년 11월) 정류소 순서를 OSM 도로 위 최단 경로로 이은 근사선이라, 생긴 해의 경로와 다를 수 있습니다. 경기 2023년 자료에 남아 있던 노선 가운데 나무위키에 폐선 기록이 있는 것은 그해까지만 그렸고, 그 밖에 없어진 노선 일부(2004년 개편 전 서울 좌석·심야좌석·직행좌석 포함)는 나무위키 문서의 경유지를 정류장 이름으로 찾아 이었습니다. 출발 정류소는 서울에서 가장 먼 정류소로 잡았습니다.</small>`);
+  document.querySelectorAll('#cardBody a.bk').forEach(a=>a.onclick=ev=>{ev.preventDefault();ev.stopPropagation();const i=+a.dataset.ri;hiBus(busHi===i?null:i)});
+  hiBus(null);
+}
+// 시외버스: 신문 기사로 확인한 노선(서울 터미널·정류장–경기·인천). 노선마다 한 줄, 기사에 나온 해 사이만
+let swHi=null;
+const swOn=o=>o.y<=Y&&Y<=o.z;
+function drawSw(){
+  if(!D.sw)return;
+  gSw.selectAll('path.sl').data(D.sw).join('path').attr('class','sl').attr('fill','none').attr('stroke','var(--bus3)').attr('stroke-width',1.7).attr('stroke-dasharray','5 3').attr('stroke-linejoin','round').attr('vector-effect','non-scaling-stroke').attr('pointer-events','none');
+  gSw.selectAll('circle').data(D.sw).join('circle').attr('fill','var(--bg)').attr('stroke','var(--bus3)').attr('stroke-width',1.2).attr('vector-effect','non-scaling-stroke').attr('pointer-events','none');
+  gSw.selectAll('path.sh').data(D.sw).join('path').attr('class','sh').attr('fill','none').attr('stroke','transparent').attr('stroke-width',10).attr('vector-effect','non-scaling-stroke').style('cursor','pointer')
+    .on('click',(e,o)=>{e.stopPropagation();showSw(e)});
+}
+function styleSw(){
+  gSw.style('display',on.sw&&D.sw?null:'none');
+  if(!D.sw||!on.sw)return;
+  gSw.selectAll('path,circle').style('display',o=>swOn(o)?null:'none');
+  gSw.selectAll('path.sl').attr('stroke',o=>swHi===o?'var(--bus4)':'var(--bus3)').attr('stroke-width',o=>swHi===o?2.6:1.7).attr('stroke-opacity',o=>swHi==null||swHi===o?1:.25);
+}
+function showSw(e){
+  // 누른 자리에서 화면으로 9px 안에 지나는, 그해 보이는 노선을 모두 보여 준다(같은 길을 여러 노선이 같이 씀)
+  const [mx,my]=d3.pointer(e,svg.node());
+  const near=o=>{let m=1e9;const q=o.p.map(c=>T.apply(proj(c)));for(let i=1;i<q.length;i++){const [ax,ay]=q[i-1],[bx,by]=q[i];const dx=bx-ax,dy=by-ay,L=dx*dx+dy*dy;let t=L?((mx-ax)*dx+(my-ay)*dy)/L:0;t=Math.max(0,Math.min(1,t));m=Math.min(m,Math.hypot(ax+t*dx-mx,ay+t*dy-my))}return m};
+  const L=D.sw.map((o,i)=>[i,o,near(o)]).filter(([i,o,d])=>swOn(o)&&d<9).sort((a,b)=>a[1].y-b[1].y);
+  if(!L.length)return;
+  sel={t:'sw',v:e};
+  const li=L.map(([i,o])=>`<li data-si="${i}"><a href="#" class="bk" data-si="${i}">${esc(o.n)}</a> <small>${o.y===o.z?o.y+'년 기사':o.y+'–'+o.z+'년 기사'} · 그린 끝 ${esc(o.o)} → ${esc(o.e)}<br>${esc(o.nt||'')}<br>근거: ${esc(o.src)}</small></li>`).join('');
+  card(`<h3>${Y}년, 이 길을 지나던 시외버스 ${L.length}개 노선</h3><small>신문 기사에 노선이 나온 해 사이만 그림 · 이름을 누르면 그 노선만 진하게 보입니다</small><ul>${li}</ul><small>1960–80년대 시외버스는 노선 목록이 남아 있지 않아, 조선일보 기사(조선 뉴스 라이브러리 100)에 서울 쪽 종점·정류장과 경기·인천 쪽 끝이 함께 나온 노선만 넣었습니다. 기사에 나온 첫해와 마지막 해 사이에만 보이므로, 실제로는 더 일찍 생기거나 더 늦게까지 다녔을 수 있습니다. 경로는 기사에 나온 곳을 지금 도로 위 최단 경로로 이은 근사선이라 그때 길과 다를 수 있습니다.</small>`);
+  document.querySelectorAll('#cardBody a.bk[data-si]').forEach(a=>a.onclick=ev=>{ev.preventDefault();ev.stopPropagation();const o=D.sw[+a.dataset.si];swHi=swHi===o?null:o;styleSw();document.querySelectorAll('#cardBody li[data-si]').forEach(el=>el.classList.toggle('hi',D.sw[+el.dataset.si]===swHi))});
+  swHi=null;styleSw();
+}
+// 시외버스 터미널·정류장: 기사로 확인한 해 동안 점, 그곳에서 나가던 방면은 화살표(굵기는 그해까지 기사에 나온 행선지 수)
+let tmSel=null;
+const tmOn=t=>t.a<=Y&&Y<=t.z, tmN=r=>r.ds.filter(d=>d[1]<=Y).length;
+function tmCol(n){return n>=8?'var(--bus4)':n>=3?'var(--bus3)':'var(--bus2)'}
+function drawTm(){
+  if(!D.tm)return;
+  const A=[];
+  for(const t of D.tm)for(const r of t.dr){
+    const L=13,H=2.3,W=1.4,cb=Math.cos(r.b),sb=Math.sin(r.b),pt=(f,s)=>[t.p[0]+(f*cb-s*sb)/88.2,t.p[1]+(f*sb+s*cb)/111];
+    A.push({t,r,ln:[pt(0.6,0),pt(L-H*0.6,0)],hd:[pt(L,0),pt(L-H,W),pt(L-H,-W)]});
+  }
+  gTm.selectAll('path.tl').data(A).join('path').attr('class','tl').attr('fill','none').attr('stroke-linecap','butt').attr('vector-effect','non-scaling-stroke').attr('pointer-events','none');
+  gTm.selectAll('path.th').data(A).join('path').attr('class','th').attr('stroke','none').attr('pointer-events','none');
+  gTm.selectAll('path.tx').data(A).join('path').attr('class','tx').attr('fill','none').attr('stroke','transparent').attr('stroke-width',12).attr('vector-effect','non-scaling-stroke').style('cursor','pointer')
+    .on('click',(e,a)=>{e.stopPropagation();showTm(a.t)});
+  gTm.selectAll('circle').data(D.tm).join('circle').attr('stroke-width',1.6).attr('vector-effect','non-scaling-stroke').style('cursor','pointer')
+    .on('click',(e,t)=>{e.stopPropagation();showTm(t)});
+}
+function styleTm(){
+  gTm.style('display',on.tm&&D.tm?null:'none');
+  if(!D.tm||!on.tm)return;
+  const vis=a=>tmOn(a.t)&&tmN(a.r)>0, dim=a=>tmSel&&tmSel!==a.t;
+  gTm.selectAll('path.tl').style('display',a=>vis(a)?null:'none').attr('stroke',a=>tmCol(tmN(a.r))).attr('stroke-width',a=>0.9+0.75*Math.sqrt(tmN(a.r))).attr('stroke-opacity',a=>dim(a)?.2:.95);
+  gTm.selectAll('path.th').style('display',a=>vis(a)?null:'none').attr('fill',a=>tmCol(tmN(a.r))).attr('fill-opacity',a=>dim(a)?.2:.95);
+  gTm.selectAll('path.tx').style('display',a=>vis(a)?null:'none');
+  gTm.selectAll('circle').style('display',t=>tmOn(t)?null:'none').attr('fill',t=>t.k==='터미널'?'var(--bus4)':'var(--bg)').attr('stroke',t=>t.k==='터미널'?'var(--bg)':'var(--bus4)').attr('opacity',t=>tmSel&&tmSel!==t?.3:1);
+}
+function showTm(t){
+  sel={t:'tm',v:t};tmSel=t;styleTm();
+  const li=t.dr.map(r=>{const n=tmN(r);return `<li><b>${esc(r.nm)}</b> <small>· ${Y}년까지 기사에 나온 행선지 ${n}곳</small><br><small>${r.ds.map(d=>{const s=esc(d[0])+'('+(d[1]===d[2]?d[1]:d[1]+'–'+d[2])+')';return d[1]<=Y?s:'<span style="opacity:.45">'+s+'</span>'}).join(', ')}</small></li>`}).join('');
+  card(`<h3>${esc(t.n)}</h3><small>시외버스 ${esc(t.k)} · 기사로 확인한 해 ${t.a}–${t.z}${t.sc?' · '+esc(t.sc):''}</small><p><small>${esc(t.nt)}</small></p><ul>${li}</ul><small>행선지는 이 ${esc(t.k)} 이름과 같은 문장에 나온 경기·강원·충청 지명을 모은 것이고, 괄호 안은 그 지명이 나온 기사의 해입니다(${t.a}년 전이나 ${t.z}년 뒤 기사는 앞뒤 해로 줄임). 화살표는 그 방면 행선지들의 평균 방위를 가리키는 도식이고, 실제 길이 아닙니다. 흐린 행선지는 ${Y}년보다 뒤 기사에 처음 나온 곳입니다. 근거: ${esc(t.src)}</small>`);
+}
+function showJsPt(p){
+  sel={t:'jp',v:p};
+  card(`<h3>${esc(p.n)}</h3><small>${esc(p.k)}${p.r?' · '+esc(p.r):''}</small><ul><li><small>자리</small><br>${esc(p.pos||'')}</li>${p.src?`<li><small>문헌 근거</small><br><small>${esc(p.src)}</small></li>`:''}</ul>`);
+}
+function showSt(s){
+  sel={t:'s',v:s};
+  const src=k=>k.split(' ').filter(x=>D.src[x]).map(x=>`<a href="${esc(D.src[x][1])}" target="_blank" rel="noopener">${esc(D.src[x][0])}</a>`).join(' · ');
+  const ls=s.ls.map(([l,y,dt,sk,cf,nt])=>`<li><span class="lc" style="background:${esc(D.lineColor[l]||'#888')}"></span><b>${esc(l)}</b> · ${y?esc(dt||y):'개통일 미정리'}<br><small>${esc(CONF[cf]||'')}${nt?' · '+esc(nt):''}</small>${cf&&cf!=='s'?`<br><small>${src(sk)}</small>`:''}</li>`).join('');
+  card(`<h3>${esc(s.n.split('#')[0])}역</h3><small>전철로 영업을 시작한 날</small><ul>${ls}</ul>`);
+}
+function showRail(e){
+  sel={t:'r',v:e};
+  const src=e.s==='hgis'?'국사편찬위원회 HGIS 철도망 공간데이터':'「서울 도시 연대지도」 국철 정리값(서울 구간)';
+  const yrs=`${e.d0}${e.d1?' – '+e.d1:' 부터'}`;
+  const note=e.todo?'HGIS에 「(todo)」로 표시된 미완성 선형. 개통일이 붙어 있지 않아 경부선 서울 구간 자료의 시작일(1905-01-01)부터 그림(추정)':(e.s==='hgis'&&!e.d1?'HGIS 자료는 1945년 8월 14일에서 끝나서, 그 뒤는 마지막 선형을 그대로 이어 그림':'');
+  card(`<h3>${esc(e.l)}</h3><small>${esc(src)}</small><ul><li>${esc(yrs)}${note?`<br><small>${esc(note)}</small>`:''}</li></ul>`);
+}
+const yr=$('year');
+yr.addEventListener('input',e=>{Y=+e.target.value;render()});
+$('play').onclick=()=>{
+  if(timer){clearInterval(timer);timer=null;$('play').textContent='▶';$('play').setAttribute('aria-label','재생');return}
+  if(Y>=Y1)Y=Y0;
+  $('play').textContent='❚❚';$('play').setAttribute('aria-label','멈춤');
+  timer=setInterval(()=>{Y++;yr.value=Y;render();if(Y>=Y1){clearInterval(timer);timer=null;$('play').textContent='▶'}},260);
+  yr.value=Y;render();
+};
+for(const b of document.querySelectorAll('.chip[data-l]'))b.onclick=()=>{const l=b.dataset.l;on[l]=!on[l];b.setAttribute('aria-pressed',on[l]);render()};
+function coverage(){
+  const st=D.stations,tot=st.length;
+  const cf=Object.assign({s:0,a:0,b:0,c:0},D.stats.conf||{});
+  const rows=[
+    ['조선 후기 대로','p','근사선','「조선 후기」 단계부터 1910년까지 진하게, 1911–1938년 흐리게, 1939년부터 옛길 자리만 가늘게(역·원 점과 누르기는 1938년까지). 『도로고』 6대로(의주·경흥·평해·영남·삼남·강화)와 『대동지지』 봉화로를 경기 끝(개성·양문역·지평·죽산·갈원·강화부·이천)까지. 서울 안은 「서울 도시 연대지도」의 선을 그대로 씀','경유지 근거: 경기옛길(경기도·경기문화재단) 구간 안내, 서울신문 옛길 연재(2006·2007). 경유지 자리: 국사편찬위원회 HGIS 1912–1914 동리 포인트(공공누리 출처표시), OSM 지명 점. 선: © OpenStreetMap contributors(ODbL). 흐려지는 시점(1911년 4월 도로규칙, 1938년 12월 1일 조선도로령): 국가기록원 「추억의 일반국도 국도」 기록 주제','옛길 자체가 아니라 경유지를 지금 도로 위 최단 경로로 이은 선. 『도로고』·『대동지지』 원문과 경유지를 하나하나 대조하지 않음. 역·원 가운데 녹양·평구·봉안·양문·동파 외에는 점 이름이 마을 이름. 혜음령·축석령 자리는 어림. 강원·충청 쪽 이어지는 길은 그리지 않음'],
+    ['경계 1899–1910','p','보정','1910년 5월 HGIS 군·면 경계에서 1906-09-24 칙령 제49호(면 이관 27건)와 1908-09-14 양평군 출범(양근·지평 합침)을 되짚음. 기준 3개(1899·1906·1908)','칙령 제49호: 위키문헌 전사본(관보 원본 대조 안 함). 양평군: 한국민족문화대백과(순종실록 인용)','1899–1906년 사이 변경은 확인 안 함. 이관 면 중 이포·오정·서생·언리·외야곶·안중·소북면, 광덕·가사면 일부는 1910년 자료에서 짝을 못 찾아 그대로 둠. 마전 장신·강신·하신면=장동·강동·하북면, 남양 분향리면=분향면, 수원 감미면=감미동면, 양근·지평 면 나눔은 추정'],
+    ['경계 1910–1945','y','그림','경기도 부·군 경계(한성부·경성부·인천부·개성부 포함). 1910년 5월부터 기준일 12개','국사편찬위원회 HGIS 행정구역 GIS 데이터(1910~1945년), 공공누리 출처표시','1910–1914년 경성부는 5부(部) 폴리곤을 합쳐 만듦. 부·군 아래 읍·면은 아직 그리지 않음'],
+    ['경계 1945–1955','p','보정','1945년 8월·1955년 9월 HGIS 경계를 양 끝에 두고 변경 날짜 5개(1945·1946·1949·1953·1954)로 이음. 23개 부·군 가운데 14곳은 두 시점 경계가 같음','날짜: 서울특별시 미디어허브(1946 분리), 한겨레21(1949 서울 확장), 수원시·인천시 누리집(1949), 한국민족문화대백과(1954 연천 수복)','HGIS 1945~1955 변경이력 표는 내려받기 단추가 아직 막혀 있음. 1945–1954 연천·포천 북부의 38선 분단과 파주 편입은 경계에 반영하지 않음'],
+    ['경계 1955–1975','y','그림','서울 구, 경기도 시·군 경계. 기준일 5개(1955·1963·1964·1968·1973)','국사편찬위원회 HGIS 행정구역 GIS 데이터(1955~1975년), 공공누리 출처표시','HGIS 신뢰도는 모두 3(추정)'],
+    ['경계 1975–2026','y','그림','시·군·구 경계 32개 시점. 2000년 전은 5년 간격','admdongkor(SGIS 가공), CC BY 4.0 · 원자료 공공누리 제1유형','5년 사이 변화는 다음 시점에 몰려 보임'],
+    ['국철 1899–','p','일부','경인선 1899–1945 시기별 선형, 경부선 서울 구간 1905–1945, 경부선 영등포 남쪽 미완성 선형, 서울 안 경원·경의·중앙·경춘·용산선 등','HGIS 철도망 공간데이터(공공누리 출처표시), 「서울 도시 연대지도」','서울 밖 경원·경의·경춘·중앙·수인·수려·교외선. 1945년 뒤 경인·경부선은 1945년 선형을 이어 그림'],
+    ['전철 선로','y','그림',`지금 운행하는 ${D.lines.length}개 노선의 선로 형상`,'metroscope 정리본, © OpenStreetMap contributors(ODbL)','없어진 노선과 옛 선형. 아직 열지 않은 노선'],
+    ['역 개통일','y','그림',`역 ${tot}곳 모두(노선별로 ${cf.s+cf.a+cf.b+cf.c}개). 서울 쪽 ${cf.s}개는 서울 지도 정리값, 새로 찾은 것 ${cf.a+cf.b+cf.c}개 가운데 출처 두 곳 일치 ${cf.a}, 한 곳 ${cf.b}, 구간 개통일로 둔 것 ${cf.c}`,'나무위키 노선 문서 개통 연혁(변환된 페이지로 봄)을 바탕으로 보도자료·인천시·신문 기사로 일부 맞춰 봄','관보·철도거리표 고시 원문과는 대조하지 않음'],
+    ['신도시·택지 지구','y','그림','서울·인천·경기 공공·민간 택지·개발지구 '+(D.jigu||[]).length+'곳(10ha 이상). 지구 지정일부터 점선, 준공일부터 실선. 택지개발촉진법·도시개발법·공공주택 특별법·경제자유구역법 등 18개 법령의 지구','택지정보시스템 자료제공(국토교통부·한국국토정보공사), 2026-10 고시월. 공공데이터포털 표기 「이용허락범위 제한 없음」','경계는 마지막 고시 모양 하나뿐. 1980년대 전 개발(성남 광주대단지, 과천 신도시 등)과 토지구획정리사업은 이 자료에서 찾지 못함. 첫 입주일은 없어서 부분준공일만 보임'],
+    ['고속도로','y','그림',`서울·인천·경기를 지나는 고속도로 ${Object.keys((D.hw||{}).sec||{}).length}개 노선의 지금 본선을 구간 개통일 ${Object.values((D.hw||{}).sec||{}).reduce((a,v)=>a+v.length,0)}개에 맞춰 그 해부터 그림. 그해 연 구간은 파랗게`,'선형: © OpenStreetMap contributors(ODbL), Geofabrik 추출본(2026-11-24). 개통일: 국가기록원 「고속도로 연표」, 한국어 위키백과 노선 문서(CC BY-SA 4.0), 신문·정부 보도자료(구간을 누르면 나옴)','옛 선형·차로 확장은 없음. 지금 고속도로가 아닌 옛 구간(경인고속도로 인천 쪽 2017년 일반도로 전환 구간, 경부 한남–양재)은 빠짐. 도시고속도로(올림픽대로·강변북로 등)는 간선도로 쪽에서 다룰 예정. 나들목 개통일은 정리 안 함. 중앙고속도로 만종–남원주 날짜는 추정'],
+    ['자동차전용도로','p','일부',`날짜를 찾은 ${Object.keys((D.art||{}).sec||{}).length}개 도로(올림픽대로·강변북로·자유로·동부간선·내부순환·북부간선·분당수서·강남순환 등)를 구간 개통일 ${Object.values((D.art||{}).sec||{}).reduce((a,v)=>a+v.length,0)}개에 맞춰 그 해부터 그림`,'선형: © OpenStreetMap contributors(ODbL). 개통일: 한국어 위키백과 노선 문서(CC BY-SA 4.0), 서울특별시 보도, 신문 기사(구간을 누르면 나옴)','구간 경계는 다리·나들목 위치로 어림해 나눔. 1970년대 강변도로는 당시 이름(강변5로·강남2로 등)이 달랐음. 봉담과천로·분당내곡로·신경춘로 등 날짜를 못 찾은 자동차전용도로는 바탕선으로만 보임. 없어진 고가도로(청계고가 등)는 없음'],
+    ['국도·주요 도로','p','지금 모습','OSM trunk·primary 도로를 모든 해에 같은 모양으로 옅게 깖','© OpenStreetMap contributors(ODbL), Geofabrik 추출본(2026-11-24)','옛 해에도 지금 도로가 보이므로 그 해 도로망으로 읽으면 안 됨. 칩으로 끌 수 있음'],
+    ['광역버스','p','생긴 해부터',`서울로 들어가는 광역버스 ${(D.bus||{rt:[]}).rt.length}개(경기 면허 M·G·P·네 자리 번호, 인천 면허 광역·M, 서울 면허 9xxx)를 서울로 들어가는 방향만 그림. 노선마다 나무위키에서 찾은 생긴 해부터 없어진 해까지 보이고, 생긴 해를 못 찾은 노선은 자료 시점부터 보임. 경기 2023년 자료에 남아 있지만 나무위키에 폐지 분류·폐선 기록이 있는 노선은 그해까지만 그리고, 생긴 해를 못 찾았으면서 BMS 마지막 등록이 2020년 이전인 노선은 지금 다니는지 확인하지 못해 뺌. 없어진 노선 일부와 2004년 개편 전 서울 면허 좌석·심야좌석·직행좌석 가운데 경기·인천에서 서울로 들어오던 25개는 나무위키 문서의 경유지로 더함. 그해 다니던 노선 수로 굵기를 정함`,'노선·정류소 순서: 경기도 BMS 「노선 경유정류소」「노선 정보 검증」(2023-09, 이용허락범위 제한 없음), 인천광역시 BIS 「노선별경유노드 현황」(2024-08, 이용허락범위 제한 없음)과 「시내버스 노선현황」(2024-08-31, 공공누리 출처표시), 서울시 「버스노선별 정류장별 승하차 인원」(2026-11, 공공누리 제1유형). 정류소 좌표: 국토교통부 「전국 버스정류장 위치정보」(2026-11-09, 이용허락범위 제한 없음), 인천 교차로 노드: 국가교통정보센터 표준노드링크(2024-11-29). 생긴 해·없어진 해: 나무위키 「YYYY년 개업한 버스 노선」「YYYY년 폐지된 버스 노선」「경기도의 폐지된 직행좌석버스」 분류와 노선 문서·시군별 폐선 목록(CC BY-NC-SA 2.0 KR). 경로: © OpenStreetMap contributors(ODbL)','지금(또는 마지막) 경로를 생긴 해까지 거슬러 그리므로 옛 경로·옛 번호는 반영하지 않음. 없어진 노선은 나무위키에 문서가 있고 경유지와 연도를 읽을 수 있는 것만 들어감(시작 해가 없는 노선, 문서 없는 지선, 1970–80년대 시외버스는 아래 「시외버스」 줄에서 따로 그림). 2004년 개편 전 서울 700번대는 일반 좌석버스로, 지금 그리는 경기 직행좌석과 성격이 조금 다름. 생긴 해를 못 찾은 노선은 자료 시점부터 보임'],
+    ['시외버스','p','기사로 확인한 해만',`1963–1990년 서울의 시외버스 터미널·정류장(종로5가·신설동·용두동·동마장·용산·동자동·불광동·신촌 등)에서 경기·인천으로 가던 노선 ${(D.sw||[]).length}개. 신문 기사에 서울 쪽 끝과 경기·인천 쪽 끝이 함께 나온 노선만, 기사에 나온 첫해부터 마지막 해까지 노선마다 한 줄로 그림(광역버스와 달리 노선 수로 굵기를 정하지 않음)`,'조선일보 기사(조선 뉴스 라이브러리 100, 1963–1990년 기사 본문). 기사 저작권은 조선일보에 있어 사실(노선의 두 끝·해)만 옮김. 경로: © OpenStreetMap contributors(ODbL), 지명 자리: 국토교통부 「전국 버스정류장 위치정보」','노선 목록·면허 기록(교통부·경기도·서울시 고시)은 보지 못함. 기사에 나온 해 사이만 보여 실제 운행 기간보다 짧음. 경로는 기사에 나온 곳을 지금 도로 위 최단 경로로 이은 근사선. 다른 신문(동아·경향·매일경제)은 아직 찾지 않음'],
+    ['시외버스 터미널','p','기사로 확인한 해만',`서울의 시외버스 터미널·정류장 ${(D.tm||[]).length}곳(신설동·종로5가·동마장·용산 남부·서울역 동자동·영등포·불광동 서부·신촌·상봉·동서울·서초 남부)을 기사에 나온 해 동안 점으로 찍고, 그곳에서 나가던 방면을 화살표로 그림. 화살표 굵기는 그해까지 그 터미널 이름과 같은 문장에 나온 그 방면 행선지 수`,'조선일보 기사(조선 뉴스 라이브러리 100, 1963–1999년 기사 본문). 기사 저작권은 조선일보에 있어 터미널 이름·해·행선지 지명만 옮김. 동서울·서초 남부가 지금도 영업 중이라는 것은 일반 지식','행선지는 같은 문장에 함께 나온 지명을 기계로 모은 뒤 엉뚱한 것(같은 문장에 다른 터미널 행선지가 나온 경우 등)을 사람이 덜어 낸 것이라, 노선 목록이 아니고 빠진 행선지도 많음. 터미널마다 문을 연 날·닫은 날을 모두 찾지는 못해 기사에 처음·마지막으로 나온 해로 둔 곳이 있음(신촌·불광동·상봉 등). 2000년 뒤 기사는 보지 않음'],
+    ['바다','y','그림','해안선은 그해 행정구역 경계를 따름(매립으로 땅이 늘어나는 모습이 보임). 1899–1910년 5월은 1910년 5월 경계를 합친 땅 모양을 경계선 없이 깖. 이웃 시·도와 북한은 지금 경계로 깖','이웃 땅: admdongkor 2026년 시도 경계, Natural Earth 10m 국가 경계(공공 도메인, 북한)','옛 해의 이웃 땅도 지금 모양. 휴전선 아래 내륙의 빈 띠는 지금 경기 경계로 채움. 1910–1945 HGIS 해안선은 일제강점기 지형도 기준이라 지금과 어긋나는 곳이 있음'],
+    ['시화 간석지','p','보정','1994년 1월 시화방조제 물막이 뒤 드러난 간석지를 1994년부터 빗금으로 그림. SGIS 행정경계(admdongkor)에는 송산그린시티 쪽 약 40㎢가 땅으로 들어 있지 않아 바다로 보였음','범위: 택지정보시스템 반월특수지역 세 구역 경계에서 OSM 수면(시화호 등)을 빼고 해안선 안쪽만 남김. 날짜: 한국수자원공사 시화지구 누리집','지금 모양 하나뿐. 물막이 뒤 간석지가 마르고 매립되는 과정은 그리지 않음'],
+    ['강','p','지금 모습','강 수면(water=river) 면과 강 중심선(waterway=river)을 모든 해에 같은 모양으로 그림','© OpenStreetMap contributors(ODbL), Geofabrik 대한민국·북한 추출본(2026-11-24)','옛 물길이 아님(한강 매립 전 모습, 하중도 등은 서울 지도 쪽 작업과 겹침). 호수·저수지(팔당호 제외)는 생긴 해를 정리하지 않아 뺌. 시화호·청평호 등 없음'],
+  ];
+  const lab={y:'st y',p:'st p',n:'st n'};
+  $('cov').innerHTML=rows.map(r=>`<tr><td>${esc(r[0])}</td><td><span class="${lab[r[1]]}">${esc(r[2])}</span></td><td>${esc(r[3])}</td><td>${esc(r[4])}</td><td>${esc(r[5])}</td></tr>`).join('');
+}
+}
+</script>
+</body>
+</html>
