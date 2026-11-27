@@ -13,16 +13,19 @@ python3 src/seogye.py   (data/oldmap1903.json·oldmap1907.json의 기준점과 d
 - 두 지도 모두 도성 안 여덟 구간만 있다. 西署·北署 선은 필운대(弼雲臺) 아래, 北署·東署 선은 大報壇 앞에서 끊기고,
   西署·南署 선은 남산 기슭 성벽 바로 앞에서 끝난다. 그 너머(산과 성 밖)는 두 지도에 그려져 있지 않다.
 - 두 지도의 선은 따로 맞췄는데도 서로 중앙값 5–15m(가장 멀리 43m) 안에서 겹친다. HGIS 1910년 5부 선과는 다섯 구간이
-  중앙값 11–35m로 가깝고, 中署·東署(종묘 서쪽 길 대 종묘 담 안, 중앙값 약 120m)와 西署·中署(육조거리 가운데 대 백운동천, 약 100m),
-  西署·南署(약 40–50m) 구간이 다르다(이 스크립트가 출력함).
+  중앙값 11–32m로 가깝고, 中署·東署(종묘 서쪽 길 대 종묘 담 안, 중앙값 약 120m)와 西署·中署(육조거리 가운데 대 백운동천, 약 80m),
+  西署·南署(약 40–46m) 구간이 다르다(이 스크립트가 출력함. 2026-11-27 HGIS 선을 고친 뒤 값).
 - 좌표는 oldmap1903.py·oldmap1907.py와 같은 성문 7곳 아핀 맞춤으로 바꾼다.
 - hgisOutside: HGIS 1910년 5부 안쪽 선에서 도성 안(data/tram.json의 한양도성 선으로 둘러싼 면)을 뺀 것.
+- join: 옛 지도 선이 성벽에 닿기 전에 끊긴 두 곳(西署·北署 약 380m 앞, 北署·東署 약 710m 앞)을 HGIS 1910년 선으로 성벽까지 잇는 조각.
+  끊긴 끝에서 30–60m 안에 있는 HGIS 선 가운데 성벽을 지나는 선을 골라, 끊긴 끝에서 성벽까지만 잘라 쓴다. 성벽에서 150m 안에서
+  끝나는 선(西署·南署, 東署·南署)은 잇지 않는다(HGIS 선이 성벽에 닿는 곳과 성벽을 따라 50–215m 떨어져 있음).
 """
 import json, os
 import numpy as np
 import shapely
-from shapely.geometry import LineString, Polygon, mapping, shape
-from shapely.ops import unary_union
+from shapely.geometry import LineString, Point, Polygon, mapping, shape
+from shapely.ops import substring, unary_union
 from pyproj import Transformer
 from paths import DATA
 
@@ -78,6 +81,28 @@ def rnd(g):
     gj = mapping(g)
     def r(c): return [round(c[0], 5), round(c[1], 5)] if isinstance(c[0], float) else [r(x) for x in c]
     return {"type": gj["type"], "coordinates": r(gj["coordinates"])}
+
+# 끊긴 끝 잇기(EPSG:5186에서 계산)
+to5186g = lambda g: shapely.transform(g, lambda c: np.array(T.transform(c[:, 0], c[:, 1])).T)
+to4326g = lambda g: shapely.transform(g, lambda c: np.array(Ti.transform(c[:, 0], c[:, 1])).T)
+wallM, meshM = to5186g(wall), to5186g(mesh)
+hl = list(shapely.line_merge(meshM).geoms)
+junc = [Point(c) for l in to5186g(outside).geoms for c in (l.coords[0], l.coords[-1]) if wallM.exterior.distance(Point(c)) < 5]
+for st in sets:
+    st["join"] = []
+    ls = {l["id"]: to5186g(LineString(l["coords"])) for l in st["lines"]}
+    for k, g in ls.items():
+        others = unary_union([v for kk, v in ls.items() if kk != k])
+        for c in (g.coords[0], g.coords[-1]):
+            p = Point(c)
+            if others.distance(p) < 30 or wallM.exterior.distance(p) < 150: continue
+            cand = [(l.distance(p), l, j) for l in hl for j in junc if l.distance(p) < 60 and l.distance(j) < 5]
+            if not cand: print("잇지 못함", st["map"], k); continue
+            _, l, j = min(cand, key=lambda t: (t[0], t[2].distance(p)))
+            a, b = sorted((l.project(p), l.project(j)))
+            seg = to4326g(substring(l, a, b))
+            st["join"].append({"id": k, "between": list(NAMES[k]), "m": round(substring(l, a, b).length), "coords": [[round(x, 6), round(y, 6)] for x, y in seg.coords]})
+    print(st["map"], "잇는 조각", [(j["id"], j["m"]) for j in st["join"]])
 
 json.dump({"sets": sets, "hgisOutside": rnd(outside)}, open(os.path.join(DATA, "seogye.json"), "w"), ensure_ascii=False, separators=(",", ":"))
 

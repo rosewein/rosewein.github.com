@@ -889,6 +889,9 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     const st = seoSet(year); if (!st || hsPhase(year) !== "bu1910") return;
     gGu.append("path").datum({ type: "MultiLineString", coordinates: st.lines.map(l => l.coords) }).attr("d", path)
       .attr("fill", "none").attr("stroke", "var(--gu)").attr("stroke-width", 1.1).attr("vector-effect", "non-scaling-stroke");
+    // 옛 지도 선이 성벽 앞에서 끊긴 두 곳(필운대 아래, 대보단 앞)은 HGIS 1910년 선으로 성벽까지 점선으로 잇는다(seogye.py의 join)
+    if (st.join && st.join.length) gGu.append("path").datum({ type: "MultiLineString", coordinates: st.join.map(l => l.coords) }).attr("d", path)
+      .attr("fill", "none").attr("stroke", "var(--gu)").attr("stroke-width", 1.1).attr("stroke-dasharray", "3 3").attr("vector-effect", "non-scaling-stroke");
   }
   function drawJoseon() {
     gJoseon.selectAll("*").remove();
