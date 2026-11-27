@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>수도권 도시 연대지도 시안</title>
+<title>수도권 도시 연대지도</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Hahmlet:wght@500;700&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-/* VOICE: 연구 시안. 차분한 지도 도판, 꾸밈 없이 자료가 닿는 곳과 비는 곳을 그대로 보여 줌
+/* VOICE: 개인 연구 지도. 차분한 지도 도판, 꾸밈 없이 자료가 닿는 곳과 비는 곳을 그대로 보여 줌
    IDEA: 지도첩의 한 장 — 「서울 도시 연대지도」와 같은 종이·잉크, 연도 띠가 붙은 행정구역 변천 도판
    PICTURE: 서울·인천·경기 시·군·구 면(황토색 밝기 3단계)과 전철 선, 그 해 바뀐 곳은 파란 테두리
    COLOUR and TYPE: 본 지도의 종이 #e8ebe4·잉크 #1e2420, 황토 한 색상 밝기 단계, Hahmlet 제목 + IBM Plex Sans KR
@@ -82,8 +82,8 @@ a{color:var(--focus)}
 </head>
 <body>
 <header class="band"><div class="wrap">
-  <h1>수도권 도시 연대지도 — 자료 시안</h1>
-  <p class="lede">지금 손에 있는 자료만으로 1899–2026년 서울·인천·경기의 행정구역 경계와 철도·전철, 신도시·택지 지구, 고속도로·자동차전용도로를 겹쳐 본 러프 시안입니다. 연도 띠 맨 앞 「조선 후기」 단계부터 조선 후기 대로를 지금 도로 위 근사선으로 그렸고, 1911년 도로규칙 뒤로는 흐리게, 1938년 조선도로령으로 국도 노선이 처음 지정된 뒤로는 옛길 자리만 가늘게 남겼습니다. 광역버스는 서울로 들어가는 경기·인천·서울 면허 노선을 서울 방향만 도로 위로 이어, 노선마다 생긴 해부터 그해 같은 길을 다니던 노선 수로 굵기를 정했습니다. 1899–1910년과 1945–1955년은 HGIS 경계에 행정구역 변경 법령을 맞춰 보정했고(점선 테두리).</p>
+  <h1>수도권 도시 연대지도</h1>
+  <p class="lede">지금 손에 있는 자료만으로 1899–2026년 서울·인천·경기의 행정구역 경계와 철도·전철, 신도시·택지 지구, 고속도로·자동차전용도로, 조선 후기 대로, 광역버스·시외버스를 연도별로 겹쳐 본 지도입니다. 레이어마다 자료가 닿는 범위와 비는 곳은 지도 아래 표에 적었습니다. 연도 띠 맨 앞 「조선 후기」 단계부터 조선 후기 대로를 지금 도로 위 근사선으로 그렸고, 1911년 도로규칙 뒤로는 흐리게, 1938년 조선도로령으로 국도 노선이 처음 지정된 뒤로는 옛길 자리만 가늘게 남겼습니다. 광역버스는 서울로 들어가는 경기·인천·서울 면허 노선을 서울 방향만 도로 위로 이어 노선마다 생긴 해부터 없어진 해까지 그렸고, 굵기는 그해 같은 길을 다니던 노선 수로 정했습니다. 1963–1990년 시외버스 노선과 서울의 시외버스 터미널·정류장 11곳은 조선일보 기사로 확인한 해를 바탕으로 그렸습니다. 1899–1910년과 1945–1955년 경계는 HGIS에 자료가 없어서 가까운 시점의 HGIS 경계에 행정구역 변경 법령과 날짜를 맞춰 보정했고(점선 테두리), 그 구역을 누르면 근거가 나옵니다.</p>
 </div></header>
 
 <section class="fig" id="fig" aria-label="수도권 지도">
@@ -108,7 +108,7 @@ a{color:var(--focus)}
   <button class="chip" data-l="arb" aria-pressed="true"><i style="background:var(--ink2);opacity:.45;height:1px"></i>국도·주요 도로 · 지금 모습</button>
   <button class="chip" data-l="bus" aria-pressed="true"><i style="background:var(--bus3);height:4px"></i>광역버스 · 생긴 해부터 없어진 해까지</button>
   <button class="chip" data-l="sw" aria-pressed="true"><i style="background:none;border-radius:0;border-top:2px dashed var(--bus3);height:0"></i>시외버스 1963–1990 · 신문 기사로 확인한 해만</button>
-  <button class="chip" data-l="tm" aria-pressed="true"><i style="background:var(--bus4);border-radius:50%;width:10px;height:10px"></i>시외버스 터미널·정류장 · 나가던 방면</button>
+  <button class="chip" data-l="tm" aria-pressed="true"><i style="background:var(--bus4);border-radius:50%;width:10px;height:10px"></i>시외버스 터미널·정류장 · 누르면 나가던 방면</button>
 </div>
 <div class="legend">
   <span><i class="sw" style="background:var(--k0)"></i>군·출장소</span>
@@ -130,9 +130,9 @@ a{color:var(--focus)}
   <span><i class="sw" style="background:none;border:0;border-top:1.5px dashed var(--js);height:0;width:18px"></i>나룻배로 건넘</span>
   <span><i class="sw" style="background:none;border:0;border-top:1.5px solid var(--bus1);height:0;width:18px"></i><i class="sw" style="background:none;border:0;border-top:2.5px solid var(--bus2);height:0;width:18px"></i><i class="sw" style="background:none;border:0;border-top:3.5px solid var(--bus3);height:0;width:18px"></i><i class="sw" style="background:none;border:0;border-top:4.5px solid var(--bus4);height:0;width:18px"></i>광역버스가 지나는 길(그해 다니던 노선 1–2·3–7·8–19·20개 넘음) — 노선마다 생긴 해부터 없어진 해까지, 서울로 들어가는 방향만, 정류소·경유지를 도로 위로 이은 근사선</span>
   <span><i class="sw" style="background:none;border:0;border-top:2px dashed var(--bus3);height:0;width:18px"></i>서울 시외버스 터미널·정류장에서 경기·인천으로 가던 시외버스 노선(1963–1990) — 신문 기사에 그 노선이 나온 해 사이만, 노선마다 한 줄, 서울 쪽 끝·경유지를 지금 도로 위로 이은 근사선</span>
-  <span><i class="sw" style="background:var(--bus4);border:1.5px solid var(--bg);border-radius:50%;width:10px;height:10px"></i><i class="sw" style="background:var(--bg);border:1.5px solid var(--bus4);border-radius:50%;width:10px;height:10px"></i>시외버스 터미널(채운 점)·정류장(빈 점)과 그곳에서 나가던 방면(화살표) — 신문 기사로 확인한 해 동안, 화살표 굵기는 그해까지 기사에 함께 나온 그 방면 행선지 수(1–2·3–7·8곳 넘음)</span>
+  <span><i class="sw" style="background:var(--bus4);border:1.5px solid var(--bg);border-radius:50%;width:10px;height:10px"></i><i class="sw" style="background:var(--bg);border:1.5px solid var(--bus4);border-radius:50%;width:10px;height:10px"></i>시외버스 터미널(채운 점)·정류장(빈 점) — 신문 기사로 확인한 해 동안. 점을 누르면 그곳에서 나가던 방면과 기사에 함께 나온 행선지가 나옵니다</span>
   <span><i class="sw" style="background:var(--nb);border-color:var(--rule)"></i>이웃 시·도와 북한(지금 경계)</span>
-  <span>지도를 누르면 시·군·구, 역, 택지 지구, 고속도로·자동차전용도로의 내력과 그 길을 지나는 광역버스·시외버스 노선, 시외버스 터미널에서 나가던 방면이 나옵니다. 역 점은 확대하면 보입니다</span>
+  <span>지도를 누르면 시·군·구, 역, 택지 지구, 고속도로·자동차전용도로의 내력과 그 길을 지나는 광역버스·시외버스 노선, 시외버스 터미널에서 나가던 방면이 나옵니다. 역 점은 확대하면 보입니다.</span>
 </div>
 
 <section class="band"><div class="wrap">
@@ -144,7 +144,8 @@ a{color:var(--focus)}
   <p class="note">전철은 구간마다 개통한 해부터 그립니다. 구간 개통 뒤 사이에 새로 생긴 역(예: 1호선 금정·부개, 4호선 산본·수리산)은 선로를 앞 해부터 그리고 역 점만 그 역이 생긴 해부터 보입니다. 안산선(1988)·과천선(1993)처럼 처음엔 다른 계통으로 다니다 4호선이 된 구간도 선로가 생긴 해부터 4호선 색으로 그렸습니다.</p>
   <p class="note">행정구역 경계는 시기마다 자료가 다릅니다. 1910–1945년은 국사편찬위원회 HGIS의 부·군 경계, 1955–1975년은 같은 HGIS의 시·군·구 경계, 1975년 말부터는 admdongkor 경계입니다. 1945–1955년은 HGIS에 경계 자료가 없어서, 1945년 8월과 1955년 9월 경계를 양 끝에 두고 그 사이 행정구역 변경 날짜(서울 분리 1946, 서울 확장·수원시·인천시 1949, 휴전 1953, 연천 수복 1954)에 맞춰 바꿔 끼웠습니다. 이 구간은 테두리를 점선으로 그렸고, 누르면 어떤 근거로 이었는지 나옵니다. 1899–1910년도 HGIS에 경계 자료가 없어서, 1910년 5월 HGIS 군·면 경계를 바탕으로 1906년 9월 칙령 제49호 「지방구역정리건」의 면 이관과 1908년 양평군 출범을 거꾸로 되짚어 채웠습니다(점선 테두리). 1906년 전에는 광주의 초부면처럼 다른 군 안에 떨어져 있던 비입지도 보입니다. 바다와 땅의 경계는 그해 행정구역 경계를 그대로 따르므로, 인천·시화 등에서 매립으로 땅이 늘어난 모습이 시기별로 드러납니다. 다만 1910–1945년 해안선은 HGIS가 일제강점기 지형도로 그린 것이라 지금 해안선과 어긋나는 곳도 있습니다.</p>
   <p class="note">1975년 말 이후 경계는 2000년 전에는 5년 간격 자료라서, 그 사이에 생긴 변화가 다음 시점에 한꺼번에 나타납니다. '바뀐 곳'은 직전 시점보다 면적 기준으로 6% 넘게 달라진 경우만 표시했습니다. 자료를 만든 쪽의 단순화 정도 차이도 섞일 수 있어서, 실제 경계 조정인지는 따로 확인해야 합니다. 강원·충청·북한 쪽 땅은 지금 경계로 옅게 깔아 두었고, 휴전선 아래 내륙에서 그해 경계가 비는 띠(비무장지대 남쪽, 1963년 강원도 철원군에서 연천군으로 넘어온 신서면 등)도 같은 색으로 채웠습니다. 서해의 먼 섬(백령·대청·연평)은 화면 밖입니다.</p>
-  <p class="note">출처: 1910–1945·1955–1975 경계와 1899–1945 경인선·경부선 선형 — 국사편찬위원회 역사지리정보시스템(HGIS) 개방데이터셋(공공누리 출처표시). 1945–1955 보정 날짜 — 서울특별시 미디어허브, 수원시·인천광역시 누리집, 한국민족문화대백과사전, 신문 기사. 서울 안 국철 — 「서울 도시 연대지도」 정리값. 1975년 이후 시·군·구 경계 — 통계청 통계지리정보서비스(SGIS) 행정동 경계를 가공한 <a href="https://github.com/vuski/admdongkor">vuski/admdongkor</a>(CC BY 4.0, 원자료 공공누리 제1유형). 전철 선로·역 위치 — © OpenStreetMap contributors, <a href="https://github.com/kimmdr2/metroscope">kimmdr2/metroscope</a> 정리본(ODbL). 역 개통일 — 서울 쪽은 <a href="https://rosewein.github.io/seoul-layer-map/">「서울 도시 연대지도」</a>의 정리값, 서울 밖은 나무위키 노선 문서(CC BY-NC-SA 2.0 KR)와 국토교통부·건설교통부 보도자료, 인천시, 신문 기사(역을 누르면 출처가 나옴). 이웃 시·도 땅 — admdongkor 2026년 시도 경계, 북한 — Natural Earth(공공 도메인). 강 — © OpenStreetMap contributors(ODbL), Geofabrik 추출본. 신도시·택지 지구 — 택지정보시스템 자료제공(국토교통부·한국국토정보공사, 이용허락범위 제한 없음). 고속도로 선형 — © OpenStreetMap contributors(ODbL), Geofabrik 추출본(2026-11-24). 고속도로 구간 개통일 — 국가기록원 「고속도로 연표」, 한국어 위키백과 노선 문서(CC BY-SA 4.0), 신문·정부 보도자료(구간을 누르면 출처가 나옴). 자동차전용도로·국도 선형 — © OpenStreetMap contributors(ODbL), Geofabrik 추출본. 자동차전용도로 구간 개통일 — 한국어 위키백과 노선 문서(CC BY-SA 4.0), 서울특별시 보도, 신문 기사(구간을 누르면 출처가 나옴). 조선 후기 대로 — 서울 안은 「서울 도시 연대지도」 정리값, 서울 밖 경유지는 경기옛길 안내와 서울신문 옛길 연재, 경유지 자리는 국사편찬위원회 HGIS 1912–1914 동리 포인트(공공누리 출처표시)와 OSM 지명, 선은 © OpenStreetMap contributors(ODbL) 도로 위 최단 경로. 대로가 흐려지는 시점(1911년 도로규칙, 1938년 조선도로령) — 국가기록원 <a href="https://theme.archives.go.kr/next/koreaOfRecord/nationalHighway.do">「추억의 일반국도 국도」</a>. 광역버스 노선·정류소 순서 — 경기도 버스운송관리시스템 「노선 경유정류소」「노선 정보 검증」(2023-09, <a href="https://www.data.go.kr/data/15124068/fileData.do">공공데이터포털</a>·경기데이터드림, 이용허락범위 제한 없음), 인천광역시 버스정보시스템 <a href="https://www.data.go.kr/data/15134389/fileData.do">「노선별경유노드 현황」</a>(2024-08, 이용허락범위 제한 없음)과 <a href="https://www.incheon.go.kr/traffic/TR060002/2205815">「시내버스 노선현황」</a>(2024-08-31, 공공누리 출처표시), 서울시 「버스노선별 정류장별 승하차 인원 정보」(서울 열린데이터광장, 공공누리 제1유형), 인천 교차로 노드 — 국가교통정보센터 표준노드링크(2024-11-29), 노선이 생긴 해·없어진 해와 없어진 노선의 경유지 — 나무위키 「YYYY년 개업한 버스 노선」「YYYY년 폐지된 버스 노선」「경기도의 폐지된 직행좌석버스」 분류, 노선 문서와 시·군별 「버스 목록/폐선」·「서울특별시 시내버스/2004년 개편 전 목록」 문서(CC BY-NC-SA 2.0 KR), 정류소 좌표 — 국토교통부 <a href="https://www.data.go.kr/data/15067528/fileData.do">「전국 버스정류장 위치정보」</a>(2026-11-09, 이용허락범위 제한 없음), 경로 — © OpenStreetMap contributors(ODbL) 도로 위 최단 경로. 1963–1990년 시외버스 노선과 해 — 조선일보 기사(<a href="https://newslibrary.chosun.com/">조선 뉴스 라이브러리 100</a>, 기사 저작권은 조선일보에 있어 노선의 두 끝과 해만 옮김; 노선을 누르면 기사 날짜가 나옴). 시외버스 터미널·정류장과 나가던 방면 — 같은 조선일보 기사(1963–1999), 터미널 점을 누르면 기사 날짜와 행선지가 나옴.</p>
+  <p class="note">출처: 1910–1945·1955–1975 경계와 1899–1945 경인선·경부선 선형 — 국사편찬위원회 역사지리정보시스템(HGIS) 개방데이터셋(공공누리 출처표시). 1945–1955 보정 날짜 — 서울특별시 미디어허브, 수원시·인천광역시 누리집, 한국민족문화대백과사전, 신문 기사. 1899–1910 보정 — 1906년 칙령 제49호 「지방구역정리건」(위키문헌 전사본, 공공 도메인), 1908년 양평군 출범은 한국민족문화대백과사전. 서울 안 국철 — 「서울 도시 연대지도」 정리값. 1975년 이후 시·군·구 경계 — 통계청 통계지리정보서비스(SGIS) 행정동 경계를 가공한 <a href="https://github.com/vuski/admdongkor">vuski/admdongkor</a>(CC BY 4.0, 원자료 공공누리 제1유형). 전철 선로·역 위치 — © OpenStreetMap contributors, <a href="https://github.com/kimmdr2/metroscope">kimmdr2/metroscope</a> 정리본(ODbL). 역 개통일 — 서울 쪽은 <a href="https://rosewein.github.io/seoul-layer-map/">「서울 도시 연대지도」</a>의 정리값, 서울 밖은 나무위키 노선 문서(CC BY-NC-SA 2.0 KR)와 국토교통부·건설교통부 보도자료, 인천시, 신문 기사(역을 누르면 출처가 나옴). 이웃 시·도 땅 — admdongkor 2026년 시도 경계, 북한 — Natural Earth(공공 도메인). 강 — © OpenStreetMap contributors(ODbL), Geofabrik 추출본. 신도시·택지 지구 — 택지정보시스템 자료제공(국토교통부·한국국토정보공사, 이용허락범위 제한 없음). 시화 간석지 — 범위는 택지정보시스템 반월특수지역 구역 경계에서 © OpenStreetMap contributors(ODbL) 수면을 뺀 것, 1994년 1월 방조제 물막이 날짜는 한국수자원공사 시화지구 누리집. 고속도로 선형 — © OpenStreetMap contributors(ODbL), Geofabrik 추출본(2026-11-24). 고속도로 구간 개통일 — 국가기록원 「고속도로 연표」, 한국어 위키백과 노선 문서(CC BY-SA 4.0), 신문·정부 보도자료(구간을 누르면 출처가 나옴). 자동차전용도로·국도 선형 — © OpenStreetMap contributors(ODbL), Geofabrik 추출본. 자동차전용도로 구간 개통일 — 한국어 위키백과 노선 문서(CC BY-SA 4.0), 서울특별시 보도, 신문 기사(구간을 누르면 출처가 나옴). 조선 후기 대로 — 서울 안은 「서울 도시 연대지도」 정리값, 서울 밖 경유지는 경기옛길 안내와 서울신문 옛길 연재, 경유지 자리는 국사편찬위원회 HGIS 1912–1914 동리 포인트(공공누리 출처표시)와 OSM 지명, 선은 © OpenStreetMap contributors(ODbL) 도로 위 최단 경로. 대로가 흐려지는 시점(1911년 도로규칙, 1938년 조선도로령) — 국가기록원 <a href="https://theme.archives.go.kr/next/koreaOfRecord/nationalHighway.do">「추억의 일반국도 국도」</a>. 광역버스 노선·정류소 순서 — 경기도 버스운송관리시스템 「노선 경유정류소」「노선 정보 검증」(2023-09, <a href="https://www.data.go.kr/data/15124068/fileData.do">공공데이터포털</a>·경기데이터드림, 이용허락범위 제한 없음), 인천광역시 버스정보시스템 <a href="https://www.data.go.kr/data/15134389/fileData.do">「노선별경유노드 현황」</a>(2024-08, 이용허락범위 제한 없음)과 <a href="https://www.incheon.go.kr/traffic/TR060002/2205815">「시내버스 노선현황」</a>(2024-08-31, 공공누리 출처표시), 서울시 「버스노선별 정류장별 승하차 인원 정보」(서울 열린데이터광장, 공공누리 제1유형), 인천 교차로 노드 — 국가교통정보센터 표준노드링크(2024-11-29), 노선이 생긴 해·없어진 해와 없어진 노선의 경유지 — 나무위키 「YYYY년 개업한 버스 노선」「YYYY년 폐지된 버스 노선」「경기도의 폐지된 직행좌석버스」 분류, 노선 문서와 시·군별 「버스 목록/폐선」·「서울특별시 시내버스/2004년 개편 전 목록」 문서(CC BY-NC-SA 2.0 KR), 정류소 좌표 — 국토교통부 <a href="https://www.data.go.kr/data/15067528/fileData.do">「전국 버스정류장 위치정보」</a>(2026-11-09, 이용허락범위 제한 없음), 경로 — © OpenStreetMap contributors(ODbL) 도로 위 최단 경로. 1963–1990년 시외버스 노선과 해 — 조선일보 기사(<a href="https://newslibrary.chosun.com/">조선 뉴스 라이브러리 100</a>, 기사 저작권은 조선일보에 있어 노선의 두 끝과 해만 옮김; 노선을 누르면 기사 날짜가 나옴), 지명 자리 — 국토교통부 「전국 버스정류장 위치정보」, 경로 — © OpenStreetMap contributors(ODbL) 도로 위 최단 경로. 시외버스 터미널·정류장과 나가던 방면 — 같은 조선일보 기사(1963–1999), 터미널 점을 누르면 기사 날짜와 행선지가 나옴.</p>
+  <p class="note">v1.0 · 2026-11-27 · <a href="https://github.com/rosewein/rosewein.github.com/tree/master/metropolitan_layer_map#변경-기록">변경 기록</a></p>
 </div></section>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
@@ -157,7 +158,7 @@ const WHY={'처음':'이 이름으로 처음 보임','경계':'경계가 달라�
 const SRCN={h45:'HGIS 1910–1945',fix0:'보정 구간(1899–1910)',fix:'보정 구간(1945–1955)',h55:'HGIS 1955–1975',adm:'admdongkor(SGIS 가공)'};
 const Y0=1898,Y1=2026;   // 1898 = 「조선 후기」 단계
 const fig=$('fig'),svg=d3.select('#map');
-const root=svg.append('g'),gNb=root.append('g'),gS=root.append('g'),gW=root.append('g').attr('pointer-events','none'),gJ=root.append('g'),gChg=root.append('g'),gSido=root.append('g'),gJs=root.append('g'),gArB=root.append('g').attr('pointer-events','none'),gArt=root.append('g'),gHW=root.append('g'),gBus=root.append('g'),gSw=root.append('g'),gTm=root.append('g'),g38=root.append('g'),gR0=root.append('g'),gD=root.append('g'),gSt=root.append('g');
+const root=svg.append('g'),gNb=root.append('g'),gS=root.append('g'),gW=root.append('g').attr('pointer-events','none'),gJ=root.append('g'),gChg=root.append('g'),gSido=root.append('g'),gJs=root.append('g'),gArB=root.append('g').attr('pointer-events','none'),gArt=root.append('g'),gHW=root.append('g'),gBus=root.append('g'),gSw=root.append('g'),gTm=root.append('g'),g38=root.append('g'),gR0=root.append('g'),gD=root.append('g'),gTmHit=root.append('g'),gSt=root.append('g');
 const gLab=svg.append('g').attr('pointer-events','none');
 let D=null,Y=Y1,idx=-1,pidx=-1,k=1,T=d3.zoomIdentity,proj=null,path=null,timer=null,sel=null;
 const on={sgg:true,chg:true,mD:true,r0:true,l38:true,w:true,jg:true,hw:true,ar:true,arb:true,js:true,bus:true,sw:true,tm:true};
@@ -249,9 +250,8 @@ function layout(){
   gHW.selectAll('path').attr('d',e=>line(e.p));
   gBus.selectAll('path').attr('d',e=>line(e.p));
   gSw.selectAll('path').attr('d',e=>line(e.p));
-  gTm.selectAll('path.tl,path.tx').attr('d',a=>line(a.ln));
-  gTm.selectAll('path.th').attr('d',a=>line(a.hd)+'Z');
   gTm.selectAll('circle').attr('cx',t=>proj(t.p)[0]).attr('cy',t=>proj(t.p)[1]);
+  gTmHit.selectAll('circle').attr('cx',t=>proj(t.p)[0]).attr('cy',t=>proj(t.p)[1]);
   gSw.selectAll('circle').attr('cx',o=>proj(o.p[0])[0]).attr('cy',o=>proj(o.p[0])[1]);
   gBus.selectAll('circle').attr('cx',p=>proj(p)[0]).attr('cy',p=>proj(p)[1]);
   gArt.selectAll('path').attr('d',e=>line(e.p));
@@ -334,7 +334,8 @@ function styleZoom(){
   gJs.selectAll('circle').attr('r',Math.min(2.6,1.4+0.25*k)/k);
   gBus.selectAll('circle').attr('r',Math.min(2.4,1.2+0.2*k)/k);
   gSw.selectAll('circle').attr('r',Math.min(2.6,1.3+0.2*k)/k);
-  gTm.selectAll('circle').attr('r',Math.min(5,3.6+0.25*k)/k);
+  gTm.selectAll('circle').attr('r',tmR);
+  gTmHit.selectAll('circle').attr('r',t=>Math.max(tmR(t),9/k));
   gSt.selectAll('circle').style('display',s=>show&&on.mD&&s.f!=null&&s.f<=Y?null:'none')
     .attr('fill','var(--bg)').attr('stroke','var(--ink)').attr('r',rs);
 }
@@ -452,37 +453,30 @@ function showSw(e){
   document.querySelectorAll('#cardBody a.bk[data-si]').forEach(a=>a.onclick=ev=>{ev.preventDefault();ev.stopPropagation();const o=D.sw[+a.dataset.si];swHi=swHi===o?null:o;styleSw();document.querySelectorAll('#cardBody li[data-si]').forEach(el=>el.classList.toggle('hi',D.sw[+el.dataset.si]===swHi))});
   swHi=null;styleSw();
 }
-// 시외버스 터미널·정류장: 기사로 확인한 해 동안 점, 그곳에서 나가던 방면은 화살표(굵기는 그해까지 기사에 나온 행선지 수)
+// 시외버스 터미널·정류장: 기사로 확인한 해 동안 점. 나가던 방면과 행선지는 점을 누르면 정보창에 나옴(v1.0에서 지도 위 화살표를 뺌)
+// 누른 점은 1.8배로 키움
 let tmSel=null;
 const tmOn=t=>t.a<=Y&&Y<=t.z, tmN=r=>r.ds.filter(d=>d[1]<=Y).length;
-function tmCol(n){return n>=8?'var(--bus4)':n>=3?'var(--bus3)':'var(--bus2)'}
+const tmR=t=>Math.min(5,3.6+0.25*k)/k*(tmSel===t?1.8:1);
 function drawTm(){
   if(!D.tm)return;
-  const A=[];
-  for(const t of D.tm)for(const r of t.dr){
-    const L=13,H=2.3,W=1.4,cb=Math.cos(r.b),sb=Math.sin(r.b),pt=(f,s)=>[t.p[0]+(f*cb-s*sb)/88.2,t.p[1]+(f*sb+s*cb)/111];
-    A.push({t,r,ln:[pt(0.6,0),pt(L-H*0.6,0)],hd:[pt(L,0),pt(L-H,W),pt(L-H,-W)]});
-  }
-  gTm.selectAll('path.tl').data(A).join('path').attr('class','tl').attr('fill','none').attr('stroke-linecap','butt').attr('vector-effect','non-scaling-stroke').attr('pointer-events','none');
-  gTm.selectAll('path.th').data(A).join('path').attr('class','th').attr('stroke','none').attr('pointer-events','none');
-  gTm.selectAll('path.tx').data(A).join('path').attr('class','tx').attr('fill','none').attr('stroke','transparent').attr('stroke-width',12).attr('vector-effect','non-scaling-stroke').style('cursor','pointer')
-    .on('click',(e,a)=>{e.stopPropagation();showTm(a.t)});
   gTm.selectAll('circle').data(D.tm).join('circle').attr('stroke-width',1.6).attr('vector-effect','non-scaling-stroke').style('cursor','pointer')
+    .on('click',(e,t)=>{e.stopPropagation();showTm(t)});
+  // 누르는 자리: 전철 선이 점 위를 지나가도 점을 누를 수 있게, 보이지 않는 원을 전철 선 위(역 점 아래)에 둠
+  gTmHit.selectAll('circle').data(D.tm).join('circle').attr('fill','transparent').style('cursor','pointer')
     .on('click',(e,t)=>{e.stopPropagation();showTm(t)});
 }
 function styleTm(){
-  gTm.style('display',on.tm&&D.tm?null:'none');
+  gTm.style('display',on.tm&&D.tm?null:'none');gTmHit.style('display',on.tm&&D.tm?null:'none');
   if(!D.tm||!on.tm)return;
-  const vis=a=>tmOn(a.t)&&tmN(a.r)>0, dim=a=>tmSel&&tmSel!==a.t;
-  gTm.selectAll('path.tl').style('display',a=>vis(a)?null:'none').attr('stroke',a=>tmCol(tmN(a.r))).attr('stroke-width',a=>0.9+0.75*Math.sqrt(tmN(a.r))).attr('stroke-opacity',a=>dim(a)?.2:.95);
-  gTm.selectAll('path.th').style('display',a=>vis(a)?null:'none').attr('fill',a=>tmCol(tmN(a.r))).attr('fill-opacity',a=>dim(a)?.2:.95);
-  gTm.selectAll('path.tx').style('display',a=>vis(a)?null:'none');
-  gTm.selectAll('circle').style('display',t=>tmOn(t)?null:'none').attr('fill',t=>t.k==='터미널'?'var(--bus4)':'var(--bg)').attr('stroke',t=>t.k==='터미널'?'var(--bg)':'var(--bus4)').attr('opacity',t=>tmSel&&tmSel!==t?.3:1);
+  gTmHit.selectAll('circle').style('display',t=>tmOn(t)?null:'none').attr('r',t=>Math.max(tmR(t),9/k));
+  gTm.selectAll('circle').style('display',t=>tmOn(t)?null:'none').attr('r',tmR).attr('fill',t=>t.k==='터미널'?'var(--bus4)':'var(--bg)').attr('stroke',t=>t.k==='터미널'?'var(--bg)':'var(--bus4)').attr('opacity',t=>tmSel&&tmSel!==t?.3:1);
+  if(tmSel)gTm.selectAll('circle').filter(t=>t===tmSel).raise();
 }
 function showTm(t){
   sel={t:'tm',v:t};tmSel=t;styleTm();
   const li=t.dr.map(r=>{const n=tmN(r);return `<li><b>${esc(r.nm)}</b> <small>· ${Y}년까지 기사에 나온 행선지 ${n}곳</small><br><small>${r.ds.map(d=>{const s=esc(d[0])+'('+(d[1]===d[2]?d[1]:d[1]+'–'+d[2])+')';return d[1]<=Y?s:'<span style="opacity:.45">'+s+'</span>'}).join(', ')}</small></li>`}).join('');
-  card(`<h3>${esc(t.n)}</h3><small>시외버스 ${esc(t.k)} · 기사로 확인한 해 ${t.a}–${t.z}${t.sc?' · '+esc(t.sc):''}</small><p><small>${esc(t.nt)}</small></p><ul>${li}</ul><small>행선지는 이 ${esc(t.k)} 이름과 같은 문장에 나온 경기·강원·충청 지명을 모은 것이고, 괄호 안은 그 지명이 나온 기사의 해입니다(${t.a}년 전이나 ${t.z}년 뒤 기사는 앞뒤 해로 줄임). 화살표는 그 방면 행선지들의 평균 방위를 가리키는 도식이고, 실제 길이 아닙니다. 흐린 행선지는 ${Y}년보다 뒤 기사에 처음 나온 곳입니다. 근거: ${esc(t.src)}</small>`);
+  card(`<h3>${esc(t.n)}</h3><small>시외버스 ${esc(t.k)} · 기사로 확인한 해 ${t.a}–${t.z}${t.sc?' · '+esc(t.sc):''}</small><p><small>${esc(t.nt)}</small></p><ul>${li}</ul><small>행선지는 이 ${esc(t.k)} 이름과 같은 문장에 나온 경기·강원·충청 지명을 모은 것이고, 괄호 안은 그 지명이 나온 기사의 해입니다(${t.a}년 전이나 ${t.z}년 뒤 기사는 앞뒤 해로 줄임). 흐린 행선지는 ${Y}년보다 뒤 기사에 처음 나온 곳입니다. 근거: ${esc(t.src)}</small>`);
 }
 function showJsPt(p){
   sel={t:'jp',v:p};
@@ -530,7 +524,7 @@ function coverage(){
     ['국도·주요 도로','p','지금 모습','OSM trunk·primary 도로를 모든 해에 같은 모양으로 옅게 깖','© OpenStreetMap contributors(ODbL), Geofabrik 추출본(2026-11-24)','옛 해에도 지금 도로가 보이므로 그 해 도로망으로 읽으면 안 됨. 칩으로 끌 수 있음'],
     ['광역버스','p','생긴 해부터',`서울로 들어가는 광역버스 ${(D.bus||{rt:[]}).rt.length}개(경기 면허 M·G·P·네 자리 번호, 인천 면허 광역·M, 서울 면허 9xxx)를 서울로 들어가는 방향만 그림. 노선마다 나무위키에서 찾은 생긴 해부터 없어진 해까지 보이고, 생긴 해를 못 찾은 노선은 자료 시점부터 보임. 경기 2023년 자료에 남아 있지만 나무위키에 폐지 분류·폐선 기록이 있는 노선은 그해까지만 그리고, 생긴 해를 못 찾았으면서 BMS 마지막 등록이 2020년 이전인 노선은 지금 다니는지 확인하지 못해 뺌. 없어진 노선 일부와 2004년 개편 전 서울 면허 좌석·심야좌석·직행좌석 가운데 경기·인천에서 서울로 들어오던 25개는 나무위키 문서의 경유지로 더함. 그해 다니던 노선 수로 굵기를 정함`,'노선·정류소 순서: 경기도 BMS 「노선 경유정류소」「노선 정보 검증」(2023-09, 이용허락범위 제한 없음), 인천광역시 BIS 「노선별경유노드 현황」(2024-08, 이용허락범위 제한 없음)과 「시내버스 노선현황」(2024-08-31, 공공누리 출처표시), 서울시 「버스노선별 정류장별 승하차 인원」(2026-11, 공공누리 제1유형). 정류소 좌표: 국토교통부 「전국 버스정류장 위치정보」(2026-11-09, 이용허락범위 제한 없음), 인천 교차로 노드: 국가교통정보센터 표준노드링크(2024-11-29). 생긴 해·없어진 해: 나무위키 「YYYY년 개업한 버스 노선」「YYYY년 폐지된 버스 노선」「경기도의 폐지된 직행좌석버스」 분류와 노선 문서·시군별 폐선 목록(CC BY-NC-SA 2.0 KR). 경로: © OpenStreetMap contributors(ODbL)','지금(또는 마지막) 경로를 생긴 해까지 거슬러 그리므로 옛 경로·옛 번호는 반영하지 않음. 없어진 노선은 나무위키에 문서가 있고 경유지와 연도를 읽을 수 있는 것만 들어감(시작 해가 없는 노선, 문서 없는 지선, 1970–80년대 시외버스는 아래 「시외버스」 줄에서 따로 그림). 2004년 개편 전 서울 700번대는 일반 좌석버스로, 지금 그리는 경기 직행좌석과 성격이 조금 다름. 생긴 해를 못 찾은 노선은 자료 시점부터 보임'],
     ['시외버스','p','기사로 확인한 해만',`1963–1990년 서울의 시외버스 터미널·정류장(종로5가·신설동·용두동·동마장·용산·동자동·불광동·신촌 등)에서 경기·인천으로 가던 노선 ${(D.sw||[]).length}개. 신문 기사에 서울 쪽 끝과 경기·인천 쪽 끝이 함께 나온 노선만, 기사에 나온 첫해부터 마지막 해까지 노선마다 한 줄로 그림(광역버스와 달리 노선 수로 굵기를 정하지 않음)`,'조선일보 기사(조선 뉴스 라이브러리 100, 1963–1990년 기사 본문). 기사 저작권은 조선일보에 있어 사실(노선의 두 끝·해)만 옮김. 경로: © OpenStreetMap contributors(ODbL), 지명 자리: 국토교통부 「전국 버스정류장 위치정보」','노선 목록·면허 기록(교통부·경기도·서울시 고시)은 보지 못함. 기사에 나온 해 사이만 보여 실제 운행 기간보다 짧음. 경로는 기사에 나온 곳을 지금 도로 위 최단 경로로 이은 근사선. 다른 신문(동아·경향·매일경제)은 아직 찾지 않음'],
-    ['시외버스 터미널','p','기사로 확인한 해만',`서울의 시외버스 터미널·정류장 ${(D.tm||[]).length}곳(신설동·종로5가·동마장·용산 남부·서울역 동자동·영등포·불광동 서부·신촌·상봉·동서울·서초 남부)을 기사에 나온 해 동안 점으로 찍고, 그곳에서 나가던 방면을 화살표로 그림. 화살표 굵기는 그해까지 그 터미널 이름과 같은 문장에 나온 그 방면 행선지 수`,'조선일보 기사(조선 뉴스 라이브러리 100, 1963–1999년 기사 본문). 기사 저작권은 조선일보에 있어 터미널 이름·해·행선지 지명만 옮김. 동서울·서초 남부가 지금도 영업 중이라는 것은 일반 지식','행선지는 같은 문장에 함께 나온 지명을 기계로 모은 뒤 엉뚱한 것(같은 문장에 다른 터미널 행선지가 나온 경우 등)을 사람이 덜어 낸 것이라, 노선 목록이 아니고 빠진 행선지도 많음. 터미널마다 문을 연 날·닫은 날을 모두 찾지는 못해 기사에 처음·마지막으로 나온 해로 둔 곳이 있음(신촌·불광동·상봉 등). 2000년 뒤 기사는 보지 않음'],
+    ['시외버스 터미널','p','기사로 확인한 해만',`서울의 시외버스 터미널·정류장 ${(D.tm||[]).length}곳(신설동·종로5가·동마장·용산 남부·서울역 동자동·영등포·불광동 서부·신촌·상봉·동서울·서초 남부)을 기사에 나온 해 동안 점으로 찍음. 점을 누르면 그곳에서 나가던 방면(아홉 갈래)과, 그해까지 그 터미널 이름과 같은 문장에 나온 행선지가 나옴`,'조선일보 기사(조선 뉴스 라이브러리 100, 1963–1999년 기사 본문). 기사 저작권은 조선일보에 있어 터미널 이름·해·행선지 지명만 옮김. 동서울·서초 남부가 지금도 영업 중이라는 것은 일반 지식','터미널 자리는 기사에 나온 동네 이름으로 어림함(동마장은 마장동·용두동 사이, 용산 남부는 한강로3가, 서울역 터미널은 동자동). 행선지는 같은 문장에 함께 나온 지명을 기계로 모은 뒤 엉뚱한 것(같은 문장에 다른 터미널 행선지가 나온 경우 등)을 사람이 덜어 낸 것이라, 노선 목록이 아니고 빠진 행선지도 많음. 터미널마다 문을 연 날·닫은 날을 모두 찾지는 못해 기사에 처음·마지막으로 나온 해로 둔 곳이 있음(신촌·불광동·상봉 등). 2000년 뒤 기사는 보지 않음'],
     ['바다','y','그림','해안선은 그해 행정구역 경계를 따름(매립으로 땅이 늘어나는 모습이 보임). 1899–1910년 5월은 1910년 5월 경계를 합친 땅 모양을 경계선 없이 깖. 이웃 시·도와 북한은 지금 경계로 깖','이웃 땅: admdongkor 2026년 시도 경계, Natural Earth 10m 국가 경계(공공 도메인, 북한)','옛 해의 이웃 땅도 지금 모양. 휴전선 아래 내륙의 빈 띠는 지금 경기 경계로 채움. 1910–1945 HGIS 해안선은 일제강점기 지형도 기준이라 지금과 어긋나는 곳이 있음'],
     ['시화 간석지','p','보정','1994년 1월 시화방조제 물막이 뒤 드러난 간석지를 1994년부터 빗금으로 그림. SGIS 행정경계(admdongkor)에는 송산그린시티 쪽 약 40㎢가 땅으로 들어 있지 않아 바다로 보였음','범위: 택지정보시스템 반월특수지역 세 구역 경계에서 OSM 수면(시화호 등)을 빼고 해안선 안쪽만 남김. 날짜: 한국수자원공사 시화지구 누리집','지금 모양 하나뿐. 물막이 뒤 간석지가 마르고 매립되는 과정은 그리지 않음'],
     ['강','p','지금 모습','강 수면(water=river) 면과 강 중심선(waterway=river)을 모든 해에 같은 모양으로 그림','© OpenStreetMap contributors(ODbL), Geofabrik 대한민국·북한 추출본(2026-11-24)','옛 물길이 아님(한강 매립 전 모습, 하중도 등은 서울 지도 쪽 작업과 겹침). 호수·저수지(팔당호 제외)는 생긴 해를 정리하지 않아 뺌. 시화호·청평호 등 없음'],

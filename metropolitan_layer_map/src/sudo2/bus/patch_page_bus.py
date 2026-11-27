@@ -1,4 +1,4 @@
-"""시안 index.html에 광역버스 레이어를 붙인다(한 번만 돌림)."""
+"""index.html에 광역버스 레이어를 붙인다(한 번만 돌림)."""
 p='/home/claude/sudo/page/index.html'; s=open(p,encoding='utf-8').read()
 def rep(a,b,n=1):
     global s
