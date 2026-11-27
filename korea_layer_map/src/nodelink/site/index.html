@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>표준노드링크 판별 비교</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+/* VOICE work: 연구 메모에 딸린 시안, 숫자와 지도가 먼저
+   IDEA 도로 대장(臺帳)의 판을 한 장씩 넘겨 보는 열람대
+   PICTURE 판마다 실린 도로망 밀도 위에, 앞 판에 없던 도로를 도로표지 청색으로 얹은 전국 지도
+   COLOUR 흰 바탕, 먹색, 도로표지 청색 한 색상의 밝기 단계
+   TYPE IBM Plex Sans KR(서울 지도 본문 글꼴과 같은 집안)
+   LAYOUT 넓은 화면은 지도 왼쪽, 판 고르기와 목록 오른쪽 / 휴대폰은 제목, 지도, 고르기, 목록 순 */
+:root{color-scheme:light dark;--bg:light-dark(#ffffff,#101317);--ink:light-dark(#15181d,#e8ecf1);--mute:light-dark(#5b6470,#9aa4b1);--rule:light-dark(#e2e5e9,#2a3038);--panel:light-dark(#f4f6f8,#171b21);--acc:light-dark(#1d5fb4,#6aa8f2);--acc2:light-dark(#9dbbe3,#2f5785);--bar:light-dark(#c8d3e0,#3a4656);--net:light-dark(#2f3742,#c7ced8);--warn:light-dark(#8a4b00,#f0b35e)}
+:root[data-theme=light]{color-scheme:light}
+:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.55 "IBM Plex Sans KR",system-ui,sans-serif;overflow-x:clip;word-break:keep-all;overflow-wrap:anywhere}
+.band{padding:clamp(24px,3.5vw,48px) max(4vw,16px)}
+.wrap{max-width:1240px;margin:0 auto}
+h1{font-size:clamp(30px,4vw,44px);line-height:1.08;letter-spacing:-.02em;margin:0 0 12px;text-wrap:balance}
+h2{font-size:24px;line-height:1.2;margin:0 0 6px;letter-spacing:-.01em}
+.lead{max-width:62ch;margin:0;color:var(--ink)}
+.figs{display:grid;grid-template-columns:repeat(auto-fit,minmax(11em,1fr));gap:12px 24px;margin:22px 0 0;padding:14px 0 0;border-top:1px solid var(--rule)}
+.figs div{font-size:14px;color:var(--mute)}
+.figs b{display:block;font-size:clamp(20px,2.4vw,26px);color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap}
+.main{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:24px;align-items:start}
+.fig{position:relative;height:min(78vh,760px);min-height:420px;background:var(--panel);border-radius:6px;overflow:hidden}
+.fig canvas{position:absolute;inset:0;width:100%;height:100%;cursor:grab;touch-action:none}
+.tip{position:absolute;pointer-events:none;background:var(--bg);color:var(--ink);border:1px solid var(--rule);border-radius:4px;padding:6px 9px;font-size:13px;line-height:1.4;max-width:240px;display:none;box-shadow:0 2px 8px rgb(0 0 0 / .12)}
+.hint{position:absolute;left:12px;bottom:10px;font-size:13px;color:var(--mute);background:color-mix(in srgb,var(--panel) 85%,transparent);padding:2px 6px;border-radius:3px}
+.side{display:grid;gap:18px}
+.ed{font-size:clamp(28px,3vw,36px);font-weight:700;letter-spacing:-.02em;line-height:1;font-variant-numeric:tabular-nums}
+.ctl{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.ctl input[type=range]{flex:1 1 200px;accent-color:var(--acc);height:44px}
+button{font:inherit;font-size:15px;min-height:44px;min-width:44px;padding:0 14px;border:1px solid var(--rule);background:var(--bg);color:var(--ink);border-radius:6px;cursor:pointer}
+button:hover{border-color:var(--acc)}
+button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.ticks{display:flex;justify-content:space-between;font-size:13px;color:var(--mute);margin-top:-6px}
+.opts{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:15px}
+.opts label{display:flex;gap:6px;align-items:center;min-height:36px;cursor:pointer}
+.opts input{width:18px;height:18px;accent-color:var(--acc)}
+.kv{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;font-size:15px;margin:0}
+.kv dt{color:var(--mute)}
+.kv dd{margin:0;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.note{font-size:14px;color:var(--warn);margin:0}
+.list{list-style:none;margin:0;padding:0;font-size:15px}
+.list li{display:grid;grid-template-columns:5.6em minmax(0,1fr) auto;gap:8px;padding:6px 4px;border-top:1px solid var(--rule);cursor:default}
+.list li:hover{background:var(--panel)}
+.list .r{color:var(--mute);font-size:13px;padding-top:2px}
+.list .k{font-variant-numeric:tabular-nums;white-space:nowrap}
+.sub{font-size:14px;color:var(--mute);margin:0 0 4px}
+.key{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:14px;color:var(--mute)}
+.key i{display:inline-block;width:22px;height:0;border-top:3px solid var(--acc);vertical-align:middle;margin-right:6px}
+.key i.o{border-color:var(--acc2)}
+.key i.n{border-top:8px solid color-mix(in srgb,var(--net) 35%,transparent)}
+.multi{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:20px 28px;margin-top:16px}
+.mc h3{font-size:15px;margin:0;display:flex;justify-content:space-between;gap:8px;font-weight:600}
+.mc h3 span{font-weight:400;color:var(--mute);font-variant-numeric:tabular-nums;white-space:nowrap}
+.mc svg{display:block;width:100%;height:110px}
+.mc svg text{font-size:12px;fill:var(--mute)}
+.notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px 36px;font-size:15px}
+.notes h3{font-size:16px;margin:12px 0 4px}
+.notes ul{margin:0;padding-left:1.1em}
+.notes li{margin:0 0 6px}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums;white-space:nowrap}
+th,td{padding:6px 10px;border-bottom:1px solid var(--rule);text-align:right}
+th:first-child,td:first-child{text-align:left}
+th{font-weight:600;color:var(--mute)}
+details summary{cursor:pointer;font-weight:600;min-height:44px;display:flex;align-items:center}
+@media(max-width:900px){.main{grid-template-columns:minmax(0,1fr)}.fig{height:72vh}}
+@media(max-width:600px){.figs{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.figs b{font-size:17px;white-space:normal}.fig{height:62vh;min-height:360px}table{font-size:13px}th,td{padding:6px 5px}}
+</style>
+</head>
+<body>
+<header class="band"><div class="wrap">
+<h1>전국표준노드링크 19개 판 비교</h1>
+<p class="lead">2008년 판부터 2026년 판까지 지도에 실린 도로는 <b id="fTot">–</b> 늘었습니다. 늘어난 길이의 대부분은 2009년 판과 2020년 판이 시·군도와 특별·광역시도를 한꺼번에 새로 실은 몫이라, 새로 뚫린 길로 읽을 수 없습니다. 판 사이 차이를 새 도로로 읽어 볼 만한 것은 고속국도, 일반국도, 국가지원지방도·지방도 쪽입니다.</p>
+<div class="figs">
+<div>실린 도로 길이(연결로 빼고)<b id="f1">–</b></div>
+<div>고속국도<b id="f2">–</b></div>
+<div>시·군도<b id="f3">–</b></div>
+<div>링크 수<b id="f4">–</b></div>
+</div>
+</div></header>
+
+<section class="band" style="padding-top:0"><div class="wrap main">
+<div>
+<div class="fig" id="mapBox"><canvas id="map" aria-label="판별 도로망 지도"></canvas><div class="tip" id="tip"></div><div class="hint">끌어서 옮기고, 휠·두 손가락으로 확대</div></div>
+<div class="key" style="margin-top:10px"><span><i></i>이 판에 새로 실린 도로</span><span><i class="o"></i>그 전 판들에서 새로 실린 도로</span><span><i class="n"></i>이 판에 실린 모든 도로(1km 칸 밀도)</span></div>
+</div>
+<div class="side">
+<div>
+<p class="sub">고른 판</p>
+<div class="ed" id="edDate">–</div>
+<div class="ctl" style="margin-top:10px">
+<button id="prev" aria-label="앞 판">◀</button>
+<input type="range" id="slider" min="0" max="18" step="1" value="9" aria-label="판 고르기">
+<button id="next" aria-label="다음 판">▶</button>
+<button id="play">차례로 보기</button>
+</div>
+<div class="ticks"><span>2008</span><span>2014</span><span>2020</span><span>2026</span></div>
+</div>
+<div class="opts">
+<label><input type="checkbox" id="g1" checked>고속·도시고속국도</label>
+<label><input type="checkbox" id="g2" checked>일반국도</label>
+<label><input type="checkbox" id="g3" checked>국지도·지방도</label>
+<label><input type="checkbox" id="g4">특별·광역시도</label>
+<label><input type="checkbox" id="cum" checked>그 전 판에서 새로 실린 도로도</label>
+</div>
+<div>
+<h2 style="font-size:18px">이 판의 숫자</h2>
+<dl class="kv" id="kv"></dl>
+<p class="note" id="warn" hidden></p>
+</div>
+<div>
+<h2 style="font-size:18px">이 판에 새로 실린 길이 많은 도로</h2>
+<p class="sub">특별·광역시도와 시·군도, 연결로는 뺐습니다. 줄에 올리면 지도에서 그 도로가 굵어집니다.</p>
+<ul class="list" id="top"></ul>
+</div>
+</div>
+</div></section>
+
+<section class="band" style="border-top:1px solid var(--rule)"><div class="wrap">
+<h2>등급별로 실린 도로 길이</h2>
+<p class="sub">판마다 연결로를 뺀 길이(km)입니다. 막대를 누르면 그 판으로 갑니다. 진한 막대가 고른 판입니다.</p>
+<div class="multi" id="m1"></div>
+</div></section>
+
+<section class="band" style="border-top:1px solid var(--rule)"><div class="wrap">
+<h2>등급별로 앞 판에 없던 도로 길이</h2>
+<p class="sub">바로 앞 판 도로에서 100m 넘게 떨어진 링크의 길이(km)입니다. 2009년 판과 2020년 판의 큰 막대는 새로 실은 몫이 대부분입니다.</p>
+<div class="multi" id="m2"></div>
+</div></section>
+
+<section class="band" style="border-top:1px solid var(--rule)"><div class="wrap">
+<h2>읽는 법과 한계</h2>
+<div class="notes">
+<div>
+<h3>잰 방법</h3>
+<ul>
+<li>국가교통정보센터 「전국표준노드링크」 19개 판(2008-11-05 – 2026-11-11)의 링크 파일(MOCT_LINK)을 모두 열어 셌습니다.</li>
+<li>등급은 링크의 도로 등급 코드(101 고속국도 – 107 시·군도)를 따랐고, 길이는 연결로(CONNECT 표시)를 뺀 값입니다.</li>
+<li>'앞 판에 없던 도로'는 25m 간격으로 찍은 점 가운데 80% 넘게가 바로 앞 판 도로에서 100m 밖에 있고, 길이가 100m 이상인 링크입니다. 정해진 용어가 아니라 이 시안에서 판끼리 견주려고 붙인 이름입니다.</li>
+<li>지도 바탕은 그 판의 모든 링크를 1km 칸에 모은 밀도입니다. 새 도로 선은 40m 단위로 줄여 그렸습니다.</li>
+</ul>
+</div>
+<div>
+<h3>확인한 것(원문 파일을 직접 열어 셈)</h3>
+<ul>
+<li>2008–2013년 판은 경위도(ITRF2000), 2014년 판부터는 TM 중부원점 좌표입니다. 좌표계가 바뀐 2014년 판에서 새 도로가 갑자기 늘지 않아, 두 좌표계를 맞춘 것이 어긋나지 않았다고 봅니다.</li>
+<li>2019년 판은 칸 이름 끝에 밑줄이 붙어 있고(ROAD_RANK_ 등), 2025년 판은 글자가 UTF-8입니다.</li>
+<li>2025년 판은 링크 수가 앞 판의 약 2.8배인데 길이는 1%도 늘지 않았습니다. 링크를 잘게 나눈 판입니다.</li>
+</ul>
+</div>
+<div>
+<h3>추정</h3>
+<ul>
+<li>2009년 판과 2020년 판의 큰 증가는 그때까지 싣지 않던 시·군도와 특별·광역시도를 새로 실은 것으로 봅니다. 개통과는 따로 봐야 합니다.</li>
+<li>일반국도 길이가 2017년 판에서 2020년 판 사이 줄어든 것은 등급 변경(국도가 시도 등으로)일 수 있습니다.</li>
+<li>고속국도에 새로 실린 노선은 개통 해와 대체로 맞아 보입니다(일반 지식으로만 견줌). 다만 서울 쪽에서 본 것처럼 판에 한두 판 늦게 실리거나 개통 전 판에 먼저 실린 예가 있습니다.</li>
+</ul>
+</div>
+<div>
+<h3>확인 못 한 것</h3>
+<ul>
+<li>표준노드링크 자료실의 이용 조건 문구.</li>
+<li>판 사이 간격이 고르지 않습니다(2019-09 → 2020-11 등). 한 판에 잡힌 새 도로는 그 사이 어느 때 생긴 것입니다.</li>
+<li>2026년 판의 HIST_TYPE 칸 뜻과 2019년 판 zip에 든 「업데이트 내역서」(hwp)는 열어 보지 않았습니다.</li>
+</ul>
+</div>
+</div>
+<details style="margin-top:20px"><summary>판별 숫자 표</summary>
+<div class="scroll"><table id="tbl"></table></div>
+</details>
+<p class="sub" style="margin-top:16px">자료: 국가교통정보센터 「전국표준노드링크」 2008–2026년 판 19개(이지 다운로드 폴더의 zip). 2026-11-27 러프 시안.</p>
+</div></section>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script>
+{
+const RN={101:"고속국도",102:"도시고속국도",103:"일반국도",104:"특별·광역시도",105:"국가지원지방도",106:"지방도",107:"시·군도"};
+const RS={101:"고속",102:"도시고속",103:"일반국도",104:"시도",105:"국지도",106:"지방도"};
+const GRP={g1:[101,102],g2:[103],g3:[105,106],g4:[104]};
+const RANKS=["101","102","103","104","105","106","107"];
+const fmt=n=>Math.round(n).toLocaleString("ko-KR");
+const sum=o=>Object.entries(o||{}).filter(([k])=>RANKS.includes(k)).reduce((a,[,v])=>a+v,0);
+const $=id=>document.getElementById(id);
+let D=null,cur=9,T=d3.zoomIdentity,hoverName=null,playing=null,imgs={},tint={};
+const box=$("mapBox"),cv=$("map"),ctx=cv.getContext("2d"),tip=$("tip");
+const probe=document.createElement("span");probe.style.display="none";document.body.append(probe);
+const css=v=>{probe.style.color=`var(${v})`;return getComputedStyle(probe).color;};
+let W=0,H=0,dpr=1,s0=1,ox=0,oy=0;
+
+function colorRGB(c){const t=document.createElement("canvas").getContext("2d");t.fillStyle=c;t.fillRect(0,0,1,1);return t.getImageData(0,0,1,1).data;}
+function tinted(d){
+  const key=d+"|"+css("--net");if(tint[key])return tint[key];
+  const im=imgs[d];if(!im||!im.complete)return null;
+  const c=document.createElement("canvas");c.width=im.width;c.height=im.height;const x=c.getContext("2d");
+  x.drawImage(im,0,0);const id=x.getImageData(0,0,c.width,c.height),p=id.data,[r,g,b]=colorRGB(css("--net"));
+  for(let i=0;i<p.length;i+=4){const v=p[i];p[i]=r;p[i+1]=g;p[i+2]=b;p[i+3]=v*0.42;}
+  x.putImageData(id,0,0);tint[key]=c;return c;
+}
+function layout(){
+  const r=box.getBoundingClientRect();dpr=window.devicePixelRatio||1;W=r.width;H=r.height;
+  cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);
+  const I=D.img,wm=I.w*I.cs,hm=I.h*I.cs;s0=Math.min((W-24)/wm,(H-24)/hm);ox=(W-wm*s0)/2;oy=(H-hm*s0)/2;
+}
+const px=(x,y)=>[T.applyX(ox+(x-D.img.left)*s0),T.applyY(oy+(D.img.top-y)*s0)];
+function on(r){for(const[g,rs]of Object.entries(GRP))if(rs.includes(r))return $(g).checked;return false;}
+const WID={101:2.4,102:2.4,103:1.8,104:1.1,105:1.3,106:1.3};
+function draw(){
+  if(!D)return;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);
+  const e=D.eds[cur],I=D.img,t=tinted(e.d);
+  if(t){ctx.save();ctx.translate(T.x,T.y);ctx.scale(T.k,T.k);ctx.imageSmoothingEnabled=true;ctx.drawImage(t,ox,oy,I.w*I.cs*s0,I.h*I.cs*s0);ctx.restore();}
+  ctx.lineCap="round";ctx.lineJoin="round";
+  const acc=css("--acc"),acc2=css("--acc2");
+  const pass=(segs,col,wadd)=>{for(const sg of segs){if(!on(sg.r))continue;ctx.strokeStyle=col;ctx.lineWidth=WID[sg.r]+wadd+(hoverName!==null&&sg.n===hoverName&&col===acc?2.5:0);ctx.beginPath();const p=sg.p;let a=px(p[0],p[1]);ctx.moveTo(a[0],a[1]);for(let i=2;i<p.length;i+=2){a=px(p[i],p[i+1]);ctx.lineTo(a[0],a[1]);}ctx.stroke();}};
+  if($("cum").checked)for(let i=1;i<cur;i++)pass(D.eds[i].S,acc2,-0.3);
+  pass(e.S,acc,0.4);
+}
+function decode(){
+  const q=D.grid.q,X0=D.grid.x0,Y0=D.grid.y0;
+  for(const e of D.eds){e.S=e.segs.map(([r,n,km,dq])=>{const p=new Float64Array(dq.length);let x=0,y=0;for(let i=0;i<dq.length;i+=2){x+=dq[i];y+=dq[i+1];p[i]=X0+x*q;p[i+1]=Y0+y*q;}return{r,n,km,p};});delete e.segs;}
+}
+function nearest(mx,my){
+  let best=null,bd=64;const lists=[[D.eds[cur],true]];if($("cum").checked)for(let i=cur-1;i>=1;i--)lists.push([D.eds[i],false]);
+  for(const[e,isCur]of lists){for(const sg of e.S){if(!on(sg.r))continue;const p=sg.p;let a=px(p[0],p[1]);
+    for(let i=2;i<p.length;i+=2){const b=px(p[i],p[i+1]);const dx=b[0]-a[0],dy=b[1]-a[1],L=dx*dx+dy*dy;let u=L?((mx-a[0])*dx+(my-a[1])*dy)/L:0;u=Math.max(0,Math.min(1,u));const ex=a[0]+u*dx-mx,ey=a[1]+u*dy-my,dd=ex*ex+ey*ey;if(dd<bd){bd=dd;best={sg,e};}a=b;}}
+    if(best&&isCur)break;}
+  return best;
+}
+function showTip(ev){
+  const r=box.getBoundingClientRect(),mx=ev.clientX-r.left,my=ev.clientY-r.top,hit=nearest(mx,my);
+  if(!hit){tip.style.display="none";return;}
+  const n=D.names[hit.sg.n]||"이름 없음";tip.textContent="";
+  const b=document.createElement("b");b.textContent=n;tip.append(b,document.createElement("br"),`${RN[hit.sg.r]} · 이 링크 ${hit.sg.km.toLocaleString("ko-KR")}km`,document.createElement("br"),`${hit.e.d} 판에 처음 실림`);
+  tip.style.display="block";const tw=tip.offsetWidth,th=tip.offsetHeight;
+  tip.style.left=Math.min(W-tw-8,mx+14)+"px";tip.style.top=(my+th+20>H?my-th-12:my+14)+"px";
+}
+function panel(){
+  const e=D.eds[cur],p=D.eds[cur-1];$("edDate").textContent=e.d+" 판";$("slider").value=cur;
+  const tot=sum(e.km),grp=(o,rs)=>rs.reduce((a,r)=>a+(+(o||{})[r]||0),0);
+  const rows=[["링크 수",fmt(e.links)],["실린 길이(연결로 빼고)",fmt(tot)+" km"],["좌표계",e.crs]];
+  if(p){rows.push(["앞 판보다",(tot-sum(p.km)>=0?"+":"−")+fmt(Math.abs(tot-sum(p.km)))+" km"]);
+    rows.push(["새로 실림 · 고속·도시고속",fmt(grp(e.new,[101,102]))+" km"],["새로 실림 · 일반국도",fmt(grp(e.new,[103]))+" km"],["새로 실림 · 국지도·지방도",fmt(grp(e.new,[105,106]))+" km"],["새로 실림 · 특별·광역시도",fmt(grp(e.new,[104]))+" km"],["새로 실림 · 시·군도",fmt(grp(e.new,[107]))+" km"],["앞 판에서 빠짐(시·군도 빼고)",fmt(grp(e.gone,[101,102,103,104,105,106]))+" km"]);}
+  else rows.push(["앞 판","없음(첫 판)"]);
+  const kv=$("kv");kv.textContent="";for(const[k,v]of rows){const dt=document.createElement("dt"),dd=document.createElement("dd");dt.textContent=k;dd.textContent=v;kv.append(dt,dd);}
+  const w=[];if(p){if(grp(e.new,[107])>10000||grp(e.new,[104])>900)w.push("이 판에서 시·군도나 특별·광역시도를 크게 새로 실었습니다. 이 판의 새 도로 대부분은 개통이 아니라 새로 실은 몫입니다.");
+    if(e.links/p.links>2&&sum(e.km)/sum(p.km)<1.05)w.push("이 판은 링크를 잘게 나눠 링크 수만 크게 늘었습니다.");}
+  const wn=$("warn");wn.hidden=!w.length;wn.textContent=w.join(" ");
+  const ul=$("top");ul.textContent="";
+  if(!e.top.length){const li=document.createElement("li");li.textContent=p?"앞 판에 없던 주요 도로가 없습니다.":"첫 판이라 견줄 앞 판이 없습니다.";li.style.display="block";ul.append(li);}
+  for(const[r,n,km]of e.top){const li=document.createElement("li"),a=document.createElement("span"),b=document.createElement("span"),c=document.createElement("span");
+    a.className="r";a.textContent=RS[r];b.textContent=D.names[n]||"이름 없음";c.className="k";c.textContent=km.toLocaleString("ko-KR")+" km";li.append(a,b,c);
+    li.addEventListener("mouseenter",()=>{hoverName=n;draw();});li.addEventListener("mouseleave",()=>{hoverName=null;draw();});ul.append(li);}
+}
+function mini(host,key,isNew){
+  host.textContent="";
+  for(const r of RANKS){
+    const vals=D.eds.map((e,i)=>isNew&&i===0?null:+((e[key]||{})[r]||0));const mx=d3.max(vals)||1;
+    const div=document.createElement("div");div.className="mc";const h=document.createElement("h3"),sp=document.createElement("span");
+    h.textContent=RN[r];sp.textContent=isNew?"가장 큰 판 "+fmt(mx)+" km":fmt(vals[0])+" → "+fmt(vals[vals.length-1])+" km";h.append(sp);
+    const svg=document.createElementNS("http://www.w3.org/2000/svg","svg");div.append(h,svg);host.append(div);
+    const drawM=()=>{const w=svg.clientWidth,hh=110,top=6,bot=18,bw=w/vals.length;let s="";
+      vals.forEach((v,i)=>{if(v===null)return;const bh=Math.max(v>0?1.5:0,(hh-top-bot)*v/mx),x=i*bw+1,y=hh-bot-bh;
+        s+=`<rect data-i="${i}" x="${x}" y="${y}" width="${Math.max(1,bw-2)}" height="${bh}" rx="2" fill="${i===cur?"var(--acc)":"var(--bar)"}"><title>${D.eds[i].d} 판 · ${RN[r]} ${fmt(v)} km</title></rect>`;
+        s+=`<rect data-i="${i}" x="${i*bw}" y="0" width="${bw}" height="${hh}" fill="transparent" style="cursor:pointer"><title>${D.eds[i].d} 판 · ${RN[r]} ${fmt(v)} km</title></rect>`;});
+      s+=`<line x1="0" x2="${w}" y1="${hh-bot}" y2="${hh-bot}" stroke="var(--rule)"/><text x="0" y="${hh-3}">2008</text><text x="${w}" y="${hh-3}" text-anchor="end">2026</text>`;
+      svg.innerHTML=s;};
+    svg.addEventListener("click",ev=>{const i=ev.target.getAttribute("data-i");if(i!==null)go(+i);});
+    div._draw=drawM;const ro=new ResizeObserver(drawM);ro.observe(svg);
+  }
+}
+function redrawMinis(){for(const h of[$("m1"),$("m2")])for(const c of h.children)c._draw&&c._draw();}
+function go(i){cur=Math.max(0,Math.min(D.eds.length-1,i));panel();draw();redrawMinis();}
+function table(){
+  const hd=["판","링크 수","실린 길이",...RANKS.map(r=>RN[r]),"새로 실림(시·군도 빼고)","빠짐(시·군도 빼고)"];
+  const t=$("tbl");const tr=document.createElement("tr");for(const h of hd){const th=document.createElement("th");th.textContent=h;tr.append(th);}const th=document.createElement("thead");th.append(tr);t.append(th);
+  const tb=document.createElement("tbody");
+  for(const e of D.eds){const r=document.createElement("tr");const nw=["101","102","103","104","105","106"].reduce((a,k)=>a+(+(e.new||{})[k]||0),0),gn=["101","102","103","104","105","106"].reduce((a,k)=>a+(+(e.gone||{})[k]||0),0);
+    for(const v of[e.d,fmt(e.links),fmt(sum(e.km)),...RANKS.map(k=>fmt(+(e.km[k]||0))),e===D.eds[0]?"–":fmt(nw),e===D.eds[0]?"–":fmt(gn)]){const td=document.createElement("td");td.textContent=v;r.append(td);}tb.append(r);}
+  t.append(tb);
+}
+function start(){
+  decode();const a=D.eds[0],z=D.eds[D.eds.length-1];
+  $("fTot").textContent=fmt(sum(a.km))+"km에서 "+fmt(sum(z.km))+"km로 "+(sum(z.km)/sum(a.km)).toFixed(1)+"배";
+  $("f1").textContent=fmt(sum(a.km))+" → "+fmt(sum(z.km))+" km";$("f2").textContent=fmt(a.km["101"])+" → "+fmt(z.km["101"])+" km";
+  $("f3").textContent=fmt(a.km["107"])+" → "+fmt(z.km["107"])+" km";$("f4").textContent=fmt(a.links)+" → "+fmt(z.links);
+  for(const e of D.eds){const im=new Image();im.onload=()=>{if(e===D.eds[cur])draw();};im.src="net_"+e.d+".png";imgs[e.d]=im;}
+  layout();mini($("m1"),"km",false);mini($("m2"),"new",true);table();go(cur);
+  const zoom=d3.zoom().scaleExtent([1,12]).on("zoom",ev=>{T=ev.transform;draw();});d3.select(cv).call(zoom);
+  cv.addEventListener("pointermove",ev=>{if(ev.buttons)return;requestAnimationFrame(()=>showTip(ev));});
+  cv.addEventListener("pointerleave",()=>{tip.style.display="none";});
+  const ro=new ResizeObserver(()=>{layout();draw();});ro.observe(box);
+  $("slider").addEventListener("input",ev=>go(+ev.target.value));$("prev").addEventListener("click",()=>go(cur-1));$("next").addEventListener("click",()=>go(cur+1));
+  for(const id of["g1","g2","g3","g4","cum"])$(id).addEventListener("change",draw);
+  $("play").addEventListener("click",()=>{if(playing){clearInterval(playing);playing=null;$("play").textContent="차례로 보기";return;}
+    if(cur>=D.eds.length-1)go(0);$("play").textContent="멈추기";playing=setInterval(()=>{if(cur>=D.eds.length-1){clearInterval(playing);playing=null;$("play").textContent="차례로 보기";return;}go(cur+1);},1100);});
+  const mo=new MutationObserver(()=>{draw();});mo.observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change",draw);
+}
+fetch("data.json").then(r=>r.json()).then(d=>{D=d;start();}).catch(err=>{$("edDate").textContent="자료를 읽지 못했습니다";console.error(err);});
+}
+</script>
+</body>
+</html>
