@@ -99,6 +99,8 @@ data = {
   "joseon": json.load(open(F("joseon.json"))) if os.path.exists(F("joseon.json")) else None,
   # 옛 지도(시안): kanggye1914.py가 만든 이미지의 위치·출처. 이미지는 img/에 따로 두고 처음 보일 때 불러온다
   "oldmap": {k: v for k, v in json.load(open(F("oldmap.json"))).items() if k != "gcp"} if os.path.exists(F("oldmap.json")) else None,
+  # 큰 도로(시안, roads 브랜치): majorroads.py가 만든다. 선·해와 팝업에 쓸 개통일 표·연혁도 제목
+  "majorroads": (lambda m: {k: m[k] for k in ("cls", "planSheets", "open", "segs", "gone", "goneRows", "nlVers") if k in m})(json.load(open(F("majorroads.json")))) if os.path.exists(F("majorroads.json")) else None,
 }
 # 역 둘레 땅값(개통 전후): station_land_layer.py가 만든 역별 고리 값과 모양. 파일이 없으면 칩이 나타나지 않음
 data["stationLand"] = json.load(open(F("station_land.json"))) if os.path.exists(F("station_land.json")) else None
@@ -179,6 +181,34 @@ if (data["joseon"] or data["oldmap"]) and os.path.exists(F("method_oldmap.html")
                " 옛 지도는 서울역사아카이브 「경성부시가강계도」(서울역사001349, 서울역사박물관 소장, 공공누리 제1유형,"
                ' <a href="' + (data["oldmap"] or {}).get("url", "") + '" target="_blank" rel="noopener">아카이브 상세</a>).')
     data["methodHtml"] = mh[:i] + open(F("method_oldmap.html")).read() + mh[i:j] + old_src + mh[j:]
+# 큰 도로(시안, roads 브랜치): 자료가 있을 때만 출처 문단 끝에 한 줄(레이어 설명 문단은 시안을 정한 뒤 씀)
+if data.get("majorroads"):
+    SRC_PAR = '<p class="small">출처:'
+    mh = data["methodHtml"]
+    assert mh.count(SRC_PAR) == 1, "method.html 출처 문단이 바뀜 — build.py의 SRC_PAR을 고칠 것"
+    i = mh.index(SRC_PAR); j = mh.index("</p>", i)
+    road_src = (" 큰 도로는 국가교통정보센터 「전국표준노드링크」(2026-11-11 판, 차로 수·도로등급. 개통일을 못 찾은 길은 2008–2025년 옛 판 18개에 처음 실린 해로 추정), 서울 열린데이터광장 「서울시 소통 돌발 도로 분류 정보」(OA-15059, 2025),"
+                " 서울특별시 『서울 도시계획 연혁』(1977·1991) 도로 연혁도(그림은 싣지 않고 도시계획가로로 결정된 해를 판단하는 데만 씀), 개통일은 「수도권 도시 연대지도 시안」 정리(한국어 위키백과 노선 문서 연혁, 국가기록원 「고속도로 연표」, 서울시 보도 등)와 서울시·국가기록원·건설교통부 보도자료 등. 없어진 고가도로(아현·삼일·서울역·청계)는 서울시 보도자료와 국가기록원 「기록으로 보는 한국」 고가도로, 선은 OSM의 지금 길·물길을 따라 그린 근사.")
+    if os.path.exists(F("majorroads_topo.json")):
+        road_src += (" 개통일을 못 찾은 큰 도로가 처음 보인 판은 국토지리정보원 1:25,000 지형도(국토정보맵 「종이지도」 1970–2000년대 판, 공공누리 제1유형)에서 길 색을 기계로 읽어 잼"
+                     "(지도 그림은 싣지 않음. 판의 해는 공공데이터포털 「구지형도 지도메타데이터」와 개통일 아는 길로 어림).")
+    data["methodHtml"] = mh[:j] + road_src + mh[j:]
+# 큰 도로 옛 지형도(시안, roads 브랜치): majorroads_topo.py가 만든 판별 있음·없음을 개통일 없는 링크에 붙인다.
+# tg = 처음 보인 판 번호, tn = 바로 앞 판에 분명히 없었으면 그 번호(사이가 정해짐). 처음 보인 판 뒤에 「없음」이 나오면 쓰지 않음
+if data.get("majorroads") and os.path.exists(F("majorroads_topo.json")):
+    topo = json.load(open(F("majorroads_topo.json")))
+    data["majorroads"]["topoEds"] = topo["eds"]
+    key = lambda sg: ",".join(json.dumps(v) for v in sg["g"][0]) + "|" + ",".join(json.dumps(v) for v in sg["g"][-1])
+    n_tg = 0
+    for sg in data["majorroads"]["segs"]:
+        st = topo["segs"].get(key(sg))
+        if not st or sg.get("o") or sg.get("oh"): continue
+        i = st.find("1")
+        if i < 0 or "0" in st[i + 1:]: continue
+        sg["tg"] = i; n_tg += 1
+        # 1970년대 판의 「없음」은 믿지 않는다: 도심 시가지 칠이 주황빛이라 길 색과 섞여 종로·한강대로 같은 오래된 길도 없음으로 나옴(2026-11-27 확인)
+        if i > 1 and st[i - 1] == "0": sg["tn"] = i - 1
+    print(f"큰 도로 옛 지형도: 처음 보인 판을 붙인 링크 {n_tg}개")
 # 버스: 2004년 7월 개편 이후 해마다 그릴 노선(2026년 노선망에서 그 해 뒤에 생긴 노선을 뺀다)
 OLD_FROM = 1998
 if data["bus2026"] and os.path.exists(F("route_years.json")):
