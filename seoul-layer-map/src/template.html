@@ -139,6 +139,19 @@ input[type=range] { width: 100%; margin: 0; accent-color: var(--tram); height: 2
 .side .all button:focus-visible, .legbtn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .side .chips { flex-direction: column; gap: 4px; }
 .side .chip { width: 100%; border-radius: 4px; padding: 4px 8px; font-size: 12.5px; }
+/* 칩 묶음(v2.0, 이지가 시안 나′를 고름: 주제별 묶음 + 두 칸 + 짧은 이름, 원래 이름은 title·aria-label).
+   데스크톱 오른쪽 판에서만 묶음 제목과 두 칸으로 놓고, 좁은 화면 칩 줄과 낮은 가로 화면 팝오버에서는 묶음 없이 한 줄로 흐른다 */
+.side .cgrp, .side .cgl { display: contents; }
+.side .cgh { display: none; }
+.side .cgrp[hidden] { display: none !important; }
+@media (min-width: 901px) and (min-height: 501px) {
+  .side .chips { gap: 0; }
+  .side .cgrp { display: block; margin: 0 0 6px; }
+  .side .cgh { display: block; font: 600 11px var(--body); color: var(--ink-2); letter-spacing: .02em; margin: 4px 0 3px; }
+  .side .cgl { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+  .side .cgl .chip { width: auto; padding: 3px 6px; font-size: 12px; line-height: 1.2; text-align: left; gap: 5px; }
+  .side .cgl .chip i { width: 10px; }
+}
 .legbtn { display: none; flex: none; color: var(--ink); border-color: var(--ink); }
 .legends h3 { font: 600 12px var(--body); color: var(--ink-2); margin: 14px 0 4px; letter-spacing: 0.02em; }
 .side .legend-bus { flex-direction: column; gap: 3px; font-size: 12px; margin-top: 4px; }
@@ -398,26 +411,32 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   <div class="scroller">
   <div class="all"><button type="button" id="allOn">전체 켜기</button><button type="button" id="allOff">전체 끄기</button></div>
   <div class="chips" role="group" aria-label="레이어">
-    <button class="chip" type="button" data-layer="rail" aria-pressed="true" id="railChip" hidden><i style="color:var(--rail);border-top-width:4px;border-top-style:double"></i>철도(국철)</button>
-    <button class="chip" type="button" data-layer="metro" aria-pressed="true" id="metroChip" hidden><i style="color:#00A84D;border-top-width:4px"></i>지하철·광역철도</button>
-    <button class="chip" type="button" data-layer="tram" aria-pressed="true"><i style="color:var(--tram)"></i>전차</button>
-    <button class="chip" type="button" data-layer="kido" aria-pressed="true"><i style="color:var(--kido)"></i>경성궤도 기동차</button>
-    <button class="chip" type="button" data-layer="land" aria-pressed="false" id="landChip" hidden><i class="fill" style="background:linear-gradient(90deg,var(--land-1),var(--land-4),var(--land-7))"></i>땅값(공시지가)</button>
-    <button class="chip" type="button" data-layer="bld" aria-pressed="false" id="bldChip" hidden><i class="fill" style="background:linear-gradient(90deg,var(--bld-2),var(--bld-5),var(--bld-8))"></i>새 건물(5년)</button>
-    <button class="chip" type="button" data-layer="stland" aria-pressed="false" id="stLandChip" hidden><i class="fill" style="background:linear-gradient(90deg,var(--stl-1),var(--stl-3))"></i>역 둘레 땅값(개통 전후)</button>
-    <button class="chip" type="button" data-layer="gb" aria-pressed="false" id="gbChip" hidden><i class="fill" style="background:repeating-linear-gradient(45deg,transparent 0 3px,var(--gb) 3px 4.5px);border-color:var(--gb)"></i>그린벨트(지금 경계)</button>
-    <button class="chip" type="button" data-layer="urban" aria-pressed="false" id="urbanChip" hidden><i class="fill" style="border-color:var(--up);background:repeating-linear-gradient(-45deg,var(--up) 0 1.5px,transparent 1.5px 4px)"></i>토지구획정리 지구</button>
-    <button class="chip" type="button" data-layer="area" aria-pressed="true"><i class="fill" style="background:var(--area)"></i>시역</button>
-    <button class="chip" type="button" data-layer="rings" aria-pressed="true"><i style="color:var(--ring);border-top-style:dashed;border-top-width:2px"></i>이전 경계</button>
-    <button class="chip" type="button" data-layer="gu" aria-pressed="true"><i style="color:var(--gu);border-top-width:1px"></i>구 경계</button>
-    <button class="chip" type="button" data-layer="wall" aria-pressed="true"><i style="color:var(--wall);border-top-style:dotted"></i>한양도성</button>
-    <button class="chip" type="button" data-layer="joseon" aria-pressed="true" id="joseonChip" hidden><i style="color:var(--joseon);border-top-width:2px"></i>조선 후기 대로·역·원·나루</button>
-    <button class="chip" type="button" data-layer="oldmap" aria-pressed="true" id="oldmapChip" hidden><i class="fill" style="background:#e6d2ad"></i>옛 지도(1914–1935)</button>
-    <button class="chip" type="button" data-layer="roads" aria-pressed="true" id="roadsChip" hidden><i style="color:var(--road-x);border-top-width:3px"></i>큰 도로(시안)</button>
-    <button class="chip" type="button" data-layer="palace" aria-pressed="true" id="palaceChip" hidden><i class="fill" style="background:var(--palace)"></i>궁궐</button>
-    <button class="chip" type="button" data-layer="bus" aria-pressed="true" id="busChip" hidden><i style="color:var(--bus);border-top-width:2px"></i>버스</button>
-    <button class="chip" type="button" data-layer="village" aria-pressed="true" id="villageChip" hidden><i class="fill" style="background:var(--village)"></i>마을버스(2015–)</button>
-    <button class="chip" type="button" data-layer="dong" aria-pressed="false"><i style="color:var(--rule);border-top-width:1px"></i>현재 법정동</button>
+    <div class="cgrp" role="group" aria-label="교통"><div class="cgh" aria-hidden="true">교통</div><div class="cgl">
+      <button class="chip" type="button" data-layer="rail" title="철도(국철)" aria-label="철도(국철)" aria-pressed="true" id="railChip" hidden><i style="color:var(--rail);border-top-width:4px;border-top-style:double"></i>철도</button>
+      <button class="chip" type="button" data-layer="metro" title="지하철·광역철도" aria-label="지하철·광역철도" aria-pressed="true" id="metroChip" hidden><i style="color:#00A84D;border-top-width:4px"></i>지하철·광역</button>
+      <button class="chip" type="button" data-layer="tram" aria-pressed="true"><i style="color:var(--tram)"></i>전차</button>
+      <button class="chip" type="button" data-layer="kido" title="경성궤도 기동차" aria-label="경성궤도 기동차" aria-pressed="true"><i style="color:var(--kido)"></i>기동차</button>
+      <button class="chip" type="button" data-layer="bus" aria-pressed="true" id="busChip" hidden><i style="color:var(--bus);border-top-width:2px"></i>버스</button>
+      <button class="chip" type="button" data-layer="village" title="마을버스(2015–)" aria-label="마을버스(2015–)" aria-pressed="true" id="villageChip" hidden><i class="fill" style="background:var(--village)"></i>마을버스</button>
+      <button class="chip" type="button" data-layer="roads" aria-pressed="true" id="roadsChip" hidden><i style="color:var(--road-x);border-top-width:3px"></i>큰 도로</button>
+      <button class="chip" type="button" data-layer="joseon" title="조선 후기 대로·역·원·나루" aria-label="조선 후기 대로·역·원·나루" aria-pressed="true" id="joseonChip" hidden><i style="color:var(--joseon);border-top-width:2px"></i>조선 후기 대로</button>
+    </div></div>
+    <div class="cgrp" role="group" aria-label="경계·옛 모습"><div class="cgh" aria-hidden="true">경계·옛 모습</div><div class="cgl">
+      <button class="chip" type="button" data-layer="area" aria-pressed="true"><i class="fill" style="background:var(--area)"></i>시역</button>
+      <button class="chip" type="button" data-layer="rings" aria-pressed="true"><i style="color:var(--ring);border-top-style:dashed;border-top-width:2px"></i>이전 경계</button>
+      <button class="chip" type="button" data-layer="gu" aria-pressed="true"><i style="color:var(--gu);border-top-width:1px"></i>구 경계</button>
+      <button class="chip" type="button" data-layer="dong" aria-pressed="false"><i style="color:var(--rule);border-top-width:1px"></i>현재 법정동</button>
+      <button class="chip" type="button" data-layer="wall" aria-pressed="true"><i style="color:var(--wall);border-top-style:dotted"></i>한양도성</button>
+      <button class="chip" type="button" data-layer="palace" aria-pressed="true" id="palaceChip" hidden><i class="fill" style="background:var(--palace)"></i>궁궐</button>
+      <button class="chip" type="button" data-layer="oldmap" title="옛 지도(1914–1935)" aria-label="옛 지도(1914–1935)" aria-pressed="true" id="oldmapChip" hidden><i class="fill" style="background:#e6d2ad"></i>옛 지도</button>
+    </div></div>
+    <div class="cgrp" role="group" aria-label="땅·건물·도시계획"><div class="cgh" aria-hidden="true">땅·건물·도시계획</div><div class="cgl">
+      <button class="chip" type="button" data-layer="land" title="땅값(공시지가)" aria-label="땅값(공시지가)" aria-pressed="false" id="landChip" hidden><i class="fill" style="background:linear-gradient(90deg,var(--land-1),var(--land-4),var(--land-7))"></i>땅값</button>
+      <button class="chip" type="button" data-layer="stland" title="역 둘레 땅값(개통 전후)" aria-label="역 둘레 땅값(개통 전후)" aria-pressed="false" id="stLandChip" hidden><i class="fill" style="background:linear-gradient(90deg,var(--stl-1),var(--stl-3))"></i>역 둘레 땅값</button>
+      <button class="chip" type="button" data-layer="bld" title="새 건물(5년)" aria-label="새 건물(5년)" aria-pressed="false" id="bldChip" hidden><i class="fill" style="background:linear-gradient(90deg,var(--bld-2),var(--bld-5),var(--bld-8))"></i>새 건물</button>
+      <button class="chip" type="button" data-layer="urban" title="토지구획정리 지구" aria-label="토지구획정리 지구" aria-pressed="false" id="urbanChip" hidden><i class="fill" style="border-color:var(--up);background:repeating-linear-gradient(-45deg,var(--up) 0 1.5px,transparent 1.5px 4px)"></i>구획정리 지구</button>
+      <button class="chip" type="button" data-layer="gb" title="그린벨트(지금 경계)" aria-label="그린벨트(지금 경계)" aria-pressed="false" id="gbChip" hidden><i class="fill" style="background:repeating-linear-gradient(45deg,transparent 0 3px,var(--gb) 3px 4.5px);border-color:var(--gb)"></i>그린벨트</button>
+    </div></div>
   </div>
   </div>
   <div class="bseg bldUse" id="bldUse" role="group" aria-label="새 건물 용도" hidden><span>새 건물 용도</span><button type="button" data-use="all" aria-pressed="true">전체</button><button type="button" data-use="r" aria-pressed="false">주거</button><button type="button" data-use="c" aria-pressed="false">상업·업무</button></div>
@@ -760,7 +779,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   const joseonBound = DATA.joseonBound;   // 조선 후기 한성부 바깥 경계 근사선(사산금표 경계, joseon_bound.py)       // 1903·1907 옛 지도의 5서 경계(도성 안)
   const palace = DATA.palaces;
   if (oldmap) { const c = document.getElementById("oldmapChip"); c.hidden = false;
-    c.lastChild.textContent = `옛 지도(${oldmaps[0].from}–${Math.max(...oldmaps.map(m => m.to))})`; }
+    const full = `옛 지도(${oldmaps[0].from}–${Math.max(...oldmaps.map(m => m.to))})`; c.title = full; c.setAttribute("aria-label", full); }
   if (joseon) document.getElementById("joseonChip").hidden = false;
   if (palace) document.getElementById("palaceChip").hidden = false;
   const Y0 = joseon ? 1898 : 1899;
@@ -952,12 +971,15 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   // 궁궐: 지금 궁역에 해마다 상태(궁으로 쓰임·크게 헐리거나 다른 쓰임·복원 사업 뒤)를 칠하고, 그 해의 이름(경운궁→덕수궁, 창경원)과
   // 사건 뒤 몇 해 동안만 짧은 설명을 단다. 옮겨 간 건물 화살표는 단추(palMove)로 켜고, 1868–1910년 임금 거처에 별표와 칭호를 단다
   const PAL_MOVE_YEARS = 5;
+  // 연도 띠 맨 앞 「조선 후기」 단계에서 궁궐을 그릴 해. 같은 단계의 『대동지지』 강역·「사산금표도」 근사선·조선 후기 대로와 시기를 맞추려고
+  // 1898년(대한제국) 상태 대신 사건표의 1860년 상태를 그린다(이지가 시안 「다」를 고름, 2026-11-27). 경복궁(1868 중건)·경운궁(1897)은 이 해에 그리지 않는다
+  const PAL_STAGE_Y = 1860;
   let palMove = false, palLab = null, palBoxes = [];   // palLab: drawPalace가 모은 글자 자리 거리, palBoxes: 놓은 글자 상자(역 이름이 피함)
   function drawPalace() {
     gPalace.selectAll("*").remove(); gPalaceTop.selectAll("*").remove();
     d3.select("#palMove").attr("hidden", palace && layerOn.palace ? null : true);
     if (!palace || !layerOn.palace) { palLab = null; return; }
-    const y = year, k = kNow;   // 조선 후기 단계(1898 자리)는 1898년 상태
+    const y = year < 1899 ? PAL_STAGE_Y : year, k = kNow;   // 조선 후기 단계(1898 자리)는 PAL_STAGE_Y년 상태
     let defs = svg.select("defs"); if (defs.empty()) defs = svg.insert("defs", ":first-child");
     if (defs.select("#palHatch").empty()) {
       const pt = defs.append("pattern").attr("id", "palHatch").attr("width", 6).attr("height", 6).attr("patternUnits", "userSpaceOnUse").attr("patternTransform", "rotate(45)");
@@ -1355,7 +1377,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   function drawWaterYr() {
     if (!gRiverYr || !waterHist) return;
     // 시안 비교용: hide(가 숨김) / dash(나 점선) / faint(다 옅게) / casing(라 복개천 두 줄 점선) / road(마 복개도로 띠). WH_EMPH(바): 바뀐 해부터 5년 굵게
-    const st = window.WH_STYLE || "casing", emph = !!window.WH_EMPH;
+    const st = "casing", emph = false;   // 이지가 라(복개천 두 줄 점선)를 고름(2026-11-27). 시안 비교용 window.WH_STYLE·WH_EMPH는 뺌
     drawWaterZones();
     const segs = waterHist.cgc.segs;
     const cov = s => waterCovered(s, year);
@@ -1794,8 +1816,10 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     sd.classList.remove("lgauto");
     if (sd.scrollHeight > sd.clientHeight + 2) sd.classList.add("lgauto");
   }
+  const BUS_FROM = DATA.busDrawn ? Math.min(...Object.keys(DATA.busDrawn).map(Number)) : 1998;   // 버스 노선망을 그리는 첫 해
   function renderLegends() {
-    d3.select("#busLegend").attr("hidden", layerOn.bus && bus ? null : true);
+    document.querySelectorAll(".side .cgrp").forEach(g => { g.hidden = !g.querySelector(".chip:not([hidden])"); });   // 칩이 하나도 안 보이는 묶음은 숨김
+    d3.select("#busLegend").attr("hidden", layerOn.bus && bus && year >= BUS_FROM ? null : true);   // 노선망이 없는 해(1998년 전)에는 범례도 숨김
     d3.select("#villageLegend").attr("hidden", layerOn.village && villageYear(year) ? null : true);
     d3.select("#landLegend").attr("hidden", layerOn.land && land ? null : true);
     d3.select("#landExcl").attr("hidden", stLand ? null : true);
