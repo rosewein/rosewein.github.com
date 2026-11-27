@@ -849,7 +849,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
     const fsz = 11;
     urban.features.filter(f => f.year <= year).sort((a, b) => b.areaDrawn - a.areaDrawn).forEach(f => {
       const txt = `${f.key} ${f.names.join("·")}`, p = projection(f.lab), [sx, sy] = t.apply(p);
-      const w = txt.length * fsz * 0.9 + 4, h = fsz + 3, box = [sx - w / 2, sy - h / 2, sx + w / 2, sy + h / 2];
+      const w = txt.length * fsz * 0.9 + 4, h = fsz + 5, box = [sx - w / 2, sy - h / 2, sx + w / 2, sy + h / 2];   // 높이는 위아래 1px씩 넉넉히(1975 「11 중앙제1」이 「중구」에 닿던 것)
       if (sx < -w || sy < -h || sx > W + w || sy > H + h || hit(box)) return;
       placed.push(box); out.push({ txt, p });
     });
