@@ -681,7 +681,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
   if (village) document.getElementById("villageChip").hidden = false;
   // 조선 후기 대로·역·원·나루: 자료가 있으면 연도 띠가 1899년 한 칸 앞(Y0=1898)에서 시작한다. 1898은 '조선 후기' 단계를 뜻하고 실제 1898년이 아니다
   const joseon = DATA.joseon || null;
-  // 옛 지도: 해마다 그 해에 맞는 지도 한 장을 깐다(1914 경성부시가강계도, 1899–1913 실측상밀 최신경성전도). 웹 메르카토르로 다시 그린 이미지(img/)는 처음 보일 때 불러온다
+  // 옛 지도: 해마다 그 해에 맞는 지도 한 장을 깐다(1914 경성부시가강계도, 1907 실측상밀 최신경성전도, 1903 한국경성전도). 웹 메르카토르로 다시 그린 이미지(img/)는 처음 보일 때 불러온다
   const oldmaps = [DATA.oldmap, ...(DATA.oldmapsMore || [])].filter(Boolean).sort((a, b) => a.from - b.from);
   const oldmap = oldmaps[0] || null;   // 옛 지도가 하나라도 있는지
   const oldAt = y => oldmaps.find(m => y >= m.from && y <= m.to) || null;
@@ -716,7 +716,7 @@ details.landtab td i { display: inline-block; width: 10px; height: 10px; border-
       .attr("cx", d => projection(d)[0]).attr("cy", d => projection(d)[1]).attr("r", 1.1 / kNow)
       .attr("fill", "var(--village-dot)").attr("fill-opacity", 0.75).style("pointer-events", "none");
   }
-  // 옛 지도: 1914년 6월 「경성부시가강계도」를 1914–1935년에, 1907 「實測詳密 最新京城全圖」를 1899–1913년에 깐다(oldAt). 웹 메르카토르 격자라 두 모서리만 투영하면 된다
+  // 옛 지도: 1914년 6월 「경성부시가강계도」를 1914–1935년에, 1907 「實測詳密 最新京城全圖」를 1907–1913년에, 1903 「韓國京城全圖」를 1899–1906년에 깐다(oldAt). 웹 메르카토르 격자라 두 모서리만 투영하면 된다
   // 진하기: 띠를 건드리기 전에는 화면 색에 맞춘 기본값(--oldmap-op), 건드리면 그 값
   let oldOpUser = null;
   const oldOpInput = document.getElementById("oldOp");

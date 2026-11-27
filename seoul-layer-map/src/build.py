@@ -101,8 +101,8 @@ data = {
   "joseon": json.load(open(F("joseon.json"))) if os.path.exists(F("joseon.json")) else None,
   # 옛 지도(시안): kanggye1914.py가 만든 이미지의 위치·출처. 이미지는 img/에 따로 두고 처음 보일 때 불러온다
   "oldmap": {k: v for k, v in json.load(open(F("oldmap.json"))).items() if k != "gcp"} if os.path.exists(F("oldmap.json")) else None,
-  # 다른 해의 옛 지도(oldmap1907.py 등). 지도는 해마다 그 해에 맞는 한 장을 고른다
-  "oldmapsMore": [{k: v for k, v in json.load(open(F(f))).items() if k != "gcp"} for f in ("oldmap1907.json",) if os.path.exists(F(f))],
+  # 다른 해의 옛 지도(oldmap1903.py·oldmap1907.py). 지도는 해마다 그 해에 맞는 한 장을 고른다
+  "oldmapsMore": [{k: v for k, v in json.load(open(F(f))).items() if k != "gcp"} for f in ("oldmap1903.json", "oldmap1907.json") if os.path.exists(F(f))],
 }
 # 땅값 설명문은 자료가 있을 때만 「이 지도를 읽는 법」에 넣는다(출처 문단 앞 + 출처 한 줄)
 if data["land"] and os.path.exists(F("method_land.html")):
