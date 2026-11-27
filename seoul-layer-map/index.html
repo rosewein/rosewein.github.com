@@ -8,21 +8,21 @@
 <meta property="og:title" content="서울 도시 연대지도">
 <meta property="og:description" content="1899년 경인선과 전차부터 지하철·철도·버스, 1990년 이후 땅값(공시지가)과 1960년 이후 새 건물까지, 서울의 교통망과 시역·행정구역, 땅값과 건물이 바뀌어 온 과정을 연도별 레이어로 겹쳐 보는 지도">
 <meta property="og:type" content="website">
-<link rel="preload" href="fonts/slm-sans-kr-400.woff2?v=ab5ac8ca25" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="fonts/slm-sans-kr-500.woff2?v=ab5ac8ca25" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="fonts/hahmlet-500.woff2?v=ab5ac8ca25" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="fonts/hahmlet-700.woff2?v=ab5ac8ca25" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/slm-sans-kr-400.woff2?v=7c1935ffb1" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/slm-sans-kr-500.woff2?v=7c1935ffb1" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/hahmlet-500.woff2?v=7c1935ffb1" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/hahmlet-700.woff2?v=7c1935ffb1" as="font" type="font/woff2" crossorigin>
 <style>
 /* 글꼴: 저장소 fonts/에 페이지에 쓰는 글자만 담아 둔다(src/fonts.py가 빌드 때 만듦). IBM Plex는 'Plex'가 예약된 이름이라
    글자를 덜어 낸 것은 SLM Sans KR·SLM Mono로 이름을 바꿨다. 제목 글꼴(Hahmlet)은 h1·h2·연표 시기 제목·연도 숫자 글자만 담으므로,
    var(--display)를 다른 곳에 새로 쓰면 build.py의 display_text()에 그 글자를 더해야 한다 */
-@font-face { font-family: "Hahmlet"; src: url("fonts/hahmlet-500.woff2?v=ab5ac8ca25") format("woff2"); font-weight: 500; font-display: swap; }
-@font-face { font-family: "Hahmlet"; src: url("fonts/hahmlet-700.woff2?v=ab5ac8ca25") format("woff2"); font-weight: 700; font-display: swap; }
-@font-face { font-family: "SLM Sans KR"; src: url("fonts/slm-sans-kr-400.woff2?v=ab5ac8ca25") format("woff2"); font-weight: 400; font-display: swap; }
-@font-face { font-family: "SLM Sans KR"; src: url("fonts/slm-sans-kr-500.woff2?v=ab5ac8ca25") format("woff2"); font-weight: 500; font-display: swap; }
-@font-face { font-family: "SLM Sans KR"; src: url("fonts/slm-sans-kr-600.woff2?v=ab5ac8ca25") format("woff2"); font-weight: 600; font-display: swap; }
-@font-face { font-family: "SLM Mono"; src: url("fonts/slm-mono-400.woff2?v=ab5ac8ca25") format("woff2"); font-weight: 400; font-display: swap; }
-@font-face { font-family: "SLM Mono"; src: url("fonts/slm-mono-500.woff2?v=ab5ac8ca25") format("woff2"); font-weight: 500; font-display: swap; }
+@font-face { font-family: "Hahmlet"; src: url("fonts/hahmlet-500.woff2?v=7c1935ffb1") format("woff2"); font-weight: 500; font-display: swap; }
+@font-face { font-family: "Hahmlet"; src: url("fonts/hahmlet-700.woff2?v=7c1935ffb1") format("woff2"); font-weight: 700; font-display: swap; }
+@font-face { font-family: "SLM Sans KR"; src: url("fonts/slm-sans-kr-400.woff2?v=7c1935ffb1") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "SLM Sans KR"; src: url("fonts/slm-sans-kr-500.woff2?v=7c1935ffb1") format("woff2"); font-weight: 500; font-display: swap; }
+@font-face { font-family: "SLM Sans KR"; src: url("fonts/slm-sans-kr-600.woff2?v=7c1935ffb1") format("woff2"); font-weight: 600; font-display: swap; }
+@font-face { font-family: "SLM Mono"; src: url("fonts/slm-mono-400.woff2?v=7c1935ffb1") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "SLM Mono"; src: url("fonts/slm-mono-500.woff2?v=7c1935ffb1") format("woff2"); font-weight: 500; font-display: swap; }
 /* Layout: 지도가 화면 대부분을 차지하는 무대, 그 아래 고정 연도 띠(슬라이더), 그 아래 연표·메모. 옛 측량도의 종이·먹·철도 붉은선을 차용 */
 :root {
   --paper: #e8ebe4;
@@ -68,9 +68,9 @@
   --ring: #9a9880; --wall: #c3ccc4; --gu: #8e9a91; --focus: #6fb2ec; --bus: #ff5cb8; --rail: #c9d1ca; --village: #9fbf2a; --village-dot: #c8e05a; --land-0: #3b2a1b; --land-1: #5a3817; --land-2: #784919; --land-3: #935c24; --land-4: #ad7138; --land-5: #c38853; --land-6: #d7a273; --land-7: #e6bd99; --land-8: #f0d9c7; --chg-0: #9ad6cc; --chg-1: #5f9f96; --chg-2: #3f6f69; --chg-3: #4a4946; --chg-4: #7d5636; --chg-5: #b97a44; --chg-6: #f2b47e; --bld-1: #41506c; --bld-2: #4a628e; --bld-3: #5675af; --bld-4: #6589cb; --bld-5: #799ee2; --bld-6: #91b3f1; --bld-7: #adc9fb; --bld-8: #d3dff3; --joseon: #6cc3b6; --joseon-2: #a8e6dc; --oldmap-op: .62; color-scheme: dark;
 }
 /* 연대별 물길(waterways 갈래): 덮인(복개) 물길 점선. 물길과 같은 색상의 진한 단계. 다른 갈래와 부딪치지 않게 따로 둔 블록 */
-:root { --river-cov: #5f8ba3; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --river-cov: #6f9bb5; } }
-:root[data-theme="dark"] { --river-cov: #6f9bb5; }
+:root { --river-cov: #5f8ba3; --water-road: #a2a8ab; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --river-cov: #6f9bb5; --water-road: #56605f; } }
+:root[data-theme="dark"] { --river-cov: #6f9bb5; --water-road: #56605f; }
 * { box-sizing: border-box; }
 body { background: var(--paper); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.55; }
 .wrap { max-width: 1080px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
@@ -902,26 +902,44 @@ const DATA = {"topo":{"type":"Topology","arcs":[[[40031,31959],[49,-342],[356,-3
   }
   function drawWaterYr() {
     if (!gRiverYr || !waterHist) return;
-    const st = window.WH_STYLE || "hide";   // 시안 비교용: hide(가 숨김) / dash(나 점선) / faint(다 옅게)
+    // 시안 비교용: hide(가 숨김) / dash(나 점선) / faint(다 옅게) / casing(라 복개천 두 줄 점선) / road(마 복개도로 띠). WH_EMPH(바): 바뀐 해부터 5년 굵게
+    const st = window.WH_STYLE || "casing", emph = !!window.WH_EMPH;
     const segs = waterHist.cgc.segs;
+    const cov = s => waterCovered(s, year);
+    const fresh = s => emph && s.c && ((year >= s.c && year < s.c + 5) || (year >= s.o && year < s.o + 5));
+    const W = s => (fresh(s) ? 1.5 : 1) * (cov(s) ? ({ casing: 6.5, road: 5.5, dash: 2.2, faint: 2.6 }[st] || 0) : 2.6);
+    const line = s => path({ type: "LineString", coordinates: s.g });
+    const shown = s => !(cov(s) && st === "hide");
     // 수면 조각(복원된 청계천 물길 면): 열린 해에만. 옅게(다) 보기에서는 덮인 해에도 옅게
     gRiverYr.selectAll("path.wa").data(segs.filter(s => s.a)).join("path").attr("class", "wa").attr("d", s => path(s.a))
       .attr("fill", "var(--river)").attr("stroke", "none")
-      .attr("display", s => waterCovered(s, year) && st !== "faint" ? "none" : null)
-      .attr("fill-opacity", s => waterCovered(s, year) ? 0.3 : null);
-    gRiverYr.selectAll("path.wy").data(segs).join("path").attr("class", "wy").attr("d", s => path({ type: "LineString", coordinates: s.g })).attr("fill", "none")
-      .attr("stroke", s => waterCovered(s, year) && st === "dash" ? "var(--river-cov)" : "var(--river)").attr("stroke-linecap", "round").attr("stroke-linejoin", "round").attr("vector-effect", "non-scaling-stroke")
-      .attr("display", s => waterCovered(s, year) && st === "hide" ? "none" : null)
-      .attr("stroke-width", s => waterCovered(s, year) && st === "dash" ? 2 : 1.8)
-      .attr("stroke-dasharray", s => waterCovered(s, year) && st === "dash" ? "0.1 4.5" : null)
-      .attr("stroke-opacity", s => waterCovered(s, year) && st === "faint" ? 0.3 : null);
+      .attr("display", s => cov(s) && st !== "faint" ? "none" : null)
+      .attr("fill-opacity", s => cov(s) ? 0.3 : null);
+    const base = sel => sel.attr("d", line).attr("fill", "none").attr("stroke-linecap", s => cov(s) && st === "casing" ? "butt" : "round")
+      .attr("stroke-linejoin", "round").attr("vector-effect", "non-scaling-stroke").attr("display", s => shown(s) ? null : "none");
+    // 바탕색 테: 구 경계선·버스 선 위에서도 물길이 떠 보이게
+    gRiverYr.selectAll("path.wh").data(segs).join("path").attr("class", "wh").call(base)
+      .attr("stroke", "var(--paper-2)").attr("stroke-opacity", 0.85).attr("stroke-width", s => W(s) + 2.4).attr("stroke-linecap", "round");
+    gRiverYr.selectAll("path.wy").data(segs).join("path").attr("class", "wy").call(base)
+      .attr("stroke", s => !cov(s) ? "var(--river)" : st === "road" ? "var(--water-road)" : st === "dash" || st === "casing" ? "var(--river-cov)" : "var(--river)")
+      .attr("stroke-width", W)
+      .attr("stroke-dasharray", s => !cov(s) ? null : st === "dash" ? "0.1 4.5" : st === "casing" ? "5 3" : null)
+      .attr("stroke-opacity", s => cov(s) && st === "faint" ? 0.3 : null);
+    // 라: 가운데를 바탕색으로 비워 두 줄로 / 마: 가운데에 물색 점선(땅 밑으로 흐르는 물)
+    gRiverYr.selectAll("path.wc").data(segs.filter(s => cov(s) && (st === "casing" || st === "road"))).join("path").attr("class", "wc").call(base)
+      .attr("stroke", st === "casing" ? "var(--paper)" : "var(--river-cov)")
+      .attr("stroke-width", s => st === "casing" ? W(s) - 3 : 1.6 * (fresh(s) ? 1.5 : 1))
+      .attr("stroke-dasharray", st === "road" ? "0.1 4" : null);
     // 범례: 덮인 구간이 있는 해에만 한 줄(범례 틀은 그대로 두고 이 줄만 덧붙임)
-    const cov = segs.filter(s => waterCovered(s, year)), km = cov.reduce((a, s) => a + s.m, 0) / 1000;
+    const cs = segs.filter(cov), km = cs.reduce((a, s) => a + s.m, 0) / 1000;
     let nt = d3.select("#waterYrNote");
     if (nt.empty()) nt = d3.select("#waterLegend").append("span").attr("id", "waterYrNote");
-    const key = st === "dash" ? `<svg width="20" height="12" viewBox="0 0 20 12"><path d="M2,6H19" stroke="var(--river-cov)" stroke-width="2" stroke-dasharray="0.1 4.5" stroke-linecap="round"/></svg>`
-      : st === "faint" ? `<svg width="20" height="12" viewBox="0 0 20 12"><path d="M2,6H19" stroke="var(--river)" stroke-width="1.8" stroke-opacity=".3"/></svg>` : "";
-    nt.property("hidden", !cov.length).html(cov.length ? `${key}청계천 ${km.toFixed(1)}km 덮임(복개)${st === "hide" ? ", 그리지 않음" : ""} · ${year < 2003 ? "2005년 복원" : "복원 공사 중(2003–2005)"}` : "");
+    const sv = inner => `<svg width="22" height="12" viewBox="0 0 22 12">${inner}</svg>`;
+    const key = st === "dash" ? sv('<path d="M2,6H20" stroke="var(--river-cov)" stroke-width="2.2" stroke-dasharray="0.1 4.5" stroke-linecap="round"/>')
+      : st === "faint" ? sv('<path d="M2,6H20" stroke="var(--river)" stroke-width="2.6" stroke-opacity=".3"/>')
+      : st === "casing" ? sv('<path d="M1,6H21" stroke="var(--river-cov)" stroke-width="6.5" stroke-dasharray="5 3"/><path d="M1,6H21" stroke="var(--paper)" stroke-width="3.5"/>')
+      : st === "road" ? sv('<path d="M1,6H21" stroke="var(--water-road)" stroke-width="5.5"/><path d="M2,6H20" stroke="var(--river-cov)" stroke-width="1.6" stroke-dasharray="0.1 4" stroke-linecap="round"/>') : "";
+    nt.property("hidden", !cs.length).html(cs.length ? `${key}청계천 ${km.toFixed(1)}km 덮임(복개)${st === "hide" ? ", 그리지 않음" : ""} · ${year < 2003 ? "2005년 복원" : "복원 공사 중(2003–2005)"}` : "");
   }
 
   // ---------- static layers ----------
